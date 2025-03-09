@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -169,6 +170,36 @@ public class Screen_Home extends EconomySystem_Screen {
             );
         });
 
+        // 新增步骤1：计算所有需要渲染的文本（前10条 + 自己）
+        List<Component> allEntries = new ArrayList<>();
+
+        int baseX = 0;
+        // 添加前10条账户数据
+        if (accounts != null) {
+            int count = 0;
+            for (Map.Entry<String, Integer> entry : accounts) {
+                if (count >= 10) break;
+                allEntries.add(createAccountComponent(entry.getKey(), entry.getValue(), count + 1));
+                count++;
+            }
+
+            // 添加自己的条目（无论是否在前10）
+            int selfIndex = getIndexOfPlayer(accounts, this.minecraft.player.getName().getString()) + 1;
+            if (selfIndex != 0) { // 确保自己存在于列表中
+                allEntries.add(Component.literal("[" + selfIndex + "] 你 拥有 " + balance + " 枚梦鱼币"));
+            }
+
+            // 新增步骤2：计算最大文本宽度
+            int maxWidth = allEntries.stream()
+                    .mapToInt(component -> this.font.width(component))
+                    .max()
+                    .orElse(100); // 默认值防止空列表
+
+            // 新增步骤3：计算基准X坐标（右对齐位置）
+            baseX = maxWidth;
+        }
+
+
 
         // 渲染玩家账户列表
         int y = this.startY - 20;
@@ -184,7 +215,7 @@ public class Screen_Home extends EconomySystem_Screen {
                 richList = new TextAnimation(
                         this.width + 200,
                         y,
-                        this.width - startX,
+                        this.width - startX - baseX,
                         y,
                         0f,
                         1f,
@@ -223,7 +254,7 @@ public class Screen_Home extends EconomySystem_Screen {
             myself = new TextAnimation(
                     this.width + 200,
                     leaderboardY,
-                    this.width - startX,
+                    this.width - startX - baseX,
                     leaderboardY,
                     0f,
                     1f,
@@ -300,6 +331,12 @@ public class Screen_Home extends EconomySystem_Screen {
         startX = Math.max((this.width / 2) - 300, 60);
         startY = Math.max((this.height) / 4, 40);
     }
+
+    // 辅助方法：生成带排名的条目文本
+    private Component createAccountComponent(String name, int balance, int rank) {
+        return Component.literal("[" + rank + "] " + name + " 拥有 " + balance + " 枚梦鱼币");
+    }
+
 
     @Override
     protected void renderAnimatedText(GuiGraphics guiGraphics, Component text, TextAnimation animation) {

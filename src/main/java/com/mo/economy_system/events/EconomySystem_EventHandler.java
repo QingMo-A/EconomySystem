@@ -43,7 +43,7 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID)
 public class EconomySystem_EventHandler {
 
-    private static ShopManager shopManager;
+    public static ShopManager shopManager;
 
     private static final Random RANDOM = new Random();
 

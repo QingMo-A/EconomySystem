@@ -9,12 +9,16 @@ import com.mo.economy_system.screen.components.AnimatedButton;
 import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.utils.Util_Message;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +41,7 @@ public class Screen_Shop extends EconomySystem_Screen {
     }
 
     public void updateShopItems(List<ShopItem> items) {
+        // System.out.println("更新商店数据: " + items.size() + " 个");
         this.items = items;
         this.itemsSnapshot = new ArrayList<>(items);
         this.init(); // 每次更新商店物品后重新初始化界面
@@ -189,8 +194,10 @@ public class Screen_Shop extends EconomySystem_Screen {
                         Component.translatable(Util_MessageKeys.SHOP_LOADING_SHOP_DATA_TEXT_KEY),
                         noItem
                 );
+
             });
             return;
+
         }
 
         int y = startY;
@@ -269,6 +276,9 @@ public class Screen_Shop extends EconomySystem_Screen {
         int y = startY;
 
         for (int i = startIndex; i < endIndex; i++) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player == null) return;
+
             ShopItem item = items.get(i);
 
             int priceDifference = item.getCurrentPrice() - item.getLastPrice();
@@ -281,14 +291,20 @@ public class Screen_Shop extends EconomySystem_Screen {
             }
 
             if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
-                List<Component> tooltip = new ArrayList<>();
-                tooltip.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CHANGE_PRICE_KEY, priceChangeText));
-                tooltip.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_BASIC_PRICE_KEY, item.getBasePrice()));
-                tooltip.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CURRENT_PRICE_KEY, item.getCurrentPrice()));
-                tooltip.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_FLUCTUATION_FACTOR_KEY, item.getFluctuationFactor()));
-                tooltip.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_ID_KEY, item.getItemId()));
+                List<Component> tooltipLines = item.getItemStack().getTooltipLines(
+                        player,
+                        Minecraft.getInstance().options.advancedItemTooltips ?
+                                TooltipFlag.ADVANCED : TooltipFlag.NORMAL
+                );
+                tooltipLines.add(Component.literal("-=-=-=-=-=-").withStyle(ChatFormatting.DARK_GRAY));
 
-                guiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), mouseX, mouseY);
+                tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CHANGE_PRICE_KEY, priceChangeText));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_BASIC_PRICE_KEY, item.getBasePrice()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CURRENT_PRICE_KEY, item.getCurrentPrice()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_FLUCTUATION_FACTOR_KEY, item.getFluctuationFactor()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_ID_KEY, item.getItemId()));
+
+                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
             }
 
             y += THING_SPACING;

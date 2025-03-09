@@ -2,6 +2,7 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
+import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -40,6 +41,7 @@ public class Packet_ShopDataResponse {
     public static void handle(Packet_ShopDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
+            // Util_Message.sendDebugMessage("收到来自服务器的商品数据: " + msg.shopItems.size() + " 个");
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen instanceof Screen_Shop screenShop) {
                 screenShop.updateShopItems(msg.shopItems);

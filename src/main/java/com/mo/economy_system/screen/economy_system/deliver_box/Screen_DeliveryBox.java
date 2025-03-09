@@ -6,13 +6,21 @@ import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxCl
 import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxDataRequest;
 import com.mo.economy_system.screen.EconomySystem_Screen;
 import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.screen.components.AnimatedButton;
+import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
+import com.mo.economy_system.screen.components.ItemIconAnimation;
+import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.screen.economy_system.shop.Screen_BuyItem;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,19 +33,30 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
     private List<DeliveryItem> filteredItems = new ArrayList<>(); // 根据搜索过滤后的物品列表
     private List<DeliveryItem> itemsSnapshot = new ArrayList<>();
 
-    private EditBox searchBox; // 搜索框
+    private TextAnimation pageAnimation;
+    private TextAnimation noItem;
+
+    private AnimatedHighLevelTextField searchBox; // 搜索框
 
     private UUID playerUUID;
     private String playerName;
 
     public Screen_DeliveryBox() {
-        super(Component.literal("test"));
+        super(Component.translatable(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxDataRequest());
     }
 
     @Override
     protected void init() {
         super.init();
+
+        this.currentPage = 0;
+
+        initPart();
+    }
+
+    @Override
+    protected void initPart() {
         initPosition();
 
         if (this.minecraft != null && this.minecraft.player != null) {
@@ -48,23 +67,73 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
         // 清除现有按钮
         this.clearWidgets();
 
-        // 添加搜索框
-        this.searchBox = new EditBox(this.font, Math.max((this.width / 2) - 300, 60), 20, 200, 20, Component.translatable("search.market"));
-        this.addRenderableWidget(searchBox);
+        if (flag == 1) {
 
-        // 设置搜索框的键盘监听器
-        this.searchBox.setFocused(false); // 默认不聚焦
-        this.searchBox.setMaxLength(50); // 限制输入长度
-        this.searchBox.setHint(Component.translatable(Util_MessageKeys.MARKET_HINT_TEXT_KEY)); // 提示文本
+            // 添加搜索框
+            this.searchBox = new AnimatedHighLevelTextField(
+                    this.font,
+                    Math.max((this.width / 2) - 300, 60),
+                    -20,
+                    200,
+                    20,
+                    1000,
+                    Component.translatable("search.delivery_box")
+            );
+            this.addRenderableWidget(searchBox);
+
+            // 设置搜索框的键盘监听器
+            this.searchBox.setFocused(false); // 默认不聚焦
+            this.searchBox.setMaxLength(50); // 限制输入长度
+            this.searchBox.setHint(Component.translatable(Util_MessageKeys.SHOP_HINT_TEXT_KEY)); // 提示文本
+            this.searchBox.setResponder(text -> applySearch());
+            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
+
+            // 添加动态翻页按钮
+            addPageAnimatedButtons();
+
+        } else if (flag >= 2) {
+
+            // 添加搜索框
+            this.searchBox = new AnimatedHighLevelTextField(
+                    this.font,
+                    Math.max((this.width / 2) - 300, 60),
+                    20,
+                    200,
+                    20,
+                    1000,
+                    Component.translatable("search.delivery_box")
+            );
+            this.addRenderableWidget(searchBox);
+
+            // 设置搜索框的键盘监听器
+            this.searchBox.setFocused(false); // 默认不聚焦
+            this.searchBox.setMaxLength(50); // 限制输入长度
+            this.searchBox.setHint(Component.translatable(Util_MessageKeys.SHOP_HINT_TEXT_KEY)); // 提示文本
+            this.searchBox.setResponder(text -> applySearch());
+            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
+
+            // 添加静态翻页按钮
+            addPageButtons();
+
+        }
 
         // 动态添加商品购买按钮
         addItemButtons();
 
-        // 添加翻页按钮
-        addPageButtons();
+        flag ++;
 
         // 初始化渲染缓存（在所有按钮添加后调用）
         initializeRenderCache();
+
+        super.initPart();
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+
+        this.flag = 1;
+
+        super.resize(minecraft, width, height);
     }
 
     @Override
@@ -81,10 +150,6 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
             detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
         }
 
-        // 渲染当前页数
-        guiGraphics.drawCenteredString(this.font, (currentPage + 1) + " / " + getTotalPages(),
-                this.width / 2, this.height - 33, 0xFFFFFF);
-
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
@@ -92,14 +157,51 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
     protected void initializeRenderCache() {
         renderCache.clear(); // 清空旧的缓存
 
+        pageAnimation = new TextAnimation(
+                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.height + 33,
+                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.height - 33,
+                0f,
+                1f,
+                1000
+        );
+
+        renderCache.add((guiGraphics) -> {
+            renderAnimatedText(
+                    guiGraphics,
+                    Component.literal((currentPage + 1) + " / " + getTotalPages()),
+                    pageAnimation
+            );
+        });
+
         if (filteredItems.isEmpty()) {
+
+            // 动态计算文字居中的位置
+            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY));
+            int xPosition = (this.width - textWidth) / 2;
+
+            noItem = new TextAnimation(
+                    xPosition,
+                    this.height / 2 - 10,
+                    xPosition,
+                    this.height / 2 - 10,
+                    0f,
+                    1f,
+                    2000
+            );
+
             // 如果没有商品，添加无商品提示的渲染任务
             renderCache.add((guiGraphics) -> {
-                int textWidth = this.font.width(Component.literal("你的收货箱是空的~"));
-                int xPosition = (this.width - textWidth) / 2;
-                guiGraphics.drawString(this.font, Component.literal("你的收货箱是空的~"), xPosition, this.height / 2 - 10, 0xFFFFFF, false);
+
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.translatable(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY),
+                        noItem
+                );
             });
             return;
+
         }
 
         int y = startY;
@@ -110,18 +212,62 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
 
             final int currentY = y; // 使用最终变量供 Lambda 表达式使用
 
-            // 添加图标渲染任务
-            renderCache.add((guiGraphics) -> guiGraphics.renderItem(itemStack, startX, currentY));
+            ItemIconAnimation icon;
+            TextAnimation name;
+            TextAnimation source;
 
-            // 添加物品名称渲染任务
-            renderCache.add((guiGraphics) -> guiGraphics.drawString(this.font,
-                    Component.translatable(Util_MessageKeys.MARKET_ITEM_NAME_AND_COUNT_KEY,
-                            itemStack.getHoverName().getString(),
-                            itemStack.getCount()), startX + 20, currentY + 5, 0xFFFFFF, false));
+            icon = new ItemIconAnimation(
+                    startX,
+                    currentY,
+                    startX,
+                    currentY,
+                    0f,
+                    1f,
+                    0.8f,
+                    1f,
+                    1000
+            );
 
-            // 添加价格渲染任务
-            renderCache.add((guiGraphics) -> guiGraphics.drawString(this.font,
-                    Component.literal("来源: " + item.getSource()), startX, currentY + 18, 0xAAAAAA, false));
+            name = new TextAnimation(
+                    startX + 20,
+                    currentY + 5,
+                    startX + 20,
+                    currentY + 5,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            source = new TextAnimation(
+                    startX,
+                    currentY + 18,
+                    startX,
+                    currentY + 18,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            // 渲染物品图标, 价格与描述
+            renderCache.add((guiGraphics) -> {
+                renderAnimatedItem(
+                        guiGraphics,
+                        itemStack,
+                        icon
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.translatable(Util_MessageKeys.DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY, itemStack.getHoverName().getString(), itemStack.getCount()),
+                        name,
+                        0xFFFFFF
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.translatable(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, item.getSource()),
+                        source,
+                        0xAAAAAA
+                );
+            });
 
             addItemButtons();
 
@@ -137,14 +283,24 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
         int y = startY;
 
         for (int i = startIndex; i < endIndex; i++) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player == null) return;
+
             DeliveryItem item = filteredItems.get(i);
 
             if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
-                List<Component> tooltip = new ArrayList<>();
-                tooltip.add(Component.literal("数据ID: " + item.getDataID()));
-                tooltip.add(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY, item.getItemID()));
+                List<Component> tooltipLines = item.getItemStack().getTooltipLines(
+                        player,
+                        Minecraft.getInstance().options.advancedItemTooltips ?
+                                TooltipFlag.ADVANCED : TooltipFlag.NORMAL
+                );
+                tooltipLines.add(Component.literal("-=-=-=-=-=-").withStyle(ChatFormatting.DARK_GRAY));
 
-                guiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), mouseX, mouseY);
+                tooltipLines.add(Component.translatable(Util_MessageKeys.DELIVERY_BOX_DATA_ID_KEY, item.getDataID()));
+                    tooltipLines.add(Component.translatable(Util_MessageKeys.DELIVERY_BOX_ITEM_ID_KEY, item.getItemID()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, item.getSource()));
+
+                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
             }
 
             y += THING_SPACING;
@@ -159,18 +315,66 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
         for (int i = startIndex; i < endIndex; i++) {
             DeliveryItem item = filteredItems.get(i);
 
-            // 添加 购买 按钮
             this.addRenderableWidget(
-                    Button.builder(Component.literal("领取"), button -> {
+                    new AnimatedButton(
+                            this.width + 60,
+                            y,
+                            this.width - startX - 60,
+                            y,
+                            60, 20,
+                            Component.translatable(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY),
+                            1000,
+                            button -> {
                                 EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxClaimItem(item.getDataID()));
                             })
-                            .pos( this.width - startX - 60, y)
-                            .size(60, 20)
-                            .build()
             );
 
             y += THING_SPACING;
         }
+    }
+
+    // 添加初始化动态分页按钮
+    @Override
+    protected void addPageAnimatedButtons() {
+        int buttonY = this.height - 40;
+
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        startX,
+                        this.height,
+                        startX,
+                        buttonY,
+                        PAGE_BUTTON_WIDTH,
+                        PAGE_BUTTON_HEIGHT,
+                        Component.literal("<"),
+                        1000,
+                        button -> {
+                            if (currentPage > 0) {
+                                currentPage--;
+                                this.initPart(); // 刷新页面
+                            }
+                        }
+                )
+        );
+
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        this.width - startX - PAGE_BUTTON_WIDTH,
+                        this.height,
+                        this.width - startX - PAGE_BUTTON_WIDTH,
+                        buttonY,
+                        PAGE_BUTTON_WIDTH,
+                        PAGE_BUTTON_HEIGHT,
+                        Component.literal(">"),
+                        1000,
+                        button -> {
+                            if (currentPage < getTotalPages() - 1) {
+                                currentPage++;
+                                this.initPart(); // 刷新页面
+                            }
+                        }
+                )
+        );
     }
 
     // 添加翻页按钮
@@ -278,7 +482,7 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
     // 判断是否为购买按钮
     private boolean isItemButton(Button button) {
         Component buttonMessage = button.getMessage();
-        return buttonMessage.equals(Component.literal("领取"));
+        return buttonMessage.equals(Component.translatable(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY));
     }
 
     @Override
@@ -290,6 +494,6 @@ public class Screen_DeliveryBox extends EconomySystem_Screen {
         endIndex = Math.min(startIndex + thingsPerPage, filteredItems.size());
 
         startX = Math.max((this.width / 2) - 300, 60);
-        startY = Math.max((this.height - 400) / 4, 40);
+        startY = Math.max((this.height - 450) / 4, 55);
     }
 }

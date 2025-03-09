@@ -17,12 +17,15 @@ import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
@@ -308,18 +311,27 @@ public class Screen_Market extends EconomySystem_Screen {
         int y = startY;
 
         for (int i = startIndex; i < endIndex; i++) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player == null) return;
+
             MarketItem item = filteredItems.get(i);
 
             if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
-                List<Component> tooltip = new ArrayList<>();
-                tooltip.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_NAME_KEY, item.getSellerName()));
-                tooltip.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_UUID_KEY, item.getSellerID()));
-                tooltip.add(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY, item.getTradeID()));
-                tooltip.add(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY, item.getItemID()));
-                tooltip.add(Component.literal(""));
-                tooltip.add(Component.literal(String.valueOf(item.getListingTime())));
+                List<Component> tooltipLines = item.getItemStack().getTooltipLines(
+                        player,
+                        Minecraft.getInstance().options.advancedItemTooltips ?
+                                TooltipFlag.ADVANCED : TooltipFlag.NORMAL
+                );
+                tooltipLines.add(Component.literal("-=-=-=-=-=-").withStyle(ChatFormatting.DARK_GRAY));
 
-                guiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), mouseX, mouseY);
+                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_NAME_KEY, item.getSellerName()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_UUID_KEY, item.getSellerID()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY, item.getTradeID()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY, item.getItemID()));
+                tooltipLines.add(Component.literal(""));
+                tooltipLines.add(Component.literal(String.valueOf(item.getListingTime())));
+
+                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
             }
 
             y += THING_SPACING;
@@ -545,7 +557,7 @@ public class Screen_Market extends EconomySystem_Screen {
         UUID playerUUID = this.minecraft.player.getUUID();
 
         for (int i = startIndex; i < endIndex; i++) {
-            System.out.println(i);
+
             MarketItem item = filteredItems.get(i);
 
             // 添加购买或下架按钮

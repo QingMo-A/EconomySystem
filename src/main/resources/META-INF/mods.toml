@@ -17,7 +17,7 @@ license="${mod_license}"
 # The modid of the mod
 modId="economy_system" #mandatory
 # The version number of the mod
-version="1.2.01" #mandatory
+version="1.2.02" #mandatory
 # A display name for the mod
 displayName="Economy System" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification https://docs.minecraftforge.net/en/latest/misc/updatechecker/

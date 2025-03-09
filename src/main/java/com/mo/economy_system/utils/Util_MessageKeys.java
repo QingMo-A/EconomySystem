@@ -122,6 +122,15 @@ public class Util_MessageKeys {
     public static final String MARKET_UNMATCHED_SELLER_MESSAGE_KEY = "message.market.unmatched_seller";
     public static final String MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY = "message.market.item_has_been_returned";
 
+    public static final String DELIVERY_BOX_TITLE_KEY = "screen.delivery_box.title";
+    public static final String DELIVERY_BOX_HINT_TEXT_KEY = "text.delivery_box.hint";
+    public static final String DELIVERY_BOX_NO_ITEMS_TEXT_KEY = "text.delivery_box.no_items";
+    public static final String DELIVERY_BOX_SOURCE_KEY = "screen.delivery_box.item.source";
+    public static final String DELIVERY_BOX_DATA_ID_KEY = "screen.delivery_box.item.data_id";
+    public static final String DELIVERY_BOX_ITEM_ID_KEY = "screen.delivery_box.item.item_id";
+    public static final String DELIVERY_BOX_CLAIM_BUTTON_KEY = "button.delivery_box.claim";
+    public static final String DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY = "screen.delivery_box.item.name_and_count";
+
     public static final String RED_PACKET_INSUFFICIENT_BALANCE = "message.red_packet.insufficient_balance";
     public static final String RED_PACKET_ALREADY_ACTIVE = "message.red_packet.already_active";
     public static final String RED_PACKET_CREATED_SUCCESSFULLY = "message.red_packet.created_successfully";
@@ -138,6 +147,7 @@ public class Util_MessageKeys {
     public static final String RED_PACKET_CLAIM_BROADCAST = "message.red_packet.claim_broadcast";
 
     public static final String TERRITORY_TITLE_KEY = "screen.territory.title";
+    public static final String TERRITORY_HINT_TEXT_KEY = "text.territory.hint";
     public static final String TERRITORY_NO_TERRITORIES_TEXT_KEY = "text.territory.no_territories";
     public static final String TERRITORY_TERRITORY_NAME_TEXT_KEY = "text.territory.territory_name";
     public static final String TERRITORY_TERRITORY_AREA_TEXT_KEY = "text.territory.territory_area";

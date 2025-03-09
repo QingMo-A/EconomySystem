@@ -228,7 +228,7 @@ public class Screen_CreateSalesOrder extends EconomySystem_Screen {
         int textWidth = this.font.width(Component.translatable(Util_MessageKeys.LIST_PRICE_TEXT_KEY));
 
         price = new TextAnimation(
-                -textWidth,
+                this.width / 2 - 78 - textWidth,
                 this.height / 2 - 15,
                 this.width / 2 - 78 - textWidth,
                 this.height / 2 - 15,

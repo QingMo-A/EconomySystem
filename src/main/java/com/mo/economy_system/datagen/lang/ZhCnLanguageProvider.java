@@ -109,7 +109,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.MARKET_ITEM_ID_KEY, "物品ID: %s");
         add(Util_MessageKeys.MARKET_ITEM_NAME_AND_COUNT_KEY, "%s x %s");
         add(Util_MessageKeys.MARKET_ITEM_PRICE_KEY, "%s 枚梦鱼币");
-        add(Util_MessageKeys.MARKET_NO_ITEMS_TEXT_KEY, "还没有人发布订单哦~");
+        add(Util_MessageKeys.MARKET_NO_ITEMS_TEXT_KEY, "还没有人发布订单喵~");
         add(Util_MessageKeys.MARKET_LIST_BUTTON_KEY, "上架");
         add(Util_MessageKeys.MARKET_REQUEST_BUTTON_KEY, "求购");
         add(Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_0_BUTTON_KEY, "无显示类型");
@@ -163,6 +163,16 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.CLAIM_NOT_OWNER_KEY, "你不能领取不属于你的物品");
         add(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, "你的订购单 %s x %s 被 %s 交付");
 
+        // Screen_DeliveryBox | 收货箱
+        add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "收货箱");
+        add(Util_MessageKeys.DELIVERY_BOX_HINT_TEXT_KEY, "输入商品的任意信息");
+        add(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY, "你的收货箱是空的喵~");
+        add(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, "来源: %s");
+        add(Util_MessageKeys.DELIVERY_BOX_DATA_ID_KEY, "数据ID: %s");
+        add(Util_MessageKeys.DELIVERY_BOX_ITEM_ID_KEY, "物品ID: %s");
+        add(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY, "领取");
+        add(Util_MessageKeys.DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY, "%s x %s");
+
         // RedPacket Command | 红包指令
         add(Util_MessageKeys.RED_PACKET_INSUFFICIENT_BALANCE, "§c你没有足够的梦鱼币创建红包");
         add(Util_MessageKeys.RED_PACKET_ALREADY_ACTIVE, "§c你已经有一个活动的红包");
@@ -181,7 +191,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
 
         // Screen_Territory | 我的领地
         add(Util_MessageKeys.TERRITORY_TITLE_KEY, "我的领地");
-        add(Util_MessageKeys.TERRITORY_NO_TERRITORIES_TEXT_KEY, "你还没有自己的领地哦~");
+        add(Util_MessageKeys.TERRITORY_HINT_TEXT_KEY, "输入领地的任意信息");
+        add(Util_MessageKeys.TERRITORY_NO_TERRITORIES_TEXT_KEY, "你还没有自己的领地喵~");
         add(Util_MessageKeys.TERRITORY_TERRITORY_NAME_TEXT_KEY, "领地名称: %s");
         add(Util_MessageKeys.TERRITORY_TERRITORY_AREA_TEXT_KEY, "领地范围: %s");
         add(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY, "传送");
@@ -234,6 +245,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.INVITE_DECLINE_NO_PENDING, "没有待拒绝的领地邀请！");
         add(Util_MessageKeys.INVITE_DECLINED, "已拒绝邀请。");
         add(Util_MessageKeys.INVITE_BACK_BUTTON, "返回");
+        add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "§a[同意]");
+        add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "§c[拒绝]");
 
         // Claim Territory | 圈地
         add(Util_MessageKeys.CLAIM_WAND_SELECT_POINTS, "§c请先用圈地杖选定两个点！");

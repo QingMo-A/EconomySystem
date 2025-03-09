@@ -7,6 +7,10 @@ import com.mo.economy_system.network.packets.territory_system.Packet_RemovePlaye
 import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
 import com.mo.economy_system.core.territory_system.PlayerInfo;
 import com.mo.economy_system.core.territory_system.Territory;
+import com.mo.economy_system.screen.EconomySystem_Screen;
+import com.mo.economy_system.screen.components.AnimatedButton;
+import com.mo.economy_system.screen.components.ItemIconAnimation;
+import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mo.economy_system.utils.Util_Skull;
 import net.minecraft.client.Minecraft;
@@ -20,27 +24,43 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class Screen_ManageTerritory extends Screen {
+public class Screen_ManageTerritory extends EconomySystem_Screen {
     private final Territory territory;
-
-    private int currentPage = 0; // 当前页码
-    private static final int BOTTOM_MARGIN = 30; // 距离底部的最小空白高度
-    private int playersPerPage; // 动态计算的每页商品数
-    private final int GAP = 35; // 动态调整的垂直间距
 
     private UUID playerUUID;
     private List<PlayerInfo> authorizedPlayers;
 
-    private List<RunnableWithGraphics> renderCache = new ArrayList<>();
+    private TextAnimation noMember;
 
     public Screen_ManageTerritory(Territory territory) {
         super(Component.literal("管理领地: " + territory.getName()));
         this.territory = territory;
+        // 显示有权限玩家列表
+        authorizedPlayers = territory.getAuthorizedPlayers().stream().toList();
     }
 
     @Override
     protected void init() {
+        super.init();
+
+        this.currentPage = 0;
+
+        initPart();
+    }
+
+    @Override
+    protected void initPart() {
+        initPosition();
+
         this.clearWidgets();
+
+        if (flag == 1) {
+
+        } else if (flag >= 2) {
+
+        }
+
+        flag ++;
 
         if (this.minecraft != null && this.minecraft.player != null) {
             this.playerUUID = this.minecraft.player.getUUID();
@@ -48,6 +68,16 @@ public class Screen_ManageTerritory extends Screen {
 
         // 初始化渲染缓存（在所有按钮添加后调用）
         initializeRenderCache();
+
+        super.initPart();
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+
+        this.flag = 1;
+
+        super.resize(minecraft, width, height);
     }
 
     @Override
@@ -62,138 +92,249 @@ public class Screen_ManageTerritory extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
-    private void initializeRenderCache() {
+    @Override
+    protected void initializeRenderCache() {
         renderCache.clear(); // 清空旧的缓存
-
-        // 动态计算每页可显示的商品数和间距
-        int availableHeight = this.height - 100; // 减去顶部和底部的空白区域
-        playersPerPage = Math.max(1, availableHeight / GAP); // 至少显示 1 件商品
-
-        int startX = Math.max((this.width / 2) - 450, 60);
-        int startY = Math.max((this.height - 400) / 4, 40);
 
         int y = startY;
 
-        // 显示领地 ID
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_COPY_ID), button -> {
+        addActionButton
+                (
+                        this.width + 100,
+                        startY,
+                        this.width - startX - 120,
+                        startY,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_COPY_ID,
+                        1000,
+                        button -> {
                             GLFW.glfwSetClipboardString(Minecraft.getInstance().getWindow().getWindow(),
                                     territory.getTerritoryID().toString());
                             this.minecraft.player.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_COPY_SUCCESS));
-                        }).pos(this.width - (this.width / 4) - 60, startY)
-                        .size(120, 20)
-                        .build()
-        );
+                        }
+                );
 
-        // 更改领地范围
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_RESIZE_TERRITORY), button -> {
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 30,
+                        this.width - startX - 120,
+                        startY + 30,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_RESIZE_TERRITORY,
+                        1000,
+                        button -> {
                             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ModifyMode(territory.getTerritoryID()));
                             this.minecraft.setScreen(null);
-                        }).pos(this.width - (this.width / 4) - 60, startY + 30)
-                        .size(120, 20)
-                        .build()
-        );
+                        }
+                );
 
-        // 邀请玩家
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_INVITE_PLAYER), button -> {
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 60,
+                        this.width - startX - 120,
+                        startY + 60,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_INVITE_PLAYER,
+                        1000,
+                        button -> {
                             Minecraft.getInstance().setScreen(new Screen_InvitePlayer(territory));
-                        }).pos(this.width - (this.width / 4) - 60, startY + 60)
-                        .size(120, 20)
-                        .build()
-        );
+                        }
+                );
 
-        // 领地内Buff
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_BUFF), button -> {
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 90,
+                        this.width - startX - 120,
+                        startY + 90,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_BUFF,
+                        1000,
+                        button -> {
 
-                        }).pos(this.width - (this.width / 4) - 60, startY + 90)
-                        .size(120, 20)
-                        .build()
-        );
+                        }
+                );
 
-        // 领地权限
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_PERMISSIONS), button -> {
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 120,
+                        this.width - startX - 120,
+                        startY + 120,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_PERMISSIONS,
+                        1000,
+                        button -> {
 
-                        }).pos(this.width - (this.width / 4) - 60, startY + 120)
-                        .size(120, 20)
-                        .build()
-        );
-        // 领地转让
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_TRANSFER_OWNERSHIP), button -> {
+                        }
+                );
 
-                        }).pos(this.width - (this.width / 4) - 60, startY + 150)
-                        .size(120, 20)
-                        .build()
-        );
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 150,
+                        this.width - startX - 120,
+                        startY + 150,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_TRANSFER_OWNERSHIP,
+                        1000,
+                        button -> {
 
-        // 删除领地
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY), button -> {
+                        }
+                );
+
+        addActionButton
+                (
+                        this.width + 100,
+                        startY + 180,
+                        this.width - startX - 120,
+                        startY + 180,
+                        120,
+                        20,
+                        Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY,
+                        1000,
+                        button -> {
                             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveTerritory(territory.getTerritoryID()));
                             this.minecraft.setScreen(null); // 关闭界面
-                        }).pos(this.width - (this.width / 4) - 60, startY + 180)
-                        .size(120, 20)
-                        .build()
-        );
-
-        // 显示有权限玩家列表
-        authorizedPlayers = territory.getAuthorizedPlayers().stream().toList();
+                        }
+                );
 
         if (authorizedPlayers.isEmpty()) {
+
+            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NO_AUTHORIZED_PLAYER_KEY));
+            int xPosition = (this.width / 4) - (textWidth / 2);
+
+            noMember = new TextAnimation(
+                    xPosition,
+                    startY,
+                    xPosition,
+                    startY,
+                    0f,
+                    1f,
+                    2000
+            );
+
             renderCache.add((guiGraphics) -> {
-                int textWidth = this.font.width(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NO_AUTHORIZED_PLAYER_KEY));
-                int xPosition = (this.width / 4) - (textWidth / 2);
-                guiGraphics.drawString(this.font, Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NO_AUTHORIZED_PLAYER_KEY), xPosition, startY, 0xFFFFFF, false);
+
+
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NO_AUTHORIZED_PLAYER_KEY),
+                        noMember
+                );
             });
             return;
         }
-
-        int startIndex = currentPage * playersPerPage;
-        int endIndex = Math.min(startIndex + playersPerPage, authorizedPlayers.size());
 
         for (int i = startIndex; i < endIndex; i++) {
             PlayerInfo playerInfo = authorizedPlayers.get(i);
 
             final int currentY = y; // 使用最终变量供 Lambda 表达式使用
 
-            // 添加图标渲染任务
-            renderCache.add((guiGraphics) -> guiGraphics.renderItem(Util_Skull.createPlayerHead(playerUUID, playerInfo.getName()), startX, currentY));
+            ItemIconAnimation icon;
+            TextAnimation name;
+            TextAnimation uuid;
 
-            // 添加物品名称渲染任务
-            renderCache.add((guiGraphics) -> guiGraphics.drawString(this.font, playerInfo.getName(), startX + 20, currentY + 5, 0xFFFFFF, false));
-            renderCache.add((guiGraphics) -> guiGraphics.drawString(this.font, String.valueOf(playerInfo.getUuid()), startX, currentY + 18, 0xAAAAAA, false));
+            icon = new ItemIconAnimation(
+                    startX,
+                    currentY,
+                    startX,
+                    currentY,
+                    0f,
+                    1f,
+                    0.8f,
+                    1f,
+                    1000
+            );
+
+            name = new TextAnimation(
+                    startX + 20,
+                    currentY + 5,
+                    startX + 20,
+                    currentY + 5,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            uuid = new TextAnimation(
+                    startX,
+                    currentY + 18,
+                    startX,
+                    currentY + 18,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            // 渲染物品图标, 价格与描述
+            renderCache.add((guiGraphics) -> {
+                renderAnimatedItem(
+                        guiGraphics,
+                        Util_Skull.createPlayerHead(playerUUID, playerInfo.getName()),
+                        icon
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.literal(playerInfo.getName()),
+                        name,
+                        0xFFFFFF
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.literal(playerInfo.getUuid().toString()),
+                        uuid,
+                        0xAAAAAA
+                );
+            });
 
             addKickButton(playerInfo.getUuid(), (this.width / 2) - startX, currentY);
 
-            y += GAP;
+            y += THING_SPACING;
         }
     }
 
     private void addKickButton(UUID playerUUID, int buttonX, int buttonY) {
         this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_KICK_PLAYER), button -> {
+                new AnimatedButton(
+                        -60,
+                        buttonY,
+                        buttonX,
+                        buttonY,
+                        60,
+                        20,
+                        Component.translatable(Util_MessageKeys.TERRITORY_MANAGEMENT_KICK_PLAYER),
+                        1000,
+                        button -> {
                             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemovePlayer(territory.getTerritoryID(), playerUUID));
-                            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
                             this.minecraft.setScreen(new Screen_Territory());
-                        })
-                        .pos(buttonX, buttonY)
-                        .size(60, 20)
-                        .build()
+                        }
+                )
         );
     }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false; // 打开界面时不暂停游戏
-    }
-
-    @FunctionalInterface
-    private interface RunnableWithGraphics {
-        void run(GuiGraphics guiGraphics);
+    private void addActionButton(int startX, int startY, int targetX, int targetY, int width, int height, String key, int duration, Button.OnPress action) {
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        startX,
+                        startY,
+                        targetX,
+                        targetY,
+                        width,
+                        height,
+                        Component.translatable(key),
+                        duration,
+                        action
+                )
+        );
     }
 
     @Override
@@ -203,5 +344,17 @@ public class Screen_ManageTerritory extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    protected void initPosition() {
+        TOP_MARGIN = this.height - 100;
+        thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
+
+        startIndex = currentPage * thingsPerPage;
+        endIndex = Math.min(startIndex + thingsPerPage, authorizedPlayers.size());
+
+        startX = Math.max((this.width / 2) - 450, 60);
+        startY = Math.max((this.height - 450) / 4, 55);
     }
 }

@@ -230,7 +230,7 @@ public class Screen_BuyItem extends EconomySystem_Screen {
         int textWidth = this.font.width(Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY));
 
         count = new TextAnimation(
-                -textWidth,
+                this.width / 2 - 78 - textWidth,
                 this.height / 2 - 15,
                 this.width / 2 - 78 - textWidth,
                 this.height / 2 - 15,

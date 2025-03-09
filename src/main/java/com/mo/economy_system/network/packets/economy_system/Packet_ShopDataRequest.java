@@ -2,7 +2,9 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
+import com.mo.economy_system.events.EconomySystem_EventHandler;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -26,8 +28,11 @@ public class Packet_ShopDataRequest {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
+                // Util_Message.sendDebugMessage("收到来自客户端的商店数据请求");
                 // 从 ShopManager 获取商店商品
-                List<ShopItem> shopItems = EconomySystem.SHOP_MANAGER.getItems();
+                List<ShopItem> shopItems = EconomySystem_EventHandler.shopManager.getItems();
+
+                // Util_Message.sendDebugMessage("商店数据: " + shopItems.size() + " 个");
 
                 // 将商品列表发送到客户端
                 EconomySystem_NetworkManager.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new Packet_ShopDataResponse(shopItems));
