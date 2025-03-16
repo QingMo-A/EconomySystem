@@ -1,6 +1,6 @@
 # EconomySystem (经济系统)
 
-> 一个简单的经济系统
+> 为Minecraft开发的一款多功能高级经济系统
 
 ![Version](https://img.shields.io/badge/version-v1.2.03-blue)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
