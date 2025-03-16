@@ -1,7 +1,9 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
+import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
@@ -23,6 +25,7 @@ public class Packet_TerritoryDataRequest {
             // 获取当前玩家
             var player = context.getSender();
             if (player != null) {
+
                 var ownedTerritories = TerritoryManager.getTerritoriesByOwner(player.getUUID());
                 var authorizedTerritories = TerritoryManager.getAuthorizedTerritories(player.getUUID());
 

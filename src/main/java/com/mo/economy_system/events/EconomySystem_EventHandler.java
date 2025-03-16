@@ -43,7 +43,7 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID)
 public class EconomySystem_EventHandler {
 
-    public static ShopManager shopManager;
+    public static ShopManager shopManager = EconomySystem.SHOP_MANAGER;
 
     private static final Random RANDOM = new Random();
 
@@ -64,8 +64,7 @@ public class EconomySystem_EventHandler {
 
         // 初始化 经济系统
         EconomySavedData.getInstance(overworld);
-        // 初始化 商店系统
-        shopManager = new ShopManager();
+
         // 初始化 市场系统
         MarketSavedData marketData = MarketSavedData.getInstance(overworld);
         MarketManager.setMarketItems(marketData.getMarketItems()); // 将数据加载到 MarketManager

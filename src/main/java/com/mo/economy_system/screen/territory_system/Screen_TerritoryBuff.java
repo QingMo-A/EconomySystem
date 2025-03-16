@@ -1,0 +1,431 @@
+package com.mo.economy_system.screen.territory_system;
+
+import com.mo.economy_system.core.territory_system.Territory;
+import com.mo.economy_system.core.territory_system.TerritoryBuff;
+import com.mo.economy_system.core.territory_system.TerritoryBuffConfig;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.territory_system.Packet_SingleTerritoryDataRequest;
+import com.mo.economy_system.network.packets.territory_system.Packet_UnlockTerritoryBuff;
+import com.mo.economy_system.network.packets.territory_system.Packet_UpgradeTerritoryBuff;
+import com.mo.economy_system.screen.EconomySystem_Screen;
+import com.mo.economy_system.screen.components.AnimatedButton;
+import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
+import com.mo.economy_system.screen.components.ItemIconAnimation;
+import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.utils.Util_Message;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public class Screen_TerritoryBuff extends EconomySystem_Screen {
+    private Territory territory;
+    private List<TerritoryBuff> buffs;
+    private List<TerritoryBuff> buffsSnapshot;
+
+
+    private TextAnimation pageAnimation;
+    private TextAnimation noBuff;
+
+    private AnimatedHighLevelTextField searchBox; // 搜索框
+
+    private UUID playerUUID;
+    private String playerName;
+    private LocalPlayer player;
+
+    protected Screen_TerritoryBuff(Territory territory) {
+        super(Component.literal("领地Buff"));
+
+        this.territory = territory;
+        this.buffs = territory.getTerritoryBuffs();
+        this.buffsSnapshot = territory.getTerritoryBuffs();
+
+        for (TerritoryBuff buff : buffs) {
+            Util_Message.sendDebugMessage(buff.getDisplayText());
+        }
+    }
+
+    public void updateTerritory(Territory territory) {
+        this.territory = territory;
+
+        this.buffs = territory.getTerritoryBuffs();
+        this.buffsSnapshot = territory.getTerritoryBuffs();
+
+        init();
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+        this.currentPage = 0;
+
+        initPart();
+
+        if (this.minecraft != null && this.minecraft.player != null) {
+            this.playerUUID = this.minecraft.player.getUUID();
+            this.playerName = this.minecraft.player.getName().getString();
+            this.player = this.minecraft.player;
+        }
+    }
+
+    @Override
+    protected void initPart() {
+
+        initPosition();
+
+        clearWidgets();
+
+        if (flag == 1) {
+
+            // 添加动态翻页按钮
+            addPageAnimatedButtons();
+
+        } else if (flag >= 2) {
+
+            // 添加静态翻页按钮
+            addPageButtons();
+
+        }
+
+        flag ++;
+
+        initializeRenderCache();
+
+        super.initPart();
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+
+        this.flag = 1;
+
+        super.resize(minecraft, width, height);
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        this.renderBackground(guiGraphics);
+
+        // 执行渲染缓存中的任务
+        for (RunnableWithGraphics task : renderCache) {
+            task.run(guiGraphics);
+        }
+
+        // 进行鼠标悬停检测并显示 Tooltip
+        if (!buffs.isEmpty()) {
+            detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
+        }
+
+        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    }
+
+    @Override
+    protected void initializeRenderCache() {
+        renderCache.clear();
+
+        pageAnimation = new TextAnimation(
+                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.height + 33,
+                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.height - 33,
+                0f,
+                1f,
+                1000
+        );
+
+        renderCache.add((guiGraphics) -> {
+            renderAnimatedText(
+                    guiGraphics,
+                    Component.literal((currentPage + 1) + " / " + getTotalPages()),
+                    pageAnimation
+            );
+        });
+
+        if (buffs.isEmpty()) {
+
+            Util_Message.sendDebugMessage("Buff为空");
+            return;
+        }
+
+        int y = startY;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            TerritoryBuff buff = buffs.get(i);
+
+            final int currentY = y;
+
+            ItemIconAnimation icon;
+            TextAnimation name;
+            TextAnimation desc;
+
+            icon = new ItemIconAnimation(
+                    startX,
+                    currentY,
+                    startX,
+                    currentY,
+                    0f,
+                    1f,
+                    0.8f,
+                    1f,
+                    1000
+            );
+
+            name = new TextAnimation(
+                    startX + 20,
+                    currentY + 5,
+                    startX + 20,
+                    currentY + 5,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            desc = new TextAnimation(
+                    startX,
+                    currentY + 18,
+                    startX,
+                    currentY + 18,
+                    0f,
+                    1f,
+                    1000
+            );
+
+            // 渲染物品图标, 价格与描述
+            renderCache.add((guiGraphics) -> {
+                renderAnimatedItem(
+                        guiGraphics,
+                        Items.GLASS_BOTTLE.getDefaultInstance(),
+                        icon
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.literal(buff.getDisplayText()),
+                        name,
+                        0xFFFFFF
+                );
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.literal(buff.isUnlocked() ? "已解锁" : "未解锁"),
+                        desc,
+                        0xAAAAAA
+                );
+            });
+
+            addActionButton(buff, this.width - startX, currentY, playerUUID);
+
+            y += THING_SPACING; // 调整下一件商品的位置
+        }
+
+        super.initializeRenderCache();
+    }
+
+    @Override
+    protected void detectMouseHoverAndRenderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        initPosition();
+        int y = startY;
+
+        for (int i = startIndex; i < endIndex; i++) {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player == null) return;
+
+            TerritoryBuff buff = buffs.get(i);
+
+            if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
+                List<Component> tooltipLines = new ArrayList<>();
+
+                tooltipLines.add(Component.literal("BuffID: " + buff.getId()));
+                tooltipLines.add(Component.literal("名称: " + buff.getDisplayText()));
+                tooltipLines.add(Component.literal("当前等级: " + buff.getLevel()));
+                tooltipLines.add(Component.literal("最大等级: " + buff.getMaxLevel()));
+                tooltipLines.add(Component.literal("效果ID: " + buff.getEffectId()));
+                tooltipLines.add(Component.literal("解锁状态: " + buff.isUnlocked()));
+
+                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
+            }
+
+            y += THING_SPACING;
+        }
+    }
+
+    // 添加初始化动态分页按钮
+    @Override
+    protected void addPageAnimatedButtons() {
+        initPosition();
+        int buttonY = this.height - 40;
+
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        startX,
+                        this.height,
+                        startX,
+                        buttonY,
+                        PAGE_BUTTON_WIDTH,
+                        PAGE_BUTTON_HEIGHT,
+                        Component.literal("<"),
+                        1000,
+                        button -> {
+                            if (currentPage > 0) {
+                                currentPage--;
+                                this.initPart(); // 刷新页面
+                            }
+                        }
+                )
+        );
+
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        this.width - startX - PAGE_BUTTON_WIDTH,
+                        this.height,
+                        this.width - startX - PAGE_BUTTON_WIDTH,
+                        buttonY,
+                        PAGE_BUTTON_WIDTH,
+                        PAGE_BUTTON_HEIGHT,
+                        Component.literal(">"),
+                        1000,
+                        button -> {
+                            if (currentPage < getTotalPages() - 1) {
+                                currentPage++;
+                                this.initPart(); // 刷新页面
+                            }
+                        }
+                )
+        );
+    }
+
+    // 添加后续静态分页按钮
+    @Override
+    protected void addPageButtons() {
+        initPosition();
+        int buttonY = this.height - 40;
+
+        // 上一页按钮
+        this.addRenderableWidget(
+                Button.builder(Component.literal("<"), button -> {
+                            if (currentPage > 0) {
+                                currentPage--;
+                                this.initPart(); // 刷新页面
+                            }
+                        })
+                        .pos(startX, buttonY)
+                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
+                        .build()
+        );
+
+        // 下一页按钮
+        this.addRenderableWidget(
+                Button.builder(Component.literal(">"), button -> {
+                            if (currentPage < getTotalPages() - 1) {
+                                currentPage++;
+                                this.initPart(); // 刷新页面
+                            }
+                        })
+                        .pos(this.width - startX - PAGE_BUTTON_WIDTH, buttonY)
+                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
+                        .build()
+        );
+    }
+
+    private void addActionButton(TerritoryBuff buff, int buttonX, int buttonY, UUID playerUUID) {
+        // 如果没解锁
+        if (!(buff.isUnlocked())) {
+            addButton("unlock", buttonX - 60, buttonY, 60, 20,
+                    () -> {
+                        if (canAffordUpgrade(buff, player)) {
+                            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_UnlockTerritoryBuff(territory.getTerritoryID(), buff.getId()));
+                            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
+                        }
+                    });
+        } else {
+            // 如果没满级
+            if (buff.getLevel() < buff.getMaxLevel()) {
+                addButton("up", buttonX - 60, buttonY, 60, 20,
+                        () -> {
+                            if (canAffordUpgrade(buff, player)) {
+                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_UpgradeTerritoryBuff(territory.getTerritoryID(), buff.getId()));
+                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
+                            }
+                        });
+            } else if (buff.getLevel() >= buff.getMaxLevel()) { // 如果满级了
+                addButton("max", buttonX - 60, buttonY, 60, 20,
+                        () -> {
+                            this.player.sendSystemMessage(Component.literal("该增益已满级"));
+                        });
+            }
+        }
+    }
+
+    private void addButton(String translationKey, int posX, int posY, int width, int height, Runnable onClick) {
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        this.width + width,
+                        posY,
+                        posX,
+                        posY,
+                        width,
+                        height,
+                        Component.translatable(translationKey),
+                        1000,
+                        button -> onClick.run()
+                )
+        );
+    }
+
+    // 动态计算总页数
+    private int getTotalPages() {
+        return (int) Math.ceil((double) buffs.size() / thingsPerPage);
+    }
+
+    @Override
+    protected void initPosition(){
+        TOP_MARGIN = this.height - 100;
+        thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
+
+        startIndex = currentPage * thingsPerPage;
+        endIndex = Math.min(startIndex + thingsPerPage, buffs.size());
+
+        startX = Math.max((this.width / 2) - 300, 60);
+        startY = Math.max((this.height - 450) / 4, 55);
+    }
+
+    private boolean canAffordUpgrade(TerritoryBuff buff, LocalPlayer player) {
+        for (TerritoryBuffConfig.BuffUpgradeCost cost : buff.getUpgradeCost()) {
+            // **遍历多种物品**
+            for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemCost : cost.items) {
+                if (!itemCost.item.isEmpty() && !playerHasItem(player, itemCost.item, itemCost.count)) {
+                    player.sendSystemMessage(Component.literal("物品不足!!!"));
+                    return false; // 物品不足
+                }
+            }
+
+            // **检查经验**
+            if (cost.xp > 0 && player.experienceLevel < cost.xp) {
+                player.sendSystemMessage(Component.literal("经验不足!!!"));
+                return false; // 经验值不足
+            }
+        }
+        return true; // 资源充足，可以解锁或升级
+    }
+
+    private boolean playerHasItem(LocalPlayer player, String itemID, int requiredCount) {
+        int count = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            if (ForgeRegistries.ITEMS.getKey(stack.getItem()).toString().equals(itemID)) {
+                count += stack.getCount();
+                if (count >= requiredCount) {
+                    return true; // 物品数量足够
+                }
+            }
+        }
+        return false; // 物品不足
+    }
+}

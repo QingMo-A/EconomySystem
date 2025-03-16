@@ -1,11 +1,12 @@
 package com.mo.economy_system;
 
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
+import com.mo.economy_system.init.Init;
 import com.mo.economy_system.item.EconomySystem_CreativeTabs;
 import com.mo.economy_system.item.EconomySystem_Items;
 import com.mo.economy_system.core.economy_system.reward.RewardConfigWatcher;
 import com.mo.economy_system.core.economy_system.reward.RewardManager;
-import com.mo.economy_system.core.economy_system.shop.ConfigWatcher;
+import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mojang.logging.LogUtils;
@@ -38,8 +39,9 @@ public class EconomySystem {
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
 
+        new Init();
         // 启动文件监听器
-        new ConfigWatcher(SHOP_MANAGER).watchConfigFile();
+        new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
 
         // 日志信息
@@ -61,8 +63,9 @@ public class EconomySystem {
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
 
+        new Init();
         // 启动文件监听器
-        new ConfigWatcher(SHOP_MANAGER).watchConfigFile();
+        new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
 
         // 日志信息

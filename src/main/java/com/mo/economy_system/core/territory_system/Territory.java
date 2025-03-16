@@ -9,10 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class Territory {
 
@@ -24,7 +21,9 @@ public class Territory {
     private final Set<PlayerInfo> authorizedPlayers; // 保存有权限玩家的列表
     private BlockPos backpoint; // 回城点
     private final ResourceKey<Level> dimension; // 所在维度
-    private int territoryOrder;
+    private int territoryOrder; // 领地序号
+    private final List<TerritoryBuff> territoryBuffs = new ArrayList<>(); // 领地buff
+
 
     // 用于新建领地的构造方法（生成新 UUID）
     public Territory(String name, UUID ownerUUID, String ownerName, int x1, int y1, int z1, int x2, int y2, int z2, BlockPos backpoint, ResourceKey<Level> dimension) {
@@ -76,6 +75,7 @@ public class Territory {
     public BlockPos getPos2() {
         return new BlockPos(x2, y2, z2);
     }
+
 
     public void setX1(int x1) {
         this.x1 = x1;
@@ -148,6 +148,58 @@ public class Territory {
         this.backpoint = backpoint;
     }
 
+    public List<TerritoryBuff> getTerritoryBuffs() {
+        return territoryBuffs;
+    }
+
+    public TerritoryBuff getBuff(String buffID) {
+        for (TerritoryBuff buff : territoryBuffs) {
+            if (buff.getId().equals(buffID)) {
+                return buff;
+            }
+        }
+        return null; // 找不到返回 null
+    }
+
+    public void addBuffs(TerritoryBuff buff) {
+        territoryBuffs.add(buff);
+    }
+
+    public void removeBuff(String buffId) {
+        territoryBuffs.removeIf(buff -> buff.getId().equals(buffId));
+    }
+
+    public boolean unlockBuff(String buffID) {
+        TerritoryBuff buff = getBuff(buffID);
+        if (buff == null) {
+            return false;
+        }
+
+        if (buff.isUnlocked()) {
+            return false;
+        }
+
+        // 这里可以添加解锁费用的检测，例如金币、经验值等
+        buff.setUnlocked(true);
+        return true;
+    }
+
+    public boolean upgradeBuff(String buffID) {
+        TerritoryBuff buff = getBuff(buffID);
+        if (buff == null) return false;
+
+        // **检查是否已达最大等级**
+        if (buff.getLevel() >= buff.getMaxLevel()) {
+            return false;
+        }
+
+        // **执行升级**
+        buff.setLevel(buff.getLevel() + buff.getSingleUpgradeLevel());
+        return true;
+    }
+
+
+
     public CompoundTag toNBT() {
         CompoundTag tag = new CompoundTag();
         tag.putUUID("TerritoryID", territoryID);
@@ -182,6 +234,19 @@ public class Territory {
             backpointTag.putInt("BackZ", backpoint.getZ());
             tag.put("Backpoint", backpointTag);
         }
+
+        // 存储Buff数据
+        /*ListTag buffListTag = new ListTag();
+        for (TerritoryBuff buff : buffs.values()) {
+            buffListTag.add(buff.toNBT());
+        }
+        tag.put("Buffs", buffListTag);*/
+
+        ListTag buffListTag = new ListTag();
+        for (TerritoryBuff buff : territoryBuffs) {
+            buffListTag.add(buff.toNBT());
+        }
+        tag.put("TerritoryBuffs", buffListTag);
 
         return tag;
     }
@@ -218,6 +283,12 @@ public class Territory {
                     backpointTag.getInt("BackY"),
                     backpointTag.getInt("BackZ"));
             territory.setBackpoint(backpoint);
+        }
+
+        ListTag buffsTag = tag.getList("TerritoryBuffs", Tag.TAG_COMPOUND);
+        for (Tag buffTag : buffsTag) {
+            TerritoryBuff buff = TerritoryBuff.fromNBT((CompoundTag) buffTag);
+            territory.territoryBuffs.add(buff);
         }
 
         return territory;

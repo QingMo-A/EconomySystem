@@ -3,6 +3,7 @@ package com.mo.economy_system.core.economy_system.shop;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.mo.economy_system.EconomySystem;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.*;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Random;
 
 public class ShopManager {
-    public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile(), "economy_shop.json");
+    public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID, "economy_shop.json");
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()  // 启用格式化
             .disableHtmlEscaping() // 可选：禁用 HTML 转义（如保留 &、< 等符号）
@@ -32,22 +33,13 @@ public class ShopManager {
         return new ArrayList<>(items); // 返回副本以保护内部列表
     }
 
-    public void saveToConfig() {
-        try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE); // 使用字节流
-             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) { // 指定 UTF-8
-            GSON.toJson(items, osw);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void loadFromConfig() {
+    public synchronized void loadFromConfig() {
         if (!CONFIG_FILE.exists()) {
             saveDefaultConfig();
         }
 
-        try (FileInputStream fis = new FileInputStream(CONFIG_FILE); // 使用字节流
-             InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8)) { // 指定 UTF-8
+        try (FileInputStream fis = new FileInputStream(CONFIG_FILE);
+             InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8)) {
             Type listType = new TypeToken<List<ShopItem>>() {}.getType();
             List<ShopItem> loadedItems = GSON.fromJson(isr, listType);
             items.clear();
@@ -58,6 +50,16 @@ public class ShopManager {
             e.printStackTrace();
         }
     }
+
+    public synchronized void saveToConfig() {
+        try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE);
+             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+            GSON.toJson(items, osw);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private void saveDefaultConfig() {
         items.add(new ShopItem("economy_system:recall_potion", 5, "回忆药水"));

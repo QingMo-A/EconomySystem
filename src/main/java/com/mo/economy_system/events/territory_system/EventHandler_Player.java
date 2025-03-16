@@ -2,12 +2,17 @@ package com.mo.economy_system.events.territory_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.territory_system.Territory;
+import com.mo.economy_system.core.territory_system.TerritoryBuff;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
+import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -16,6 +21,7 @@ import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -43,6 +49,9 @@ public class EventHandler_Player {
      */
     private static final Map<UUID, Long> lastCheckTime = new WeakHashMap<>();
 
+    // 存储玩家上次施加 Buff 的时间（单位：tick）
+    private static final Map<UUID, Long> lastBuffApplyTime = new HashMap<>();
+
     /**
      * 记录每个玩家的粒子任务，用于在进入领地时生成粒子效果。
      */
@@ -52,6 +61,11 @@ public class EventHandler_Player {
      * 检测间隔，默认 200ms。
      */
     private static long CHECK_INTERVAL = 200L;
+
+    /**
+     * Buff检测间隔，默认 200ms。
+     */
+    private static long CHECK_BUFF_INTERVAL = 5000L;
 
     /**
      * 处理玩家移动事件，检测玩家是否进入了新的领地或离开了当前领地。
@@ -65,7 +79,7 @@ public class EventHandler_Player {
         }
 
         UUID playerUUID = player.getUUID();
-        BlockPos playerPos = player.blockPosition();
+
         long currentTime = System.currentTimeMillis();
         long lastTime = lastCheckTime.getOrDefault(playerUUID, 0L);
 
@@ -74,6 +88,8 @@ public class EventHandler_Player {
             return;
         }
         lastCheckTime.put(playerUUID, currentTime);
+
+        BlockPos playerPos = player.blockPosition();
 
         // 检查位置是否发生变化
         BlockPos lastPosition = lastPositions.get(playerUUID);
@@ -96,12 +112,41 @@ public class EventHandler_Player {
             if (currentTerritory != null && player.serverLevel().dimension().equals(currentTerritory.getDimension())) {
                 MinecraftForge.EVENT_BUS.post(new Event_PlayerEnterTerritory(player, currentTerritory));
                 showParticleEffect(player.serverLevel(), currentTerritory.getPos1(), currentTerritory.getPos2(), player);
+
+                // applyTerritoryBuffs(player, currentTerritory);
+
             }
         }
 
         // 更新当前领地状态
         playerCurrentTerritory.put(playerUUID, currentTerritory);
     }
+
+    @SubscribeEvent
+    public static void applyBuffsInTerritory(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.START || !(event.player instanceof ServerPlayer player)) {
+            return;
+        }
+
+        UUID playerUUID = player.getUUID();
+        BlockPos playerPos = player.blockPosition();
+        Territory currentTerritory = playerCurrentTerritory.get(playerUUID);
+
+        // 确保玩家仍然在领地中
+        if (currentTerritory != null && TerritoryManager.getTerritoryAtIgnoreY(playerPos.getX(), playerPos.getZ()) == currentTerritory) {
+            long currentTime = player.getServer().getTickCount(); // 获取当前 tick 数
+
+            // 获取上次施加 Buff 的时间
+            long lastApplyTime = lastBuffApplyTime.getOrDefault(playerUUID, 0L);
+
+            // 只有当间隔大于 100 tick（5 秒）时才施加 Buff
+            if (currentTime - lastApplyTime >= 100) {
+                applyTerritoryBuffs(player, currentTerritory);
+                lastBuffApplyTime.put(playerUUID, currentTime); // 记录本次施加 Buff 时间
+            }
+        }
+    }
+
 
     /**
      * 处理玩家放置方块事件，检查玩家是否有权限在当前位置放置方块。
@@ -251,4 +296,30 @@ public class EventHandler_Player {
             executorService.shutdownNow();
         }
     }
+
+    /**
+     * 给玩家应用当前领地的 Buff 效果。
+     *
+     * @param player  进入领地的玩家
+     * @param territory  领地对象
+     */
+    private static void applyTerritoryBuffs(ServerPlayer player, Territory territory) {
+        // Util_Message.sendDebugMessage("buff数量: " + territory.getTerritoryBuffs().size());
+        for (TerritoryBuff buff : territory.getTerritoryBuffs()) {
+            if (buff.isUnlocked()) { // **🔹 只有解锁的 Buff 才生效**
+                MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(buff.getEffectId()));
+
+                if (effect != null) {
+                    int amplifier = buff.getLevel(); // **使用当前等级作为增幅**
+                    int duration = 20 * 10; // 10秒（单位：tick）
+
+                    player.addEffect(new MobEffectInstance(effect, duration, amplifier, false, true));
+                    // Util_Message.sendDebugMessage("✅ 给予玩家 Buff: " + buff.getDisplayText() + " | 等级: " + amplifier);
+                } else {
+                    Util_Message.sendDebugMessage("❌ Buff ID 无效: " + buff.getEffectId());
+                }
+            }
+        }
+    }
+
 }

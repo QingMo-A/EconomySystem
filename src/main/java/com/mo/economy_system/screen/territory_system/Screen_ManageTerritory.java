@@ -157,7 +157,7 @@ public class Screen_ManageTerritory extends EconomySystem_Screen {
                         Util_MessageKeys.TERRITORY_MANAGEMENT_BUFF,
                         1000,
                         button -> {
-
+                            Minecraft.getInstance().setScreen(new Screen_TerritoryBuff(territory));
                         }
                 );
 

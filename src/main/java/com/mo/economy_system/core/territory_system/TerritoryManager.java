@@ -1,8 +1,11 @@
 package com.mo.economy_system.core.territory_system;
 
+import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraftforge.fml.loading.FMLPaths;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,6 +13,7 @@ public class TerritoryManager {
 
     private static TerritorySavedData savedData;
     private static boolean initialized = false;
+    public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID, "territory_buffs.json");
 
     private static final Map<UUID, Territory> territoryByID = Collections.synchronizedMap(new HashMap<>());
     private static final Map<UUID, List<Territory>> territoriesByOwner = new ConcurrentHashMap<>();
@@ -25,13 +29,17 @@ public class TerritoryManager {
     public static void initialize(ServerLevel level) {
         if (initialized) return;
 
+        TerritoryBuffManager.initConfig(); // 初始化 Buff 配置
+
         quadTree.clear(); // 清空四叉树
         savedData = TerritorySavedData.getInstance(level);
 
         // ServerMessageUtil.log("Initializing TerritoryManager...");
 
         for (Territory territory : savedData.getAllTerritories()) {
+
             addTerritory(territory);
+
         }
 
         initialized = true;
@@ -54,9 +62,152 @@ public class TerritoryManager {
                 savedData.addTerritory(territory);
             }
 
+            updateTerritoryBuffs(territory);
+
             autoSave(); // 自动保存
             // ServerMessageUtil.log("Territory added: " + territory.getName());
         }
+    }
+
+    private static void updateTerritoryBuffs(Territory territory) {
+        System.out.println("------init territory Buff-------");
+
+        // 🔹 读取配置文件中的 Buff ID
+        Set<String> configBuffs = TerritoryBuffManager.getAllBuffIDs();
+
+        // 🔹 获取当前领地已有的 Buff ID（从 List 生成 Set）
+        Set<String> existingBuffs = new HashSet<>();
+        for (TerritoryBuff buff : territory.getTerritoryBuffs()) {
+            existingBuffs.add(buff.getId());
+        }
+
+        // **1. 添加新 Buff（配置文件有，领地没有）**
+        for (String buffId : configBuffs) {
+            if (!existingBuffs.contains(buffId)) {
+                System.out.println("add Buff: " + buffId);
+                TerritoryBuffConfig buffConfig = TerritoryBuffManager.getBuffConfig(buffId);
+                if (buffConfig != null) {
+                    TerritoryBuff newBuff = new TerritoryBuff(buffConfig.getId(),
+                            buffConfig.getDisplayText(),
+                            buffConfig.getEffectId(),
+                            buffConfig.isInitialUnlockState(),
+                            buffConfig.getInitialLevel(),
+                            buffConfig.getSingleUpgradeLevel(),
+                            buffConfig.getMaxLevel(),
+                            buffConfig.getUpgradeCost());
+                    territory.addBuffs(newBuff);
+                }
+            }
+        }
+
+        // **2. 删除已移除 Buff（配置文件没有，领地有）**
+        Iterator<TerritoryBuff> iterator = territory.getTerritoryBuffs().iterator();
+        while (iterator.hasNext()) {
+            TerritoryBuff buff = iterator.next();
+            if (!configBuffs.contains(buff.getId())) {
+                System.out.println("remove Buff: " + buff.getId());
+                iterator.remove(); // 移除 Buff
+            }
+        }
+
+        // **3. 更新已存在 Buff（同步配置信息）**
+        for (TerritoryBuff buff : territory.getTerritoryBuffs()) {
+            if (configBuffs.contains(buff.getId())) {
+                System.out.println("Update Buff: " + buff.getId());
+                TerritoryBuffConfig buffConfig = TerritoryBuffManager.getBuffConfig(buff.getId());
+
+                if (buffConfig != null) {
+                    // **更新 Buff 的属性**
+                    boolean changed = false;
+
+                    if (!buff.getDisplayText().equals(buffConfig.getDisplayText())) {
+                        buff.setDisplayText(buffConfig.getDisplayText());
+                        changed = true;
+                    }
+
+                    if (!buff.getEffectId().equals(buffConfig.getEffectId())) {
+                        buff.setEffectId(buffConfig.getEffectId());
+                        changed = true;
+                    }
+
+                    if (buff.getSingleUpgradeLevel() != buffConfig.getSingleUpgradeLevel()) {
+                        buff.setSingleUpgradeLevel(buffConfig.getSingleUpgradeLevel());
+                        changed = true;
+                    }
+
+                    if (buff.getMaxLevel() != buffConfig.getMaxLevel()) {
+                        buff.setMaxLevel(buffConfig.getMaxLevel());
+                        changed = true;
+                    }
+
+                    if (!buff.getUpgradeCost().equals(buffConfig.getUpgradeCost())) {
+                        buff.setUpgradeCost(buffConfig.getUpgradeCost());
+                        changed = true;
+                    }
+
+                    // 确保当前等级不超过最大等级
+                    if (buff.getLevel() > buffConfig.getMaxLevel()) {
+                        buff.setLevel(buffConfig.getMaxLevel());
+                        changed = true;
+                    }
+
+                    // **如果有任何变化，则打印日志**
+                    if (changed) {
+                        System.out.println("Buff " + buff.getId() + " 更新完成！");
+                    }
+                }
+            }
+        }
+
+
+        autoSave(); // 自动保存
+    }
+
+    // **🔹 解锁 Buff**
+    public static boolean unlockBuff(UUID territoryID, String buffID) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null) {
+            return false; // 领地不存在
+        }
+
+        TerritoryBuff buff = territory.getBuff(buffID);
+        if (buff == null) {
+            return false; // Buff 不存在
+        }
+
+        if (!buff.isUnlocked()) {
+            buff.setUnlocked(true); // 直接解锁
+            markDirty();
+            return true; // 成功解锁
+        }
+
+        return false; // 已解锁，返回 false
+    }
+
+    // **🔹 升级 Buff**
+    public static boolean upgradeBuff(UUID territoryID, String buffID) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null) {
+            return false; // 领地不存在
+        }
+
+        TerritoryBuff buff = territory.getBuff(buffID);
+        if (buff == null) {
+            return false; // Buff 不存在
+        }
+
+        TerritoryBuffConfig config = TerritoryBuffManager.getBuffConfig(buffID);
+        if (config == null) {
+            return false; // 配置不存在
+        }
+
+        if (buff.getLevel() < config.getMaxLevel()) {
+            buff.setLevel(buff.getLevel() + config.getSingleUpgradeLevel()); // 直接升级
+            markDirty();
+            return true; // 成功升级
+        }
+
+        return false; // 已达最大等级，返回 false
     }
 
     // 移除领地
@@ -162,6 +313,5 @@ public class TerritoryManager {
         territoryByID.clear();
         territoriesByOwner.clear();
         quadTree.clear();
-        Util_Message.log("TerritoryManager has been reset.");
     }
 }

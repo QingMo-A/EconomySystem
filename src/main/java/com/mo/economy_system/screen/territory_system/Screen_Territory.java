@@ -349,6 +349,7 @@ public class Screen_Territory extends EconomySystem_Screen {
                 tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_UUID_KEY, territory.getTerritoryID()));
                 tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_OWNER_NAME_KEY, territory.getOwnerName()));
                 tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_OWNER_UUID_KEY, territory.getOwnerUUID()));
+                tooltip.add(Component.literal(territory.getTerritoryBuffs().size() + ""));
                 if (territory.getBackpoint() != null) {
                     tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_BACK_POINT_KEY, territory.getBackpoint().getX(), territory.getBackpoint().getY(), territory.getBackpoint().getZ()));
                 } else {

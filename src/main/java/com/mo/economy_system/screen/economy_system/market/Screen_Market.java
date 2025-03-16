@@ -21,12 +21,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,8 +33,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class Screen_Market extends EconomySystem_Screen {
-    private List<MarketItem> items = new ArrayList<>(); // 市场商品列表
-    private List<MarketItem> filteredItems = new ArrayList<>(); // 根据搜索过滤后的商品列表
+    private List<MarketItem> items = new ArrayList<>(); // 根据搜索过滤后的商品列表
     private List<MarketItem> itemsSnapshot = new ArrayList<>();
     // 计数器变量，初始为 0
     private int displayTypeIndex = 0;
@@ -177,7 +174,7 @@ public class Screen_Market extends EconomySystem_Screen {
         }
 
         // 如果有商品，进行鼠标悬停检测并显示 Tooltip
-        if (!filteredItems.isEmpty()) {
+        if (!items.isEmpty()) {
             detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
         }
 
@@ -206,7 +203,7 @@ public class Screen_Market extends EconomySystem_Screen {
             );
         });
 
-        if (filteredItems.isEmpty()) {
+        if (items.isEmpty()) {
 
             int textWidth = this.font.width(Component.translatable(Util_MessageKeys.MARKET_NO_ITEMS_TEXT_KEY));
             int xPosition = (this.width - textWidth) / 2;
@@ -236,7 +233,7 @@ public class Screen_Market extends EconomySystem_Screen {
         int y = startY;
 
         for (int i = startIndex; i < endIndex; i++) {
-            MarketItem item = filteredItems.get(i);
+            MarketItem item = items.get(i);
             ItemStack itemStack = item.getItemStack();
 
             final int currentY = y; // 使用最终变量供 Lambda 表达式使用
@@ -314,7 +311,7 @@ public class Screen_Market extends EconomySystem_Screen {
             LocalPlayer player = Minecraft.getInstance().player;
             if (player == null) return;
 
-            MarketItem item = filteredItems.get(i);
+            MarketItem item = items.get(i);
 
             if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
                 List<Component> tooltipLines = item.getItemStack().getTooltipLines(
@@ -558,7 +555,7 @@ public class Screen_Market extends EconomySystem_Screen {
 
         for (int i = startIndex; i < endIndex; i++) {
 
-            MarketItem item = filteredItems.get(i);
+            MarketItem item = items.get(i);
 
             // 添加购买或下架按钮
             this.addActionButton(item, this.width - startX, y, playerUUID);
@@ -760,7 +757,7 @@ public class Screen_Market extends EconomySystem_Screen {
             // 3. 更新UI
             List<MarketItem> finalResult = result;
             this.minecraft.execute(() -> {
-                this.filteredItems = finalResult;
+                this.items = finalResult;
                 this.currentPage = 0;
                 refreshItemButtons();
                 initializeRenderCache(); // 重新初始化渲染缓存
@@ -800,15 +797,14 @@ public class Screen_Market extends EconomySystem_Screen {
     }
 
     public void updateMarketItems(List<MarketItem> items) {
-        this.items = items;
-        this.filteredItems = new ArrayList<>(items); // 初始化过滤后的列表
+        this.items = new ArrayList<>(items); // 初始化过滤后的列表
         this.itemsSnapshot = new ArrayList<>(items); // 初始化过滤后的列表
         this.init(); // 每次更新市场物品后重新初始化界面
     }
 
     // 动态计算总页数
     private int getTotalPages() {
-        return (int) Math.ceil((double) this.filteredItems.size() / thingsPerPage);
+        return (int) Math.ceil((double) this.items.size() / thingsPerPage);
     }
 
     @Override
@@ -817,7 +813,7 @@ public class Screen_Market extends EconomySystem_Screen {
         thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
 
         startIndex = currentPage * thingsPerPage;
-        endIndex = Math.min(startIndex + thingsPerPage, filteredItems.size());
+        endIndex = Math.min(startIndex + thingsPerPage, items.size());
 
         startX = Math.max((this.width / 2) - 300, 60);
         startY = Math.max((this.height - 450) / 4, 55);

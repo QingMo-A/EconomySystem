@@ -3,10 +3,10 @@ package com.mo.economy_system.core.economy_system.shop;
 import java.io.IOException;
 import java.nio.file.*;
 
-public class ConfigWatcher {
+public class ShopConfigWatcher {
     private final ShopManager shopManager;
 
-    public ConfigWatcher(ShopManager shopManager) {
+    public ShopConfigWatcher(ShopManager shopManager) {
         this.shopManager = shopManager;
     }
 
