@@ -2,7 +2,7 @@
 
 > 一个简单的经济系统
 
-![Version](https://img.shields.io/badge/version-v1.2.00-blue)
+![Version](https://img.shields.io/badge/version-v1.2.03-blue)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
 ### 作者 (Author): [QingMo](https://github.com/QingMo)
