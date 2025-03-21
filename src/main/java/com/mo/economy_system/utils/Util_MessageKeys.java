@@ -1,6 +1,7 @@
 package com.mo.economy_system.utils;
 
 public class Util_MessageKeys {
+    // EconomySystem Command | 经济指令
     public static final String COIN_COMMAND_BALANCE = "message.coin_command_balance";
     public static final String COIN_COMMAND_ADD = "message.coin_command_add";
     public static final String COIN_COMMAND_MIN = "message.coin_command_min";
@@ -10,6 +11,7 @@ public class Util_MessageKeys {
     public static final String RECEIVE_SUCCESSFULLY_MESSAGE_KEY = "message.transfer.receive_successfully";
     public static final String TRANSFER_FAILED_MESSAGE_KEY = "message.transfer.transfer_failed";
 
+    // TPA Command | TPA指令
     public static final String TPA_SELF_ERROR = "message.tpa.self_error";
     public static final String TPA_NO_POTION = "message.tpa.no_potion";
     public static final String TPA_REQUEST_SENT = "message.tpa.request_sent";
@@ -24,8 +26,10 @@ public class Util_MessageKeys {
     public static final String TPA_TIMEOUT_SENDER = "message.tpa.timeout_sender";
     public static final String TPA_TIMEOUT_TARGET = "message.tpa.timeout_target";
 
+    // Recall Potion | 回忆药水
     public static final String RECALL_POTION_ERROR_DIMENSION_NOT_FOUND = "message.recall_potion.error_dimension_not_found";
 
+    // Screen_Home | 主页
     public static final String HOME_TITLE_KEY = "screen.home.title";
     public static final String HOME_FETCHING_BALANCE_TEXT_KEY = "text.home.fetching_balance";
     public static final String HOME_BALANCE_TEXT_KEY = "text.home.balance";
@@ -35,6 +39,10 @@ public class Util_MessageKeys {
     public static final String HOME_TERRITORY_BUTTON_KEY = "button.home.territory";
     public static final String HOME_ABOUT_BUTTON_KEY = "button.home.about";
 
+    // Reward | 击杀奖励
+    public static final String MOB_REWARD_MESSAGE_KEY = "message.mob_reward";
+
+    // Screen_Shop | 商店
     public static final String SHOP_TITLE_KEY = "screen.shop.title";
     public static final String SHOP_ITEM_PRICE_KEY = "screen.shop.item.price";
     public static final String SHOP_ITEM_ID_KEY = "screen.shop.item.id";
@@ -48,12 +56,12 @@ public class Util_MessageKeys {
     public static final String SHOP_BUY_PRICE_TEXT_KEY = "text_buy.price";
     public static final String SHOP_BUY_SUCCESSFULLY_MESSAGE_KEY = "message.shop.buy_successfully";
     public static final String SHOP_BUY_FAILED_MESSAGE_KEY = "message.shop.buy_failed";
-    public static final String SHOP_INVALID_ITEM_MESSAGE_KEY = "message.shop.invalid_item";  // 无效的商品
-    public static final String SHOP_BUY_FAILED_INVENTORY_FULL_MESSAGE_KEY = "message.shop.buy_failed_inventory_full";  // 购买失败，库存已满
-    public static final String SHOP_BUY_ERROR_MESSAGE_KEY = "message.shop.buy_error";  // 购买错误
+    public static final String SHOP_INVALID_ITEM_MESSAGE_KEY = "message.shop.invalid_item";
+    public static final String SHOP_BUY_FAILED_INVENTORY_FULL_MESSAGE_KEY = "message.shop.buy_failed_inventory_full";
+    public static final String SHOP_BUY_ERROR_MESSAGE_KEY = "message.shop.buy_error";
     public static final String SHOP_REFRESH_MESSAGE_KEY = "message.shop.shop_refresh";
-    public static final String MOB_REWARD_MESSAGE_KEY = "message.mob_reward";
 
+    // Screen_BuyItem | 商店购买界面
     public static final String SHOP_BUY_TITLE_KEY = "screen.shop_buy.title";
     public static final String SHOP_BUY_HINT_TEXT_KEY = "text.shop_buy.hint";
     public static final String SHOP_BUY_BUY_BUTTON_KEY = "button.shop_buy.buy";
@@ -62,40 +70,7 @@ public class Util_MessageKeys {
     public static final String SHOP_BUY_INVALID_COUNT_MESSAGE_KEY = "message.shop_buy.invalid_count";
     public static final String SHOP_BUY_COUNT_TEXT_KEY = "text.shop_buy.count";
 
-    public static final String LIST_TITLE_KEY = "screen.list.title";
-    public static final String LIST_NO_ITEM_IN_HAND_TEXT_KEY = "text.list.no_item_in_hand";
-    public static final String LIST_PRICE_TEXT_KEY = "text.list.price";
-    public static final String LIST_LIST_BUTTON_KEY = "button.list.list";
-    public static final String LIST_NO_ITEM_IN_HAND_MESSAGE_KEY = "message.list.no_item_in_hand";
-    public static final String LIST_INVALID_PRICE_MESSAGE_KEY = "message.list.invalid_price";
-    public static final String LIST_HINT_TEXT_KEY = "text.list.hint";
-    public static final String LIST_SUCCESSFULLY_MESSAGE_KEY = "message.list.list_successfully";
-    public static final String LIST_INSUFFICIENT_ITEM_MESSAGE_KEY = "message.list.list_insufficient_item";
-    public static final String LIST_UNMATCHED_ITEM_MESSAGE_KEY = "message.list.list_unmatched_item";
-    public static final String LIST_ITEM_TAX_PAYMENT_FAILED_MESSAGE_KEY = "message.list.list_item_tax_payment_failed";
-
-    public static final String REQUEST_TITLE_KEY = "screen.request.title";
-    public static final String REQUEST_PRICE_TEXT_KEY = "text.request.price";
-    public static final String REQUEST_ITEM_COUNT_TEXT_KEY = "text.request.item_count";
-    public static final String REQUEST_ITEM_ID_TEXT_KEY = "text.request.item_id";
-    public static final String REQUEST_REQUEST_BUTTON_KEY = "button.request.request";
-    public static final String REQUEST_PRICE_HINT_TEXT_KEY = "text.request.price.hint";
-    public static final String REQUEST_ITEM_COUNT_HINT_TEXT_KEY = "text.request.item_count.hint";
-    public static final String REQUEST_ITEM_ID_HINT_TEXT_KEY = "text.request.item_id.hint";
-    public static final String REQUEST_UNKNOWN_ITEM_ID_KEY = "text.request.unknown_item_id";
-    public static final String REQUEST_INVALID_ITEM_COUNT_KEY = "text.request.invalid_item_count";
-    public static final String REQUEST_EXCESSIVE_ITEM_COUNT_KEY = "text.request.excessive_item_count";
-    public static final String REQUEST_INVALID_PRICE_KEY = "text.request.invalid_price";
-    public static final String REQUEST_DELIVER_BUTTON_KEY = "button.request.deliver";
-    public static final String REQUEST_DELIVERED_STATUS_KEY = "button.request.delivered_status"; // 已交付
-    public static final String REQUEST_CANCEL_KEY = "button.request.cancel"; // 已交付
-    public static final String REQUEST_CLAIM_BUTTON_KEY = "button.request.claim"; // 领取
-    public static final String DELIVERY_NOT_ENOUGH_ITEMS_KEY = "message.delivery.not_enough_items"; // 你没有足够的物品来交付
-    public static final String DELIVERY_SUCCESS_KEY = "message.delivery.success"; // 你成功交付了这个物品
-    public static final String CLAIM_SUCCESS_KEY = "message.request.claim.success"; // 成功领取物品
-    public static final String CLAIM_NOT_OWNER_KEY = "message.claim.not_owner"; // 你不能领取不属于你的物品
-    public static final String ORDER_DELIVERED_BY_PLAYER_KEY = "message.order.delivered_by_player";
-
+    // Screen_Market | 市场
     public static final String MARKET_TITLE_KEY = "screen.market.title";
     public static final String MARKET_HINT_TEXT_KEY = "text.market.hint";
     public static final String MARKET_SELLER_NAME_KEY = "screen.market.item.seller_name";
@@ -122,6 +97,43 @@ public class Util_MessageKeys {
     public static final String MARKET_UNMATCHED_SELLER_MESSAGE_KEY = "message.market.unmatched_seller";
     public static final String MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY = "message.market.item_has_been_returned";
 
+    // Screen_CreateSalesOrder | 创建出货单
+    public static final String LIST_TITLE_KEY = "screen.list.title";
+    public static final String LIST_NO_ITEM_IN_HAND_TEXT_KEY = "text.list.no_item_in_hand";
+    public static final String LIST_PRICE_TEXT_KEY = "text.list.price";
+    public static final String LIST_LIST_BUTTON_KEY = "button.list.list";
+    public static final String LIST_NO_ITEM_IN_HAND_MESSAGE_KEY = "message.list.no_item_in_hand";
+    public static final String LIST_INVALID_PRICE_MESSAGE_KEY = "message.list.invalid_price";
+    public static final String LIST_HINT_TEXT_KEY = "text.list.hint";
+    public static final String LIST_SUCCESSFULLY_MESSAGE_KEY = "message.list.list_successfully";
+    public static final String LIST_INSUFFICIENT_ITEM_MESSAGE_KEY = "message.list.list_insufficient_item";
+    public static final String LIST_UNMATCHED_ITEM_MESSAGE_KEY = "message.list.list_unmatched_item";
+    public static final String LIST_ITEM_TAX_PAYMENT_FAILED_MESSAGE_KEY = "message.list.list_item_tax_payment_failed";
+
+    // Screen_CreateDemandOrder | 创建求购单
+    public static final String REQUEST_TITLE_KEY = "screen.request.title";
+    public static final String REQUEST_PRICE_TEXT_KEY = "text.request.price";
+    public static final String REQUEST_ITEM_COUNT_TEXT_KEY = "text.request.item_count";
+    public static final String REQUEST_ITEM_ID_TEXT_KEY = "text.request.item_id";
+    public static final String REQUEST_REQUEST_BUTTON_KEY = "button.request.request";
+    public static final String REQUEST_PRICE_HINT_TEXT_KEY = "text.request.price.hint";
+    public static final String REQUEST_ITEM_COUNT_HINT_TEXT_KEY = "text.request.item_count.hint";
+    public static final String REQUEST_ITEM_ID_HINT_TEXT_KEY = "text.request.item_id.hint";
+    public static final String REQUEST_UNKNOWN_ITEM_ID_KEY = "text.request.unknown_item_id";
+    public static final String REQUEST_INVALID_ITEM_COUNT_KEY = "text.request.invalid_item_count";
+    public static final String REQUEST_EXCESSIVE_ITEM_COUNT_KEY = "text.request.excessive_item_count";
+    public static final String REQUEST_INVALID_PRICE_KEY = "text.request.invalid_price";
+    public static final String REQUEST_DELIVER_BUTTON_KEY = "button.request.deliver";
+    public static final String REQUEST_DELIVERED_STATUS_KEY = "button.request.delivered_status";
+    public static final String REQUEST_CANCEL_KEY = "button.request.cancel";
+    public static final String REQUEST_CLAIM_BUTTON_KEY = "button.request.claim";
+    public static final String DELIVERY_NOT_ENOUGH_ITEMS_KEY = "message.delivery.not_enough_items";
+    public static final String DELIVERY_SUCCESS_KEY = "message.delivery.success";
+    public static final String CLAIM_SUCCESS_KEY = "message.request.claim.success";
+    public static final String CLAIM_NOT_OWNER_KEY = "message.claim.not_owner";
+    public static final String ORDER_DELIVERED_BY_PLAYER_KEY = "message.order.delivered_by_player";
+
+    // Screen_DeliveryBox | 收货箱
     public static final String DELIVERY_BOX_TITLE_KEY = "screen.delivery_box.title";
     public static final String DELIVERY_BOX_HINT_TEXT_KEY = "text.delivery_box.hint";
     public static final String DELIVERY_BOX_NO_ITEMS_TEXT_KEY = "text.delivery_box.no_items";
@@ -131,6 +143,7 @@ public class Util_MessageKeys {
     public static final String DELIVERY_BOX_CLAIM_BUTTON_KEY = "button.delivery_box.claim";
     public static final String DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY = "screen.delivery_box.item.name_and_count";
 
+    // RedPacket Command | 红包指令
     public static final String RED_PACKET_INSUFFICIENT_BALANCE = "message.red_packet.insufficient_balance";
     public static final String RED_PACKET_ALREADY_ACTIVE = "message.red_packet.already_active";
     public static final String RED_PACKET_CREATED_SUCCESSFULLY = "message.red_packet.created_successfully";
@@ -146,6 +159,7 @@ public class Util_MessageKeys {
     public static final String RED_PACKET_EXPIRED_BROADCAST = "message.red_packet.expired_broadcast";
     public static final String RED_PACKET_CLAIM_BROADCAST = "message.red_packet.claim_broadcast";
 
+    // Screen_Territory | 我的领地
     public static final String TERRITORY_TITLE_KEY = "screen.territory.title";
     public static final String TERRITORY_HINT_TEXT_KEY = "text.territory.hint";
     public static final String TERRITORY_NO_TERRITORIES_TEXT_KEY = "text.territory.no_territories";
@@ -160,6 +174,7 @@ public class Util_MessageKeys {
     public static final String TERRITORY_TERRITORY_BACK_POINT_KEY = "screen.territory.territory_back_point";
     public static final String TERRITORY_TERRITORY_NO_AUTHORIZED_PLAYER_KEY = "screen.territory.territory_no_authorized_player";
 
+    // Screen_ManageTerritory | 管理领地
     public static final String TERRITORY_MANAGEMENT_COPY_ID = "message.territory_management.copy_id";
     public static final String TERRITORY_MANAGEMENT_INVITE_PLAYER = "message.territory_management.invite_player";
     public static final String TERRITORY_MANAGEMENT_DELETE_TERRITORY = "message.territory_management.delete_territory";
@@ -177,17 +192,18 @@ public class Util_MessageKeys {
     public static final String TERRITORY_PLAYER_KICKED = "message.territory.player_kicked";
     public static final String TERRITORY_PLAYER_REMOVED = "message.territory.player_removed";
 
+    // Screen_InvitePlayer | 邀请玩家
     public static final String INVITE_TITLE_KEY = "screen.invite.title";
     public static final String INVITE_INVITE_BUTTON_KEY = "button.invite.invite";
     public static final String INVITE_NO_NAME_KEY = "message.invite.no_name";
     public static final String INVITE_BACK_BUTTON = "button.invite.back";
-    public static final String INVITE_NO_PERMISSION = "message.invite.no_permission"; // 你没有权限邀请玩家加入此领地！
-    public static final String INVITE_PLAYER_OFFLINE = "message.invite.player_offline"; // 玩家 {playerName} 不在线！
-    public static final String INVITE_ALREADY_MEMBER = "message.invite.already_member"; // 玩家 {playerName} 已经是你的领地成员了！
-    public static final String INVITE_SENT = "message.invite.sent"; // 已向玩家 {playerName} 发送邀请！
-    public static final String INVITE_RECEIVED = "message.invite.received"; // 玩家 {inviterName} 邀请你加入领地: {territoryName}
-    public static final String INVITE_INSTRUCTIONS = "message.invite.instructions"; // 输入 /accept_invite 接受 或 /decline_invite 拒绝
-    public static final String INVITE_SELF_ERROR = "message.invite.self_error"; // 你不能向自己发出邀请!
+    public static final String INVITE_NO_PERMISSION = "message.invite.no_permission";
+    public static final String INVITE_PLAYER_OFFLINE = "message.invite.player_offline";
+    public static final String INVITE_ALREADY_MEMBER = "message.invite.already_member";
+    public static final String INVITE_SENT = "message.invite.sent";
+    public static final String INVITE_RECEIVED = "message.invite.received";
+    public static final String INVITE_INSTRUCTIONS = "message.invite.instructions";
+    public static final String INVITE_SELF_ERROR = "message.invite.self_error";
     public static final String INVITE_NOT_IN_TERRITORY = "message.invite.not_in_territory";
     public static final String INVITE_SENT_TO_PLAYER = "message.invite.sent_to_player";
     public static final String INVITE_RECEIVED_PLAYER = "message.invite.received_player";
@@ -202,6 +218,26 @@ public class Util_MessageKeys {
     public static final String INVITE_DECLINED = "message.invite.declined";
     public static final String INVITE_DECLINE_BUTTON = "button.invite.decline";
 
+    // Screen_TerritoryBuff | 领地增益
+    public static final String TERRITORY_BUFF_TITLE_KEY = "screen.territory_buff.title";
+    public static final String TERRITORY_BUFF_TEXT_NO_BUFFS_TEXT_KEY  = "text.territory_buff.no_buffs";
+    public static final String TERRITORY_BUFF_TEXT_BE_LOCKED_TEXT_KEY = "text.territory_buff.be_locked";
+    public static final String TERRITORY_BUFF_TEXT_BE_UNLOCKED_TEXT_KEY = "text.territory_buff.be_unlocked";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_ID_TEXT_KEY = "tooltip.territory_buff.buff_id";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_NAME_TEXT_KEY = "tooltip.territory_buff.buff_name";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_CURRENT_LEVEL_TEXT_KEY = "tooltip.territory_buff.buff_current_level";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_MAX_LEVEL_TEXT_KEY = "tooltip.territory_buff.buff_max_level";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_EFFECT_ID_TEXT_KEY = "tooltip.territory_buff.buff_effect_id";
+    public static final String TERRITORY_BUFF_TOOLTIP_BUFF_UNLOCK_STATE_KEY = "tooltip.territory_buff.buff_unlock_state";
+    public static final String TERRITORY_BUFF_BUTTON_UNLOCK_KEY = "button.territory_buff.unlock";
+    public static final String TERRITORY_BUFF_BUTTON_UPGRADE_KEY = "button.territory_buff.upgrade";
+    public static final String TERRITORY_BUFF_BUTTON_MAX_KEY = "button.territory_buff.max";
+    public static final String TERRITORY_BUFF_MESSAGE_BUFF_MAX_LEVEL_KEY = "message.territory_buff.buff_max_level";
+    public static final String TERRITORY_BUFF_MESSAGE_REQUIREMENT_ITEM_FAIL_KEY = "message.territory_buff.requirement_item_fail";
+    public static final String TERRITORY_BUFF_MESSAGE_REQUIREMENT_XP_LEVEL_FAIL_KEY = "message.territory_buff.requirement_xp_level_fail";
+
+
+    // Claim Territory | 圈地
     public static final String CLAIM_WAND_SELECT_POINTS = "message.claim_wand.select_points";
     public static final String CLAIM_INSUFFICIENT_BALANCE = "message.claim.insufficient_balance";
     public static final String CLAIM_SUCCESS = "message.claim.success";
@@ -224,6 +260,7 @@ public class Util_MessageKeys {
     public static final String CLAIM_WAND_ENTER_RESIZE_MODE = "message.claim_wand.enter_resize_mode";
     public static final String CLAIM_WAND_EXIT_RESIZE_MODE = "message.claim_wand.exit_resize_mode";
 
+    // Territory Teleport | 领地传送
     public static final String TELEPORT_TARGET_NOT_FOUND = "message.teleport.target_not_found";
     public static final String TELEPORT_NO_PERMISSION = "message.teleport.no_permission";
     public static final String TELEPORT_NO_BACKPOINT = "message.teleport.no_backpoint";
@@ -232,6 +269,7 @@ public class Util_MessageKeys {
     public static final String TELEPORT_SUCCESS = "message.teleport.success";
     public static final String TELEPORT_FAILED = "message.teleport.failed";
 
+    // Screen_About | 关于页
     public static final String ABOUT_TITLE_KEY = "screen.about.title";
     public static final String ABOUT_MOD_NAME_KEY = "screen.about.mod_name";
     public static final String ABOUT_AUTHOR_NAME_KEY = "screen.about.author_name";

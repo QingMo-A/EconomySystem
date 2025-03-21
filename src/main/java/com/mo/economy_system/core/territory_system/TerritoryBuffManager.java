@@ -27,7 +27,7 @@ public class TerritoryBuffManager {
 
         TerritoryBuffConfig speedBuff = new TerritoryBuffConfig();
         speedBuff.setId("speed_boost");
-        speedBuff.setDisplayText("速度增幅");
+        speedBuff.setDisplayText("速度++");
         speedBuff.setEffectId("minecraft:speed");
         speedBuff.setInitialUnlockState(false);
         speedBuff.setInitialLevel(0);

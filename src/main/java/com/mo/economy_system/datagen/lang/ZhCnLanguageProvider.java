@@ -248,6 +248,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "§a[同意]");
         add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "§c[拒绝]");
 
+        // Screen_TerritoryBuff | 领地增益
+
+
         // Claim Territory | 圈地
         add(Util_MessageKeys.CLAIM_WAND_SELECT_POINTS, "§c请先用圈地杖选定两个点！");
         add(Util_MessageKeys.CLAIM_INSUFFICIENT_BALANCE, "§c余额不足，圈地所需价格为 %s 枚梦鱼币");

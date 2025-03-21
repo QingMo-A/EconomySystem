@@ -7,12 +7,11 @@ import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
+import com.mo.economy_system.screen.newUI.Screen_Test;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -128,6 +127,22 @@ public class Screen_Home extends EconomySystem_Screen {
                         button -> {
                             // 打开 AboutScreen
                             this.minecraft.setScreen(new Screen_About());
+                        })
+        );
+
+        // 添加关于按钮
+        this.addRenderableWidget(
+                new AnimatedButton(
+                        -100,                   // 初始X
+                        startY + 150,           // 初始Y
+                        startX,                 // 目标X
+                        startY + 150,           // 目标Y
+                        100, 20,                // 宽度和高度
+                        Component.literal("测试界面"),
+                        1000,                   // 动画持续时间
+                        button -> {
+                            // 打开 AboutScreen
+                            this.minecraft.setScreen(new Screen_Test());
                         })
         );
 

@@ -13,6 +13,7 @@ import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.utils.Util_Message;
+import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -43,7 +44,7 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
     private LocalPlayer player;
 
     protected Screen_TerritoryBuff(Territory territory) {
-        super(Component.literal("领地Buff"));
+        super(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TITLE_KEY));
 
         this.territory = territory;
         this.buffs = territory.getTerritoryBuffs();
@@ -153,7 +154,28 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
 
         if (buffs.isEmpty()) {
 
-            Util_Message.sendDebugMessage("Buff为空");
+            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TEXT_NO_BUFFS_TEXT_KEY));
+            int xPosition = (this.width - textWidth) / 2;
+
+            noBuff = new TextAnimation(
+                    xPosition,
+                    this.height / 2 - 10,
+                    xPosition,
+                    this.height / 2 - 10,
+                    0f,
+                    1f,
+                    2000
+            );
+
+            // 如果没有商品，添加无商品提示的渲染任务
+            renderCache.add((guiGraphics) -> {
+
+                renderAnimatedText(
+                        guiGraphics,
+                        Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TEXT_NO_BUFFS_TEXT_KEY),
+                        noBuff
+                );
+            });
             return;
         }
 
@@ -215,7 +237,7 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
                 );
                 renderAnimatedText(
                         guiGraphics,
-                        Component.literal(buff.isUnlocked() ? "已解锁" : "未解锁"),
+                        Component.translatable(buff.isUnlocked() ? Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_UNLOCKED_TEXT_KEY : Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_LOCKED_TEXT_KEY),
                         desc,
                         0xAAAAAA
                 );
@@ -243,12 +265,12 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
             if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
                 List<Component> tooltipLines = new ArrayList<>();
 
-                tooltipLines.add(Component.literal("BuffID: " + buff.getId()));
-                tooltipLines.add(Component.literal("名称: " + buff.getDisplayText()));
-                tooltipLines.add(Component.literal("当前等级: " + buff.getLevel()));
-                tooltipLines.add(Component.literal("最大等级: " + buff.getMaxLevel()));
-                tooltipLines.add(Component.literal("效果ID: " + buff.getEffectId()));
-                tooltipLines.add(Component.literal("解锁状态: " + buff.isUnlocked()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_ID_TEXT_KEY, buff.getId()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_NAME_TEXT_KEY, buff.getDisplayText()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_CURRENT_LEVEL_TEXT_KEY, buff.getLevel()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_MAX_LEVEL_TEXT_KEY, buff.getMaxLevel()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_EFFECT_ID_TEXT_KEY, buff.getEffectId()));
+                tooltipLines.add(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_UNLOCK_STATE_KEY, buff.isUnlocked()));
 
                 guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
             }
@@ -338,7 +360,7 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
     private void addActionButton(TerritoryBuff buff, int buttonX, int buttonY, UUID playerUUID) {
         // 如果没解锁
         if (!(buff.isUnlocked())) {
-            addButton("unlock", buttonX - 60, buttonY, 60, 20,
+            addButton(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UNLOCK_KEY, buttonX - 60, buttonY, 60, 20,
                     () -> {
                         if (canAffordUpgrade(buff, player)) {
                             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_UnlockTerritoryBuff(territory.getTerritoryID(), buff.getId()));
@@ -348,7 +370,7 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
         } else {
             // 如果没满级
             if (buff.getLevel() < buff.getMaxLevel()) {
-                addButton("up", buttonX - 60, buttonY, 60, 20,
+                addButton(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UPGRADE_KEY, buttonX - 60, buttonY, 60, 20,
                         () -> {
                             if (canAffordUpgrade(buff, player)) {
                                 EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_UpgradeTerritoryBuff(territory.getTerritoryID(), buff.getId()));
@@ -356,9 +378,9 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
                             }
                         });
             } else if (buff.getLevel() >= buff.getMaxLevel()) { // 如果满级了
-                addButton("max", buttonX - 60, buttonY, 60, 20,
+                addButton(Util_MessageKeys.TERRITORY_BUFF_BUTTON_MAX_KEY, buttonX - 60, buttonY, 60, 20,
                         () -> {
-                            this.player.sendSystemMessage(Component.literal("该增益已满级"));
+                            this.player.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_BUFF_MAX_LEVEL_KEY));
                         });
             }
         }
@@ -402,14 +424,14 @@ public class Screen_TerritoryBuff extends EconomySystem_Screen {
             // **遍历多种物品**
             for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemCost : cost.items) {
                 if (!itemCost.item.isEmpty() && !playerHasItem(player, itemCost.item, itemCost.count)) {
-                    player.sendSystemMessage(Component.literal("物品不足!!!"));
+                    player.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_ITEM_FAIL_KEY));
                     return false; // 物品不足
                 }
             }
 
             // **检查经验**
             if (cost.xp > 0 && player.experienceLevel < cost.xp) {
-                player.sendSystemMessage(Component.literal("经验不足!!!"));
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_XP_LEVEL_FAIL_KEY));
                 return false; // 经验值不足
             }
         }
