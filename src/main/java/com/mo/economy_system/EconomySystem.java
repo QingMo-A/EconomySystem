@@ -9,6 +9,7 @@ import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.server.ChangeJoinMessage;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -52,6 +53,7 @@ public class EconomySystem {
         // 获取 mod 事件总线
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+        ChangeJoinMessage.registerConfig();
         // 注册客户端事件
         modEventBus.addListener(this::onClientSetup);
         // 注册物品
@@ -63,10 +65,13 @@ public class EconomySystem {
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
 
+
         new Init();
         // 启动文件监听器
         new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
+
+
 
         // 日志信息
         LOGGER.info("Economy System Mod Initialized!");
