@@ -8,6 +8,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -49,15 +50,19 @@ public class Config
     }
 
     @SubscribeEvent
-    static void onLoad(final ModConfigEvent event)
+    static void onLoad(final ModConfigEvent.Loading event)
     {
-        logDirtBlock = LOG_DIRT_BLOCK.get();
-        magicNumber = MAGIC_NUMBER.get();
-        magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
+        if (SPEC.isLoaded()) {
+            logDirtBlock = LOG_DIRT_BLOCK.get();
+            magicNumber = MAGIC_NUMBER.get();
+            magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
 
-        // convert the list of strings into a set of items
-        items = ITEM_STRINGS.get().stream()
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
-                .collect(Collectors.toSet());
+            // convert the list of strings into a set of items
+            items = ITEM_STRINGS.get().stream()
+                    .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+                    .collect(Collectors.toSet());
+        } else {
+            return;
+        }
     }
 }

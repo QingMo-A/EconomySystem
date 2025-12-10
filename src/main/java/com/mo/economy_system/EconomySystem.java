@@ -29,31 +29,9 @@ public class EconomySystem {
         // 获取 mod 事件总线
         IEventBus modEventBus = context.getModEventBus();
 
-        // 注册客户端事件
-        modEventBus.addListener(this::onClientSetup);
-        // 注册物品
-        EconomySystem_Items.register(modEventBus);
-        // 注册附魔
-        EconomySystem_Enchants.register(modEventBus);
-        // 注册网络包
-        EconomySystem_NetworkManager.register();
-        // 注册创造物品栏
-        EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
-
-        new Init();
-        // 启动文件监听器
-        new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
-        new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
-
-        // 日志信息
-        LOGGER.info("Economy System Mod Initialized!");
-    }
-
-    public EconomySystem() {
-        // 获取 mod 事件总线
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
+        // 首先生成进出服消息配置文件
         ChangeJoinMessage.registerConfig();
+
         // 注册客户端事件
         modEventBus.addListener(this::onClientSetup);
         // 注册物品
@@ -65,7 +43,6 @@ public class EconomySystem {
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
 
-
         new Init();
         // 启动文件监听器
         new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
@@ -76,6 +53,33 @@ public class EconomySystem {
         // 日志信息
         LOGGER.info("Economy System Mod Initialized!");
     }
+
+//    public EconomySystem() {
+//        // 获取 mod 事件总线
+//        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+//
+//        // 注册客户端事件
+//        modEventBus.addListener(this::onClientSetup);
+//        // 注册物品
+//        EconomySystem_Items.register(modEventBus);
+//        // 注册附魔
+//        EconomySystem_Enchants.register(modEventBus);
+//        // 注册网络包
+//        EconomySystem_NetworkManager.register();
+//        // 注册创造物品栏
+//        EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
+//
+//
+//        new Init();
+//        // 启动文件监听器
+//        new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
+//        new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
+//
+//
+//
+//        // 日志信息
+//        LOGGER.info("Economy System Mod Initialized!");
+//    }
 
     private void onClientSetup(FMLClientSetupEvent event) {
         // 注册按键绑定的事件监听
