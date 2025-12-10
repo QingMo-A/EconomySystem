@@ -9,6 +9,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -40,7 +41,7 @@ public class ChangeJoinMessage {
         ModLoadingContext.get().registerConfig(
                 ModConfig.Type.COMMON,          // 配置类型：通用配置（服务端优先）
                 COMMON_CONFIG_SPEC,             // 把上面构建好的配置规则拿下来用进行注册
-                "economy_system-join_message.toml"  // 配置文件的名字
+                "economy_system/economy_system-join_message.toml"  // 配置文件的名字
         );
     }
 
