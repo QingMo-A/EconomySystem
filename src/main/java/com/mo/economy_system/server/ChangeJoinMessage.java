@@ -34,6 +34,12 @@ public class ChangeJoinMessage {
                 .define("leave_message", "§7[§c-§7]§b鱼友§6%player%§b不想和你VAN辣！");  //同上
 
         COMMON_CONFIG_SPEC = configBuilder.build();         //configbuilder又有进服消息，也有出服消息，再全部统一构建成配置规则
+
+        ModLoadingContext.get().registerConfig(
+                ModConfig.Type.COMMON,
+                COMMON_CONFIG_SPEC,
+                "economy_system/economy_system-join_message.toml"
+        );
     }
 
     // 注册配置文件

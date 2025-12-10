@@ -28,10 +28,6 @@ public class EconomySystem {
     public EconomySystem(FMLJavaModLoadingContext context) {
         // 获取 mod 事件总线
         IEventBus modEventBus = context.getModEventBus();
-
-        // 首先生成进出服消息配置文件
-        ChangeJoinMessage.registerConfig();
-
         // 注册客户端事件
         modEventBus.addListener(this::onClientSetup);
         // 注册物品
