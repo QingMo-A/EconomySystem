@@ -7,11 +7,10 @@ import com.mo.economy_system.item.items.Item_ClaimWand;
 import com.mo.economy_system.item.items.Item_Guitar;
 import com.mo.economy_system.item.items.Potion_Recall;
 import com.mo.economy_system.item.items.Potion_Wormhole;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.*;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -19,6 +18,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+
+import java.util.List;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class EconomySystem_Items {
@@ -54,6 +55,23 @@ public class EconomySystem_Items {
     // 注册赞助者帽子
     public static final RegistryObject<Item> SUPPORTER_HAT = ITEMS.register("supporter_hat", () -> new SupporterHat(
             EconomySystem_ArmorMaterials.SUPPORTER, ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final RegistryObject<Item> Dreamingfish = ITEMS.register(
+            "dreamingfish",
+            () -> new Item(new Item.Properties()
+                    .stacksTo(64)
+                    .rarity(Rarity.UNCOMMON))  //金色品质
+            {
+                // 加自定义描述tooltips
+                @Override
+                public void appendHoverText(ItemStack stack, Level level,
+                                            List<Component> tooltip, TooltipFlag flag) {
+                    super.appendHoverText(stack, level, tooltip, flag);
+                    // 读语言文件里的tooltip
+                    tooltip.add(Component.translatable("item.economy_system.dreamingfish.tooltip"));
+                }
+            }
+    );
 
 
     public static void register(IEventBus eventBus) {
