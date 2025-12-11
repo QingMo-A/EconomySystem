@@ -4,6 +4,9 @@ import net.minecraft.world.effect.MobEffects;
 
 public class RankRegistry {
     //5个等级
+    public static final Rank NULL = new Rank(
+            "NULL", -1
+    );
     public static final Rank NO_RANK = new Rank(
             "NO RANK", 0
     );
