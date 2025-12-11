@@ -1,6 +1,8 @@
 package com.mo.economy_system.server;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.rank.Rank;
+import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -16,8 +18,24 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 public class ChangeJoinMessage {
     private static ForgeConfigSpec COMMON_CONFIG_SPEC;    //声明COMMON_CONFIG_SPEC变量为配置规则容器，存储后面的配置项
+
+    //无rank消息
     private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE;     //声明JOIN_MESSAGE为forge配置文件规定的字符串变量
     private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE;   //同上
+
+    // Rank专属进服消息
+    private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE_NO_RANK;
+    private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE_FISH;
+    private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE_FISH_PLUS;
+    private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE_FISH_PLUS_PLUS;
+    private static ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE_OPERATOR;
+
+    // Rank专属离开消息
+    private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE_NO_RANK;
+    private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE_FISH;
+    private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE_FISH_PLUS;
+    private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE_FISH_PLUS_PLUS;
+    private static ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE_OPERATOR;
 
     // 静态代码块，类初始化只会执行一次
     static {
@@ -32,6 +50,48 @@ public class ChangeJoinMessage {
         LEAVE_MESSAGE = configBuilder
                 .comment("玩家离开自定义消息 | 占位符：%player%=玩家名 | 颜色代码：§a绿 §c红 §6金 §b蓝")
                 .define("leave_message", "§7[§c-§7]§b鱼友§6%player%§b不想和你VAN辣！");  //同上
+
+        // Rank专属进服消息配置
+        JOIN_MESSAGE_NO_RANK = configBuilder
+                .comment("NO_RANK玩家进服消息 | 占位符：%player%=玩家名")
+                .define("join_message_no_rank", "§7[§a+§7]§b鱼友§6%player%§b来和你VAN辣！");
+
+        JOIN_MESSAGE_FISH = configBuilder
+                .comment("FISH玩家进服消息 | 占位符：%player%=玩家名")
+                .define("join_message_fish", "§a[§aFISH§a]§b鱼友§6%player%§b来和你VAN辣！");
+
+        JOIN_MESSAGE_FISH_PLUS = configBuilder
+                .comment("FISH+玩家进服消息 | 占位符：%player%=玩家名")
+                .define("join_message_fish_plus", "§b[§bFISH+§b]§b鱼友§6%player%§b来和你VAN辣！");
+
+        JOIN_MESSAGE_FISH_PLUS_PLUS = configBuilder
+                .comment("FISH++玩家进服消息 | 占位符：%player%=玩家名")
+                .define("join_message_fish_plus_plus", "§6[§6FISH++§6]§b鱼友§6%player%§b来和你VAN辣！");
+
+        JOIN_MESSAGE_OPERATOR = configBuilder
+                .comment("OPERATOR玩家进服消息 | 占位符：%player%=玩家名")
+                .define("join_message_operator", "§c[§cOPERATOR§c]§b鱼友§6%player%§b来和你VAN辣！");
+
+        // Rank专属离开消息配置
+        LEAVE_MESSAGE_NO_RANK = configBuilder
+                .comment("NO_RANK玩家离开消息 | 占位符：%player%=玩家名")
+                .define("leave_message_no_rank", "§7[§c-§7]§b鱼友§6%player%§b不想和你VAN辣！");
+
+        LEAVE_MESSAGE_FISH = configBuilder
+                .comment("FISH玩家离开消息 | 占位符：%player%=玩家名")
+                .define("leave_message_fish", "§a[§aFISH§a]§b鱼友§6%player%§b不想和你VAN辣！");
+
+        LEAVE_MESSAGE_FISH_PLUS = configBuilder
+                .comment("FISH+玩家离开消息 | 占位符：%player%=玩家名")
+                .define("leave_message_fish_plus", "§b[§bFISH+§b]§b鱼友§6%player%§b不想和你VAN辣！");
+
+        LEAVE_MESSAGE_FISH_PLUS_PLUS = configBuilder
+                .comment("FISH++玩家离开消息 | 占位符：%player%=玩家名")
+                .define("leave_message_fish_plus_plus", "§6[§6FISH++§6]§b鱼友§6%player%§b不想和你VAN辣！");
+
+        LEAVE_MESSAGE_OPERATOR = configBuilder
+                .comment("OPERATOR玩家离开消息 | 占位符：%player%=玩家名")
+                .define("leave_message_operator", "§c[§cOPERATOR§c]§B鱼友§6%player%§b不想和你VAN辣！");
 
         COMMON_CONFIG_SPEC = configBuilder.build();         //configbuilder又有进服消息，也有出服消息，再全部统一构建成配置规则
 
@@ -61,6 +121,30 @@ public class ChangeJoinMessage {
         return (customValue == null || customValue.isBlank()) ? configValue.getDefault() : customValue;
     }
 
+    // 根据玩家Rank获取进服消息
+    private static String getJoinMessageByRank(Rank rank) {
+        return switch (rank.getRankLevel()) {
+            case 0 -> getConfigValue(JOIN_MESSAGE_NO_RANK);
+            case 1 -> getConfigValue(JOIN_MESSAGE_FISH);
+            case 2 -> getConfigValue(JOIN_MESSAGE_FISH_PLUS);
+            case 3 -> getConfigValue(JOIN_MESSAGE_FISH_PLUS_PLUS);
+            case 4 -> getConfigValue(JOIN_MESSAGE_OPERATOR);
+            default -> getConfigValue(JOIN_MESSAGE); // 默认消息
+        };
+    }
+
+    // 根据玩家Rank获取离开消息
+    private static String getLeaveMessageByRank(Rank rank) {
+        return switch (rank.getRankLevel()) {
+            case 0 -> getConfigValue(LEAVE_MESSAGE_NO_RANK);
+            case 1 -> getConfigValue(LEAVE_MESSAGE_FISH);
+            case 2 -> getConfigValue(LEAVE_MESSAGE_FISH_PLUS);
+            case 3 -> getConfigValue(LEAVE_MESSAGE_FISH_PLUS_PLUS);
+            case 4 -> getConfigValue(LEAVE_MESSAGE_OPERATOR);
+            default -> getConfigValue(LEAVE_MESSAGE); // 默认消息
+        };
+    }
+
     // 监听玩家进服事件，类似单片机中断
     @SubscribeEvent
     public static void onPlayerJoinServer(PlayerEvent.PlayerLoggedInEvent event) {   //括号里的内容是监听的对象事件
@@ -74,7 +158,10 @@ public class ChangeJoinMessage {
         }
 
         // 获取配置消息后替换占位符
-        String rawMsg = getConfigValue(JOIN_MESSAGE);
+        // 获取玩家Rank
+        Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+        // 根据Rank获取消息并替换占位符
+        String rawMsg = getJoinMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
         // 发送消息给所有在线玩家（false=非强制系统消息）
@@ -96,7 +183,10 @@ public class ChangeJoinMessage {
             return;
         }
 
-        String rawMsg = getConfigValue(LEAVE_MESSAGE);
+        // 获取玩家Rank
+        Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+        // 根据Rank获取消息并替换占位符
+        String rawMsg = getLeaveMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
         serverPlayer.getServer().getPlayerList().broadcastSystemMessage(

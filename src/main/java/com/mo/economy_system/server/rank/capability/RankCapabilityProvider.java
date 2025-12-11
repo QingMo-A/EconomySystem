@@ -93,13 +93,13 @@ public class RankCapabilityProvider implements ICapabilityProvider, INBTSerializ
         return LazyOptional.empty();
     }
 
-    // 核心改动4：实现INBTSerializable的序列化方法（Forge自动调用）
+    // 实现INBTSerializable的序列化方法（Forge自动调用）
     @Override
     public CompoundTag serializeNBT() {
         return rankCapability.serializeNBT();
     }
 
-    // 核心改动5：实现INBTSerializable的反序列化方法（Forge自动调用）
+    // 实现INBTSerializable的反序列化方法（Forge自动调用）
     @Override
     public void deserializeNBT(CompoundTag nbt) {
         rankCapability.deserializeNBT(nbt);
@@ -116,7 +116,7 @@ public class RankCapabilityProvider implements ICapabilityProvider, INBTSerializ
                 RankCapabilityProvider provider = new RankCapabilityProvider();
                 // 创建RankCapabilityProvider这个大类的一个实例（对象），把他塞给玩家
                 event.addCapability(RANK_CAP_ID, provider);
-                // 新增：玩家实体销毁时，释放LazyOptional
+                // 玩家实体销毁时，释放LazyOptional
                 event.addListener(() -> provider.lazyCapability.invalidate());
             }
         }
