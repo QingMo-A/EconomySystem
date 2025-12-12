@@ -45,10 +45,11 @@ public class EconomySystem {
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
 
 
-
         // 日志信息
         LOGGER.info("Economy System Mod Initialized!");
     }
+
+
 
 //    public EconomySystem() {
 //        // 获取 mod 事件总线

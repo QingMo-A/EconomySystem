@@ -11,11 +11,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-
 public class ChangeJoinMessage {
     private static ForgeConfigSpec COMMON_CONFIG_SPEC;    //声明COMMON_CONFIG_SPEC变量为配置规则容器，存储后面的配置项
 
@@ -94,21 +95,21 @@ public class ChangeJoinMessage {
                 .define("leave_message_operator", "§c[§cOPERATOR§c]§B鱼友§6%player%§b不想和你VAN辣！");
 
         COMMON_CONFIG_SPEC = configBuilder.build();         //configbuilder又有进服消息，也有出服消息，再全部统一构建成配置规则
-
-        ModLoadingContext.get().registerConfig(
-                ModConfig.Type.COMMON,
-                COMMON_CONFIG_SPEC,
-                "economy_system/economy_system-join_message.toml"
-        );
     }
 
     // 注册配置文件
-    public static void registerConfig() {
-        ModLoadingContext.get().registerConfig(
-                ModConfig.Type.COMMON,          // 配置类型：通用配置（服务端优先）
-                COMMON_CONFIG_SPEC,             // 把上面构建好的配置规则拿下来用进行注册
-                "economy_system/economy_system-join_message.toml"  // 配置文件的名字
-        );
+    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+    public class registerConfig {
+        @SubscribeEvent
+        public static void RegisterConfig(FMLConstructModEvent event) {
+            @SuppressWarnings({"deprecation", "removal"})
+            ModLoadingContext modLoadingContext = ModLoadingContext.get();
+            modLoadingContext.registerConfig(
+                    ModConfig.Type.COMMON,          // 配置类型：通用配置（服务端优先）
+                    COMMON_CONFIG_SPEC,             // 把上面构建好的配置规则拿下来用进行注册
+                    "economy_system/economy_system-join_message.toml"  // 配置文件的名字
+            );
+        }
     }
 
     // 获取配置文件的内容
