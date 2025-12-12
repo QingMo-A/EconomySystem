@@ -26,6 +26,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -326,7 +330,7 @@ public class Screen_Market extends EconomySystem_Screen {
                 tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY, item.getTradeID()));
                 tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY, item.getItemID()));
                 tooltipLines.add(Component.literal(""));
-                tooltipLines.add(Component.literal(String.valueOf(item.getListingTime())));
+                tooltipLines.add(Component.literal(formatTimestamp(item.getListingTime())));
 
                 guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
             }
@@ -817,5 +821,12 @@ public class Screen_Market extends EconomySystem_Screen {
 
         startX = Math.max((this.width / 2) - 300, 60);
         startY = Math.max((this.height - 450) / 4, 55);
+    }
+
+    // 格式化时间戳
+    private static String formatTimestamp(long timestamp) {
+        return Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM));
     }
 }

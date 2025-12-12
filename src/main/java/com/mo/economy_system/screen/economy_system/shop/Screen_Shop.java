@@ -9,7 +9,6 @@ import com.mo.economy_system.screen.components.AnimatedButton;
 import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
-import com.mo.economy_system.utils.Util_Message;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;

@@ -112,6 +112,8 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
+    implementation 'com.zaxxer:HikariCP:5.0.1' // 最新稳定版
 }
 
 tasks.named('processResources', ProcessResources).configure {

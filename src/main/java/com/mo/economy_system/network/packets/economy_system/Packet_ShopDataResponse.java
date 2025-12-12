@@ -2,6 +2,7 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
+import com.mo.economy_system.screen.newUI.a1111_Screen;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -45,6 +46,8 @@ public class Packet_ShopDataResponse {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen instanceof Screen_Shop screenShop) {
                 screenShop.updateShopItems(msg.shopItems);
+            } else if (Minecraft.getInstance().screen instanceof a1111_Screen screen){
+                screen.updateShopItems(msg.shopItems);
             }
         });
         context.setPacketHandled(true);
