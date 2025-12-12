@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 @Mod(EconomySystem.MODID)
 public class EconomySystem {
     public static final String MODID = "economy_system";
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
     public static final ShopManager SHOP_MANAGER = new ShopManager();
     public static final RewardManager REWARD_MANAGER = new RewardManager();
 

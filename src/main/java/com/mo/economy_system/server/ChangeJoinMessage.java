@@ -98,7 +98,7 @@ public class ChangeJoinMessage {
     }
 
     // 注册配置文件
-    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+//    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
     public class registerConfig {
         @SubscribeEvent
         public static void RegisterConfig(FMLConstructModEvent event) {
@@ -113,7 +113,7 @@ public class ChangeJoinMessage {
     }
 
     // 获取配置文件的内容
-    private static String getConfigValue(ForgeConfigSpec.ConfigValue<String> configValue) {
+    public static String getConfigValue(ForgeConfigSpec.ConfigValue<String> configValue) {
         // 配置未加载，那么返回默认值；配置加载了但是是空的，返回默认值，如果返回的不是空的，那么返回自定义值
         if (!COMMON_CONFIG_SPEC.isLoaded()) {
             return configValue.getDefault();
@@ -123,7 +123,7 @@ public class ChangeJoinMessage {
     }
 
     // 根据玩家Rank获取进服消息
-    private static String getJoinMessageByRank(Rank rank) {
+    public static String getJoinMessageByRank(Rank rank) {
         return switch (rank.getRankLevel()) {
             case 0 -> getConfigValue(JOIN_MESSAGE_NO_RANK);
             case 1 -> getConfigValue(JOIN_MESSAGE_FISH);
@@ -135,7 +135,7 @@ public class ChangeJoinMessage {
     }
 
     // 根据玩家Rank获取离开消息
-    private static String getLeaveMessageByRank(Rank rank) {
+    public static String getLeaveMessageByRank(Rank rank) {
         return switch (rank.getRankLevel()) {
             case 0 -> getConfigValue(LEAVE_MESSAGE_NO_RANK);
             case 1 -> getConfigValue(LEAVE_MESSAGE_FISH);
@@ -158,6 +158,7 @@ public class ChangeJoinMessage {
             return;
         }
 
+        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(Component.empty(), false);
         // 获取配置消息后替换占位符
         // 获取玩家Rank
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
@@ -184,6 +185,8 @@ public class ChangeJoinMessage {
             return;
         }
 
+        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(Component.empty(), false);
+
         // 获取玩家Rank
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
         // 根据Rank获取消息并替换占位符
@@ -195,4 +198,6 @@ public class ChangeJoinMessage {
                 false
         );
     }
+
+
 }

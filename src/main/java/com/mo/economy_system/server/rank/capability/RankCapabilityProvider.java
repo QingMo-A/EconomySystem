@@ -1,13 +1,17 @@
 package com.mo.economy_system.server.rank.capability;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.ranktitle_system.Packet_SyncRankTitle;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.capabilities.*;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.common.util.NonNullSupplier;
@@ -15,6 +19,8 @@ import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import net.minecraftforge.common.util.INBTSerializable; // 必须导入这个接口
@@ -118,6 +124,13 @@ public class RankCapabilityProvider implements ICapabilityProvider, INBTSerializ
                 event.addCapability(RANK_CAP_ID, provider);
                 // 玩家实体销毁时，释放LazyOptional
                 event.addListener(() -> provider.lazyCapability.invalidate());
+
+                // 关键：客户端同步（Forge会自动同步NBT数据到客户端）
+                if (FMLEnvironment.dist == Dist.CLIENT) {
+                    player.getCapability(RANK_CAPABILITY).ifPresent(cap -> {
+                        // 客户端初始化时从服务端同步的NBT加载数据
+                    });
+                }
             }
         }
     }
@@ -141,6 +154,14 @@ public class RankCapabilityProvider implements ICapabilityProvider, INBTSerializ
 
         LazyOptional<IRankCapability> capOptional = player.getCapability(RANK_CAPABILITY);
         capOptional.ifPresent(cap -> cap.setRank(rank));
+
+        // 新增：服务器端立即同步给所有能看到该玩家的客户端（包括自己）
+        if (player instanceof ServerPlayer serverPlayer) {
+            EconomySystem_NetworkManager.INSTANCE.send(
+                    PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
+                    new Packet_SyncRankTitle(serverPlayer)
+            );
+        }
     }
 }
 

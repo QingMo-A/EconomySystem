@@ -12,8 +12,10 @@ import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
+import com.mo.economy_system.network.packets.ranktitle_system.Packet_SyncRankTitle;
 import com.mo.economy_system.network.packets.territory_system.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
@@ -69,5 +71,6 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_UpgradeTerritoryBuff.class, Packet_UpgradeTerritoryBuff::encode, Packet_UpgradeTerritoryBuff::decode, Packet_UpgradeTerritoryBuff::handle);
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataRequest.class, Packet_SingleTerritoryDataRequest::encode, Packet_SingleTerritoryDataRequest::decode, Packet_SingleTerritoryDataRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataResponse.class, Packet_SingleTerritoryDataResponse::encode, Packet_SingleTerritoryDataResponse::decode, Packet_SingleTerritoryDataResponse::handle);
+        INSTANCE.registerMessage(packetId++, Packet_SyncRankTitle.class, Packet_SyncRankTitle::encode, Packet_SyncRankTitle::decode, Packet_SyncRankTitle::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 可选：明确指定只发到客户端
     }
 }

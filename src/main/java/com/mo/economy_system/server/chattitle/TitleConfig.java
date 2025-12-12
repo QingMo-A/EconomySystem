@@ -54,8 +54,8 @@ public class TitleConfig {
         try {
             List<TitleData> defaultTitles = List.of(
                     new TitleData() {{ titleId = 0; titleName = "默认称号"; }},
-                    new TitleData() {{ titleId = 1; titleName = "勇者"; }},
-                    new TitleData() {{ titleId = 2; titleName = "大师"; }}
+                    new TitleData() {{ titleId = 1; titleName = "123"; }},
+                    new TitleData() {{ titleId = 2; titleName = "456"; }}
             );
 
             File parentDir = TITLE_CONFIG_FILE.getParentFile();

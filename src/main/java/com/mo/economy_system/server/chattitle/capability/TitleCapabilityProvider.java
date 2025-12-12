@@ -2,14 +2,19 @@ package com.mo.economy_system.server.chattitle.capability;
 
 import com.google.common.eventbus.Subscribe;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.ranktitle_system.Packet_SyncRankTitle;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
+import com.mo.economy_system.server.headdisplay.HeadDisplay;
 import com.mo.economy_system.server.rank.capability.IRankCapability;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderHighlightEvent;
 import net.minecraftforge.common.capabilities.*;
 import net.minecraftforge.common.util.INBTSerializable;
@@ -17,6 +22,8 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,6 +73,13 @@ public class TitleCapabilityProvider implements ICapabilityProvider, INBTSeriali
                 event.addCapability(Title_Capability_ID, provider);
                 // 玩家下线时释放资源
                 event.addListener(() -> provider.lazyCapability.invalidate());
+
+                // 客户端同步
+                if (FMLEnvironment.dist == Dist.CLIENT) {
+                    ((Player) event.getObject()).getCapability(Title_CAPABILITY_BIAOSHI).ifPresent(cap -> {
+                        // 客户端自动加载服务端同步的NBT数据
+                    });
+                }
             }
         }
     }
@@ -87,8 +101,14 @@ public class TitleCapabilityProvider implements ICapabilityProvider, INBTSeriali
         if (Title_CAPABILITY_BIAOSHI == null) {
             return; // 能力未初始化，不执行
         }
-
         LazyOptional<ITitleCapability> capOptional = player.getCapability(Title_CAPABILITY_BIAOSHI);
-        capOptional.ifPresent(cap -> cap.setTitle(title)); // 如果获取成功，设置称号
+        capOptional.ifPresent(cap -> cap.setTitle(title));
+        // 新增：服务器端立即同步
+        if (player instanceof ServerPlayer serverPlayer) {
+            EconomySystem_NetworkManager.INSTANCE.send(
+                    PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
+                    new Packet_SyncRankTitle(serverPlayer)
+            );
+        }
     }
 }
