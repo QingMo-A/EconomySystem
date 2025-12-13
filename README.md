@@ -6,8 +6,8 @@
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
 ### 作者 (Author): 
-[QingMo](https://github.com/QingMo-A)
-[HanHanYu](https://github.com/hanhanyu666)
+- [QingMo](https://github.com/QingMo-A)
+- [HanHanYu](https://github.com/hanhanyu666)
 
 详细请查看 [1.20.1 分支](https://github.com/QingMo-A/EconomySystem/tree/1.20.1)
 
