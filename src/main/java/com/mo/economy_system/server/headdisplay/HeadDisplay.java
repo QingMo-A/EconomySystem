@@ -63,6 +63,8 @@ public class HeadDisplay {
             textColorFormatting = ChatFormatting.AQUA;
         } else if (Objects.equals(playerRank.getRankId(), RankRegistry.FISH_PLUS_PLUS.getRankId())) {
             textColorFormatting = ChatFormatting.GOLD;
+        } else if  (Objects.equals(playerRank.getRankId(), RankRegistry.OPERATOR.getRankId())) {
+            textColorFormatting = ChatFormatting.RED;
         } else {
             textColorFormatting = ChatFormatting.WHITE;
         }

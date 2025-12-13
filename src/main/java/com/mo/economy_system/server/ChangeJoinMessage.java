@@ -1,7 +1,10 @@
 package com.mo.economy_system.server;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.network.EconomySystem_NetworkManager; // 新增：导入网络管理器
+import com.mo.economy_system.network.packets.Packet_JoinMessage;
 import com.mo.economy_system.server.rank.Rank;
+import com.mo.economy_system.server.rank.RankRegistry;
 import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,8 +15,10 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.PacketDistributor;
+
+import java.util.Objects;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -98,7 +103,7 @@ public class ChangeJoinMessage {
     }
 
     // 注册配置文件
-//    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
     public class registerConfig {
         @SubscribeEvent
         public static void RegisterConfig(FMLConstructModEvent event) {
@@ -158,19 +163,29 @@ public class ChangeJoinMessage {
             return;
         }
 
-        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(Component.empty(), false);
-        // 获取配置消息后替换占位符
         // 获取玩家Rank
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+
+        //只有尊贵的rank用户才有提示
+        if (Objects.equals(playerRank.getRankId(), RankRegistry.NO_RANK.getRankId())) {
+            return;
+        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.NULL.getRankId())) {
+            return;
+        }
+
         // 根据Rank获取消息并替换占位符
         String rawMsg = getJoinMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
-        // 发送消息给所有在线玩家（false=非强制系统消息）
-        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(
-                Component.literal(formattedMsg),
-                false
-        );
+        // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
+        Component title = Component.literal("§b玩家加入");
+        Component content = Component.literal(formattedMsg);
+        for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
+            EconomySystem_NetworkManager.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> onlinePlayer),
+                    new Packet_JoinMessage(title, content)
+            );
+        }
     }
 
     // 监听玩家离开事件
@@ -185,19 +200,27 @@ public class ChangeJoinMessage {
             return;
         }
 
-        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(Component.empty(), false);
-
         // 获取玩家Rank
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+
+        //只有尊贵的rank用户才有提示
+        if (Objects.equals(playerRank.getRankId(), RankRegistry.NO_RANK.getRankId())) {
+            return;
+        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.NULL.getRankId())) {
+            return;
+        }
         // 根据Rank获取消息并替换占位符
         String rawMsg = getLeaveMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
-        serverPlayer.getServer().getPlayerList().broadcastSystemMessage(
-                Component.literal(formattedMsg),
-                false
-        );
+        // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
+        Component title = Component.literal("§c玩家离开");
+        Component content = Component.literal(formattedMsg);
+        for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
+            EconomySystem_NetworkManager.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> onlinePlayer),
+                    new Packet_JoinMessage(title, content)
+            );
+        }
     }
-
-
 }

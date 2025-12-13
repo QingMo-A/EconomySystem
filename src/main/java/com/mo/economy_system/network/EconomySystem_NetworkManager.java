@@ -3,6 +3,7 @@ package com.mo.economy_system.network;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.packets.Packet_ServerPlayerListRequest;
 import com.mo.economy_system.network.packets.Packet_ServerPlayerListResponse;
+import com.mo.economy_system.network.packets.Packet_JoinMessage; // 新增：导入弹窗消息包
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
@@ -71,6 +72,8 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_UpgradeTerritoryBuff.class, Packet_UpgradeTerritoryBuff::encode, Packet_UpgradeTerritoryBuff::decode, Packet_UpgradeTerritoryBuff::handle);
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataRequest.class, Packet_SingleTerritoryDataRequest::encode, Packet_SingleTerritoryDataRequest::decode, Packet_SingleTerritoryDataRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataResponse.class, Packet_SingleTerritoryDataResponse::encode, Packet_SingleTerritoryDataResponse::decode, Packet_SingleTerritoryDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncRankTitle.class, Packet_SyncRankTitle::encode, Packet_SyncRankTitle::decode, Packet_SyncRankTitle::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)); // 可选：明确指定只发到客户端
+        INSTANCE.registerMessage(packetId++, Packet_SyncRankTitle.class, Packet_SyncRankTitle::encode, Packet_SyncRankTitle::decode, Packet_SyncRankTitle::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        // 新增：注册弹窗消息包（指定只发往客户端，和你的SyncRankTitle保持一致）
+        INSTANCE.registerMessage(packetId++, Packet_JoinMessage.class, Packet_JoinMessage::encode, Packet_JoinMessage::decode, Packet_JoinMessage::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

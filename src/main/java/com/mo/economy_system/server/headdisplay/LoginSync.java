@@ -12,13 +12,11 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID)
 public class LoginSync {
 
-    // 当一个玩家开始被另一个玩家追踪（进入视野）时触发
+    // 当一个玩家进入另一个玩家的视野里时触发
     @SubscribeEvent
     public static void onStartTracking(PlayerEvent.StartTracking event) {
-        // event.getTarget() 是被追踪的实体（这里是玩家）
-        // event.getEntity() 是开始追踪的玩家（观察者）
         if (event.getTarget() instanceof ServerPlayer targetPlayer) {
-            // 向开始追踪的玩家（观察者）发送被追踪玩家的 Rank 和 Title 数据
+            // 向观察者发送被观察玩家的 Rank 和 Title 数据
             EconomySystem_NetworkManager.INSTANCE.send(
                     net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> (ServerPlayer) event.getEntity()),
                     new Packet_SyncRankTitle(targetPlayer)
