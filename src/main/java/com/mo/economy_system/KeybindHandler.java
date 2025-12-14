@@ -52,8 +52,8 @@ public class KeybindHandler {
                 ServerInformationDisplay.toggleUI(); // UI开关
                 mc.player.sendSystemMessage(
                         ServerInformationDisplay.isShowUI() ?
-                                Component.literal("§a信息面板已开启，再次按下M关闭！") :
-                                Component.literal("§c信息面板已关闭，再次按下M开启！")
+                                Component.literal("§a[EconomySystem]信息面板已开启，再次按下M关闭！") :
+                                Component.literal("§c[EconomySystem]信息面板已关闭，再次按下M开启！")
                 );
             }
         }

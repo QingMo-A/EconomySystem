@@ -1,6 +1,7 @@
 package com.mo.economy_system.server.chattitle;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.playerlevel.overalllevel.capability.OverAllLevelCapabilityProvider;
 import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
 import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.ChatFormatting;
@@ -14,76 +15,55 @@ import java.util.Objects;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ChangeChatEvent {
+    // 在ChangeChatEvent的onPlayerChat方法中修改
     @SubscribeEvent
     public static void onPlayerChat(ServerChatEvent event) {
-        // 获取发送消息的玩家
         ServerPlayer player = event.getPlayer();
-
-        // 获取玩家的当前称号
         Title playerTitle = TitleCapabilityProvider.getPlayerTitle(player);
         String titleName = playerTitle.getTitleName();
-        //取消原版的聊天发送
+        String playerRank = RankCapabilityProvider.getPlayerRank(player).getRankName();
+        int playerLevel = OverAllLevelCapabilityProvider.getPlayerLevel(player); // 获取等级
         event.setCanceled(true);
 
         Component customMessage = null;
-        String player_rank = RankCapabilityProvider.getPlayerRank(player).getRankName();
+        ChatFormatting rankColor = switch (playerRank) {
+            case "FISH" -> ChatFormatting.GREEN;
+            case "FISH+" -> ChatFormatting.AQUA;
+            case "FISH++" -> ChatFormatting.GOLD;
+            case "OPERATOR" -> ChatFormatting.RED;
+            default -> ChatFormatting.WHITE; // NO_RANK/NULL默认白色
+        };
 
-        if (Objects.equals(player_rank, "NO_RANK") || Objects.equals(player_rank, "NULL")) {
-            // 拼接消息  称号+玩家名+文本
-            if (player_rank.equals("NO_RANK")) {
-                customMessage = Component.literal("[" + titleName + "] ")
-                        .append(player.getDisplayName())
-                        .append(": ")
-                        .append(event.getRawText());
-            }
-            else {
-                customMessage = Component.literal("[" + titleName + "] ")
-                        .append(player.getDisplayName())
-                        .append(": ")
-                        .append(event.getRawText());
-            }
+        // 等级前缀
+        String levelPrefix = String.format("[Lv.%d] ", playerLevel);
+
+        if (Objects.equals(playerRank, "NO_RANK") || Objects.equals(playerRank, "NULL")) {
+            // 无特殊Rank：等级+称号+玩家名+消息（均为默认白色）
+            customMessage = Component.literal(levelPrefix)
+                    .append(Component.literal("[" + titleName + "] ").withStyle(rankColor))
+                    .append(player.getDisplayName())
+                    .append(Component.literal(": ").withStyle(rankColor))
+                    .append(event.getRawText());
+        } else if (playerRank.equals("OPERATOR")) {
+            // 管理员等级和Rank为红色，玩家ID和内容为白色
+            customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级红色
+                    .append(Component.literal("[" + playerRank + " - " + titleName + "] ").withStyle(rankColor)) // Rank红色
+                    .append(Component.literal(player.getDisplayName().getString()).withStyle(ChatFormatting.WHITE)) // 玩家ID白色
+                    .append(Component.literal(": ").withStyle(rankColor)) // 冒号红色
+                    .append(Component.literal(event.getRawText()).withStyle(ChatFormatting.WHITE)); // 内容白色
         } else {
-            // 拼接消息  称号+玩家名+文本
-            if (player_rank.equals("FISH")) {
-                customMessage = Component.literal("§a[" + player_rank + " - " + titleName + "] ")
-                        .append(player.getDisplayName()).withStyle(ChatFormatting.GREEN)
-                        .append(": ").withStyle(ChatFormatting.GREEN)
-                        .append(event.getRawText()).withStyle(ChatFormatting.GREEN);
-            }
-            else if (player_rank.equals("FISH+")) {
-                customMessage = Component.literal("§b[" + player_rank + " - " + titleName + "] ")
-                        .append(player.getDisplayName()).withStyle(ChatFormatting.AQUA)
-                        .append(": ").withStyle(ChatFormatting.AQUA)
-                        .append(event.getRawText()).withStyle(ChatFormatting.AQUA);
-            }
-            else if  (player_rank.equals("FISH++")) {
-                customMessage = Component.literal("§6[" + player_rank + " - " + titleName + "] ")
-                        .append(player.getDisplayName()).withStyle(ChatFormatting.GOLD)
-                        .append(": ").withStyle(ChatFormatting.GOLD)
-                        .append(event.getRawText()).withStyle(ChatFormatting.GOLD);;
-            }
-            else if  (player_rank.equals("OPERATOR")) {
-                customMessage = Component.literal("§c[" + player_rank + " - " + titleName + "] ")
-                        .append(player.getDisplayName()).withStyle(ChatFormatting.GOLD)
-                        .append(": ").withStyle(ChatFormatting.GOLD)
-                        .append(event.getRawText()).withStyle(ChatFormatting.WHITE);;
-            }
-            else {
-                customMessage = Component.literal("[" + player_rank + " - " + titleName + "] ")
-                        .append(player.getDisplayName())
-                        .append(": ")
-                        .append(event.getRawText());
-            }
+            // 其他Rank所有部分均使用对应Rank颜色
+            customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级
+                    .append(Component.literal("[" + playerRank + " - " + titleName + "] ").withStyle(rankColor)) // Rank+称号
+                    .append(Component.literal(player.getDisplayName().getString()).withStyle(rankColor))// 玩家ID
+                    .append(Component.literal(": ").withStyle(rankColor)) // 冒号
+                    .append(Component.literal(event.getRawText()).withStyle(rankColor)); // 消息内容
         }
 
-
-
-
-        // true = 仅显示在聊天栏；false = 系统提示（弹提示框）
+        // 发送格式化消息
         for (ServerPlayer onlinePlayer : player.getServer().getPlayerList().getPlayers()) {
             onlinePlayer.sendSystemMessage(customMessage, false);
         }
-
     }
 
 

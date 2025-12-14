@@ -26,6 +26,7 @@ import net.minecraftforge.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
@@ -46,6 +47,14 @@ public class ServerInformationDisplay {
     private static long LAST_PLAYER_LIST_UPDATE = 0;       // 玩家列表最后刷新时间
     private static long LAST_BALANCE_UPDATE = 0;           // 余额最后刷新时间
     private static final long UPDATE_INTERVAL = 5000;      // 5秒刷新一次
+
+    public static int PLAYER_OVERALL_LEVEL = 0; //玩家总等级
+
+    // 获取当前玩家UUID
+    public static UUID getCurrentPlayerUUID() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null ? mc.player.getUUID() : null;
+    }
 
     // 注册Tick事件
     static {
@@ -132,6 +141,7 @@ public class ServerInformationDisplay {
         if (mc.player != null) {
             lines.add(Component.literal("§6鱼友: §e" + mc.player.getName().getString()));
             lines.add(Component.literal("§6余额: §e" + PLAYER_BALANCE + " 梦鱼币"));
+            lines.add(Component.literal("§6梦鱼等级: §e" + PLAYER_OVERALL_LEVEL));
 
             ChatFormatting textColorFormatting;
             if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
@@ -202,7 +212,6 @@ public class ServerInformationDisplay {
         int bgColor = (BACKGROUND_ALPHA << 24) | 0x000000;
         guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, bgColor);
 
-        // ========== 关键修改：使用动态RGB颜色替代固定白色 ==========
         int borderColor = getDynamicBorderColor();
         guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, borderColor);          // 上边框
         guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, borderColor); // 下边框

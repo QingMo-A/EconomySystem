@@ -1,5 +1,6 @@
 package com.mo.economy_system.server.headdisplay;
 
+import com.mo.economy_system.playerlevel.overalllevel.capability.OverAllLevelCapabilityProvider;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -49,6 +50,7 @@ public class HeadDisplay {
 
         Rank playerRank = RankCapabilityProvider.getPlayerRank(player);
         Title playerTitle = TitleCapabilityProvider.getPlayerTitle(player);
+        int playerLevel = OverAllLevelCapabilityProvider.getPlayerLevel(player);
         if (playerRank == null || playerTitle == null) {
             return;
         }
@@ -68,7 +70,7 @@ public class HeadDisplay {
             textColorFormatting = ChatFormatting.WHITE;
         }
 
-        Component displayText = Component.literal("[" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+        Component displayText = Component.literal("[" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
                 .withStyle(textColorFormatting);
 
         PoseStack poseStack = event.getPoseStack();
