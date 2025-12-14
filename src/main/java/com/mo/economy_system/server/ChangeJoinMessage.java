@@ -15,7 +15,6 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Objects;
@@ -167,9 +166,9 @@ public class ChangeJoinMessage {
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
 
         //只有尊贵的rank用户才有提示
-        if (Objects.equals(playerRank.getRankId(), RankRegistry.NO_RANK.getRankId())) {
+        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
             return;
-        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.NULL.getRankId())) {
+        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.NULL.getRankName())) {
             return;
         }
 
@@ -204,9 +203,9 @@ public class ChangeJoinMessage {
         Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
 
         //只有尊贵的rank用户才有提示
-        if (Objects.equals(playerRank.getRankId(), RankRegistry.NO_RANK.getRankId())) {
+        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
             return;
-        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.NULL.getRankId())) {
+        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.NULL.getRankName())) {
             return;
         }
         // 根据Rank获取消息并替换占位符

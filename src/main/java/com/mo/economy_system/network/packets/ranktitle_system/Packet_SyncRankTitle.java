@@ -24,7 +24,7 @@ public class Packet_SyncRankTitle {
         Rank rank = RankCapabilityProvider.getPlayerRank(player);
         Title title = TitleCapabilityProvider.getPlayerTitle(player);
 
-        this.rankId = rank.getRankId();
+        this.rankId = rank.getRankName();
         this.rankLevel = rank.getRankLevel();
         this.titleId = title.getTitleID();
         this.titleName = title.getTitleName();

@@ -295,5 +295,18 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY, "点击复制");
         add(Util_MessageKeys.ABOUT_COPY_URL, "Github仓库链接已经复制到粘贴板了");
         add(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY, "返回");
+
+        //---------------------------------------------------------------------------服务器ui
+        add("screen.economy_system.start.title", "经济系统主界面"); // UI标题
+        add("screen.economy_system.start.player", "玩家: %s");     // 玩家名称
+        add("screen.economy_system.start.rank", "等级: %s");       // 等级
+        add("screen.economy_system.start.player_title", "称号: %s");// 称号（新键，避免重复）
+        add("screen.economy_system.start.economy_btn", "经济管理"); // 按钮
+        add("screen.economy_system.start.title_btn", "称号管理");   // 按钮
+
+
+
+
+
     }
 }

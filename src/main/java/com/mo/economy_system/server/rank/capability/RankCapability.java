@@ -22,7 +22,7 @@ public class RankCapability implements IRankCapability {
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
-        nbt.putString("rankId", currentRank.getRankId());
+        nbt.putString("rankId", currentRank.getRankName());
         nbt.putInt("rankLevel", currentRank.getRankLevel());
         return nbt;
     }

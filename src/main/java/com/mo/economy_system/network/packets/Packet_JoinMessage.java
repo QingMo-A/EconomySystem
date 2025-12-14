@@ -44,7 +44,6 @@ public class Packet_JoinMessage {
         DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(title, content));
     }
 
-    // 修复：实现SafeRunnable接口而非普通Runnable
     @OnlyIn(Dist.CLIENT)
     private static class ClientRunnable implements DistExecutor.SafeRunnable {
         private final Component title;

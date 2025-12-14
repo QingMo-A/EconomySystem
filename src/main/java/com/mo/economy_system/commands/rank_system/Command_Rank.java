@@ -78,7 +78,7 @@ public class Command_Rank {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
         Rank currentRank = RankCapabilityProvider.getPlayerRank(targetPlayer);
         context.getSource().sendSuccess(
-                () -> net.minecraft.network.chat.Component.literal("玩家 " + targetPlayer.getName().getString() + " 的当前等级：" + currentRank.getRankId()),
+                () -> net.minecraft.network.chat.Component.literal("玩家 " + targetPlayer.getName().getString() + " 的当前等级：" + currentRank.getRankName()),
                 false
         );
         return 1;

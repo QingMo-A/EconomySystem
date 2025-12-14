@@ -2,6 +2,7 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.newUI.a1111_Screen;
+import com.mo.economy_system.server.serverui.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,6 +19,10 @@ public class Packet_BalanceResponse {
     public Packet_BalanceResponse(int balance, List<Map.Entry<String, Integer>> accounts) {
         this.balance = balance;
         this.accounts = accounts;
+    }
+
+    public int getBalance() {
+        return this.balance;
     }
 
     // BalanceResponsePacket.java
@@ -50,6 +55,8 @@ public class Packet_BalanceResponse {
     public static void handle(Packet_BalanceResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
+            //更新服务器信息面板的玩家余额
+            ServerInformationDisplay.PLAYER_BALANCE = msg.getBalance();
             Minecraft minecraft = Minecraft.getInstance();
             Screen screen = minecraft.screen;
             if (screen instanceof Screen_Home screenHome) {
@@ -60,5 +67,7 @@ public class Packet_BalanceResponse {
         });
         context.setPacketHandled(true);
     }
+
+
 
 }

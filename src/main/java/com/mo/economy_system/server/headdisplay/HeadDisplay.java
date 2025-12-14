@@ -7,7 +7,6 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.Tesselator;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 
 import net.minecraft.client.renderer.GameRenderer;
 
@@ -32,7 +31,7 @@ import net.minecraftforge.fml.common.Mod;
 import java.util.Objects;
 
 /**
- * 客户端玩家头顶头衔渲染器（完全独立，不影响聊天和服务器）
+ * 客户端玩家头顶头衔渲染器
  */
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class HeadDisplay {
@@ -55,21 +54,21 @@ public class HeadDisplay {
         }
 
         ChatFormatting textColorFormatting;
-        if (Objects.equals(playerRank.getRankId(), RankRegistry.NO_RANK.getRankId())) {
+        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
             textColorFormatting = ChatFormatting.WHITE;
-        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.FISH.getRankId())) {
+        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH.getRankName())) {
             textColorFormatting = ChatFormatting.GREEN;
-        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.FISH_PLUS.getRankId())) {
+        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS.getRankName())) {
             textColorFormatting = ChatFormatting.AQUA;
-        } else if (Objects.equals(playerRank.getRankId(), RankRegistry.FISH_PLUS_PLUS.getRankId())) {
+        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS_PLUS.getRankName())) {
             textColorFormatting = ChatFormatting.GOLD;
-        } else if  (Objects.equals(playerRank.getRankId(), RankRegistry.OPERATOR.getRankId())) {
+        } else if  (Objects.equals(playerRank.getRankName(), RankRegistry.OPERATOR.getRankName())) {
             textColorFormatting = ChatFormatting.RED;
         } else {
             textColorFormatting = ChatFormatting.WHITE;
         }
 
-        Component displayText = Component.literal("[" + playerRank.getRankId() + "] [" + playerTitle.getTitleName() + "]")
+        Component displayText = Component.literal("[" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
                 .withStyle(textColorFormatting);
 
         PoseStack poseStack = event.getPoseStack();
@@ -87,7 +86,7 @@ public class HeadDisplay {
         float textHeight = font.lineHeight;
 
         // 背景参数：半透明黑色（类似原版nametag）
-        int backgroundColor = 0x80000000; // 50% 透明黑，可调整透明度（如0xA0000000更不透明）
+        int backgroundColor = 0x80000000; // 50% 透明黑，可调整透明度（0xA0000000更不透明）
         float paddingX = 4.0F;
         float paddingY = 2.0F;
 

@@ -103,7 +103,7 @@ public class TitleCapabilityProvider implements ICapabilityProvider, INBTSeriali
         }
         LazyOptional<ITitleCapability> capOptional = player.getCapability(Title_CAPABILITY_BIAOSHI);
         capOptional.ifPresent(cap -> cap.setTitle(title));
-        // 新增：服务器端立即同步
+        // 服务器端立即同步
         if (player instanceof ServerPlayer serverPlayer) {
             EconomySystem_NetworkManager.INSTANCE.send(
                     PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
