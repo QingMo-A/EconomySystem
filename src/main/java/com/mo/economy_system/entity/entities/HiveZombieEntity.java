@@ -1,0 +1,234 @@
+package com.mo.economy_system.entity.entities;
+
+import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.entity.EconomySystem_Entities;
+import com.mo.economy_system.entity.entities.model.ai.HiveZombieTargetGoal;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+import java.util.List;
+import java.util.UUID;
+
+@Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+public class HiveZombieEntity extends Monster {
+
+    /* =========================
+       Attribute Modifier UUIDs
+       ========================= */
+
+    private static final UUID DAY_SPEED_MODIFIER =
+            UUID.fromString("11111111-aaaa-bbbb-cccc-000000000001");
+    private static final UUID DAY_DAMAGE_MODIFIER =
+            UUID.fromString("11111111-aaaa-bbbb-cccc-000000000002");
+
+    private static final UUID NIGHT_SPEED_MODIFIER =
+            UUID.fromString("22222222-aaaa-bbbb-cccc-000000000001");
+    private static final UUID NIGHT_DAMAGE_MODIFIER =
+            UUID.fromString("22222222-aaaa-bbbb-cccc-000000000002");
+    private static final UUID NIGHT_RANGE_MODIFIER =
+            UUID.fromString("22222222-aaaa-bbbb-cccc-000000000003");
+
+
+    public HiveZombieEntity(EntityType<? extends Monster> entityType, Level level) {
+        super(entityType, level);
+    }
+
+    // =========================
+// Encircle Data
+// =========================
+
+    private net.minecraft.world.phys.Vec3 encirclePos = null;
+
+    public void setEncirclePos(net.minecraft.world.phys.Vec3 pos) {
+        this.encirclePos = pos;
+    }
+
+    public net.minecraft.world.phys.Vec3 getEncirclePos() {
+        return encirclePos;
+    }
+
+    public boolean hasEncirclePos() {
+        return encirclePos != null;
+    }
+
+    public void clearEncirclePos() {
+        this.encirclePos = null;
+    }
+
+
+    /* =========================
+       AI
+       ========================= */
+
+    @Override
+    protected void registerGoals() {
+        super.registerGoals();
+
+        // 包围移动（优先于近战）
+        this.goalSelector.addGoal(2, new com.mo.economy_system.entity.entities.model.ai.HiveEncircleGoal(this));
+
+        // 近战
+        this.goalSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.0D, false));
+
+        this.goalSelector.addGoal(7, new net.minecraft.world.entity.ai.goal.RandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(8, new net.minecraft.world.entity.ai.goal.LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(8, new net.minecraft.world.entity.ai.goal.RandomLookAroundGoal(this));
+
+        this.targetSelector.addGoal(2, new HiveZombieTargetGoal(this));
+    }
+
+
+    // 创建属性构建器
+    public static AttributeSupplier.Builder createAttributes() {
+        return Monster.createMonsterAttributes()
+                .add(Attributes.MAX_HEALTH, 20.0D)  // 生命值
+                .add(Attributes.MOVEMENT_SPEED, 0.23F)  // 移动速度
+                .add(Attributes.ATTACK_DAMAGE, 3.0D)  // 攻击伤害
+                .add(Attributes.ARMOR, 2.0D)  // 护甲
+                .add(Attributes.FOLLOW_RANGE, 35.0D);  // 跟随范围
+    }
+
+    /* =========================
+       Tick
+       ========================= */
+
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (!this.level().isClientSide) {
+            updateDayNightEffects();
+        }
+    }
+
+    /* =========================
+       Day / Night Logic
+       ========================= */
+
+    private void updateDayNightEffects() {
+        var speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        var damage = this.getAttribute(Attributes.ATTACK_DAMAGE);
+        var range = this.getAttribute(Attributes.FOLLOW_RANGE);
+
+        if (speed == null || damage == null || range == null) return;
+
+        // 清理所有 modifier
+        speed.removeModifier(DAY_SPEED_MODIFIER);
+        speed.removeModifier(NIGHT_SPEED_MODIFIER);
+        damage.removeModifier(DAY_DAMAGE_MODIFIER);
+        damage.removeModifier(NIGHT_DAMAGE_MODIFIER);
+        range.removeModifier(NIGHT_RANGE_MODIFIER);
+
+        if (isInDirectSunlight()) {
+            // 白天削弱（不燃烧）
+            speed.addTransientModifier(new AttributeModifier(
+                    DAY_SPEED_MODIFIER,
+                    "Day slow",
+                    -0.30,
+                    AttributeModifier.Operation.MULTIPLY_TOTAL));
+
+            damage.addTransientModifier(new AttributeModifier(
+                    DAY_DAMAGE_MODIFIER,
+                    "Day weak",
+                    -0.40,
+                    AttributeModifier.Operation.MULTIPLY_TOTAL));
+
+        } else if (!this.level().isDay()) {
+            // 夜晚强化
+            speed.addTransientModifier(new AttributeModifier(
+                    NIGHT_SPEED_MODIFIER,
+                    "Night speed",
+                    0.40,
+                    AttributeModifier.Operation.MULTIPLY_TOTAL));
+
+            damage.addTransientModifier(new AttributeModifier(
+                    NIGHT_DAMAGE_MODIFIER,
+                    "Night damage",
+                    0.50,
+                    AttributeModifier.Operation.MULTIPLY_TOTAL));
+
+            range.addTransientModifier(new AttributeModifier(
+                    NIGHT_RANGE_MODIFIER,
+                    "Night vision",
+                    20.0,
+                    AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    /* =========================
+       Sunlight Detection
+       ========================= */
+
+    private boolean isInDirectSunlight() {
+        if (!this.level().isDay()) return false;
+        if (this.level().isRaining()) return false;
+
+        BlockPos pos = this.blockPosition();
+        return this.level().canSeeSky(pos);
+    }
+
+    /* =========================
+       Disable Burning
+       ========================= */
+
+    @Override
+    protected boolean isSunBurnTick() {
+        return false;
+    }
+
+    /* =========================
+       Hive Broadcast
+       ========================= */
+
+    double swarmRange = 25.0;
+
+    public void broadcastAggro(LivingEntity target) {
+        if (this.level().isClientSide) return;
+        if (this.level().isDay()) return;
+
+        AABB box = this.getBoundingBox().inflate(swarmRange);
+
+        List<HiveZombieEntity> zombies =
+                this.level().getEntitiesOfClass(HiveZombieEntity.class, box);
+
+        int count = zombies.size();
+        if (count <= 1) return;
+
+        double radius = 2.8; // 包围半径
+        var center = target.position();
+
+        for (int i = 0; i < count; i++) {
+            HiveZombieEntity zombie = zombies.get(i);
+
+            zombie.setTarget(target);
+
+            // 分配角度（形成包围）
+            double angle = (2 * Math.PI / count) * i;
+
+            double x = center.x + Math.cos(angle) * radius;
+            double z = center.z + Math.sin(angle) * radius;
+
+            zombie.setEncirclePos(
+                    new net.minecraft.world.phys.Vec3(x, center.y, z)
+            );
+        }
+    }
+
+
+    // 注册实体属性
+    @SubscribeEvent
+    public static void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put(EconomySystem_Entities.HIVE_ZOMBIE.get(), HiveZombieEntity.createAttributes().build());
+    }
+}

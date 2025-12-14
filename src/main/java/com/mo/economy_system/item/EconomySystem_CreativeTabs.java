@@ -5,7 +5,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
@@ -23,7 +22,8 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.WORMHOLE_POTION.get());
                         output.accept(EconomySystem_Items.RECALL_POTION.get());
                         output.accept(EconomySystem_Items.SUPPORTER_HAT.get());
-                        output.accept(EconomySystem_Items.Dreamingfish.get());
+                        output.accept(EconomySystem_Items.DREAMINGFISH.get());
+                        output.accept(EconomySystem_Items.HIVE_ZOMBIE_SPAWN_EGG.get());
                     })
                     .build()
     );

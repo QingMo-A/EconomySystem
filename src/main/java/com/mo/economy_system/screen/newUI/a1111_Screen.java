@@ -46,7 +46,6 @@ public class a1111_Screen extends EconomySystem_Screen {
     private List<ShopItem> shopItemsSnapshot = new ArrayList<>();
 
     private final List<ItemIconWidget> itemWidgets = new ArrayList<>();
-    private ItemIconWidget hoveredItemWidget = null;
 
     private List<DeliveryItem> deliveryItems = new ArrayList<>(); // 物品列表
     private List<DeliveryItem> deliveryItemsSnapshot = new ArrayList<>();
@@ -571,6 +570,34 @@ public class a1111_Screen extends EconomySystem_Screen {
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
     }
 
+    private HBoxWidget buildItemRow(ItemStack stack, int rowHeight, int rowWidth, List<Component> tooltipLines) {
+        HBoxWidget itemRow = new HBoxWidget(0, 0, 0)
+                .setSpacing(7)
+                .setPadding(5, 10, 5, 10)
+                .setBorderColor(0x22FFFFFF)
+                .setBoxWidth(rowWidth)
+                .setBoxHeight(rowHeight)
+                .showBorder(true, false, true, false)
+                .setBorderThickness(1);
+
+        ItemIconWidget icon = new ItemIconWidget(stack, font, 0, 0)
+                .setScale(1.3f)
+                .setShowDecorations(true)
+                .setTooltipLines(tooltipLines);
+        itemRow.addChild(icon);
+
+        VBoxWidget infoBox = new VBoxWidget(0, 0, 200)
+                .setSpacing(2)
+                .setBoxHeight(rowHeight)
+                .setPadding(2, 2, 2, 2);
+
+        LabelWidget nameLabel = new LabelWidget(font, stack.getHoverName(), 0, 0, 0xFFFFFF, true)
+                .setScale(1.0f);
+        infoBox.addChild(nameLabel);
+
+        return itemRow;
+    }
+
     // 工具提示构建方法
     private static List<Component> buildItemTooltip(Player player, MarketItem item) {
         List<Component> tooltipLines = new ArrayList<>(item.getItemStack().getTooltipLines(
@@ -631,11 +658,12 @@ public class a1111_Screen extends EconomySystem_Screen {
         tooltipLines.add(Component.empty());
         tooltipLines.add(Component.literal(formatTimestamp(item.getListingTime())).withStyle(ChatFormatting.GOLD));
 
-        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.BOLD));
+        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY));
 
         // 将多行合并为一个组件
         //return joinComponents(lines);
         return  tooltipLines;
+
     }
 
     private static Component buildItemTooltip(Player player, ShopItem item) {

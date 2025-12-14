@@ -3,17 +3,16 @@ package com.mo.economy_system.item;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.armor.EconomySystem_ArmorMaterials;
 import com.mo.economy_system.armor.armors.SupporterHat;
+import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.item.items.Item_ClaimWand;
 import com.mo.economy_system.item.items.Item_Guitar;
 import com.mo.economy_system.item.items.Potion_Recall;
 import com.mo.economy_system.item.items.Potion_Wormhole;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -56,7 +55,8 @@ public class EconomySystem_Items {
     public static final RegistryObject<Item> SUPPORTER_HAT = ITEMS.register("supporter_hat", () -> new SupporterHat(
             EconomySystem_ArmorMaterials.SUPPORTER, ArmorItem.Type.HELMET, new Item.Properties()));
 
-    public static final RegistryObject<Item> Dreamingfish = ITEMS.register(
+    // 注册启程锦鲤
+    public static final RegistryObject<Item> DREAMINGFISH = ITEMS.register(
             "dreamingfish",
             () -> new Item(new Item.Properties()
                     .stacksTo(64)
@@ -72,6 +72,15 @@ public class EconomySystem_Items {
                 }
             }
     );
+
+    // 注册丧尸刷怪蛋
+    public static final RegistryObject<Item> HIVE_ZOMBIE_SPAWN_EGG =
+            ITEMS.register("hive_zombie_spawn_egg",
+                    () -> new ForgeSpawnEggItem(
+                            EconomySystem_Entities.HIVE_ZOMBIE::get,
+                            0x3A6238,  // 基础颜色
+                            0x7F997D,  // 斑点颜色
+                            new Item.Properties()));
 
 
     public static void register(IEventBus eventBus) {

@@ -16,6 +16,10 @@ import com.mo.economy_system.screen.components.AnimatedButton;
 import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.screen.newUI.HBoxWidget;
+import com.mo.economy_system.screen.newUI.ItemIconWidget;
+import com.mo.economy_system.screen.newUI.LabelWidget;
+import com.mo.economy_system.screen.newUI.VBoxWidget;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -23,6 +27,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
@@ -39,6 +45,7 @@ import java.util.stream.Collectors;
 public class Screen_Market extends EconomySystem_Screen {
     private List<MarketItem> items = new ArrayList<>(); // 根据搜索过滤后的商品列表
     private List<MarketItem> itemsSnapshot = new ArrayList<>();
+    private final List<ItemIconWidget> itemWidgets = new ArrayList<>();
     // 计数器变量，初始为 0
     private int displayTypeIndex = 0;
     // 定义按钮显示的文本数组
@@ -182,6 +189,14 @@ public class Screen_Market extends EconomySystem_Screen {
             detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
         }
 
+        // 检查哪个ItemIconWidget被悬停
+        for (ItemIconWidget widget : itemWidgets) {
+            if (widget.isHovered()) {
+                guiGraphics.renderTooltip(this.font, widget.getTooltipLines(), Optional.empty(), mouseX, mouseY);
+                break;
+            }
+        }
+
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
@@ -241,6 +256,46 @@ public class Screen_Market extends EconomySystem_Screen {
             ItemStack itemStack = item.getItemStack();
 
             final int currentY = y; // 使用最终变量供 Lambda 表达式使用
+
+            if (i == 1) {
+                int rowHeight = 30;
+                int rowWidth = 120; // 获取 mainPane 当前宽度
+
+                HBoxWidget itemRow = new HBoxWidget(0, 0, 0)
+                        .setSpacing(7)
+                        .setPadding(5, 10, 5, 10)
+                        .setBorderColor(0x22FFFFFF)
+                        .setBoxWidth(rowWidth)
+                        .setBoxHeight(rowHeight)
+                        .showBorder(true, false, true, false)
+                        .setBorderThickness(1);
+
+                // 图标
+                ItemIconWidget icon = new ItemIconWidget(itemStack, font, 0, 0)
+                        .setScale(1.3f)
+                        .setShowDecorations(true);
+                // 构建工具提示
+                List<Component> tooltipLines = buildItemTooltip(this.minecraft.player, item);
+                // Tooltip tooltip = Tooltip.create(buildItemTooltip(player, item));
+                icon.setTooltipLines(tooltipLines);
+                itemWidgets.add(icon);
+                // icon.setCustomTooltipLines(tooltipLines);
+
+                // 名称 + 价格 VBox
+                VBoxWidget infoBox = new VBoxWidget(0, 0, 200) // 宽 200，高和 row 高一致
+                        .setSpacing(2)
+                        .setBoxHeight(rowHeight)
+                        .setPadding(2, 2, 2, 2);
+
+                LabelWidget nameLabel = new LabelWidget(font, itemStack.getHoverName(), 0, 0, 0xFFFFFF, true)
+                        .setScale(1.0f);
+                LabelWidget priceLabel = new LabelWidget(font, Component.literal("价格: " + item.getBasePrice()), 0, 0, 0xAAAAAA, true)
+                        .setScale(0.9f);
+
+                infoBox.addAllChildren(nameLabel, priceLabel);
+                itemRow.addAllChildren(icon, infoBox);
+                this.addRenderableWidget(itemRow);
+            }
 
             ItemIconAnimation icon;
             TextAnimation name;
@@ -304,6 +359,74 @@ public class Screen_Market extends EconomySystem_Screen {
 
             y += THING_SPACING; // 调整下一件商品的位置
         }
+    }
+
+    // 工具提示构建方法
+    private static List<Component> buildItemTooltip(Player player, MarketItem item) {
+        List<Component> tooltipLines = new ArrayList<>(item.getItemStack().getTooltipLines(
+                player,
+                Minecraft.getInstance().options.advancedItemTooltips ?
+                        TooltipFlag.ADVANCED : TooltipFlag.NORMAL
+        ));
+
+        // 添加分隔线
+        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.BOLD));
+
+        // 卖家信息（键带符号，值在下一行缩进）
+        // 卖家名称
+        MutableComponent sellerKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.translatable(Util_MessageKeys.MARKET_SELLER_NAME_KEY)
+                        .withStyle(ChatFormatting.GRAY));
+        tooltipLines.add(sellerKeyLine);
+
+        MutableComponent sellerValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(item.getSellerName())
+                        .withStyle(ChatFormatting.WHITE));
+        tooltipLines.add(sellerValueLine);
+
+        // 卖家UUID
+        MutableComponent sellerIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.translatable(Util_MessageKeys.MARKET_SELLER_UUID_KEY)
+                        .withStyle(ChatFormatting.GRAY));
+        tooltipLines.add(sellerIDKeyLine);
+
+        MutableComponent sellerIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(item.getSellerID()))
+                        .withStyle(ChatFormatting.WHITE));
+        tooltipLines.add(sellerIDValueLine);
+
+        // 交易ID
+        MutableComponent tradeIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY)
+                        .withStyle(ChatFormatting.GRAY));
+        tooltipLines.add(tradeIDKeyLine);
+
+        MutableComponent tradeIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(item.getTradeID()))
+                        .withStyle(ChatFormatting.WHITE));
+        tooltipLines.add(tradeIDValueLine);
+
+        // 物品ID
+        MutableComponent itemIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
+                .append(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY)
+                        .withStyle(ChatFormatting.GRAY));
+        tooltipLines.add(itemIDKeyLine);
+
+        MutableComponent itemIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(item.getItemID())
+                        .withStyle(ChatFormatting.WHITE));
+        tooltipLines.add(itemIDValueLine);
+
+        // 添加空行和时间戳（注意：只有这里添加空行）
+        tooltipLines.add(Component.empty());
+        tooltipLines.add(Component.literal(formatTimestamp(item.getListingTime())).withStyle(ChatFormatting.GOLD));
+
+        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.BOLD));
+
+        // 将多行合并为一个组件
+        //return joinComponents(lines);
+        return  tooltipLines;
+
     }
 
     @Override

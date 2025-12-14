@@ -1,6 +1,7 @@
 package com.mo.economy_system;
 
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
+import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.init.Init;
 import com.mo.economy_system.item.EconomySystem_CreativeTabs;
 import com.mo.economy_system.item.EconomySystem_Items;
@@ -9,7 +10,6 @@ import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.server.ChangeJoinMessage;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -38,6 +38,8 @@ public class EconomySystem {
         EconomySystem_NetworkManager.register();
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
+        // 注册实体
+        EconomySystem_Entities.ENTITIES.register(modEventBus);
 
         new Init();
         // 启动文件监听器
