@@ -49,6 +49,9 @@ public class KeybindHandler {
 //                Minecraft.getInstance().setScreen(new Start_UI());
 //            }
             if (TOGGLE_UI_KEY.consumeClick()) {
+                if (mc.isSingleplayer()) {
+                    return;
+                }
                 ServerInformationDisplay.toggleUI(); // UI开关
                 mc.player.sendSystemMessage(
                         ServerInformationDisplay.isShowUI() ?
