@@ -181,14 +181,29 @@ public class ServerInformationDisplay {
         return maxWidth;
     }
 
+    // ========== 关键修改：新增动态颜色计算方法 ==========
+    /**
+     * 获取动态RGB变色的边框颜色（基于系统时间循环）
+     * @return ARGB格式的颜色值（透明度255）
+     */
+    private static int getDynamicBorderColor() {
+        long currentTime = System.currentTimeMillis();
+        // 正弦函数周期：0.001控制变色速度（值越小越慢），+2/+4让三通道错位，实现彩虹渐变
+        int red = (int) (Math.sin(currentTime * 0.001) * 127 + 128);   // 0-255范围
+        int green = (int) (Math.sin(currentTime * 0.001 + 2) * 127 + 128);
+        int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 127 + 128);
+        // 组合为ARGB格式（0xFF开头表示透明度100%）
+        return 0xFF000000 | (red << 16) | (green << 8) | blue;
+    }
+
     // 渲染背景
     private static void renderBackground(GuiGraphics guiGraphics, int x, int y, int width, int height) {
         // 半透明黑色背景（ARGB）
         int bgColor = (BACKGROUND_ALPHA << 24) | 0x000000;
         guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, bgColor);
 
-        // 白色细边框
-        int borderColor = 0xFFFFFFFF;
+        // ========== 关键修改：使用动态RGB颜色替代固定白色 ==========
+        int borderColor = getDynamicBorderColor();
         guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, borderColor);          // 上边框
         guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, borderColor); // 下边框
         guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, borderColor);          // 左边框
