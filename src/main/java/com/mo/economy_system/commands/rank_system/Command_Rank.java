@@ -66,7 +66,7 @@ public class Command_Rank {
         }
 
         // 使用PlayerRankManager设置等级
-        PlayerRankManager.setPlayerRank(targetPlayer, targetRank);
+        PlayerRankManager.setPlayerRankServer(targetPlayer, targetRank);
         context.getSource().sendSuccess(
                 () -> net.minecraft.network.chat.Component.literal("已将玩家 " + targetPlayer.getName().getString() + " 的等级设置为：" + rankName),
                 true
@@ -77,7 +77,7 @@ public class Command_Rank {
     private static int executeGetRank(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
         // 使用PlayerRankManager获取等级
-        Rank currentRank = PlayerRankManager.getPlayerRank(targetPlayer);
+        Rank currentRank = PlayerRankManager.getPlayerRankServer(targetPlayer);
         context.getSource().sendSuccess(
                 () -> net.minecraft.network.chat.Component.literal("玩家 " + targetPlayer.getName().getString() + " 的当前等级：" + currentRank.getRankName()),
                 false

@@ -163,7 +163,7 @@ public class ChangeJoinMessage {
         }
 
         // 获取玩家Rank
-        Rank playerRank = PlayerRankManager.getPlayerRank(serverPlayer);
+        Rank playerRank = PlayerRankManager.getPlayerRankServer(serverPlayer);
 
         //只有尊贵的rank用户才有提示
         if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
@@ -177,7 +177,7 @@ public class ChangeJoinMessage {
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
         // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
-        Component title = Component.literal("§b玩家加入");
+        Component title = Component.literal("§a鱼友加入");
         Component content = Component.literal(formattedMsg);
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
             EconomySystem_NetworkManager.INSTANCE.send(
@@ -200,7 +200,7 @@ public class ChangeJoinMessage {
         }
 
         // 获取玩家Rank
-        Rank playerRank = PlayerRankManager.getPlayerRank(serverPlayer);
+        Rank playerRank = PlayerRankManager.getPlayerRankServer(serverPlayer);
 
         //只有尊贵的rank用户才有提示
         if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
@@ -213,7 +213,7 @@ public class ChangeJoinMessage {
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
         // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
-        Component title = Component.literal("§c玩家离开");
+        Component title = Component.literal("§c鱼友离开");
         Component content = Component.literal(formattedMsg);
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
             EconomySystem_NetworkManager.INSTANCE.send(

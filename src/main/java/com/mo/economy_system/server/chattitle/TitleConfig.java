@@ -19,6 +19,8 @@ public class TitleConfig {
 
     // 存储解析后的称号（ID -> Title）
     private static Map<Integer, Title> titleMap = new HashMap<>();
+    // 新增：名称 -> Title（反向映射，用于按名称查找，保证名称唯一）
+    private static Map<String, Title> nameToTitleMap = new HashMap<>();
 
     // 加载配置文件的核心方法
     public static void loadConfig() {
@@ -32,15 +34,23 @@ public class TitleConfig {
             // 解析JSON数组为List<TitleData>（需自定义内部类TitleData接收JSON字段）
             List<TitleData> titleDataList = GSON.fromJson(reader, new TypeToken<List<TitleData>>() {}.getType());
 
-            // 3. 转换为Title对象并存入Map
+            // 3. 转换为Title对象并存入Map（同步维护两个映射）
             titleMap.clear();
+            nameToTitleMap.clear();
             for (TitleData data : titleDataList) {
                 // 校验ID唯一性（避免重复ID）
                 if (titleMap.containsKey(data.titleId)) {
                     System.err.println("重复的称号ID：" + data.titleId + "，已跳过");
                     continue;
                 }
-                titleMap.put(data.titleId, new Title(data.titleId, data.titleName));
+                // 校验名称唯一性（避免重复名称）
+                if (nameToTitleMap.containsKey(data.titleName)) {
+                    System.err.println("重复的称号名称：" + data.titleName + "，已跳过");
+                    continue;
+                }
+                Title title = new Title(data.titleId, data.titleName);
+                titleMap.put(data.titleId, title);
+                nameToTitleMap.put(data.titleName, title); // 同步到名称映射
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -53,9 +63,9 @@ public class TitleConfig {
     private static void createDefaultConfig() {
         try {
             List<TitleData> defaultTitles = List.of(
-                    new TitleData() {{ titleId = 0; titleName = "萌新鱼友"; }},
-                    new TitleData() {{ titleId = 1; titleName = "TEST"; }},
-                    new TitleData() {{ titleId = 2; titleName = "TEST2"; }}
+                    new TitleData(0, "萌新鱼友"),
+                    new TitleData(1, "TEST"),
+                    new TitleData(2, "TEST2")
             );
 
             File parentDir = TITLE_CONFIG_FILE.getParentFile();
@@ -66,9 +76,13 @@ public class TitleConfig {
                 GSON.toJson(defaultTitles, writer);
             }
 
+            // 同步初始化两个映射
             titleMap.clear();
+            nameToTitleMap.clear();
             for (TitleData data : defaultTitles) {
-                titleMap.put(data.titleId, new Title(data.titleId, data.titleName));
+                Title title = new Title(data.titleId, data.titleName);
+                titleMap.put(data.titleId, title);
+                nameToTitleMap.put(data.titleName, title);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -76,14 +90,28 @@ public class TitleConfig {
         }
     }
 
-    // 对外提供：根据ID获取称号
+    // ========== 原有方法：按ID获取 ==========
     public static Title getTitleById(int titleId) {
         // 找不到时返回默认称号（ID=0）
         return titleMap.getOrDefault(titleId, titleMap.get(0));
     }
 
+    // ========== 新增核心方法：按名称获取 ==========
+    public static Title getTitleByName(String titleName) {
+        // 空值校验 + 找不到返回默认称号
+        if (titleName == null || titleName.isEmpty()) {
+            return titleMap.get(0);
+        }
+        // 精确匹配名称（如需忽略大小写，可改为：nameToTitleMap.get(titleName.toLowerCase())）
+        return nameToTitleMap.getOrDefault(titleName, titleMap.get(0));
+    }
+
     public static void removeTitleById(int titleId) {
-        titleMap.remove(titleId);
+        // 同步删除两个映射中的数据
+        Title removedTitle = titleMap.remove(titleId);
+        if (removedTitle != null) {
+            nameToTitleMap.remove(removedTitle.getTitleName());
+        }
     }
 
     public static void saveConfig() {
@@ -94,12 +122,7 @@ public class TitleConfig {
             }
 
             List<TitleData> titleDataList = titleMap.values().stream()
-                    .map(title -> {
-                        TitleData data = new TitleData();
-                        data.titleId = title.getTitleID();
-                        data.titleName = title.getTitleName();
-                        return data;
-                    })
+                    .map(title -> new TitleData(title.getTitleID(), title.getTitleName()))
                     .toList();
 
             try (FileWriter writer = new FileWriter(TITLE_CONFIG_FILE)) {
@@ -116,13 +139,12 @@ public class TitleConfig {
         int titleId;
         String titleName;
 
+        // 新增带参构造器（简化默认配置创建）
         public TitleData(int titleId, String titleName) {
             this.titleId = titleId;
             this.titleName = titleName;
         }
 
-        public TitleData() {
-
-        }
+        public TitleData() {}
     }
 }

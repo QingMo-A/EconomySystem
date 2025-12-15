@@ -51,7 +51,7 @@ public class Command_OverAllLevel {
         int level = IntegerArgumentType.getInteger(context, "level");
 
         // 调用能力提供者的工具方法设置等级
-        PlayerLevelManager.setPlayerLevel(targetPlayer, level);
+        PlayerLevelManager.setPlayerLevelServer(targetPlayer, level);
 
         // 发送成功消息
         context.getSource().sendSuccess(
@@ -66,7 +66,7 @@ public class Command_OverAllLevel {
      */
     private static int executeGetLevel(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
-        int currentLevel = PlayerLevelManager.getPlayerLevel(targetPlayer);
+        int currentLevel = PlayerLevelManager.getPlayerLevelServer(targetPlayer);
 
         // 发送查询结果
         context.getSource().sendSuccess(

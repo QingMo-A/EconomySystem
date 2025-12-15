@@ -4,6 +4,7 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.Packet_OnlinePlayerCountRequest;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
+import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
@@ -14,6 +15,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -47,8 +49,6 @@ public class ServerInformationDisplay {
     private static long LAST_PLAYER_LIST_UPDATE = 0;       // 玩家列表最后刷新时间
     private static long LAST_BALANCE_UPDATE = 0;           // 余额最后刷新时间
     private static final long UPDATE_INTERVAL = 5000;      // 5秒刷新一次
-
-    public static int PLAYER_OVERALL_LEVEL = 0; //玩家总等级
 
     // 获取当前玩家UUID
     public static UUID getCurrentPlayerUUID() {
@@ -132,17 +132,18 @@ public class ServerInformationDisplay {
         lines.add(Component.literal(""));
 
         // 使用PlayerRankManager获取玩家等级（客户端需要同步数据支持）
-        Rank playerRank = PlayerRankManager.getPlayerRank(mc.player);
+        Rank playerRank = PlayerRankManager.getPlayerRankClient(mc.player);
         String rankId = "NO_RANK";
         rankId = playerRank.getRankName();
         String titleName = "萌新鱼友";
-        titleName = PlayerTitleManager.getPlayerTitle(mc.player).getTitleName();
+        titleName = PlayerTitleManager.getPlayerTitleClient(mc.player).getTitleName();
+        int playerLevel = PlayerLevelManager.getPlayerLevelClient(mc.player);
 
         // 玩家信息
         if (mc.player != null) {
             lines.add(Component.literal("§6鱼友: §e" + mc.player.getName().getString()));
             lines.add(Component.literal("§6余额: §e" + PLAYER_BALANCE + " 梦鱼币"));
-            lines.add(Component.literal("§6梦鱼等级: §e" + PLAYER_OVERALL_LEVEL));
+            lines.add(Component.literal("§6梦鱼等级: §e" + playerLevel));
 
             ChatFormatting textColorFormatting;
             if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {

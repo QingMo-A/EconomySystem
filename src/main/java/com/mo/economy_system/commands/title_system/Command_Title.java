@@ -62,7 +62,7 @@ public class Command_Title {
             return 0;
         }
 
-        PlayerTitleManager.setPlayerTitle(targetPlayer, targetTitle);
+        PlayerTitleManager.setPlayerTitleServer(targetPlayer, targetTitle);
         context.getSource().sendSuccess(
                 () -> Component.literal("已将玩家 " + targetPlayer.getName().getString() + " 的称号设置为：" + targetTitle.getTitleName()),
                 true
@@ -97,7 +97,7 @@ public class Command_Title {
 
     private static int executeGetTitle(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
-        Title currentTitle = PlayerTitleManager.getPlayerTitle(targetPlayer);
+        Title currentTitle = PlayerTitleManager.getPlayerTitleServer(targetPlayer);
         context.getSource().sendSuccess(
                 () -> Component.literal("玩家 " + targetPlayer.getName().getString() + " 的当前称号：" + currentTitle.getTitleName()),
                 false

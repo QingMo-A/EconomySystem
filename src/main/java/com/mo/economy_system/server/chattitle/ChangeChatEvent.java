@@ -18,10 +18,10 @@ public class ChangeChatEvent {
     @SubscribeEvent
     public static void onPlayerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
-        Title playerTitle = PlayerTitleManager.getPlayerTitle(player);
+        Title playerTitle = PlayerTitleManager.getPlayerTitleServer(player);
         String titleName = playerTitle.getTitleName();
-        String playerRank = PlayerRankManager.getPlayerRank(player).getRankName();
-        int playerLevel = PlayerLevelManager.getPlayerLevel(player); // 获取等级
+        String playerRank = PlayerRankManager.getPlayerRankServer(player).getRankName();
+        int playerLevel = PlayerLevelManager.getPlayerLevelServer(player); // 获取等级
         event.setCanceled(true);
 
         Component customMessage = null;

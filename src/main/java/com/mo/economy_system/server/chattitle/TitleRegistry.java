@@ -24,4 +24,8 @@ public class TitleRegistry {
     public static Title getTitleById(int titleId) {
         return TitleConfig.getTitleById(titleId);
     }
+
+    public static Title getTitleByName(String titleName) {
+        return TitleConfig.getTitleByName(titleName);
+    }
 }

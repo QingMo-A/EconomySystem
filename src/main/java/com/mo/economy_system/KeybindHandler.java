@@ -23,7 +23,7 @@ public class KeybindHandler {
     );
     public static final KeyMapping TOGGLE_UI_KEY = new KeyMapping(
             "key.economy_system.open_screen_m",
-            GLFW.GLFW_KEY_M,
+            GLFW.GLFW_KEY_O,
             "key.categories.economy_system"
     );
 
@@ -55,8 +55,8 @@ public class KeybindHandler {
                 ServerInformationDisplay.toggleUI(); // UI开关
                 mc.player.sendSystemMessage(
                         ServerInformationDisplay.isShowUI() ?
-                                Component.literal("§a[EconomySystem]信息面板已开启，再次按下M关闭！") :
-                                Component.literal("§c[EconomySystem]信息面板已关闭，再次按下M开启！")
+                                Component.literal("§a[EconomySystem]信息面板已开启，再次按下O关闭！") :
+                                Component.literal("§c[EconomySystem]信息面板已关闭，再次按下O开启！")
                 );
             }
         }

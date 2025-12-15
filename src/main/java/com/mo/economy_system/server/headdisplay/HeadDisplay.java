@@ -48,9 +48,9 @@ public class HeadDisplay {
             return;
         }
 
-        Rank playerRank = PlayerRankManager.getPlayerRank(player);
-        Title playerTitle = PlayerTitleManager.getPlayerTitle(player);
-        int playerLevel = PlayerLevelManager.getPlayerLevel(player);
+        Rank playerRank = PlayerRankManager.getPlayerRankClient(player);
+        Title playerTitle = PlayerTitleManager.getPlayerTitleClient(player);
+        int playerLevel = PlayerLevelManager.getPlayerLevelClient(player);
         if (playerRank == null || playerTitle == null) {
             return;
         }
