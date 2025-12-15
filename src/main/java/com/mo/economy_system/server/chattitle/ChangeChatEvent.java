@@ -1,9 +1,8 @@
 package com.mo.economy_system.server.chattitle;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.playerlevel.overalllevel.capability.OverAllLevelCapabilityProvider;
-import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
-import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
+import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,10 +18,10 @@ public class ChangeChatEvent {
     @SubscribeEvent
     public static void onPlayerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
-        Title playerTitle = TitleCapabilityProvider.getPlayerTitle(player);
+        Title playerTitle = PlayerTitleManager.getPlayerTitle(player);
         String titleName = playerTitle.getTitleName();
-        String playerRank = RankCapabilityProvider.getPlayerRank(player).getRankName();
-        int playerLevel = OverAllLevelCapabilityProvider.getPlayerLevel(player); // 获取等级
+        String playerRank = PlayerRankManager.getPlayerRank(player).getRankName();
+        int playerLevel = PlayerLevelManager.getPlayerLevel(player); // 获取等级
         event.setCanceled(true);
 
         Component customMessage = null;

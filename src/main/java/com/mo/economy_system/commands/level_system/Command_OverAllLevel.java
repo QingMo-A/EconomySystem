@@ -1,7 +1,7 @@
 package com.mo.economy_system.commands.level_system;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.playerlevel.overalllevel.capability.OverAllLevelCapabilityProvider;
+import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -51,7 +51,7 @@ public class Command_OverAllLevel {
         int level = IntegerArgumentType.getInteger(context, "level");
 
         // 调用能力提供者的工具方法设置等级
-        OverAllLevelCapabilityProvider.setPlayerLevel(targetPlayer, level);
+        PlayerLevelManager.setPlayerLevel(targetPlayer, level);
 
         // 发送成功消息
         context.getSource().sendSuccess(
@@ -66,7 +66,7 @@ public class Command_OverAllLevel {
      */
     private static int executeGetLevel(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
-        int currentLevel = OverAllLevelCapabilityProvider.getPlayerLevel(targetPlayer);
+        int currentLevel = PlayerLevelManager.getPlayerLevel(targetPlayer);
 
         // 发送查询结果
         context.getSource().sendSuccess(

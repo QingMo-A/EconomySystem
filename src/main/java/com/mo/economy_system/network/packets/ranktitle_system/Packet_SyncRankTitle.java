@@ -1,10 +1,11 @@
 // network/packets/Packet_SyncRankTitle.java
 package com.mo.economy_system.network.packets.ranktitle_system;
 
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.chattitle.Title;
-import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
-import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
+import com.mo.economy_system.server.rank.RankRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
@@ -21,8 +22,8 @@ public class Packet_SyncRankTitle {
 
     public Packet_SyncRankTitle(Player player) {
         this.entityId = player.getId();
-        Rank rank = RankCapabilityProvider.getPlayerRank(player);
-        Title title = TitleCapabilityProvider.getPlayerTitle(player);
+        Rank rank = PlayerRankManager.getPlayerRank(player);
+        Title title = PlayerTitleManager.getPlayerTitle(player);
 
         this.rankId = rank.getRankName();
         this.rankLevel = rank.getRankLevel();
@@ -59,14 +60,15 @@ public class Packet_SyncRankTitle {
 
     public static void handle(Packet_SyncRankTitle msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // 客户端执行
             Player player = (Player) Minecraft.getInstance().level.getEntity(msg.entityId);
             if (player != null) {
-                Rank rank = new Rank(msg.rankId, msg.rankLevel); // 简单方式，实际可从 RankRegistry 匹配
+                // 从RankRegistry获取规范的Rank实例（避免创建新对象）
+                Rank rank = RankRegistry.getRankByName(msg.rankId);
                 Title title = new Title(msg.titleId, msg.titleName);
 
-                player.getCapability(RankCapabilityProvider.RANK_CAPABILITY).ifPresent(cap -> cap.setRank(rank));
-                player.getCapability(TitleCapabilityProvider.Title_CAPABILITY_BIAOSHI).ifPresent(cap -> cap.setTitle(title));
+                // 更新客户端Rank缓存（核心修改）
+                PlayerRankManager.setClientPlayerRank(player, rank);
+                PlayerTitleManager.setClientPlayerTitle(player, title); // 新增这行
             }
         });
         ctx.get().setPacketHandled(true);

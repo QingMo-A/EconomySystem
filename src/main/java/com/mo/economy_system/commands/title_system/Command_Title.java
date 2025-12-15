@@ -1,10 +1,10 @@
 package com.mo.economy_system.commands.title_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleConfig;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
-import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -62,7 +62,7 @@ public class Command_Title {
             return 0;
         }
 
-        TitleCapabilityProvider.setPlayerTitle(targetPlayer, targetTitle);
+        PlayerTitleManager.setPlayerTitle(targetPlayer, targetTitle);
         context.getSource().sendSuccess(
                 () -> Component.literal("已将玩家 " + targetPlayer.getName().getString() + " 的称号设置为：" + targetTitle.getTitleName()),
                 true
@@ -97,7 +97,7 @@ public class Command_Title {
 
     private static int executeGetTitle(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
-        Title currentTitle = TitleCapabilityProvider.getPlayerTitle(targetPlayer);
+        Title currentTitle = PlayerTitleManager.getPlayerTitle(targetPlayer);
         context.getSource().sendSuccess(
                 () -> Component.literal("玩家 " + targetPlayer.getName().getString() + " 的当前称号：" + currentTitle.getTitleName()),
                 false

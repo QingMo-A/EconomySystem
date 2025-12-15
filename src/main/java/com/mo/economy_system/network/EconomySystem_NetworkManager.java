@@ -11,7 +11,7 @@ import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
-import com.mo.economy_system.network.packets.level_system.Packet_SyncOverAllLevel;
+import com.mo.economy_system.network.packets.level_system.Packet_SyncLevel;
 import com.mo.economy_system.network.packets.ranktitle_system.Packet_SyncRankTitle;
 import com.mo.economy_system.network.packets.territory_system.*;
 import net.minecraft.resources.ResourceLocation;
@@ -77,7 +77,7 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_JoinMessage.class, Packet_JoinMessage::encode, Packet_JoinMessage::decode, Packet_JoinMessage::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountRequest.class, Packet_OnlinePlayerCountRequest::encode, Packet_OnlinePlayerCountRequest::decode,Packet_OnlinePlayerCountRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountResponse.class, Packet_OnlinePlayerCountResponse::encode, Packet_OnlinePlayerCountResponse::decode, Packet_OnlinePlayerCountResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncOverAllLevel.class, Packet_SyncOverAllLevel::encode, Packet_SyncOverAllLevel::decode, Packet_SyncOverAllLevel::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        INSTANCE.registerMessage(packetId++, Packet_SyncLevel.class, Packet_SyncLevel::encode, Packet_SyncLevel::decode, Packet_SyncLevel::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
     }
 }

@@ -4,10 +4,10 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.Packet_OnlinePlayerCountRequest;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
-import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
-import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -131,11 +131,12 @@ public class ServerInformationDisplay {
         lines.add(Component.literal("§b=== " + "Dreaming" + "§dFish" + " ==="));
         lines.add(Component.literal(""));
 
-        Rank playerRank = RankCapabilityProvider.getPlayerRank(mc.player);
+        // 使用PlayerRankManager获取玩家等级（客户端需要同步数据支持）
+        Rank playerRank = PlayerRankManager.getPlayerRank(mc.player);
         String rankId = "NO_RANK";
         rankId = playerRank.getRankName();
         String titleName = "萌新鱼友";
-        titleName = TitleCapabilityProvider.getPlayerTitle(mc.player).getTitleName();
+        titleName = PlayerTitleManager.getPlayerTitle(mc.player).getTitleName();
 
         // 玩家信息
         if (mc.player != null) {

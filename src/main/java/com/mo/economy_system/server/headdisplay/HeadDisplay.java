@@ -1,6 +1,8 @@
 package com.mo.economy_system.server.headdisplay;
 
-import com.mo.economy_system.playerlevel.overalllevel.capability.OverAllLevelCapabilityProvider;
+import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -13,10 +15,8 @@ import net.minecraft.client.renderer.GameRenderer;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.server.chattitle.Title;
-import com.mo.economy_system.server.chattitle.capability.TitleCapabilityProvider;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
-import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -48,9 +48,9 @@ public class HeadDisplay {
             return;
         }
 
-        Rank playerRank = RankCapabilityProvider.getPlayerRank(player);
-        Title playerTitle = TitleCapabilityProvider.getPlayerTitle(player);
-        int playerLevel = OverAllLevelCapabilityProvider.getPlayerLevel(player);
+        Rank playerRank = PlayerRankManager.getPlayerRank(player);
+        Title playerTitle = PlayerTitleManager.getPlayerTitle(player);
+        int playerLevel = PlayerLevelManager.getPlayerLevel(player);
         if (playerRank == null || playerTitle == null) {
             return;
         }
@@ -70,7 +70,7 @@ public class HeadDisplay {
             textColorFormatting = ChatFormatting.WHITE;
         }
 
-        Component displayText = Component.literal("[" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+        Component displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
                 .withStyle(textColorFormatting);
 
         PoseStack poseStack = event.getPoseStack();

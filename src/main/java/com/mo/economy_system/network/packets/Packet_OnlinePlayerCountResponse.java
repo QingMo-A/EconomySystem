@@ -32,10 +32,7 @@ public class Packet_OnlinePlayerCountResponse {
     public static void handle(Packet_OnlinePlayerCountResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
-            // 核心：更新ServerInformationDisplay的在线玩家数
             ServerInformationDisplay.ONLINE_PLAYERS = msg.playerCount;
-            // 可选日志：验证更新
-            System.out.println("独立包更新在线玩家数：" + msg.playerCount);
         });
         context.setPacketHandled(true);
     }

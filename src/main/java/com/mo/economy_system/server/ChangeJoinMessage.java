@@ -3,9 +3,9 @@ package com.mo.economy_system.server;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager; // 新增：导入网络管理器
 import com.mo.economy_system.network.packets.Packet_JoinMessage;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
-import com.mo.economy_system.server.rank.capability.RankCapabilityProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -163,7 +163,7 @@ public class ChangeJoinMessage {
         }
 
         // 获取玩家Rank
-        Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+        Rank playerRank = PlayerRankManager.getPlayerRank(serverPlayer);
 
         //只有尊贵的rank用户才有提示
         if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
@@ -200,7 +200,7 @@ public class ChangeJoinMessage {
         }
 
         // 获取玩家Rank
-        Rank playerRank = RankCapabilityProvider.getPlayerRank(serverPlayer);
+        Rank playerRank = PlayerRankManager.getPlayerRank(serverPlayer);
 
         //只有尊贵的rank用户才有提示
         if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {

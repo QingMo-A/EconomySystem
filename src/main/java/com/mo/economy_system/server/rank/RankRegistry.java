@@ -22,4 +22,28 @@ public class RankRegistry {
     public static final Rank OPERATOR = new Rank(
             "OPERATOR", 4
     );
+
+    // 按名称查找
+    public static Rank getRankByName(String name) {
+        return switch (name) {
+            case "NO RANK" -> NO_RANK;
+            case "FISH" -> FISH;
+            case "FISH+" -> FISH_PLUS;
+            case "FISH++" -> FISH_PLUS_PLUS;
+            case "OPERATOR" -> OPERATOR;
+            default -> NO_RANK;
+        };
+    }
+
+    // 按等级查找
+    public static Rank getRankByLevel(int level) {
+        return switch (level) {
+            case 0 -> NO_RANK;
+            case 1 -> FISH;
+            case 2 -> FISH_PLUS;
+            case 3 -> FISH_PLUS_PLUS;
+            case 4 -> OPERATOR;
+            default -> NO_RANK;
+        };
+    }
 }

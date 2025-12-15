@@ -3,6 +3,7 @@ package com.mo.economy_system.server.headdisplay;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.level_system.Packet_SyncLevel;
 import com.mo.economy_system.network.packets.ranktitle_system.Packet_SyncRankTitle;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
@@ -22,6 +23,10 @@ public class LoginSync {
             EconomySystem_NetworkManager.INSTANCE.send(
                     net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> (ServerPlayer) event.getEntity()),
                     new Packet_SyncRankTitle(targetPlayer)
+            );
+            EconomySystem_NetworkManager.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> (ServerPlayer) event.getEntity()),
+                    new Packet_SyncLevel(targetPlayer) // 发送等级同步包
             );
         }
     }
