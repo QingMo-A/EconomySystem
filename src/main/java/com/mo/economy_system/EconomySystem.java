@@ -16,6 +16,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
+import software.bernie.geckolib.GeckoLib;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(EconomySystem.MODID)
@@ -46,6 +47,7 @@ public class EconomySystem {
         new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
 
+        GeckoLib.initialize();
 
         // 日志信息
         LOGGER.info("Economy System Mod Initialized!");

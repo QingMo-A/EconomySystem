@@ -4,6 +4,9 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.entity.entities.model.ai.HiveZombieTargetGoal;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -22,6 +25,9 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class HiveZombieEntity extends Monster {
+    // 定义变种的数据访问器
+    private static final EntityDataAccessor<Integer> DATA_VARIANT =
+            SynchedEntityData.defineId(HiveZombieEntity.class, EntityDataSerializers.INT);
 
     /* =========================
        Attribute Modifier UUIDs
@@ -230,5 +236,45 @@ public class HiveZombieEntity extends Monster {
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(EconomySystem_Entities.HIVE_ZOMBIE.get(), HiveZombieEntity.createAttributes().build());
+    }
+
+    // 变种类型枚举
+    public enum Variant {
+        NORMAL(0, true, true, true, true),       // 完整丧尸
+        NO_HEAD(1, false, true, true, true),     // 无头丧尸
+        NO_LEFT_ARM(2, true, false, true, true), // 无左臂
+        NO_RIGHT_ARM(3, true, true, false, true), // 无右臂
+        NO_ARMS(4, true, false, false, true),    // 无双臂
+        NO_LEGS(5, true, true, true, false),     // 无腿（拖着走）
+        CRAWLER(6, true, true, true, true),      // 爬行者（特殊动画）
+        BLOODY(7, true, true, true, true),       // 血腥版本
+        ROTTEN(8, true, true, true, true);       // 腐烂严重版本
+
+        private final int id;
+        private final boolean hasHead;
+        private final boolean hasLeftArm;
+        private final boolean hasRightArm;
+        private final boolean hasLegs;
+
+        Variant(int id, boolean hasHead, boolean hasLeftArm, boolean hasRightArm, boolean hasLegs) {
+            this.id = id;
+            this.hasHead = hasHead;
+            this.hasLeftArm = hasLeftArm;
+            this.hasRightArm = hasRightArm;
+            this.hasLegs = hasLegs;
+        }
+
+        public int getId() { return id; }
+        public boolean hasHead() { return hasHead; }
+        public boolean hasLeftArm() { return hasLeftArm; }
+        public boolean hasRightArm() { return hasRightArm; }
+        public boolean hasLegs() { return hasLegs; }
+
+        public static Variant byId(int id) {
+            for (Variant variant : values()) {
+                if (variant.id == id) return variant;
+            }
+            return NORMAL;
+        }
     }
 }

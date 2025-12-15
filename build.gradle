@@ -3,6 +3,7 @@ buildscript {
         // These repositories are only for Gradle plugins, put any other repositories in the repository block further below
         maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
         mavenCentral()
+
     }
     dependencies {
         classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
@@ -14,6 +15,7 @@ plugins {
     id 'idea'
     // id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
 }
 
 apply plugin: 'org.spongepowered.mixin'
@@ -106,6 +108,14 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
+    maven {
+        name = 'GeckoLib'
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content {
+            includeGroupByRegex("software\\.bernie.*")
+            includeGroup("com.eliotlash.mclib")
+        }
+    }
 }
 
 dependencies {
@@ -114,6 +124,8 @@ dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
     implementation 'com.zaxxer:HikariCP:5.0.1' // 最新稳定版
+    implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
+    implementation("com.eliotlash.mclib:mclib:20")
 }
 
 tasks.named('processResources', ProcessResources).configure {
