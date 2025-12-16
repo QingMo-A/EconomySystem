@@ -41,9 +41,9 @@ public class ServerInformationDisplay {
     private static final int TOP_OFFSET = 5;               // 右上角Y偏移（仅5像素）
 
     // 客户端缓存数据（从网络包获取）
-    public static int ONLINE_PLAYERS = 0;                  // 改为public，让Packet直接更新
-    public static int PLAYER_BALANCE = 0;                 // 改为public，让Packet直接更新
-    private static double SERVER_TPS = 20.0;               // 服务器TPS（可扩展）
+    public static int ONLINE_PLAYERS = 0;
+    public static int PLAYER_BALANCE = 0;
+    private static double SERVER_TPS = 20.0;
 
     private static long LAST_PLAYER_LIST_UPDATE = 0;       // 玩家列表最后刷新时间
     private static long LAST_BALANCE_UPDATE = 0;           // 余额最后刷新时间
@@ -192,7 +192,6 @@ public class ServerInformationDisplay {
         return maxWidth;
     }
 
-    // ========== 关键修改：新增动态颜色计算方法 ==========
     /**
      * 获取动态RGB变色的边框颜色（基于系统时间循环）
      * @return ARGB格式的颜色值（透明度255）

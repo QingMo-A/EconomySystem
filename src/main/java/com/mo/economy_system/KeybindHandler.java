@@ -2,6 +2,7 @@ package com.mo.economy_system;
 
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import com.mo.economy_system.task.taskui.TaskUI;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -21,9 +22,14 @@ public class KeybindHandler {
             GLFW.GLFW_KEY_I,                   // 默认绑定的键位（I键）
             "key.categories.economy_system"              // 键位分类
     );
-    public static final KeyMapping TOGGLE_UI_KEY = new KeyMapping(
-            "key.economy_system.open_screen_m",
+    public static final KeyMapping INFORMATION_UI_KEY = new KeyMapping(
+            "key.economy_system.open_screen_o",
             GLFW.GLFW_KEY_O,
+            "key.categories.economy_system"
+    );
+    public static final KeyMapping TASK_UI_KEY = new KeyMapping(
+            "key.economy_system.open_screen_u",
+            GLFW.GLFW_KEY_U,
             "key.categories.economy_system"
     );
 
@@ -31,7 +37,8 @@ public class KeybindHandler {
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(OPEN_SCREEN_KEY);
-        event.register(TOGGLE_UI_KEY);
+        event.register(INFORMATION_UI_KEY);
+        event.register(TASK_UI_KEY);
     }
 
     // 监听按键事件
@@ -45,19 +52,19 @@ public class KeybindHandler {
                 // 打开自定义界面
                 Minecraft.getInstance().setScreen(new Screen_Home());
             }
-//            if (OPEN_SCREEN_KEY_M.consumeClick()) {
-//                Minecraft.getInstance().setScreen(new Start_UI());
-//            }
-            if (TOGGLE_UI_KEY.consumeClick()) {
+            if (INFORMATION_UI_KEY.consumeClick()) {
                 if (mc.isSingleplayer()) {
                     return;
                 }
-                ServerInformationDisplay.toggleUI(); // UI开关
+                ServerInformationDisplay.toggleUI();
                 mc.player.sendSystemMessage(
                         ServerInformationDisplay.isShowUI() ?
                                 Component.literal("§a[EconomySystem]信息面板已开启，再次按下O关闭！") :
                                 Component.literal("§c[EconomySystem]信息面板已关闭，再次按下O开启！")
                 );
+            }
+            if (TASK_UI_KEY.consumeClick()) {
+                TaskUI.toggleUI();
             }
         }
     }
