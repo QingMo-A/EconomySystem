@@ -33,7 +33,6 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class ServerInformationDisplay {
-    // UI配置（贴近右上角）
     private static boolean SHOW_UI = true;                  // UI开关
     private static final int BACKGROUND_ALPHA = 128;       // 背景透明度
     private static final int BACKGROUND_PADDING = 3;       // 内边距（贴近边框）

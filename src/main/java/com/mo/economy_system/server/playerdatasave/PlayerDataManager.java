@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
 import com.mo.economy_system.server.rank.Rank;
@@ -23,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+//初始化玩家进服数据管理，对外提供数据初始化和发送，更新的方法
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerDataManager {
@@ -140,6 +143,10 @@ public class PlayerDataManager {
                 rank.getRankName(),
                 title.getTitleName(),
                 level);
+
+        //同步数据包给自己和其他玩家
+        LoginSync.sendSyncPacketToPlayer(serverPlayer, serverPlayer);
+        LoginSync.broadcastPlayerDataToAllOnlinePlayers(serverPlayer);
     }
 
     private static Map<UUID, PlayerData> loadAllPlayerDataFromFile() {
@@ -174,7 +181,6 @@ public class PlayerDataManager {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-
         initPlayerData(player);
     }
 
