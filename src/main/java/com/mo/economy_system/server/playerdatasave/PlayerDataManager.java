@@ -182,6 +182,11 @@ public class PlayerDataManager {
             return;
         }
         initPlayerData(player);
+
+        PlayerData data = getPlayerData(player.getUUID());
+        data.setLastLoginTime(System.currentTimeMillis());
+        EconomySystem.LOGGER.info("玩家 {} 登录，记录登录时间: {}",
+                player.getScoreboardName(), data.getLastLoginTime());
     }
 
     //离线清理缓存
@@ -189,6 +194,20 @@ public class PlayerDataManager {
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             UUID playerUUID = player.getUUID();
+            //游玩时长 当前-登录时间
+            PlayerData data = getPlayerData(playerUUID);
+            long onlineTime = System.currentTimeMillis() - data.getLastLoginTime();
+            data.addPlayTime(onlineTime);
+
+            Map<UUID, PlayerData> allData = loadAllPlayerDataFromFile();
+            allData.put(playerUUID, data);
+            saveAllPlayerDataToFile(allData);
+
+            EconomySystem.LOGGER.info("玩家 {} 登出，本次在线: {}秒，总时长: {}秒",
+                    player.getScoreboardName(),
+                    onlineTime / 1000,
+                    data.getTotalPlayTime() / 1000);
+
             PLAYER_DATA_CACHE.remove(playerUUID);
             EconomySystem.LOGGER.info("玩家 {} 缓存已清理", player.getScoreboardName());
         }

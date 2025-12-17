@@ -15,6 +15,8 @@ public class PlayerData {
     private Rank rank;
     private Title title;
     private int level;
+    private long lastLoginTime;
+    private long totalPlayTime;
 
     public PlayerData() {
 
@@ -26,6 +28,8 @@ public class PlayerData {
         this.rank = RankRegistry.NO_RANK;
         this.title = TitleRegistry.getDefaultTitle();
         this.level = 1;
+        this.lastLoginTime = System.currentTimeMillis();  //登录时记录当前时间
+        this.totalPlayTime = 0;
     }
 
     public PlayerData(UUID uuid, String playerName, Rank rank, Title title, int level) {
@@ -61,4 +65,9 @@ public class PlayerData {
     public int getLevel() {
         return this.level;
     }
+
+    public long getLastLoginTime() { return lastLoginTime; }
+    public void setLastLoginTime(long time) { this.lastLoginTime = time; }
+    public long getTotalPlayTime() { return totalPlayTime; }
+    public void addPlayTime(long time) { this.totalPlayTime += time; }
 }
