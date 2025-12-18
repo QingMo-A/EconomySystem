@@ -1,7 +1,10 @@
-package com.mo.economy_system.task.taskui;
+package com.mo.economy_system.core.task_system.taskui;
 
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
+
+
+//里面写了隐藏显示其他ui以及叫出鼠标的方法，供事件调用
 
 public class TaskUI {
     private static boolean SHOW_UI = false;

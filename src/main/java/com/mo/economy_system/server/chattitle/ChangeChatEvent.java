@@ -1,7 +1,7 @@
 package com.mo.economy_system.server.chattitle;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

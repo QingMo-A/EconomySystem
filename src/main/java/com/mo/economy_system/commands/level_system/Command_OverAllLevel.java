@@ -1,7 +1,7 @@
 package com.mo.economy_system.commands.level_system;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
