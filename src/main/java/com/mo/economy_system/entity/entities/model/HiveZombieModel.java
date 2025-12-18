@@ -171,7 +171,7 @@ public class HiveZombieModel <T extends HiveZombieEntity> extends HumanoidModel<
             this.leftLeg.xRot = Mth.cos(attackTime * (float)Math.PI + (float)Math.PI) * 0.8F + 0.5F;
 
             // 攻击时身体轻微旋转（扭转发力）
-            this.body.yRot = attackIntensity * 0.3F;
+            // this.body.yRot = attackIntensity * 0.3F;
         } else if (!isAggressive) {
             // 空闲/漫游时的动画
             float idleBob = Mth.cos(ageInTicks * 0.05F) * 0.02F;
