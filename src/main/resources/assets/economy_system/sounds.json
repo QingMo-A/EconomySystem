@@ -1,65 +1,23 @@
 {
-  "note_c": {
+  "entity.hive_zombie.ambient": {
+    "subtitle": "subtitles.economy_system.hive_zombie_ambient",
     "sounds": [
-      {
-        "name": "economy_system:note_c",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
+      "economy_system:hive_zombie_ambient"
+    ],
+    "stream": false
   },
-  "note_dm": {
+  "entity.hive_zombie.death": {
+    "subtitle": "subtitles.economy_system.hive_zombie_death",
     "sounds": [
-      {
-        "name": "economy_system:note_dm",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
+      "economy_system:hive_zombie_death"
+    ],
+    "stream": false
   },
-  "note_em": {
+  "entity.hive_zombie.hive_call": {
+    "subtitle": "subtitles.economy_system.hive_call",
     "sounds": [
-      {
-        "name": "economy_system:note_em",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
-  },
-  "note_f": {
-    "sounds": [
-      {
-        "name": "economy_system:note_f",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
-  },
-  "note_g": {
-    "sounds": [
-      {
-        "name": "economy_system:note_g",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
-  },
-  "note_am": {
-    "sounds": [
-      {
-        "name": "economy_system:note_am",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
-  },
-  "note_bm": {
-    "sounds": [
-      {
-        "name": "economy_system:note_bm",
-        "volume": 1.0,
-        "pitch": 1.0
-      }
-    ]
+      "economy_system:hive_zombie_hive_call"
+    ],
+    "stream": false
   }
 }

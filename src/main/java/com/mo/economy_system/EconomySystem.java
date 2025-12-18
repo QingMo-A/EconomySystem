@@ -10,6 +10,7 @@ import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.sound.EconomySystem_Sounds;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -33,6 +34,8 @@ public class EconomySystem {
         modEventBus.addListener(this::onClientSetup);
         // 注册物品
         EconomySystem_Items.register(modEventBus);
+        // 注册声音
+        EconomySystem_Sounds.SOUND_EVENTS.register(modEventBus);
         // 注册附魔
         EconomySystem_Enchants.register(modEventBus);
         // 注册网络包
