@@ -1,17 +1,28 @@
 package com.mo.economy_system.core.task_system.taskui;
 
+import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.core.task_system.TaskPlayerData;
 import com.mo.economy_system.core.task_system.TaskServerData;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics; // 必须导入，解决guiGraphics解析问题
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.network.chat.Component; // 注意：用Component而非MutableComponent
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Quaternionf;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -75,25 +86,25 @@ public class TaskUI_Screen extends Screen {
         int btnStartX = LOGO_BTN_WIDTH + 2 + uiX;
         int btnY = uiY - BTN_HEIGHT - 2;
 
-        //Logo按钮
+        //Logo按钮————————————————————————————————————————————————————————————
         int logoBtnX = uiX;
         Button.Builder logoBtnBuilder = Button.builder(Component.literal("§bDreaming§dFish"), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
-                        //不可交互，点击无响应
+                        showSubScreen = 0; // 切换到服务器任务子界面（不跳转Screen）
                     }
                 })
                 .pos(logoBtnX, btnY) //Logo按钮位置）
                 .size(LOGO_BTN_WIDTH, BTN_HEIGHT); // Logo按钮尺寸
 
-        //创建Logo按钮，不可交互，无悬浮高亮
+        //创建LOGO按钮
         logoBtn = logoBtnBuilder.build((builder) -> {
             return new Button(builder) {
                 // 标记按钮不可交互
-                @Override
-                public boolean isActive() {
-                    return false;
-                }
+//                @Override
+//                public boolean isActive() {
+//                    return false;
+//                }
 
                 @Override
                 public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -112,14 +123,20 @@ public class TaskUI_Screen extends Screen {
                             this.getX() + 1, this.getY() + this.getHeight(), borderColor);
                     guiGraphics.fill(RenderType.gui(), this.getX() + this.getWidth() - 1, this.getY(),
                             this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
+
+                    int textColor = 0xFFFFFF; // 默认白色
+                    if (showSubScreen == 0) { // 服务器任务按钮被选中
+                        textColor = 0xFFD700;
+                    }
                     //绘制Logo文字
                     guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
                             this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFF);
                 }
             };
         });
+        //————————————————————————————————————————————————————————————————————————————————————————————————————————
 
-        //服务器按钮
+        //服务器按钮————————————————————————————————————————————————————————————————————————————————————————————————
         Button.Builder serverBtnBuilder = Button.builder(Component.literal("服务器任务"), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
@@ -167,8 +184,9 @@ public class TaskUI_Screen extends Screen {
                 }
             };
         });
+        //————————————————————————————————————————————————————————————————————————————————————————————————————
 
-        //个人任务
+        //个人任务——————————————————————————————————————————————————————————————————————————————————————————————————
         Button.Builder playerBtnBuilder = Button.builder(Component.literal("个人任务"), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
@@ -210,6 +228,7 @@ public class TaskUI_Screen extends Screen {
                 }
             };
         });
+        //————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
         // 添加按钮到屏幕
         this.addRenderableWidget(logoBtn);
@@ -230,11 +249,14 @@ public class TaskUI_Screen extends Screen {
         // 右边框
         guiGraphics.fill(RenderType.gui(), uiX + screenUIWidth - 1, uiY, uiX + screenUIWidth, uiY + screenUIHeight, BORDER_COLOR);
 
-        // 2. 渲染按钮（父类方法会渲染已添加的所有按钮）
+        //渲染按钮，父类方法会渲染已添加的所有按钮
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
-        // 3. 根据子界面标识渲染对应内容（替代原ServerTaskScreen和PlayerTaskScreen）
+        //根据子界面标识渲染对应内容
         switch (showSubScreen) {
+            case 0:
+                renderMainServerContent(guiGraphics);
+                break;
             case 1:
                 renderServerTaskContent(guiGraphics); // 渲染服务器任务列表及详情
                 break;
@@ -249,14 +271,78 @@ public class TaskUI_Screen extends Screen {
 
     private int selectedServerTaskId = -1; // 选中的服务器任务ID，-1表示未选中
     private int selectedPlayerTaskId = -1;
+    //——————————————————————————————————————————————————————————————————————————————
+    private void renderMainServerContent(GuiGraphics guiGraphics) {
+        int margin = 10;
+        //计算模型尺寸
+        int modelSize = screenUIHeight / 3; // 一半少10像素
+
+        LocalPlayer player = Minecraft.getInstance().player;
+        float modelRealHeight = 0; // 模型精确视觉高度
+        if (player != null) {
+            //获取玩家碰撞箱高度（基础高度）
+            float bbHeight = player.getBbHeight();
+            //修正渲染偏移
+            // 缩放系数：modelSize是渲染缩放，对应UI像素的比例
+            modelRealHeight = bbHeight * modelSize;
+        }
+
+        //模型位置
+        int modelCenterX = uiX + margin + modelSize / 2; //模型中心X
+        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2); //脚部的y坐标
+
+        if (player != null) {
+            //调用原版背包的渲染方法
+            // guiGraphics - 渲染上下文
+            // modelCenterX/modelCenterY - 模型中心坐标
+            // modelSize - 模型尺寸
+            // 0/0 - 鼠标偏移（设为0则模型固定朝向，不跟随鼠标）
+            // player - 要渲染的玩家
+            InventoryScreen.renderEntityInInventoryFollowsMouse(
+                    guiGraphics,
+                    modelCenterX,
+                    modelCenterY,
+                    modelSize,
+                    0.0F, // 鼠标X偏移（固定为0，模型不旋转）
+                    0.0F, // 鼠标Y偏移（固定为0，模型不旋转）
+                    (LivingEntity) player
+            );
+        }
+
+        //文字信息
+        int textX = uiX + screenUIWidth / 3;
+        int textY = uiY + margin;
+        // 大标题
+        if (player != null) {
+            // 大字号渲染
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(2.0f, 2.0f, 2.0f);
+            guiGraphics.drawString(this.font, player.getScoreboardName(),
+                    (int)(textX / 2.0f), (int)(textY / 2.0f), 0xFFFFFF);
+            guiGraphics.pose().popPose();
+        }
+        // 提示文字
+        guiGraphics.drawString(this.font, "您的梦鱼游戏档案：",
+                textX, textY + 20, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "游戏等级" + "Lv" + PlayerLevelManager.getPlayerLevelClient(player),
+                textX, textY + 40, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "RANK:" + PlayerRankManager.getPlayerRankClient(player).getRankName(),
+                textX, textY + 60, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "称号:" + PlayerTitleManager.getPlayerTitleClient(player).getTitleName(),
+                textX, textY + 80, 0xAAAAAA);
+        guiGraphics.drawString(this.font, "更多功能开发中......UI会持续优化",
+                textX, textY + 100, 0xAAAAAA);
+    }
+
+    //——————————————————————————————————————————————————————————————————————————————————————————————
     private void renderPlayerTaskContent(GuiGraphics guiGraphics) {
         // 计算两栏布局参数
-        int MARGIN = 10;
-        int listWidth = (int) (screenUIWidth * 0.3f);
-        int detailWidth = screenUIWidth - listWidth - MARGIN * 2;
-        int listX = uiX + MARGIN;
-        int detailX = listX + listWidth + MARGIN;
-        int contentY = uiY + MARGIN;
+        int margin = 10;
+        int listWidth = (int) (screenUIWidth * 0.2f);
+        int detailWidth = screenUIWidth - listWidth - margin * 2;
+        int listX = uiX + margin;
+        int detailX = listX + listWidth + margin;
+        int contentY = uiY + margin;
         int line_height = 20;
         int listContentY = contentY + line_height;
 
@@ -264,7 +350,7 @@ public class TaskUI_Screen extends Screen {
         Map<Integer, TaskPlayerData> playerTasks = Packet_SyncFullTaskData.ClientTaskCache.getClientPlayerTaskCache();
 
         if (playerTasks.isEmpty()) {
-            guiGraphics.drawString(this.font, "暂无个人任务", listX, listContentY, 0xAAAAAA);
+            guiGraphics.drawString(this.font, "懒狗腐竹还没有编写任务", listX, listContentY, 0xAAAAAA);
         } else {
             // 排序任务ID
             List<Integer> taskIds = new ArrayList<>(playerTasks.keySet());
@@ -291,12 +377,25 @@ public class TaskUI_Screen extends Screen {
             }
         }
 
-        // 绘制右侧详情区域
-        guiGraphics.drawString(this.font, "任务详情", detailX, contentY, 0xFFFFFF);
+        //分栏竖线
+        int splitLineX = listX + listWidth + (margin / 2); // 竖线X坐标（列表右侧+半个内边距）
+        guiGraphics.fill(RenderType.gui(),
+                splitLineX, // 竖线左边界
+                contentY, // 竖线上边界（与内容区域对齐）
+                splitLineX + 1, // 竖线右边界（1像素宽）
+                uiY + screenUIHeight - margin, // 竖线下边界（与UI底部内边距对齐）
+                BORDER_COLOR); // 使用已定义的白色边框色
+
         int detailContentY = contentY + line_height * 2;
 
         if (selectedPlayerTaskId == -1) {
-            guiGraphics.drawString(this.font, "请从左侧选择任务", detailX, detailContentY, 0xAAAAAA);
+            // 未选中任务时，才显示「请从左侧选择任务」放大提示
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(1.5f, 1.5f, 1.5f);
+            guiGraphics.drawString(this.font, "请从左侧选择任务", (int)(detailX / 1.5 + 5), (int)(contentY / 1.5), 0xFFFFFF);
+            guiGraphics.pose().popPose();
+            // 绘制辅助提示文字
+            drawStringWithWrap(guiGraphics, "个人任务是推进进度的最好方式，完成任务，获取奖励！", detailX + 5, detailContentY, screenUIWidth - splitLineX - margin,20, 0xAAAAAA);
         } else {
             TaskPlayerData selectedTask = playerTasks.get(selectedPlayerTaskId);
             if (selectedTask != null) {
@@ -333,11 +432,15 @@ public class TaskUI_Screen extends Screen {
             }
         }
     }
-    // 渲染服务器任务内容（复用原ServerTaskScreen的逻辑，调整为子内容区域）
+    //——————————————————————————————————————————————————————————————————————————————————————————————
+
+
+    //——————————————————————————————————————————————————————————————————————————————————————————————
+    //渲染服务器任务内容
     private void renderServerTaskContent(GuiGraphics guiGraphics) {
         //计算两栏布局坐标（基于主UI区域）
         int margin = 10; // 内边距
-        int listWidth = (int) (screenUIWidth * 0.3f); // 左侧列表占30%宽度
+        int listWidth = (int) (screenUIWidth * 0.2f); // 左侧列表占30%宽度
         int detailWidth = screenUIWidth - listWidth - margin * 2; // 右侧详情区域宽度
         int listX = uiX + margin; // 左侧列表X坐标
         int detailX = listX + listWidth + margin; // 右侧详情X坐标
@@ -348,7 +451,7 @@ public class TaskUI_Screen extends Screen {
         //遍历客户端缓存的服务器任务，渲染列表
         Map<Integer, TaskServerData> serverTasks = Packet_SyncFullTaskData.ClientTaskCache.getClientServerTaskCache();
         if (serverTasks.isEmpty()) {
-            guiGraphics.drawString(this.font, "暂无服务器任务", listX, listContentY, 0xAAAAAA);
+            guiGraphics.drawString(this.font, "懒狗腐竹还没有编写任务", listX, listContentY, 0xAAAAAA);
         } else {
             // 按任务ID排序（简单处理）
             List<Integer> taskIds = new ArrayList<>(serverTasks.keySet());
@@ -374,13 +477,32 @@ public class TaskUI_Screen extends Screen {
             }
         }
 
+        //分栏竖线
+        int splitLineX = listX + listWidth + (margin / 2); // 竖线X坐标（列表右侧+半个内边距）
+        guiGraphics.fill(RenderType.gui(),
+                splitLineX, // 竖线左边界
+                contentY, // 竖线上边界（与内容区域对齐）
+                splitLineX + 1, // 竖线右边界（1像素宽）
+                uiY + screenUIHeight - margin, // 竖线下边界（与UI底部内边距对齐）
+                BORDER_COLOR); // 使用已定义的白色边框色
+
         //绘制右侧详情区域
-        guiGraphics.drawString(this.font, "任务详情", detailX, contentY, 0xFFFFFF);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(1.5f, 1.5f, 1.5f);
+        if (selectedServerTaskId == -1) {
+            guiGraphics.drawString(this.font, "请从左侧选择任务", (int)(detailX / 1.5 + 5), (int)(contentY / 1.5), 0xFFFFFF);
+        }
+        guiGraphics.pose().popPose();
         int detailContentY = contentY + lineHeight * 2; // 详情内容起始Y（预留标题空间）
 
         if (selectedServerTaskId == -1) {
             // 未选中任务时显示提示
-            guiGraphics.drawString(this.font, "请从左侧选择任务", detailX, detailContentY, 0xAAAAAA);
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(1.5f, 1.5f, 1.5f);
+            guiGraphics.drawString(this.font, "请从左侧选择任务", (int)(detailX / 1.5 + 5), (int)(contentY / 1.5), 0xFFFFFF);
+            guiGraphics.pose().popPose();
+            // 绘制辅助提示文字
+            drawStringWithWrap(guiGraphics, "服务器任务需要大家共同完成，只有共同完成任务才能推进整个服务器的进度", detailX + 5, detailContentY, screenUIWidth - splitLineX - margin,20, 0xAAAAAA);
         } else {
             //显示选中任务的详情
             TaskServerData selectedTask = serverTasks.get(selectedServerTaskId);
@@ -415,6 +537,7 @@ public class TaskUI_Screen extends Screen {
             }
         }
     }
+    //——————————————————————————————————————————————————————————————————————————————————————————————
 
     private String formatTime(long timestamp) {
         try {
@@ -427,6 +550,15 @@ public class TaskUI_Screen extends Screen {
         } catch (Exception e) {
             // 异常时返回原始时间戳
             return String.valueOf(timestamp);
+        }
+    }
+
+    private void drawStringWithWrap(GuiGraphics guiGraphics, String text, int x, int y, int maxWidth, int lineHeight, int color) {
+        // 分割为带格式的字符序列（自动换行）
+        List<FormattedCharSequence> wrappedLines = this.font.split(Component.literal(text), maxWidth);
+        // 逐行绘制（支持FormattedCharSequence）
+        for (int i = 0; i < wrappedLines.size(); i++) {
+            guiGraphics.drawString(this.font, wrappedLines.get(i), x, y + i * lineHeight, color);
         }
     }
 
