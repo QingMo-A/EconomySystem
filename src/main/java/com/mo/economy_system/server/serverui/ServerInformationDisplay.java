@@ -5,6 +5,10 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.Packet_OnlinePlayerCountRequest;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.screen.economy_system.market.Screen_Market;
+import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
+import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
@@ -69,21 +73,32 @@ public class ServerInformationDisplay {
         }
     }
 
-    // 客户端Tick，触发网络请求 =====================
+    //客户端Tick，触发网络请求
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (event.phase != TickEvent.Phase.END || mc.player == null) return;
 
+        boolean skipRequest = false;
+        if (mc.screen != null) {
+            skipRequest = mc.screen instanceof Screen_Shop
+                    || mc.screen instanceof Screen_Home
+                    || mc.screen instanceof Screen_Market
+                    || mc.screen instanceof Screen_Territory;
+        }
+        if (skipRequest) {
+            return;
+        }
+
         long currentTime = System.currentTimeMillis();
 
-        // 请求在线玩家数
+        //请求在线玩家数
         if (currentTime - LAST_PLAYER_LIST_UPDATE > UPDATE_INTERVAL) {
             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_OnlinePlayerCountRequest());
             LAST_PLAYER_LIST_UPDATE = currentTime;
         }
 
-        // 余额请求
+        //余额请求
         if (currentTime - LAST_BALANCE_UPDATE > UPDATE_INTERVAL) {
             EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
             LAST_BALANCE_UPDATE = currentTime;
