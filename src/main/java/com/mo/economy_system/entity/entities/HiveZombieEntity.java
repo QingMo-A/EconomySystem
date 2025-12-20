@@ -24,6 +24,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +34,8 @@ public class HiveZombieEntity extends Monster {
     // 定义变种的数据访问器
     private static final EntityDataAccessor<Integer> DATA_VARIANT =
             SynchedEntityData.defineId(HiveZombieEntity.class, EntityDataSerializers.INT);
+
+    private static boolean isPlayingSound = false;
 
     /* =========================
        Attribute Modifier UUIDs | 属性关键字UUID
@@ -269,6 +272,26 @@ public class HiveZombieEntity extends Monster {
     /* =========================
        Sound System | 简化的音效系统
        ========================= */
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return EconomySystem_Sounds.HIVE_ZOMBIE_AMBIENT.get();
+    }
+
+    @Override
+    public int getAmbientSoundInterval() {
+        return 80;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return EconomySystem_Sounds.HIVE_ZOMBIE_DEATH.get();
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource p_33034_) {
+        return EconomySystem_Sounds.HIVE_ZOMBIE_HURT.get();
+    }
 
     // 注册实体属性
     @SubscribeEvent

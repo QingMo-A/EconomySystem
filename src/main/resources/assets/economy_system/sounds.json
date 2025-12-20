@@ -2,7 +2,13 @@
   "entity.hive_zombie.ambient": {
     "subtitle": "subtitles.economy_system.hive_zombie_ambient",
     "sounds": [
-      "economy_system:hive_zombie_ambient"
+      {"name": "economy_system:hive_zombie_ambient_1", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_2", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_3", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_4", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_5", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_6", "volume": 0.8},
+      {"name": "economy_system:hive_zombie_ambient_7", "volume": 0.8}
     ],
     "stream": false
   },
@@ -17,6 +23,13 @@
     "subtitle": "subtitles.economy_system.hive_call",
     "sounds": [
       "economy_system:hive_zombie_hive_call"
+    ],
+    "stream": false
+  },
+  "entity.hive_zombie.hurt": {
+    "subtitle": "subtitles.economy_system.hurt",
+    "sounds": [
+      "economy_system:hive_zombie_hurt"
     ],
     "stream": false
   }

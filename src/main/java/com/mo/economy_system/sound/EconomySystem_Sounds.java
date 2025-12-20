@@ -13,6 +13,8 @@ public class EconomySystem_Sounds {
 
     // 丧尸游荡音效
     public static final RegistryObject<SoundEvent> HIVE_ZOMBIE_AMBIENT = registerSound("entity.hive_zombie.ambient");
+    // 丧尸受伤音效
+    public static final RegistryObject<SoundEvent> HIVE_ZOMBIE_HURT = registerSound("entity.hive_zombie.hurt");
     // 丧尸死亡音效
     public static final RegistryObject<SoundEvent> HIVE_ZOMBIE_DEATH = registerSound("entity.hive_zombie.death");
     // 丧尸蜂巢效应发动时音效

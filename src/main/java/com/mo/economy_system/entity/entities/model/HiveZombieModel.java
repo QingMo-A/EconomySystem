@@ -88,7 +88,7 @@ public class HiveZombieModel <T extends HiveZombieEntity> extends HumanoidModel<
     }
 
     // 动画逻辑
-    @Override
+    /*@Override
     public void setupAnim(T entity, float limbSwing, float limbSwingAmount,
                           float ageInTicks, float netHeadYaw, float headPitch) {
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
@@ -205,7 +205,7 @@ public class HiveZombieModel <T extends HiveZombieEntity> extends HumanoidModel<
             float lean = Mth.cos(limbSwing * 1.333F) * 0.1F * limbSwingAmount;
             this.body.zRot = lean;
         }
-    }
+    }*/
 
     // 渲染方法
     @Override
