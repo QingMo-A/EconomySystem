@@ -1,7 +1,7 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
@@ -97,7 +97,6 @@ public class Packet_SyncPlayerData {
 
         @Override
         public void run() {
-            // 客户端专属逻辑，服务器永远不会执行/加载
             syncPlayerDataOnClient(playerUUID, rankName, titleName, level);
         }
     }

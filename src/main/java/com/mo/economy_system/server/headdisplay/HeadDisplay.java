@@ -1,6 +1,6 @@
 package com.mo.economy_system.server.headdisplay;
 
-import com.mo.economy_system.playerlevel.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mojang.blaze3d.vertex.PoseStack;
