@@ -53,6 +53,9 @@ public class VBoxWidget extends AbstractWidget {
     public VBoxWidget(int x, int y, int width) {
         super(x, y, width, 0, null);
     }
+    public VBoxWidget(int x, int y, int width, int height) {
+        super(x, y, width, height, null);
+    }
 
     public VBoxWidget(int width) {
         super(0, 0, width, 0, null);

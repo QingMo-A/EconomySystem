@@ -7,6 +7,7 @@ import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
+import com.mo.economy_system.screen.newUI.EconomyMainScreen;
 import com.mo.economy_system.screen.newUI.Screen_Test;
 import com.mo.economy_system.screen.newUI.a1111_Screen;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
@@ -143,8 +144,9 @@ public class Screen_Home extends EconomySystem_Screen {
                         1000,                   // 动画持续时间
                         button -> {
                             // 打开 AboutScreen
-                            // this.minecraft.setScreen(new Screen_Test());
-                            this.minecraft.setScreen(new a1111_Screen());
+                            //this.minecraft.setScreen(new Screen_Test());
+                            // this.minecraft.setScreen(new a1111_Screen());
+                            this.minecraft.setScreen(new EconomyMainScreen());
                         })
         );
 

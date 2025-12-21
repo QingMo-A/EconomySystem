@@ -4,7 +4,6 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.territory_system.Packet_ModifyMode;
 import com.mo.economy_system.network.packets.territory_system.Packet_RemoveTerritory;
 import com.mo.economy_system.network.packets.territory_system.Packet_RemovePlayer;
-import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
 import com.mo.economy_system.core.territory_system.PlayerInfo;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.EconomySystem_Screen;
@@ -16,11 +15,9 @@ import com.mo.economy_system.utils.Util_Skull;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +40,7 @@ public class Screen_ManageTerritory extends EconomySystem_Screen {
     protected void init() {
         super.init();
 
-        this.currentPage = 0;
+        this.currentPageNumber = 0;
 
         initPart();
     }
@@ -351,7 +348,7 @@ public class Screen_ManageTerritory extends EconomySystem_Screen {
         TOP_MARGIN = this.height - 100;
         thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
 
-        startIndex = currentPage * thingsPerPage;
+        startIndex = currentPageNumber * thingsPerPage;
         endIndex = Math.min(startIndex + thingsPerPage, authorizedPlayers.size());
 
         startX = Math.max((this.width / 2) - 450, 60);

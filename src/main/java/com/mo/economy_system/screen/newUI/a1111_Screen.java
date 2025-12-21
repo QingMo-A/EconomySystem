@@ -118,7 +118,7 @@ public class a1111_Screen extends EconomySystem_Screen {
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    private boolean isInHoverArea(double mouseX, double mouseY, AbstractWidget widget) {
+    protected boolean isInHoverArea(double mouseX, double mouseY, AbstractWidget widget) {
         return mouseX >= widget.getX() && mouseX <= widget.getX() + widget.getWidth() &&
                 mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight();
     }

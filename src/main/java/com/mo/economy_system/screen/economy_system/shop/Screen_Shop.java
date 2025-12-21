@@ -50,7 +50,7 @@ public class Screen_Shop extends EconomySystem_Screen {
     protected void init() {
         super.init();
 
-        this.currentPage = 0;
+        this.currentPageNumber = 0;
 
         initPart();
     }
@@ -152,9 +152,9 @@ public class Screen_Shop extends EconomySystem_Screen {
         renderCache.clear(); // 清空旧的缓存
 
         pageAnimation = new TextAnimation(
-                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
                 this.height + 33,
-                this.width / 2 - this.font.width((currentPage + 1) + " / " + getTotalPages()) / 2,
+                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
                 this.height - 33,
                 0f,
                 1f,
@@ -164,7 +164,7 @@ public class Screen_Shop extends EconomySystem_Screen {
         renderCache.add((guiGraphics) -> {
             renderAnimatedText(
                     guiGraphics,
-                    Component.literal((currentPage + 1) + " / " + getTotalPages()),
+                    Component.literal((currentPageNumber + 1) + " / " + getTotalPages()),
                     pageAnimation
             );
         });
@@ -353,8 +353,8 @@ public class Screen_Shop extends EconomySystem_Screen {
                         Component.literal("<"),
                         1000,
                         button -> {
-                            if (currentPage > 0) {
-                                currentPage--;
+                            if (currentPageNumber > 0) {
+                                currentPageNumber--;
                                 this.initPart(); // 刷新页面
                             }
                         }
@@ -372,8 +372,8 @@ public class Screen_Shop extends EconomySystem_Screen {
                         Component.literal(">"),
                         1000,
                         button -> {
-                            if (currentPage < getTotalPages() - 1) {
-                                currentPage++;
+                            if (currentPageNumber < getTotalPages() - 1) {
+                                currentPageNumber++;
                                 this.initPart(); // 刷新页面
                             }
                         }
@@ -389,8 +389,8 @@ public class Screen_Shop extends EconomySystem_Screen {
         // 上一页按钮
         this.addRenderableWidget(
                 Button.builder(Component.literal("<"), button -> {
-                            if (currentPage > 0) {
-                                currentPage--;
+                            if (currentPageNumber > 0) {
+                                currentPageNumber--;
                                 this.initPart(); // 刷新页面
                             }
                         })
@@ -402,8 +402,8 @@ public class Screen_Shop extends EconomySystem_Screen {
         // 下一页按钮
         this.addRenderableWidget(
                 Button.builder(Component.literal(">"), button -> {
-                            if (currentPage < getTotalPages() - 1) {
-                                currentPage++;
+                            if (currentPageNumber < getTotalPages() - 1) {
+                                currentPageNumber++;
                                 this.initPart(); // 刷新页面
                             }
                         })
@@ -449,7 +449,7 @@ public class Screen_Shop extends EconomySystem_Screen {
             List<ShopItem> finalResult = result;
             this.minecraft.execute(() -> {
                 this.items = finalResult;
-                this.currentPage = 0;
+                this.currentPageNumber = 0;
                 refreshItemButtons();
                 initializeRenderCache(); // 重新初始化渲染缓存
             });
@@ -486,7 +486,7 @@ public class Screen_Shop extends EconomySystem_Screen {
         TOP_MARGIN = this.height - 100;
         thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
 
-        startIndex = currentPage * thingsPerPage;
+        startIndex = currentPageNumber * thingsPerPage;
         endIndex = Math.min(startIndex + thingsPerPage, items.size());
 
         startX = Math.max((this.width / 2) - 300, 60);

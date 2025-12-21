@@ -1,21 +1,60 @@
 package com.mo.economy_system.screen;
 
-import com.google.common.collect.Lists;
+import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
+import com.mo.economy_system.core.economy_system.market.MarketItem;
+import com.mo.economy_system.core.economy_system.shop.ShopItem;
+import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
-import net.minecraft.client.gui.ComponentPath;
+import com.mo.economy_system.screen.newUI.ItemIconWidget;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class EconomySystem_Screen extends Screen {
-    protected int currentPage = 0; // 当前页码
+    protected List<MarketItem> marketItems = new ArrayList<>();
+    protected List<MarketItem> marketItemsSnapshot = new ArrayList<>();
+
+    protected List<ShopItem> shopItems = new ArrayList<>(); // 商品列表
+    protected List<ShopItem> shopItemsSnapshot = new ArrayList<>();
+
+    protected final List<ItemIconWidget> itemWidgets = new ArrayList<>();
+
+    protected List<DeliveryItem> deliveryItems = new ArrayList<>(); // 物品列表
+    protected List<DeliveryItem> deliveryItemsSnapshot = new ArrayList<>();
+
+    protected List<Territory> allTerritories = new ArrayList<>(); // 拥有的领地
+    protected List<Territory> territorys = new ArrayList<>(); // 商品列表
+    protected List<Territory> ownedTerritories = new ArrayList<>(); // 拥有的领地
+    protected List<Territory> authorizedTerritories = new ArrayList<>(); // 有权限的领地
+
+    protected final String PAGE_ID_HOME = "HOME";
+    protected final String PAGE_ID_STORE = "STORE";
+    protected final String PAGE_ID_MARKET = "MARKET";
+    protected final String PAGE_ID_DELIVERY_BOX = "DELIVERY_BOX";
+    protected final String PAGE_ID_TERRITORIES = "TERRITORIES";
+    protected final String PAGE_ID_ABOUT = "ABOUT";
+
+    protected final String PAGE_NAME_HOME = "title.home";
+    protected final String PAGE_NAME_STORE = "title.store";
+    protected final String PAGE_NAME_MARKET = "title.market";
+    protected final String PAGE_NAME_DELIVERY_BOX = "title.delivery_box";
+    protected final String PAGE_NAME_TERRITORIES = "title.territories";
+    protected final String PAGE_NAME_ABOUT = "title.about";
+
+    protected String currentPage = PAGE_ID_HOME;
+    protected String currentTitle = PAGE_NAME_HOME;
+
+    protected int balance = -1;
+    protected List<Map.Entry<String, Integer>> accounts;
+
+    protected int currentPageNumber = 0; // 当前页码
     protected static int TOP_MARGIN; // 距离底部的最小空白高度
     protected static final int BOTTOM_MARGIN = 60; // 距离底部的最小空白高度
     protected int thingsPerPage; // 动态计算的每页东西
@@ -134,5 +173,10 @@ public class EconomySystem_Screen extends Screen {
         guiGraphics.renderItem(itemStack, 0, 0);
         guiGraphics.setColor(1f, 1f, 1f, 1f); // 重置颜色
         guiGraphics.pose().popPose();
+    }
+
+    protected boolean isInHoverArea(double mouseX, double mouseY, AbstractWidget widget) {
+        return mouseX >= widget.getX() && mouseX <= widget.getX() + widget.getWidth() &&
+                mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight();
     }
 }
