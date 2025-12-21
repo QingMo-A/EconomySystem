@@ -1,0 +1,33 @@
+{
+  "buffs": [
+    {
+      "id": "speed_boost",
+      "displayText": "速度++",
+      "effectId": "minecraft:speed",
+      "initialUnlockState": false,
+      "initialLevel": 0,
+      "singleUpgradeLevel": 1,
+      "maxLevel": 3,
+      "upgradeCost": [
+        {
+          "items": [
+            {
+              "item": "minecraft:emerald",
+              "count": 5
+            },
+            {
+              "item": "minecraft:diamond",
+              "count": 2
+            },
+            {
+              "item": "minecraft:gold_ingot",
+              "count": 10
+            }
+          ],
+          "xp": 5,
+          "df_coin": 10
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "onlyEnchantedBooks": false,
+  "offsetX": 82,
+  "offsetY": 12,
+  "xAxisCentered": true,
+  "fontScale": 85,
+  "fontColor": 16777215,
+  "fontColorForMaxLevel": {
+    "enabled": true,
+    "color": 16766720,
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "ignoreSingleLevel": true
+  },
+  "bgColor": 0,
+  "duration": 20,
+  "displayOnTop": true,
+  "singularFormat": "$full_name",
+  "pluralFormat": "$full_name ($index/$total)"
+}

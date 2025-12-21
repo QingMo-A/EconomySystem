@@ -1,0 +1,7 @@
+type = last_world
+
+last_world {
+  is_server = false
+  world = D:/Desktop/mc/.minecraft/versions/Dreamingfish-EP01/saves/新的世界 (2)
+}
+

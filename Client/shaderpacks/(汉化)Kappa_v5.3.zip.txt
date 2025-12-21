@@ -1,0 +1,10 @@
+#Fri Dec 19 18:45:54 CST 2025
+CLOUD_RENDER_LOD=2.0
+RSKY_SI_CloudV_Samples=20
+ResolutionScale=1.0
+UseLightleakPrevention=true
+cloudShadowsEnabled=true
+indirectResReduction=1
+minimumAmbientIllum=4.0
+shadowMapResolution=4096
+ssptSPP=1

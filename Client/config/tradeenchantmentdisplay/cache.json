@@ -1,0 +1,5 @@
+{
+  "enabled": true,
+  "filePath": "trades.nbt",
+  "distinguishPortBetweenServers": false
+}
