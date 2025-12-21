@@ -1,0 +1,11 @@
+{
+  "alwaysAttemptToGetNearbyOffers": true,
+  "requestFrequency": 5,
+  "nonInteractableItems": [
+    "minecraft:villager_spawn_egg",
+    "minecraft:name_tag"
+  ],
+  "tradableBlocks": [
+    "easy_villagers:trader"
+  ]
+}

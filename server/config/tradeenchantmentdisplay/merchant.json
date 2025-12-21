@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "renderDistance": 64.0,
+  "duration": 40,
+  "offsetY": -0.5,
+  "nameColor": 16755200,
+  "nameColorForMaxLevel": {
+    "enabled": true,
+    "color": 16733440,
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "ignoreSingleLevel": true
+  },
+  "priceColor": 5635925,
+  "enchantmentBlacklist": []
+}
