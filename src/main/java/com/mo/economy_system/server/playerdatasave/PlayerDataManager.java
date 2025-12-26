@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
@@ -82,6 +83,7 @@ public class PlayerDataManager {
             //同步到缓存
             PlayerData existingData = getPlayerData(playerUUID);
             PLAYER_DATA_CACHE.put(playerUUID, existingData);
+            PlayerAttributesDataManager.initPlayerAttributesData(player, existingData.getLevel());
             return;
         }
 
@@ -97,6 +99,8 @@ public class PlayerDataManager {
                 newPlayerData.getRank().getRankName(),
                 newPlayerData.getTitle().getTitleName(),
                 newPlayerData.getLevel());
+
+        PlayerAttributesDataManager.initPlayerAttributesData(player, newPlayerData.getLevel());
     }
 
     public static PlayerData getPlayerData(UUID playerUUID) {
@@ -137,6 +141,8 @@ public class PlayerDataManager {
         PLAYER_DATA_CACHE.put(playerUUID, playerData);
         allPlayerData.put(playerUUID, playerData);
         saveAllPlayerDataToFile(allPlayerData);
+
+        PlayerAttributesDataManager.initPlayerAttributesData(serverPlayer, level);
 
         EconomySystem.LOGGER.info("玩家 {} 数据更新成功（Rank={}, Title={}, Level={}）",
                 serverPlayer.getScoreboardName(),
@@ -189,7 +195,7 @@ public class PlayerDataManager {
                 player.getScoreboardName(), data.getLastLoginTime());
     }
 
-    //离线清理缓存
+    //离线清理缓存并计算在线时间
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {

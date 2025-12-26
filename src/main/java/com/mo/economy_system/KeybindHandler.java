@@ -1,5 +1,7 @@
 package com.mo.economy_system;
 
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SprintKeyPress;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
 import com.mo.economy_system.core.task_system.taskui.TaskUI;
@@ -7,8 +9,10 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.client.settings.KeyModifier;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -32,6 +36,12 @@ public class KeybindHandler {
             GLFW.GLFW_KEY_U,
             "key.categories.economy_system"
     );
+    //疾跑键
+    public static final KeyMapping SPRINT_KEY = new KeyMapping(
+            "key.sprint",
+            GLFW.GLFW_KEY_LEFT_CONTROL,
+            "key.categories.movement"
+    );
 
     // 注册按键绑定到 Minecraft 系统
     @SubscribeEvent
@@ -39,6 +49,7 @@ public class KeybindHandler {
         event.register(OPEN_SCREEN_KEY);
         event.register(INFORMATION_UI_KEY);
         event.register(TASK_UI_KEY);
+        event.register(SPRINT_KEY);
     }
 
     // 监听按键事件
@@ -65,6 +76,9 @@ public class KeybindHandler {
             }
             if (TASK_UI_KEY.consumeClick()) {
                 TaskUI.toggleUI();
+            }
+            if (event.getAction() == GLFW.GLFW_PRESS && SPRINT_KEY.consumeClick()) {
+                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_SprintKeyPress());  //发送网络包
             }
         }
     }
