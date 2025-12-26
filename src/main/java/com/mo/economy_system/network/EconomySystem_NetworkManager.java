@@ -11,6 +11,8 @@ import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
+import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
+import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SprintKeyPress;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.network.packets.territory_system.*;
 import net.minecraft.resources.ResourceLocation;
@@ -80,5 +82,25 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountResponse.class, Packet_OnlinePlayerCountResponse::encode, Packet_OnlinePlayerCountResponse::decode, Packet_OnlinePlayerCountResponse::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncPlayerData.class, Packet_SyncPlayerData::encode, Packet_SyncPlayerData::decode, Packet_SyncPlayerData::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncFullTaskData.class, Packet_SyncFullTaskData::encode, Packet_SyncFullTaskData::decode, Packet_SyncFullTaskData::handle);
+        INSTANCE.registerMessage(
+                packetId++, // 唯一序号（递增）
+                Packet_SprintKeyPress.class,
+                Packet_SprintKeyPress::encode,
+                Packet_SprintKeyPress::decode,
+                Packet_SprintKeyPress::handle,
+                // 明确方向：客户端发往服务端
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
+
+        // 注册 Packet_CantRun（服务端→客户端）
+        INSTANCE.registerMessage(
+                packetId++, // 唯一序号
+                Packet_CantRun.class,
+                Packet_CantRun::encode,
+                Packet_CantRun::decode,
+                Packet_CantRun::handle,
+                // 明确方向：服务端发往客户端
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
     }
 }
