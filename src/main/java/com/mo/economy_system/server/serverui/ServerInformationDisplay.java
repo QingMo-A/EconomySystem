@@ -14,6 +14,7 @@ import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
 import com.mo.economy_system.server.serverui.tips.TipDisplayManager;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -124,16 +125,47 @@ public class ServerInformationDisplay {
         List<Component> infoLines = buildInfoLines(mc);
         if (infoLines.isEmpty()) return;
 
+        // ================ 步骤1：定义缩放比例（按需调整） ================
+        float scale = 0.9f; // 缩放比例（0.8=80%大小）
+        // =============================================================
+
+        // ================ 步骤2：先计算「原尺寸」 ================
         int maxTextWidth = calculateMaxTextWidth(infoLines, font);
-        int bgWidth = maxTextWidth + BACKGROUND_PADDING * 2;
-        int bgHeight = infoLines.size() * LINE_SPACING + BACKGROUND_PADDING * 2;
-        int bgX = screenWidth - bgWidth - RIGHT_OFFSET;
-        int bgY = TOP_OFFSET;
+        int originalBgWidth = maxTextWidth + BACKGROUND_PADDING * 2;
+        int originalBgHeight = infoLines.size() * LINE_SPACING + BACKGROUND_PADDING * 2;
+        // =============================================================
+
+        // ================ 步骤3：计算「缩放后的实际尺寸」 ================
+        int scaledBgWidth = (int) (originalBgWidth * scale);
+        int scaledBgHeight = (int) (originalBgHeight * scale);
+        // =============================================================
+
+        // ================ 步骤4：重新计算精准的bgX/bgY（保证右上角对齐） ================
+        // 核心：bgX = 屏幕宽度 - 缩放后实际宽度 - 右侧偏移量（和原逻辑一致，只是用缩放后的宽度）
+        int bgX = screenWidth - scaledBgWidth - RIGHT_OFFSET;
+        int bgY = TOP_OFFSET; // 顶部偏移不变
+        // 原基准坐标（缩放前的绘制坐标，无需提前补偿）
         int baseX = bgX + BACKGROUND_PADDING;
         int baseY = bgY + BACKGROUND_PADDING;
+        // =============================================================
 
-        renderBackground(guiGraphics, bgX, bgY, bgWidth, bgHeight);
+        // ================ 步骤5：缩放渲染（平移+缩放，避免偏移） ================
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose(); // 保存矩阵状态
+
+        // 先平移到bgX/bgY（信息栏右上角定位点），再缩放（保证缩放后位置不变）
+        poseStack.translate(bgX, bgY, 0);
+        poseStack.scale(scale, scale, 1.0f);
+        // 平移回原点（让绘制的(0,0)对应缩放后的bgX/bgY）
+        poseStack.translate(-bgX, -bgY, 0);
+        // =============================================================
+
+        // 渲染背景和文本（用原坐标即可，缩放+平移已保证位置精准）
+        renderBackground(guiGraphics, bgX, bgY, originalBgWidth, originalBgHeight);
         renderInfoLines(guiGraphics, infoLines, font, baseX, baseY);
+
+        // 恢复矩阵状态
+        poseStack.popPose();
     }
 
     // 构建显示文本

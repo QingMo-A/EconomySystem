@@ -2,6 +2,8 @@ package com.mo.economy_system.core.playerattributes_system;
 
 import com.mo.economy_system.EconomySystem;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 import java.util.UUID;
 
@@ -30,6 +32,9 @@ public class PlayerAttributesData {
     // 感染值（0-100，100为完全感染）
     private int currentInfection;
 
+    //血量系统
+    private double maxHealth; //最大血量
+
     // 防重复提示标记（各属性不足时避免刷屏）
     private boolean strengthWarned;
     private boolean sanWarned;
@@ -53,6 +58,8 @@ public class PlayerAttributesData {
 
         this.maxCourage = calculateMaxCourageByLevel(level);
         this.currentCourage = maxCourage;
+
+        this.maxHealth = calculateMaxHealthByLevel(level);
 
         this.currentInfection = 0;
 
@@ -80,6 +87,9 @@ public class PlayerAttributesData {
 
         this.maxCourage = calculateMaxCourageByLevel(level);
         this.currentCourage = maxCourage;
+
+        this.maxHealth = calculateMaxHealthByLevel(level);
+        this.syncMaxHealthToPlayer(player);
 
         this.currentInfection = 0;
 
@@ -109,6 +119,8 @@ public class PlayerAttributesData {
 
         this.maxCourage = calculateMaxCourageByLevel(level);
         this.currentCourage = maxCourage;
+
+        this.maxHealth = calculateMaxHealthByLevel(level);
 
         this.currentInfection = 0;
 
@@ -140,21 +152,60 @@ public class PlayerAttributesData {
         return 100 + (level - 1) * 4;
     }
 
+    /**
+     * 最大血量计算
+     * @param level 玩家等级
+     * @return 对应等级的最大血量
+     */
+    public double calculateMaxHealthByLevel(int level) {
+        int caculateHealth = 20 + (int)(level / 5) * 2;
+        if (caculateHealth > 40) {
+            caculateHealth = 40;
+        }
+        return caculateHealth;
+    }
+
     // ========== 等级更新（同步更新所有属性最大值） ==========
-    public void setLevel(int level) {
+    public void setLevel(int level, ServerPlayer player) {  // 新增ServerPlayer参数
         this.level = level;
 
-        // 更新各属性最大值
+        // 更新各属性最大值（包含最大血量）
         this.maxStrength = calculateMaxStrengthByLevel(level);
         this.maxSan = calculateMaxSanByLevel(level);
         this.maxCourage = calculateMaxCourageByLevel(level);
+        this.maxHealth = calculateMaxHealthByLevel(level);
 
         // 防止当前属性超过新最大值
         this.currentStrength = Math.min(this.currentStrength, maxStrength);
         this.currentSan = Math.min(this.currentSan, maxSan);
         this.currentCourage = Math.min(this.currentCourage, maxCourage);
 
+        // ========== 同步生命值到玩家实体 ==========
+        // 同步生命值到玩家实体（使用自定义方法）
+        if (player != null) {
+            syncMaxHealthToPlayer(player);  // 调用自定义同步方法
+        }
+
         EconomySystem.LOGGER.info("玩家 {} 等级更新为{}，属性最大值同步完成", playerName, level);
+    }
+
+    public void syncMaxHealthToPlayer(ServerPlayer player) {
+        if (player == null) return;
+
+        // 获取玩家的最大生命值属性
+        AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+        if (maxHealthAttribute == null) return;
+
+        // 设置最大生命值的基础值（清除所有modifiers，仅保留基础值）
+        maxHealthAttribute.setBaseValue(this.maxHealth);
+
+        // 确保当前生命值不超过新的最大值
+        if (player.getHealth() > this.maxHealth) {
+            player.setHealth((float) this.maxHealth);
+        }
+
+        // 同步生命值到客户端（避免显示异常）
+        player.setHealth(player.getHealth());
     }
 
     // 体力消耗（返回是否消耗成功）
@@ -207,6 +258,14 @@ public class PlayerAttributesData {
         if (currentCourage > maxCourage * 0.2) {
             this.courageWarned = false;
         }
+    }
+
+    public double getMaxHealth() {
+        return maxHealth;
+    }
+
+    public void setMaxHealth(double maxHealth) {
+        this.maxHealth = maxHealth;
     }
 
     // 感染值增加（上限100）

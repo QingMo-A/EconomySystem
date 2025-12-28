@@ -2,8 +2,7 @@ package com.mo.economy_system.server;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.Packet_SyncPlayerData;
-import com.mo.economy_system.server.playerdatasave.PlayerDataManager;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.entity.player.PlayerEvent;
