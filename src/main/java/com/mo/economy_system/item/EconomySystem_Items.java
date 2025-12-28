@@ -4,10 +4,7 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.armor.EconomySystem_ArmorMaterials;
 import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.entity.EconomySystem_Entities;
-import com.mo.economy_system.item.items.Item_ClaimWand;
-import com.mo.economy_system.item.items.Item_Guitar;
-import com.mo.economy_system.item.items.Potion_Recall;
-import com.mo.economy_system.item.items.Potion_Wormhole;
+import com.mo.economy_system.item.items.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
@@ -81,6 +78,19 @@ public class EconomySystem_Items {
                             0x3A6238,  // 基础颜色
                             0x7F997D,  // 斑点颜色
                             new Item.Properties()));
+
+    // 自定义蓝图物品（可选，如果不想用地图）
+    public static final RegistryObject<Item> BLUEPRINT_ITEM = ITEMS.register("blueprint",
+            () -> new BlueprintItem(new Item.Properties()
+                    .stacksTo(1)  // 蓝图只能堆叠1个
+                    .fireResistant()  // 防火（重要物品）
+            ));
+
+    // 空白蓝图（用于制作特定蓝图）
+    public static final RegistryObject<Item> BLANK_BLUEPRINT = ITEMS.register("blank_blueprint",
+            () -> new Item(new Item.Properties()
+                    .stacksTo(64)
+            ));
 
 
     public static void register(IEventBus eventBus) {

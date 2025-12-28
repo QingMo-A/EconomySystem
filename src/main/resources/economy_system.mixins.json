@@ -8,6 +8,7 @@
   "server": [
   ],
   "mixins": [
+    "CraftingMenuMixin"
   ],
   "injectors": {
     "defaultRequire": 1

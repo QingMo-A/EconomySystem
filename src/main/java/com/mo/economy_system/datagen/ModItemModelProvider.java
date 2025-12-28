@@ -43,6 +43,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         // simpleItem(EconomySystem_Items.SUPPORTER_HAT);
         simpleItem(EconomySystem_Items.RECALL_POTION);
         simpleItem(EconomySystem_Items.WORMHOLE_POTION);
+        simpleItem(EconomySystem_Items.BLUEPRINT_ITEM);
         simpleItem(EconomySystem_Items.DREAMINGFISH, "minecraft:item/cod");
 
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);

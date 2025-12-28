@@ -14,9 +14,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         // Tab | 创造页标题
         add("itemGroup.economy_system.tab", "EconomySystem");
+        add("itemGroup.blueprint.tab", "蓝图");
 
         // Item | 物品
         add("item.economy_system.guitar", "吉他");
+        add("item.economy_system.blueprint", "蓝图");
         add("item.economy_system.wormhole_potion", "虫洞药水");
         add("item.economy_system.recall_potion", "回忆药水");
         add("item.economy_system.claim_wand", "圈地杖");

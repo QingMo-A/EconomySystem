@@ -1,0 +1,168 @@
+package com.mo.economy_system.item.items;
+
+import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
+import com.mo.economy_system.item.EconomySystem_Items;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import javax.annotation.Nullable;
+import java.util.List;
+
+public class BlueprintItem extends Item {
+    public BlueprintItem(Properties props) {
+        // 设置最大堆叠数为1
+        super(props.stacksTo(1));
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+
+        // 获取蓝图要解锁的物品ID
+        String itemId = getUnlockedItemId(stack);
+
+        // 检查是否是客户端（客户端和服务端都要处理）
+        if (level.isClientSide()) {
+            // 客户端逻辑（通常用于显示效果）
+            return InteractionResultHolder.success(stack);
+        } else {
+
+            // 服务端逻辑（处理实际效果）
+            if (itemId != null && !itemId.isEmpty()) {
+                // 验证物品是否存在
+                if (!ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemId))) {
+                    player.sendSystemMessage(Component.literal("§c蓝图指向不存在的物品！"));
+                    return InteractionResultHolder.fail(stack);
+                }
+
+                // 检查是否已经解锁
+                if (PlayerBlueprintData.canCraftItem(player, itemId)) {
+                    player.sendSystemMessage(Component.literal("§c你已经可以制作这个物品了！"));
+                    return InteractionResultHolder.fail(stack);
+                }
+
+                // 解锁物品制作权限
+                PlayerBlueprintData.unlockItem(player, itemId);
+
+                // 获取物品显示名称
+                Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+                String itemName = item != null ?
+                        new ItemStack(item).getHoverName().getString() : itemId;
+
+                // 发送成功消息
+                player.sendSystemMessage(
+                        Component.literal("§a恭喜！你现在可以制作 §e" + itemName + " §a了！")
+                );
+
+                // 播放使用音效
+                level.playSound(null, player.blockPosition(),
+                        SoundEvents.ENCHANTMENT_TABLE_USE,
+                        SoundSource.PLAYERS,
+                        1.0F, 1.0F);
+
+                // 消耗物品（如果不是创造模式）
+                if (!player.isCreative()) {
+                    stack.shrink(1);
+                }
+            } else {
+                player.sendSystemMessage(Component.literal("§c这个蓝图是空白的！"));
+                return InteractionResultHolder.fail(stack);
+            }
+
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        }
+    }
+
+    /*@Override
+    public InteractionResult useOn(UseOnContext context) {
+
+        return InteractionResult.SUCCESS;
+    }*/
+
+    // ===================================================================
+
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable Level level,
+                                List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+
+        String itemId = getUnlockedItemId(stack);
+        if (itemId != null && !itemId.isEmpty()) {
+            // 获取物品并显示名称
+            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+            if (item != null) {
+                ItemStack displayStack = new ItemStack(item);
+                String itemName = displayStack.getHoverName().getString();
+
+                tooltip.add(Component.literal("§7解锁物品: §f" + itemName));
+                tooltip.add(Component.literal("§7物品ID: §8" + itemId));
+            } else {
+                tooltip.add(Component.literal("§7解锁物品: §c未知物品"));
+            }
+
+            tooltip.add(Component.literal("§8右键点击学习制作这个物品"));
+            tooltip.add(Component.literal("§8使用后消失"));
+        } else {
+            tooltip.add(Component.literal("§7空白的蓝图"));
+            tooltip.add(Component.literal("§8无法使用"));
+        }
+    }
+
+    // 创建通用物品蓝图
+    /*public static ItemStack createBlueprintForItem(String itemId) {
+        ItemStack stack = new ItemStack(EconomySystem_Items.BLUEPRINT_ITEM.get());
+        setUnlockedItemId(stack, itemId);
+        return stack;
+    }*/
+    // 创建蓝图
+    public static ItemStack createBlueprint(String itemId) {
+        ItemStack stack = new ItemStack(EconomySystem_Items.BLUEPRINT_ITEM.get());
+        CompoundTag tag = new CompoundTag();
+        tag.putString("unlocks_item", itemId);
+        stack.setTag(tag);
+        return stack;
+    }
+
+    // 获取蓝图中要解锁的物品ID
+    public static String getUnlockedItemId(ItemStack stack) {
+        if (stack.hasTag() && stack.getTag().contains("unlocks_item")) {
+            return stack.getTag().getString("unlocks_item");
+        }
+        return null;
+    }
+
+    // 设置要解锁的物品ID到蓝图中
+    public static void setUnlockedItemId(ItemStack stack, String itemId) {
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putString("unlocks_item", itemId);
+
+        // 可选：添加一些额外信息
+        tag.putString("blueprint_name", "制作图纸");
+        // tag.putInt("tier", getTierForItem(itemId));
+    }
+
+    // 根据物品获取蓝图等级
+    private static int getTierForItem(String itemId) {
+        if (itemId.contains("wooden")) return 1;
+        if (itemId.contains("stone")) return 2;
+        if (itemId.contains("iron")) return 3;
+        if (itemId.contains("gold")) return 4;
+        if (itemId.contains("diamond")) return 5;
+        if (itemId.contains("netherite")) return 6;
+        return 1;
+    }
+}
+
