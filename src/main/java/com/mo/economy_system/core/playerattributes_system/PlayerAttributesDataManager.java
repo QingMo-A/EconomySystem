@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.playerattributes_system.strength.StrengthSyncManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -26,9 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerAttributesDataManager {
-    // 属性数据文件路径（独立存储，避免和原有玩家数据混写）
+    // 属性数据文件路径
     private static final File PLAYER_ATTRIBUTES_FILE = new File("config/economy_system/player_attributes_data.json");
-    // 内存缓存（线程安全）
+    // 内存缓存
     private static final Map<UUID, PlayerAttributesData> ATTRIBUTES_CACHE = new ConcurrentHashMap<>();
     // Gson实例
     public static final Gson GSON = new GsonBuilder()
@@ -63,7 +64,6 @@ public class PlayerAttributesDataManager {
         }
     }
 
-    // ========== 对外核心方法 ==========
     /**
      * 判断玩家是否已有属性数据
      */
@@ -85,10 +85,10 @@ public class PlayerAttributesDataManager {
         UUID playerUUID = player.getUUID();
         // 避免重复初始化
         if (hasPlayerAttributesData(player)) {
-            EconomySystem.LOGGER.info("玩家 {} 已有属性数据，同步等级为{}", player.getScoreboardName(), realLevel);
+//            EconomySystem.LOGGER.info("玩家 {} 已有属性数据，同步等级为{}", player.getScoreboardName(), realLevel);
             PlayerAttributesData existingData = getPlayerAttributesData(playerUUID);
-            // 同步最新等级（防止等级变更）
-            existingData.setLevel(realLevel);
+            // 同步最新等级
+            existingData.setLevel(realLevel, player);
             ATTRIBUTES_CACHE.put(playerUUID, existingData);
             // 保存到文件
             Map<UUID, PlayerAttributesData> allAttributes = loadAllAttributesFromFile();
@@ -97,16 +97,16 @@ public class PlayerAttributesDataManager {
             return;
         }
 
-        // 核心：用真实等级创建属性数据，不再硬编码1级
         PlayerAttributesData newAttributesData = new PlayerAttributesData(playerUUID, player.getScoreboardName(), realLevel);
         ATTRIBUTES_CACHE.put(playerUUID, newAttributesData);
 
-        // 写入文件
         Map<UUID, PlayerAttributesData> allAttributes = loadAllAttributesFromFile();
         allAttributes.put(playerUUID, newAttributesData);
         saveAllAttributesToFile(allAttributes);
 
-        EconomySystem.LOGGER.info("玩家 {} 属性数据初始化完成（同步真实等级{}）", player.getScoreboardName(), realLevel);
+        StrengthSyncManager.syncStrengthToClient(player);
+
+//        EconomySystem.LOGGER.info("玩家 {} 属性数据初始化完成（同步真实等级{}）", player.getScoreboardName(), realLevel);
     }
 
     /**
@@ -141,7 +141,7 @@ public class PlayerAttributesDataManager {
         PlayerAttributesData attributesData = getPlayerAttributesData(playerUUID);
 
         // 更新等级（自动同步属性最大值）
-        attributesData.setLevel(newLevel);
+        attributesData.setLevel(newLevel, player);
         attributesData.setPlayerName(player.getScoreboardName()); // 同步最新名称
 
         // 更新缓存+文件
@@ -165,7 +165,7 @@ public class PlayerAttributesDataManager {
         allAttributes.put(playerUUID, newData);
         saveAllAttributesToFile(allAttributes);
 
-        EconomySystem.LOGGER.info("玩家 {} 属性数据手动更新完成", player.getScoreboardName());
+//        EconomySystem.LOGGER.info("玩家 {} 属性数据手动更新完成", player.getScoreboardName());
     }
 
     /**

@@ -100,6 +100,7 @@ public class PlayerDataManager {
                 newPlayerData.getTitle().getTitleName(),
                 newPlayerData.getLevel());
 
+        //初始化玩家属性数据
         PlayerAttributesDataManager.initPlayerAttributesData(player, newPlayerData.getLevel());
     }
 

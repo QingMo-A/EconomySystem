@@ -15,6 +15,7 @@ public class PlayerData {
     private Rank rank;
     private Title title;
     private int level;
+    private long currentExperience;
     private long lastLoginTime;
     private long totalPlayTime;
 
@@ -49,6 +50,9 @@ public class PlayerData {
     public void setLevel(int level) {
         this.level = level;
     }
+    public void setCurrentExperience(long currentExperience) {
+        this.currentExperience = currentExperience;
+    }
 
     public String getPlayerName() {
         return this.playerName;
@@ -65,6 +69,11 @@ public class PlayerData {
     public int getLevel() {
         return this.level;
     }
+    public long getCurrentExperience() {
+        return currentExperience;
+    }
+
+
 
     public long getLastLoginTime() { return lastLoginTime; }
     public void setLastLoginTime(long time) { this.lastLoginTime = time; }

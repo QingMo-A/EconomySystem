@@ -26,7 +26,7 @@ public class PlayerStrengthManager {
     private static final int SPRINT_COST_PER_5TICK = 1;    // 疾跑每5tick耗1点体力（每秒4点）
     private static final int JUMP_COST_ONCE = 3;           // 跳跃单次消耗体力
     private static final int COOLDOWN_TICK = 100;          // 体力恢复冷却时间【5秒=100tick】
-    private static final int RESTORE_AMOUNT = 10;          // 每次恢复体力值
+    private static final int RESTORE_AMOUNT = 5;          // 每次恢复体力值
     private static final int RESTORE_INTERVAL = 20;        // 体力恢复间隔【1秒=20tick】
     public static final int MIN_RESPRINT_STRENGTH = 20;   // 体力耗尽后，重新疾跑的最低体力值
     private static final int SPRINT_STOP_STRENGTH = 0;     // 强制停跑的体力阈值（归0才停）
@@ -76,6 +76,8 @@ public class PlayerStrengthManager {
         // 跳跃重置冷却CD
         LAST_CONSUME_TICK.put(uuid, (long) serverPlayer.tickCount);
         PlayerAttributesDataManager.updatePlayerAttributesData(serverPlayer, attrData);
+        //同步客户端，渲染体力条
+        StrengthSyncManager.syncStrengthToClient(serverPlayer);
     }
 
     //检查并控制疾跑状态
@@ -97,7 +99,7 @@ public class PlayerStrengthManager {
                     true // true=动作栏（物品栏上方），false=聊天框
             );
             HAS_SHOWN_LOW_STRENGTH_TIP.put(uuid, true);
-            EconomySystem.LOGGER.debug("[体力提示] 玩家{}体力≤30%，已显示低体力提示", player.getScoreboardName());
+//            EconomySystem.LOGGER.debug("[体力提示] 玩家{}体力≤30%，已显示低体力提示", player.getScoreboardName());
         }
         if (strengthPercent > LOW_STRENGTH_PERCENT && hasShownLowTip) {
             HAS_SHOWN_LOW_STRENGTH_TIP.put(uuid, false);
@@ -107,7 +109,7 @@ public class PlayerStrengthManager {
             player.setSprinting(false);
             IS_STRENGTH_EXHAUSTED.put(uuid, true);
             IS_SPRINTING_CACHE.put(uuid, false);
-            EconomySystem.LOGGER.warn("[体力] 玩家{}体力已耗尽（0点），强制停止疾跑", player.getScoreboardName());
+//            EconomySystem.LOGGER.warn("[体力] 玩家{}体力已耗尽（0点），强制停止疾跑", player.getScoreboardName());
 
             // 显示无法奔跑提示（仅一次）
             if (!hasShownExhaustedTip) {
@@ -116,23 +118,27 @@ public class PlayerStrengthManager {
                         true
                 );
                 HAS_SHOWN_EXHAUSTED_TIP.put(uuid, true);
-                EconomySystem.LOGGER.debug("[体力提示] 玩家{}体力耗尽，已显示无法奔跑提示", player.getScoreboardName());
+//                EconomySystem.LOGGER.debug("[体力提示] 玩家{}体力耗尽，已显示无法奔跑提示", player.getScoreboardName());
             }
         }
 
         //耗尽标记未解除（体力<20）→ 禁止疾跑
         if (isExhausted && currentStrength < MIN_RESPRINT_STRENGTH && isSprinting) {
             player.setSprinting(false);
-            EconomySystem.LOGGER.debug("[体力] 玩家{}体力未恢复到{}（当前{}），后台禁止疾跑",
-                    player.getScoreboardName(), MIN_RESPRINT_STRENGTH, currentStrength);
+            player.displayClientMessage(
+                    Component.literal("§c老己~，跑不动啦歇会儿吧，休息就能恢复体力啦❤"), // 硬编码提示文本
+                    true
+            );
+//            EconomySystem.LOGGER.debug("[体力] 玩家{}体力未恢复到{}（当前{}），后台禁止疾跑",
+//                    player.getScoreboardName(), MIN_RESPRINT_STRENGTH, currentStrength);
         }
 
         //体力≥20 → 解除耗尽标记 + 重置提示标记
         if (currentStrength >= MIN_RESPRINT_STRENGTH && isExhausted) {
             IS_STRENGTH_EXHAUSTED.put(uuid, false);
             HAS_SHOWN_EXHAUSTED_TIP.put(uuid, false); // 重置无法奔跑提示标记
-            EconomySystem.LOGGER.info("[标记解除] 玩家{}体力≥20，IS_STRENGTH_EXHAUSTED已设为false",
-                    player.getScoreboardName());
+//            EconomySystem.LOGGER.info("[标记解除] 玩家{}体力≥20，IS_STRENGTH_EXHAUSTED已设为false",
+//                    player.getScoreboardName());
         }
     }
 
@@ -157,9 +163,11 @@ public class PlayerStrengthManager {
                     if (consumeOk) {
                         LAST_CONSUME_TICK.put(uuid, (long) currentTick);
                         IS_SPRINTING_CACHE.put(uuid, true);
-                        EconomySystem.LOGGER.debug("[体力] 玩家{}疾跑消耗体力，剩余{}",
-                                player.getScoreboardName(), data.getCurrentStrength());
+//                        EconomySystem.LOGGER.debug("[体力] 玩家{}疾跑消耗体力，剩余{}",
+//                                player.getScoreboardName(), data.getCurrentStrength());
                         PlayerAttributesDataManager.updatePlayerAttributesData(player, data);
+                        //同步到客户端，用于渲染体力条
+                        StrengthSyncManager.syncStrengthToClient(player);
                     }
                 }
             }
@@ -180,9 +188,11 @@ public class PlayerStrengthManager {
                 && !player.isSprinting()
                 && currentTick % RESTORE_INTERVAL == 0) {
             data.restoreStrength(RESTORE_AMOUNT);
-            EconomySystem.LOGGER.debug("[体力] 玩家{}体力恢复，当前{}",
-                    player.getScoreboardName(), data.getCurrentStrength());
+//            EconomySystem.LOGGER.debug("[体力] 玩家{}体力恢复，当前{}",
+//                    player.getScoreboardName(), data.getCurrentStrength());
             PlayerAttributesDataManager.updatePlayerAttributesData(player, data);
+            //同步到客户端，渲染体力条
+            StrengthSyncManager.syncStrengthToClient(player);
 
             //若体力≥20，解除耗尽标记
             if (data.getCurrentStrength() >= MIN_RESPRINT_STRENGTH) {
@@ -230,6 +240,7 @@ public class PlayerStrengthManager {
                 }
             }
         }
+        StrengthSyncManager.syncStrengthToClient(player);
         return success;
     }
 
@@ -248,5 +259,6 @@ public class PlayerStrengthManager {
             HAS_SHOWN_EXHAUSTED_TIP.put(player.getUUID(), false);
             HAS_SHOWN_LOW_STRENGTH_TIP.put(player.getUUID(), false); // 重置低体力提示
         }
+        StrengthSyncManager.syncStrengthToClient(player);
     }
 }

@@ -1,4 +1,4 @@
-package com.mo.economy_system.network.packets;
+package com.mo.economy_system.network.packets.playerdata_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;

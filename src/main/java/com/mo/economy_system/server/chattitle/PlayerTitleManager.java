@@ -1,15 +1,11 @@
 package com.mo.economy_system.server.chattitle;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.Packet_SyncPlayerData;
-import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.playerdatasave.PlayerData;
 import com.mo.economy_system.server.playerdatasave.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
