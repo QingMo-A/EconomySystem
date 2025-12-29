@@ -11,6 +11,9 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Optional;
 
@@ -20,7 +23,7 @@ public class CraftingMenuMixin {
     /**
      * @author
      * @reason
-     */
+     *//*
     @Overwrite
     protected static void slotChangedCraftingGrid(AbstractContainerMenu menu, Level level, Player player, CraftingContainer craftingContainer, ResultContainer resultContainer) {
         if (!level.isClientSide) {
@@ -47,6 +50,43 @@ public class CraftingMenuMixin {
             menu.setRemoteSlot(0, itemStack);
             // 给客户端发包
             serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(menu.containerId, menu.incrementStateId(), 0, itemStack));
+        }
+    }*/
+
+    @Inject(
+            method = "slotChangedCraftingGrid",
+            at = @At("TAIL"),
+            cancellable = true
+    )
+    private static void onSlotChangedCraftingGrid(
+            AbstractContainerMenu menu,
+            Level level,
+            Player player,
+            CraftingContainer craftingContainer,
+            ResultContainer resultContainer,
+            CallbackInfo ci
+    ) {
+        if (level.isClientSide) return;
+        if (!(player instanceof ServerPlayer serverPlayer)) return;
+
+        ItemStack result = resultContainer.getItem(0);
+        if (result.isEmpty()) return;
+
+        // ⭐ 蓝图权限判断
+        if (!PlayerBlueprintData.canCraftItem(player, result)) {
+            ItemStack empty = ItemStack.EMPTY;
+
+            resultContainer.setItem(0, empty);
+            menu.setRemoteSlot(0, empty);
+
+            serverPlayer.connection.send(
+                    new ClientboundContainerSetSlotPacket(
+                            menu.containerId,
+                            menu.incrementStateId(),
+                            0,
+                            empty
+                    )
+            );
         }
     }
 }
