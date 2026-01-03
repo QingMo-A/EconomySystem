@@ -6,6 +6,7 @@ import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataMa
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -47,6 +48,22 @@ public class PlayerStrengthManager {
             return;
         }
 
+        //创造模式强制设为满体力并直接返回
+        if (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
+            UUID uuid = serverPlayer.getUUID();
+            PlayerAttributesData attrData = PlayerAttributesDataManager.getPlayerAttributesData(uuid);
+            if (attrData != null) {
+                // 临时赋予满体力值
+                int maxStrength = attrData.getMaxStrength();
+                if (attrData.getCurrentStrength() != maxStrength) {
+                    attrData.setCurrentStrength(maxStrength);
+                    PlayerAttributesDataManager.updatePlayerAttributesData(serverPlayer, attrData);
+                    StrengthSyncManager.syncStrengthToClient(serverPlayer); // 同步到客户端显示满体力
+                }
+            }
+            return; // 跳过所有体力消耗/恢复逻辑
+        }
+
         UUID uuid = serverPlayer.getUUID();
         PlayerAttributesData attrData = PlayerAttributesDataManager.getPlayerAttributesData(uuid);
         if (attrData == null) return; // 空值防护
@@ -64,6 +81,11 @@ public class PlayerStrengthManager {
         LivingEntity livingEntity = event.getEntity();
         // 仅在服务端执行，且是存活的玩家
         if (livingEntity.level().isClientSide() || !(livingEntity instanceof ServerPlayer serverPlayer) || !serverPlayer.isAlive()) {
+            return;
+        }
+
+        //创造模式跳过跳跃体力消耗
+        if (serverPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
             return;
         }
 
@@ -218,7 +240,10 @@ public class PlayerStrengthManager {
 
     //手动消耗体力
     public static boolean consumeStrength(ServerPlayer player, int amount) {
-        if (player == null || !player.isAlive()) return false;
+        //创造模式直接返回false
+        if (player == null || !player.isAlive() || player.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
+            return false;
+        }
         PlayerAttributesData data = PlayerAttributesDataManager.getPlayerAttributesData(player.getUUID());
         if (data == null) return false;
 
@@ -246,7 +271,10 @@ public class PlayerStrengthManager {
 
     //手动恢复体力
     public static void restoreStrength(ServerPlayer player, int amount) {
-        if (player == null || !player.isAlive()) return;
+        //创造模式直接返回，不执行恢复
+        if (player == null || !player.isAlive() || player.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
+            return;
+        }
         PlayerAttributesData data = PlayerAttributesDataManager.getPlayerAttributesData(player.getUUID());
         if (data == null) return;
 
