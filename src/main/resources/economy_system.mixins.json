@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "com.mo.economy_system.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "economy_system.refmap.json",
   "client": [
   ],
   "server": [

@@ -5,6 +5,7 @@ import com.mo.economy_system.core.playerattributes_system.strength.StrengthBarRe
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
@@ -12,6 +13,9 @@ import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class CustomStatueGUI {
@@ -39,13 +43,28 @@ public class CustomStatueGUI {
     private static final int FOOD_BAR_COLOR = (255 << 24) | 0xFFFF88;
     private static final int STRENGTH_BAR_COLOR = (255 << 24) | 0x33FF33;
 
+    //缓存路径，优化
+    private static final Map<String, ResourceLocation> PLAYER_HEALTH_TEXTURES = new HashMap<>();
+    // 静态代码块：初始化时缓存所有纹理
+    static {
+        String[] suffixes = {"1", "0.8", "0.5", "0.4", "0.3", "0.1", "0"};
+        for (String suffix : suffixes) {
+            PLAYER_HEALTH_TEXTURES.put(suffix, new ResourceLocation(EconomySystem.MODID, "textures/gui/health/" + suffix + ".png"));
+        }
+    }
+
     /**
      * 渲染小人图片
      */
     @SubscribeEvent
     public static void renderCustomPlayerIcon(RenderGuiOverlayEvent.Post event) {
+        NamedGuiOverlay overlay = event.getOverlay();
+        if (!VanillaGuiOverlay.HOTBAR.id().equals(overlay.id())) {
+            return;
+        } //只处理快捷栏事件
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.screen != null || mc.player.isDeadOrDying()
+        Player player = mc.player;
+        if (player == null || mc.screen != null || player.isDeadOrDying()
                 || mc.gameMode != null && mc.gameMode.getPlayerMode() == GameType.CREATIVE) {
             return;
         }
@@ -59,16 +78,14 @@ public class CustomStatueGUI {
         int playerIconY = screenHeight / 2 - PLAYER_ICON_SIZE / 2;
 
         //获取玩家当前血量和最大血量
-        float currentHealth = mc.player.getHealth();
-        float maxHealth = mc.player.getMaxHealth();
+        float currentHealth = player.getHealth();
+        float maxHealth = player.getMaxHealth();
         //计算血量百分比，避免最大血量为0时出现除以0异常
         float healthPercentage = (maxHealth <= 0) ? 0 : (currentHealth / maxHealth) * 100;
 
         //根据血量百分比返回对应的纹理文件名后缀
         String textureSuffix = getTextureSuffixByHealthPercent(healthPercentage);
-
-        //动态构建纹理资源路径，匹配图片存放目录
-        ResourceLocation playerIcon = new ResourceLocation(EconomySystem.MODID, "textures/gui/health/" + textureSuffix + ".png");
+        ResourceLocation playerIcon = PLAYER_HEALTH_TEXTURES.getOrDefault(textureSuffix, PLAYER_HEALTH_TEXTURES.get("0"));
 
         //绘制小人图标
         guiGraphics.blit(
@@ -84,7 +101,7 @@ public class CustomStatueGUI {
         );
 
         //绘制饥饿竖向进度条（无图标、窄、贴近小人）
-        int currentFood = mc.player.getFoodData().getFoodLevel();
+        int currentFood = player.getFoodData().getFoodLevel();
         int maxFood = 20;
 
         // 饥饿条坐标：小人左侧，仅间距2，纵向居中（贴近小人）
@@ -95,8 +112,8 @@ public class CustomStatueGUI {
         drawVerticalProgressBar(guiGraphics, foodBarX, foodBarY, currentFood, maxFood, FOOD_BAR_COLOR);
 
         //绘制体力竖向进度条
-        int currentStrength = StrengthBarRenderer.getCurrentStrengthClient(mc.player);
-        int maxStrength = StrengthBarRenderer.getMaxStrengthClient(mc.player);
+        int currentStrength = StrengthBarRenderer.getCurrentStrengthClient(player);
+        int maxStrength = StrengthBarRenderer.getMaxStrengthClient(player);
         if (maxStrength <= 0) maxStrength = 100;
 
         // 体力条坐标：饥饿条左侧，纵向居中
