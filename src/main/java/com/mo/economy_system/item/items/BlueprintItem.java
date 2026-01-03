@@ -2,24 +2,27 @@ package com.mo.economy_system.item.items;
 
 import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
 import com.mo.economy_system.item.EconomySystem_Items;
+import com.mo.economy_system.item.item_renderer.BlueprintItemRenderer;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraftforge.registries.ForgeRegistries;
+import software.bernie.example.client.renderer.item.JackInTheBoxRenderer;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class BlueprintItem extends Item {
     public BlueprintItem(Properties props) {
@@ -121,12 +124,6 @@ public class BlueprintItem extends Item {
         }
     }
 
-    // 创建通用物品蓝图
-    /*public static ItemStack createBlueprintForItem(String itemId) {
-        ItemStack stack = new ItemStack(EconomySystem_Items.BLUEPRINT_ITEM.get());
-        setUnlockedItemId(stack, itemId);
-        return stack;
-    }*/
     // 创建蓝图
     public static ItemStack createBlueprint(String itemId) {
         ItemStack stack = new ItemStack(EconomySystem_Items.BLUEPRINT_ITEM.get());
@@ -154,15 +151,18 @@ public class BlueprintItem extends Item {
         // tag.putInt("tier", getTierForItem(itemId));
     }
 
-    // 根据物品获取蓝图等级
-    private static int getTierForItem(String itemId) {
-        if (itemId.contains("wooden")) return 1;
-        if (itemId.contains("stone")) return 2;
-        if (itemId.contains("iron")) return 3;
-        if (itemId.contains("gold")) return 4;
-        if (itemId.contains("diamond")) return 5;
-        if (itemId.contains("netherite")) return 6;
-        return 1;
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
+
+            private BlueprintItemRenderer renderer;
+
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = new BlueprintItemRenderer();
+                }
+                return renderer;
+            }
+        });
     }
 }
-

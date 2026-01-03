@@ -154,7 +154,7 @@ public class PlayerBlueprintData extends SavedData {
     /**
      * 默认解锁的物品列表（基础物品，不需要蓝图）
      */
-    private static Set<String> getDefaultUnlockedItems() {
+    public static Set<String> getDefaultUnlockedItems() {
         Set<String> defaultItems = new HashSet<>();
 
         // 添加原版基础物品
@@ -171,7 +171,7 @@ public class PlayerBlueprintData extends SavedData {
     /**
      * 检查物品是否默认解锁
      */
-    private static boolean isDefaultUnlocked(String itemId) {
+    public static boolean isDefaultUnlocked(String itemId) {
         return getDefaultUnlockedItems().contains(itemId);
     }
 
