@@ -1,6 +1,7 @@
 package com.mo.economy_system.server.serverui.tips;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -27,5 +28,23 @@ public class TipDisplayManager {
     public static List<TipMessage> getActiveMessages() {
         cleanExpiredMessages();
         return new ArrayList<>(messages);
+    }
+
+    /**
+     * 清除包含指定文本的Tip（用于玩家按下U键后清除对应提示）
+     * @param targetText 要清除的Tip包含的文本
+     */
+    public static void removeTipContainingText(String targetText) {
+        // 第一步：收集所有需要删除的 Tip（普通for循环，不使用迭代器）
+        List<TipMessage> tipsToRemove = new ArrayList<>();
+        for (TipMessage msg : TipDisplayManager.messages) {
+            if (msg.getText() != null && msg.getText().contains(targetText)) {
+                tipsToRemove.add(msg);
+            }
+        }
+        // 第二步：批量移除（CopyOnWriteArrayList 支持 removeAll，无异常）
+        if (!tipsToRemove.isEmpty()) {
+            TipDisplayManager.messages.removeAll(tipsToRemove);
+        }
     }
 }

@@ -37,6 +37,7 @@ import java.util.Objects;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class HeadDisplay {
     private static final double RENDER_HEIGHT = 0.8D;
+    private static Component displayText = null;
 
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Post event) {
@@ -58,20 +59,31 @@ public class HeadDisplay {
         ChatFormatting textColorFormatting;
         if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
             textColorFormatting = ChatFormatting.WHITE;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH.getRankName())) {
             textColorFormatting = ChatFormatting.GREEN;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS.getRankName())) {
             textColorFormatting = ChatFormatting.AQUA;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS_PLUS.getRankName())) {
             textColorFormatting = ChatFormatting.GOLD;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         } else if  (Objects.equals(playerRank.getRankName(), RankRegistry.OPERATOR.getRankName())) {
             textColorFormatting = ChatFormatting.RED;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         } else {
             textColorFormatting = ChatFormatting.WHITE;
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerTitle.getTitleName() + "]")
+                    .withStyle(textColorFormatting);
         }
 
-        Component displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
-                .withStyle(textColorFormatting);
+
 
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource bufferSource = event.getMultiBufferSource();

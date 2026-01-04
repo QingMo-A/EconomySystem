@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -27,9 +27,9 @@ public class TipDisplayRenderer {
     private static final int MAX_WIDTH = 300;
 
     @SubscribeEvent
-    public static void onRenderGui(RenderGuiOverlayEvent.Post event) {
+    public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null || mc.player == null) {
+        if (mc.player == null) {
             return;
         }
 
@@ -70,11 +70,11 @@ public class TipDisplayRenderer {
         int boxHeight = totalHeight;
 
         // 绘制黑框背景和边框
-        guiGraphics.fill(RenderType.gui(), x, y, x + boxWidth, y + boxHeight, BG_COLOR);
-        guiGraphics.fill(RenderType.gui(), x, y, x + boxWidth, y + BORDER_SIZE, BORDER_COLOR);
-        guiGraphics.fill(RenderType.gui(), x, y + boxHeight - BORDER_SIZE, x + boxWidth, y + boxHeight, BORDER_COLOR);
-        guiGraphics.fill(RenderType.gui(), x, y, x + BORDER_SIZE, y + boxHeight, BORDER_COLOR);
-        guiGraphics.fill(RenderType.gui(), x + boxWidth - BORDER_SIZE, y, x + boxWidth, y + boxHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.guiOverlay(), x, y, x + boxWidth, y + boxHeight, BG_COLOR);
+        guiGraphics.fill(RenderType.guiOverlay(), x, y, x + boxWidth, y + BORDER_SIZE, BORDER_COLOR);
+        guiGraphics.fill(RenderType.guiOverlay(), x, y + boxHeight - BORDER_SIZE, x + boxWidth, y + boxHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.guiOverlay(), x, y, x + BORDER_SIZE, y + boxHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.guiOverlay(), x + boxWidth - BORDER_SIZE, y, x + boxWidth, y + boxHeight, BORDER_COLOR);
 
         // 绘制文本
         int currentY = y + MARGIN;

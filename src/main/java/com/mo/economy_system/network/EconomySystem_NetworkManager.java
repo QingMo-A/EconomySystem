@@ -18,6 +18,7 @@ import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNot
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerData;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.network.packets.territory_system.*;
+import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
@@ -86,5 +87,6 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_CantRun.class, Packet_CantRun::encode, Packet_CantRun::decode, Packet_CantRun::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_LevelUpNotify.class, Packet_LevelUpNotify::encode, Packet_LevelUpNotify::decode, Packet_LevelUpNotify::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncStrengthData.class, Packet_SyncStrengthData::encode, Packet_SyncStrengthData::decode, Packet_SyncStrengthData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_SendTipToClient.class, Packet_SendTipToClient::encode, Packet_SendTipToClient::decode, Packet_SendTipToClient::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

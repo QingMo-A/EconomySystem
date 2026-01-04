@@ -8,8 +8,10 @@ import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataMa
 import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
+import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
+import com.mo.economy_system.server.serverui.tips.TipDisplayManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -93,6 +95,9 @@ public class PlayerDataManager {
         Map<UUID, PlayerData> allPlayerData = loadAllPlayerDataFromFile();
         allPlayerData.put(playerUUID, newPlayerData);
         saveAllPlayerDataToFile(allPlayerData);
+
+        //新手教程
+        NewPlayerGuide.sendNewPlayerGuide(player);
 
         EconomySystem.LOGGER.info("新玩家 {} 数据初始化完成（默认Rank={}, Title={}, Level={}）",
                 player.getScoreboardName(),

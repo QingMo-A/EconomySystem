@@ -46,14 +46,14 @@ public class ChangeChatEvent {
         } else if (playerRank.equals("OPERATOR")) {
             // 管理员等级和Rank为红色，玩家ID和内容为白色
             customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级红色
-                    .append(Component.literal("[" + playerRank + " - " + titleName + "] ").withStyle(rankColor)) // Rank红色
+                    .append(Component.literal("[" + playerRank + " | " + titleName + "] ").withStyle(rankColor)) // Rank红色
                     .append(Component.literal(player.getDisplayName().getString()).withStyle(ChatFormatting.WHITE)) // 玩家ID白色
                     .append(Component.literal(": ").withStyle(rankColor)) // 冒号红色
                     .append(Component.literal(event.getRawText()).withStyle(ChatFormatting.WHITE)); // 内容白色
         } else {
             // 其他Rank所有部分均使用对应Rank颜色
             customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级
-                    .append(Component.literal("[" + playerRank + " - " + titleName + "] ").withStyle(rankColor)) // Rank+称号
+                    .append(Component.literal("[" + playerRank + " | " + titleName + "] ").withStyle(rankColor)) // Rank+称号
                     .append(Component.literal(player.getDisplayName().getString()).withStyle(rankColor))// 玩家ID
                     .append(Component.literal(": ").withStyle(rankColor)) // 冒号
                     .append(Component.literal(event.getRawText()).withStyle(rankColor)); // 消息内容

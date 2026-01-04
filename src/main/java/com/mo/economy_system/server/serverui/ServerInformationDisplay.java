@@ -221,7 +221,6 @@ public class ServerInformationDisplay {
 
         // 服务器信息
         lines.add(Component.literal("§b在线人数: §7" + ONLINE_PLAYERS));
-        lines.add(Component.literal("§bTPS: §7" + String.format("%.1f", SERVER_TPS)));
         lines.add(Component.literal(""));
 
         lines.add(Component.literal("§bDreaming§dFish§6.top"));
