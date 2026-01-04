@@ -1,11 +1,10 @@
-package com.mo.economy_system.server.playerdatasave;
+package com.mo.economy_system.server.playerdata;
 
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.UUID;
 

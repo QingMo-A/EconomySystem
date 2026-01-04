@@ -1,9 +1,8 @@
 package com.mo.economy_system.server.rank;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.server.LoginSync;
-import com.mo.economy_system.server.playerdatasave.PlayerData;
-import com.mo.economy_system.server.playerdatasave.PlayerDataManager;
+import com.mo.economy_system.server.playerdata.PlayerData;
+import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.common.Mod;

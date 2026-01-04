@@ -5,6 +5,7 @@ import com.mo.economy_system.armor.EconomySystem_ArmorMaterials;
 import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.item.items.*;
+import com.mo.economy_system.item.items.medicine.Easy_Aid_Kit;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
@@ -91,6 +92,11 @@ public class EconomySystem_Items {
             () -> new Item(new Item.Properties()
                     .stacksTo(64)
             ));
+
+    //药品注册————————————————————————————————————————————————————————————————————————
+    public static final RegistryObject<Item> EASY_AID_KIT = ITEMS.register("easy_aid_kit",
+            () -> new Easy_Aid_Kit() // 实例化简易急救包
+    );
 
 
     public static void register(IEventBus eventBus) {

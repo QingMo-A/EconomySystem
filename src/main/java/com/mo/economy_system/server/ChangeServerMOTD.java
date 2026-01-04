@@ -14,7 +14,6 @@ public class ChangeServerMOTD {
         if (event.getServer() instanceof DedicatedServer dedicatedServer) {
             String dynamicMOTD = "§6DreamingFish-EP01 \n§b还没想好写什么....";
             dedicatedServer.setMotd(dynamicMOTD);
-            EconomySystem.LOGGER.info("已设置动态MOTD: {}", dynamicMOTD);
         }
     }
 }

@@ -208,6 +208,49 @@ public class PlayerAttributesData {
         player.setHealth(player.getHealth());
     }
 
+    /**
+     * 自定义血量恢复、
+     * @param player 服务端玩家实例
+     * @param healAmount 回血数值（正数，药品配置的回血值）
+     * @return 是否恢复成功（false：已达最大血量，无需恢复）
+     */
+    public boolean restoreCustomHealth(ServerPlayer player, double healAmount) {
+        // 非空校验
+        if (player == null || healAmount <= 0) {
+            return false;
+        }
+        // 获取当前血量（从玩家实体同步，避免数据不一致）
+        double currentHealth = player.getHealth();
+        // 边界判断：已达最大血量，无需恢复
+        if (currentHealth >= this.maxHealth) {
+            return false;
+        }
+        // 计算新血量（不超过最大血量）
+        double newHealth = Math.min(currentHealth + healAmount, this.maxHealth);
+        // 同步血量到玩家实体
+        player.setHealth((float) newHealth);
+        // 同步客户端显示（防止血量显示异常）
+        player.setHealth(player.getHealth());
+        EconomySystem.LOGGER.info("玩家 {} 使用自定义药品回血：{} → {}（最大血量：{}）",
+                this.playerName, currentHealth, newHealth, this.maxHealth);
+        return true;
+    }
+
+    /**
+     * 强制设置当前血量（用于特殊场景：如药品副作用、受伤扣血）
+     * @param player 服务端玩家实例
+     * @param newHealth 目标血量
+     */
+    public void setCustomHealth(ServerPlayer player, double newHealth) {
+        if (player == null) {
+            return;
+        }
+        // 边界控制：不低于0，不超过最大血量
+        double finalHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
+        player.setHealth((float) finalHealth);
+        player.setHealth(player.getHealth()); // 同步客户端
+    }
+
     // 体力消耗（返回是否消耗成功）
     public boolean consumeStrength(int amount) {
         if (currentStrength >= amount) {

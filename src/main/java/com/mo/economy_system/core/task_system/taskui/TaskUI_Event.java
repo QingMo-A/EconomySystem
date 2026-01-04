@@ -1,22 +1,15 @@
 package com.mo.economy_system.core.task_system.taskui;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.core.task_system.TaskDataManager;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.GuiOverlayManager;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class TaskUI_Event {

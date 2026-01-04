@@ -32,6 +32,7 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.SUPPORTER_HAT.get());
                         output.accept(EconomySystem_Items.DREAMINGFISH.get());
                         output.accept(EconomySystem_Items.HIVE_ZOMBIE_SPAWN_EGG.get());
+                        output.accept(EconomySystem_Items.EASY_AID_KIT.get());
                     })
                     .build()
     );

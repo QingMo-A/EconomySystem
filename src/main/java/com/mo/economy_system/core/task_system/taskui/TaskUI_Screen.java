@@ -7,8 +7,6 @@ import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics; // 必须导入，解决guiGraphics解析问题
 import net.minecraft.client.gui.components.Button;
@@ -16,13 +14,11 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.network.chat.Component; // 注意：用Component而非MutableComponent
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Quaternionf;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -137,7 +133,7 @@ public class TaskUI_Screen extends Screen {
         //————————————————————————————————————————————————————————————————————————————————————————————————————————
 
         //服务器按钮————————————————————————————————————————————————————————————————————————————————————————————————
-        Button.Builder serverBtnBuilder = Button.builder(Component.literal("服务器任务"), new Button.OnPress() {
+        Button.Builder serverBtnBuilder = Button.builder(Component.literal("故事"), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
                         showSubScreen = 1; // 切换到服务器任务子界面（不跳转Screen）
