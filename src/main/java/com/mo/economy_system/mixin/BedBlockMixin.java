@@ -32,11 +32,7 @@ import java.awt.*;
 import java.util.List;
 
 @Mixin(BedBlock.class)
-public class BedBlockMixin extends HorizontalDirectionalBlock implements EntityBlock {
-
-    protected BedBlockMixin(Properties p_54120_) {
-        super(p_54120_);
-    }
+public class BedBlockMixin {
 
     // 注入 BedBlock 的 use 方法，绕过白天和怪物限制
     /*@Inject(method = "use", at = @At("HEAD"), cancellable = true)
@@ -120,11 +116,5 @@ public class BedBlockMixin extends HorizontalDirectionalBlock implements EntityB
             ((Villager)$$2.get(0)).stopSleeping();
             return true;
         }
-    }
-
-    @Nullable
-    @Override
-    public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
-        return null;
     }
 }

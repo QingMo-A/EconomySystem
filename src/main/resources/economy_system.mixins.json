@@ -10,7 +10,10 @@
   ],
   "mixins": [
     "CraftingMenuMixin",
-    "RecipeManagerMixin"
+    "RecipeManagerMixin",
+    "BedBlockMixin",
+    "ServerLevelMixin",
+    "AnvilBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1
