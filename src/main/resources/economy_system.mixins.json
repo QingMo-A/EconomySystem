@@ -9,7 +9,8 @@
   "server": [
   ],
   "mixins": [
-    "CraftingMenuMixin"
+    "CraftingMenuMixin",
+    "RecipeManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

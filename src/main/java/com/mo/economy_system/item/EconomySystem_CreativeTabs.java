@@ -1,6 +1,7 @@
 package com.mo.economy_system.item;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
 import com.mo.economy_system.item.items.BlueprintItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -49,41 +50,10 @@ public class EconomySystem_CreativeTabs {
     );
 
     private static void addAllBlueprintItems(CreativeModeTab.Output output) {
-        // 定义需要蓝图解锁的物品列表
-        List<String> itemsRequiringBlueprint = new ArrayList<>();
-
-        // 工具类
-        itemsRequiringBlueprint.add("minecraft:wooden_pickaxe");
-        itemsRequiringBlueprint.add("minecraft:stone_pickaxe");
-        itemsRequiringBlueprint.add("minecraft:iron_pickaxe");
-        itemsRequiringBlueprint.add("minecraft:golden_pickaxe");
-        itemsRequiringBlueprint.add("minecraft:diamond_pickaxe");
-        itemsRequiringBlueprint.add("minecraft:netherite_pickaxe");
-
-        // 武器类
-        itemsRequiringBlueprint.add("minecraft:wooden_sword");
-        itemsRequiringBlueprint.add("minecraft:stone_sword");
-        itemsRequiringBlueprint.add("minecraft:iron_sword");
-        itemsRequiringBlueprint.add("minecraft:diamond_sword");
-        itemsRequiringBlueprint.add("minecraft:netherite_sword");
-
-        // 防具类
-        itemsRequiringBlueprint.add("minecraft:leather_helmet");
-        itemsRequiringBlueprint.add("minecraft:iron_helmet");
-        itemsRequiringBlueprint.add("minecraft:diamond_helmet");
-        itemsRequiringBlueprint.add("minecraft:leather_chestplate");
-        itemsRequiringBlueprint.add("minecraft:iron_chestplate");
-        itemsRequiringBlueprint.add("minecraft:diamond_chestplate");
-
-        // 其他重要物品
-        itemsRequiringBlueprint.add("minecraft:chest");
-        itemsRequiringBlueprint.add("minecraft:furnace");
-        itemsRequiringBlueprint.add("minecraft:enchanting_table");
-        itemsRequiringBlueprint.add("minecraft:anvil");
-
+        PlayerBlueprintData.initAllBlueprintItems();
         // 为每个物品创建蓝图
-        for (String itemId : itemsRequiringBlueprint) {
-            output.accept(BlueprintItem.createBlueprint(itemId));
+        for (ItemStack stack : PlayerBlueprintData.getAllBlueprintItems()) {
+            output.accept(stack);
         }
     }
 
