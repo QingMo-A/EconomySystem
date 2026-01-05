@@ -25,8 +25,9 @@ public class CustomStatueGUI {
     private static final int PLAYER_TEXTURE_TOTAL_WIDTH = 64;
     private static final int PLAYER_TEXTURE_TOTAL_HEIGHT = 64;
     //控制小人与屏幕右侧的距离
-    private static final int RIGHT_OFFSET = 5;
-
+//    private static final int RIGHT_OFFSET = 5;
+    private static final int LEFT_OFFSET = 20;
+    private static final int PLAYER_ICON_Y_OFFSET = 5;
     //样式常量
     // 基础样式
     private static final int BACKGROUND_ALPHA = 128;
@@ -53,6 +54,49 @@ public class CustomStatueGUI {
         }
     }
 
+    //缓存坐标，优化
+    // 缓存小人坐标
+    private static int CACHED_PLAYER_ICON_X = 0;
+    private static int CACHED_PLAYER_ICON_Y = 0;
+    // 缓存上一次的屏幕宽高和GUI缩放（用于判断是否需要重新计算）
+    private static int CACHED_SCREEN_WIDTH = 0;
+    private static int CACHED_SCREEN_HEIGHT = 0;
+    private static double CACHED_GUI_SCALE = 0.0D;
+    //进度条坐标缓存
+    private static int CACHED_FOOD_BAR_X = 0;
+    private static int CACHED_FOOD_BAR_Y = 0;
+    private static int CACHED_STRENGTH_BAR_X = 0;
+    private static int CACHED_STRENGTH_BAR_Y = 0;
+
+    /**
+     * 计算并缓存小人坐标 + 进度条坐标
+     */
+    private static void calculateAndCachePlayerCoords() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getWindow() == null) return;
+
+        int screenWidth = mc.getWindow().getGuiScaledWidth();
+        int screenHeight = mc.getWindow().getGuiScaledHeight();
+        double guiScale = mc.getWindow().getGuiScale();
+
+        // 计算小人坐标
+        CACHED_PLAYER_ICON_X = screenWidth / 2 - PLAYER_ICON_SIZE - 90 - 2;
+        CACHED_PLAYER_ICON_Y = screenHeight - PLAYER_ICON_Y_OFFSET - PLAYER_ICON_SIZE;
+
+        //同步计算并缓存进度条坐标
+        // 复用你原来的饥饿条坐标公式
+        CACHED_FOOD_BAR_X = CACHED_PLAYER_ICON_X - BAR_TO_PLAYER_SPACING - BAR_WIDTH;
+        CACHED_FOOD_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        // 复用你原来的体力条坐标公式
+        CACHED_STRENGTH_BAR_X = CACHED_FOOD_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
+        CACHED_STRENGTH_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+
+        //更新参数缓存
+        CACHED_SCREEN_WIDTH = screenWidth;
+        CACHED_SCREEN_HEIGHT = screenHeight;
+        CACHED_GUI_SCALE = guiScale;
+    }
+
     /**
      * 渲染小人图片
      */
@@ -73,9 +117,25 @@ public class CustomStatueGUI {
         // 获取屏幕缩放后的宽高
         int screenWidth = event.getWindow().getGuiScaledWidth();
         int screenHeight = event.getWindow().getGuiScaledHeight();
+        double currentGuiScale = event.getWindow().getGuiScale();
         //计算小人坐标：靠右、垂直中间
-        int playerIconX = screenWidth - RIGHT_OFFSET - PLAYER_ICON_SIZE;
-        int playerIconY = screenHeight / 2 - PLAYER_ICON_SIZE / 2;
+//        int playerIconX = screenWidth - RIGHT_OFFSET - PLAYER_ICON_SIZE;
+
+        //判断是否需要重新计算坐标
+        // 首次渲染 或 屏幕宽高/GUI缩放变化时，重新计算坐标
+        if (CACHED_SCREEN_WIDTH != screenWidth
+                || CACHED_SCREEN_HEIGHT != screenHeight
+                || CACHED_GUI_SCALE != currentGuiScale) {
+            calculateAndCachePlayerCoords();
+        }
+        // 直接取用缓存坐标，无需重复计算
+        int playerIconX = CACHED_PLAYER_ICON_X;
+        int playerIconY = CACHED_PLAYER_ICON_Y;
+        // 进度条缓存坐标
+        int foodBarX = CACHED_FOOD_BAR_X;
+        int foodBarY = CACHED_FOOD_BAR_Y;
+        int strengthBarX = CACHED_STRENGTH_BAR_X;
+        int strengthBarY = CACHED_STRENGTH_BAR_Y;
 
         //获取玩家当前血量和最大血量
         float currentHealth = player.getHealth();
@@ -100,14 +160,10 @@ public class CustomStatueGUI {
                 PLAYER_TEXTURE_TOTAL_HEIGHT
         );
 
-        //绘制饥饿竖向进度条（无图标、窄、贴近小人）
+        //绘制饥饿竖向进度条
         int currentFood = player.getFoodData().getFoodLevel();
         int maxFood = 20;
-
-        // 饥饿条坐标：小人左侧，仅间距2，纵向居中（贴近小人）
-        int foodBarX = playerIconX - BAR_TO_PLAYER_SPACING - BAR_WIDTH;
-        int foodBarY = playerIconY + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
-
+        // 饥饿条坐标：小人左侧
         //绘制饥饿进度条
         drawVerticalProgressBar(guiGraphics, foodBarX, foodBarY, currentFood, maxFood, FOOD_BAR_COLOR);
 
@@ -115,11 +171,7 @@ public class CustomStatueGUI {
         int currentStrength = StrengthBarRenderer.getCurrentStrengthClient(player);
         int maxStrength = StrengthBarRenderer.getMaxStrengthClient(player);
         if (maxStrength <= 0) maxStrength = 100;
-
         // 体力条坐标：饥饿条左侧，纵向居中
-        int strengthBarX = foodBarX - BAR_BAR_SPACING - BAR_WIDTH;
-        int strengthBarY = playerIconY + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
-
         //绘制体力进度条
         drawVerticalProgressBar(guiGraphics, strengthBarX, strengthBarY, currentStrength, maxStrength, STRENGTH_BAR_COLOR);
     }

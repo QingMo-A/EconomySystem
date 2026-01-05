@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerDataManager {
-    private static final File PLAYER_DATA_FILE = new File("config/economy_system/player_data.json");
+    private static final File PLAYER_DATA_FILE = new File("config/economy_system/data/player_data.json");
     private static final Map<UUID, PlayerData> PLAYER_DATA_CACHE = new ConcurrentHashMap<>();
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()

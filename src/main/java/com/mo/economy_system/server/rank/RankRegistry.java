@@ -8,7 +8,7 @@ public class RankRegistry {
             "NULL", -1
     );
     public static final Rank NO_RANK = new Rank(
-            "NO RANK", 0
+            "NO_RANK", 0
     );
     public static final Rank FISH = new Rank(
             "FISH", 1
@@ -26,7 +26,7 @@ public class RankRegistry {
     // 按名称查找
     public static Rank getRankByName(String name) {
         return switch (name) {
-            case "NO RANK" -> NO_RANK;
+            case "NO_RANK" -> NO_RANK;
             case "FISH" -> FISH;
             case "FISH+" -> FISH_PLUS;
             case "FISH++" -> FISH_PLUS_PLUS;

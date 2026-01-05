@@ -49,17 +49,17 @@ public class ChangeJoinMessage {
         // 进服消息配置
         JOIN_MESSAGE = configBuilder
                 .comment("玩家进服自定义消息 | 占位符：%player%=玩家名 | 颜色代码：§a绿 §c红 §6金 §b蓝")
-                .define("join_message", "§7[§a+§7]§b鱼友§6%player%§b来和你VAN辣！");     //本质给上面创建配置文件的对象赋值，赋值了配置文件注释和内容，然后再赋值给JOIN_MESSAGE
+                .define("join_message", "§7[§a+§7]§b鱼友§e%player%§b来和你VAN辣！");     //本质给上面创建配置文件的对象赋值，赋值了配置文件注释和内容，然后再赋值给JOIN_MESSAGE
 
         // 离开消息配置
         LEAVE_MESSAGE = configBuilder
                 .comment("玩家离开自定义消息 | 占位符：%player%=玩家名 | 颜色代码：§a绿 §c红 §6金 §b蓝")
-                .define("leave_message", "§7[§c-§7]§b鱼友§6%player%§b不想和你VAN辣！");  //同上
+                .define("leave_message", "§7[§c-§7]§b鱼友§e%player%§b不想和你VAN辣！");  //同上
 
         // Rank专属进服消息配置
         JOIN_MESSAGE_NO_RANK = configBuilder
                 .comment("NO_RANK玩家进服消息 | 占位符：%player%=玩家名")
-                .define("join_message_no_rank", "§7[§a+§7]§b鱼友§6%player%§b来和你VAN辣！");
+                .define("join_message_no_rank", "§7[§a+§7]§b鱼友§e%player%§b来和你VAN辣！");
 
         JOIN_MESSAGE_FISH = configBuilder
                 .comment("FISH玩家进服消息 | 占位符：%player%=玩家名")
@@ -80,7 +80,7 @@ public class ChangeJoinMessage {
         // Rank专属离开消息配置
         LEAVE_MESSAGE_NO_RANK = configBuilder
                 .comment("NO_RANK玩家离开消息 | 占位符：%player%=玩家名")
-                .define("leave_message_no_rank", "§7[§c-§7]§b鱼友§6%player%§b不想和你VAN辣！");
+                .define("leave_message_no_rank", "§7[§c-§7]§b鱼友§e%player%§b不想和你VAN辣！");
 
         LEAVE_MESSAGE_FISH = configBuilder
                 .comment("FISH玩家离开消息 | 占位符：%player%=玩家名")

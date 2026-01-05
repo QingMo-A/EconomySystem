@@ -36,7 +36,7 @@ public class ChangeChatEvent {
         // 等级前缀
         String levelPrefix = String.format("[Lv.%d] ", playerLevel);
 
-        if (Objects.equals(playerRank, "NO_RANK") || Objects.equals(playerRank, "NULL")) {
+        if (playerRank.equals("NO_RANK") || playerRank.equals("NULL")) {
             // 无特殊Rank：等级+称号+玩家名+消息（均为默认白色）
             customMessage = Component.literal(levelPrefix)
                     .append(Component.literal("[" + titleName + "] ").withStyle(rankColor))
@@ -48,7 +48,7 @@ public class ChangeChatEvent {
             customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级红色
                     .append(Component.literal("[" + playerRank + "]" + " | " + titleName + "] ").withStyle(rankColor)) // Rank红色
                     .append(Component.literal(player.getDisplayName().getString()).withStyle(ChatFormatting.WHITE)) // 玩家ID白色
-                    .append(Component.literal(": ").withStyle(rankColor)) // 冒号红色
+                    .append(Component.literal(": ").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(event.getRawText()).withStyle(ChatFormatting.WHITE)); // 内容白色
         } else {
             // 其他Rank所有部分均使用对应Rank颜色

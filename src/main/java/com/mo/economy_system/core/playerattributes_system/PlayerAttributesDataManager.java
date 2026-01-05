@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerAttributesDataManager {
     // 属性数据文件路径
-    private static final File PLAYER_ATTRIBUTES_FILE = new File("config/economy_system/player_attributes_data.json");
+    private static final File PLAYER_ATTRIBUTES_FILE = new File("config/economy_system/data/player_attributes_data.json");
     // 内存缓存
     private static final Map<UUID, PlayerAttributesData> ATTRIBUTES_CACHE = new ConcurrentHashMap<>();
     // Gson实例
