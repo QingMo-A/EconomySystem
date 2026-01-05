@@ -11,7 +11,7 @@ import java.util.UUID;
 
 // 仅在客户端注册（保留核心注解，移除绘制相关事件订阅）
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
-public class StrengthBarRenderer {
+public class PlayerStrengthClientSync {
     // ===================== 核心：客户端体力缓存（保留，供数据存储与获取） =====================
     private static final Map<UUID, Integer> CURRENT_STRENGTH_CACHE = new HashMap<>();
     private static final Map<UUID, Integer> MAX_STRENGTH_CACHE = new HashMap<>();

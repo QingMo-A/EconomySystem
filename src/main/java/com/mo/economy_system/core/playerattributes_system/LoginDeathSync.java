@@ -18,6 +18,7 @@ public class LoginDeathSync {
         PlayerAttributesData data = PlayerAttributesDataManager.getPlayerAttributesData(player.getUUID());
         if (data != null) {
             data.setCurrentStrength(data.getMaxStrength());
+            data.setCurrentCourage(data.getMaxCourage() / 2);
             data.syncMaxHealthToPlayer(player);
             player.setHealth((float) data.getMaxHealth());
             EconomySystem.LOGGER.info("玩家 {} 重生，同步最大生命值为{}",

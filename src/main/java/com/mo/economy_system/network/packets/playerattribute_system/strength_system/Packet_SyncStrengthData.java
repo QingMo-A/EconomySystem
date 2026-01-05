@@ -1,6 +1,6 @@
 package com.mo.economy_system.network.packets.playerattribute_system.strength_system;
 
-import com.mo.economy_system.core.playerattributes_system.strength.StrengthBarRenderer;
+import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
@@ -75,8 +75,8 @@ public class Packet_SyncStrengthData {
             Player player = minecraft.player;
             if (player == null) return;
             // 调用UI类更新缓存
-            StrengthBarRenderer.setCurrentStrength(player, this.currentStrength);
-            StrengthBarRenderer.setMaxStrength(player, this.maxStrength);
+            PlayerStrengthClientSync.setCurrentStrength(player, this.currentStrength);
+            PlayerStrengthClientSync.setMaxStrength(player, this.maxStrength);
         }
     }
 

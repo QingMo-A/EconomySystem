@@ -21,10 +21,6 @@ public class PlayerAttributesData {
     private int maxStrength;
     private int currentStrength;
 
-    // SAN值
-    private int maxSan;
-    private int currentSan;
-
     // 勇气值
     private int maxCourage;
     private int currentCourage;
@@ -37,7 +33,6 @@ public class PlayerAttributesData {
 
     // 防重复提示标记（各属性不足时避免刷屏）
     private boolean strengthWarned;
-    private boolean sanWarned;
     private boolean courageWarned;
     private boolean infectionWarned;
 
@@ -53,11 +48,8 @@ public class PlayerAttributesData {
         this.maxStrength = calculateMaxStrengthByLevel(level);
         this.currentStrength = maxStrength;
 
-        this.maxSan = calculateMaxSanByLevel(level);
-        this.currentSan = maxSan;
-
         this.maxCourage = calculateMaxCourageByLevel(level);
-        this.currentCourage = maxCourage;
+        this.currentCourage = maxCourage / 2;
 
         this.maxHealth = calculateMaxHealthByLevel(level);
 
@@ -65,7 +57,6 @@ public class PlayerAttributesData {
 
         // 初始化提示标记
         this.strengthWarned = false;
-        this.sanWarned = false;
         this.courageWarned = false;
         this.infectionWarned = false;
     }
@@ -82,11 +73,8 @@ public class PlayerAttributesData {
         this.maxStrength = calculateMaxStrengthByLevel(level);
         this.currentStrength = maxStrength;
 
-        this.maxSan = calculateMaxSanByLevel(level);
-        this.currentSan = maxSan;
-
         this.maxCourage = calculateMaxCourageByLevel(level);
-        this.currentCourage = maxCourage;
+        this.currentCourage = maxCourage / 2;
 
         this.maxHealth = calculateMaxHealthByLevel(level);
         this.syncMaxHealthToPlayer(player);
@@ -95,7 +83,6 @@ public class PlayerAttributesData {
 
         // 初始化提示标记
         this.strengthWarned = false;
-        this.sanWarned = false;
         this.courageWarned = false;
         this.infectionWarned = false;
 
@@ -114,9 +101,6 @@ public class PlayerAttributesData {
         this.maxStrength = calculateMaxStrengthByLevel(level);
         this.currentStrength = maxStrength;
 
-        this.maxSan = calculateMaxSanByLevel(level);
-        this.currentSan = maxSan;
-
         this.maxCourage = calculateMaxCourageByLevel(level);
         this.currentCourage = maxCourage;
 
@@ -126,7 +110,6 @@ public class PlayerAttributesData {
 
         // 初始化提示标记
         this.strengthWarned = false;
-        this.sanWarned = false;
         this.courageWarned = false;
         this.infectionWarned = false;
     }
@@ -139,17 +122,11 @@ public class PlayerAttributesData {
     }
 
     /**
-     * SAN值最大值：基础100，每级+3
-     */
-    public int calculateMaxSanByLevel(int level) {
-        return 100 + (level - 1) * 3;
-    }
-
-    /**
      * 勇气值最大值：基础100，每级+4
      */
     public int calculateMaxCourageByLevel(int level) {
-        return 100 + (level - 1) * 4;
+//        return 100 + (level - 1) * 4;
+        return 100;
     }
 
     /**
@@ -171,14 +148,12 @@ public class PlayerAttributesData {
 
         // 更新各属性最大值（包含最大血量）
         this.maxStrength = calculateMaxStrengthByLevel(level);
-        this.maxSan = calculateMaxSanByLevel(level);
         this.maxCourage = calculateMaxCourageByLevel(level);
         this.maxHealth = calculateMaxHealthByLevel(level);
 
         // 防止当前属性超过新最大值
         this.currentStrength = Math.min(this.currentStrength, maxStrength);
-        this.currentSan = Math.min(this.currentSan, maxSan);
-        this.currentCourage = Math.min(this.currentCourage, maxCourage);
+        this.currentCourage = this.maxCourage / 2;
 
         // ========== 同步生命值到玩家实体 ==========
         // 同步生命值到玩家实体（使用自定义方法）
@@ -269,23 +244,6 @@ public class PlayerAttributesData {
         }
     }
 
-    // SAN值消耗
-    public boolean consumeSan(int amount) {
-        if (currentSan >= amount) {
-            currentSan -= amount;
-            return true;
-        }
-        return false;
-    }
-
-    // SAN值恢复
-    public void restoreSan(int amount) {
-        currentSan = Math.min(currentSan + amount, maxSan);
-        if (currentSan > maxSan * 0.2) {
-            this.sanWarned = false;
-        }
-    }
-
     // 勇气值消耗
     public boolean consumeCourage(int amount) {
         if (currentCourage >= amount) {
@@ -329,10 +287,6 @@ public class PlayerAttributesData {
         return currentStrength <= maxStrength * 0.2; // 体力低于20%
     }
 
-    public boolean isSanLow() {
-        return currentSan <= maxSan * 0.2; // SAN值低于20%
-    }
-
     public boolean isCourageLow() {
         return currentCourage <= maxCourage * 0.2; // 勇气值低于20%
     }
@@ -374,18 +328,6 @@ public class PlayerAttributesData {
         this.currentStrength = currentStrength;
     }
 
-    public int getMaxSan() {
-        return maxSan;
-    }
-
-    public int getCurrentSan() {
-        return currentSan;
-    }
-
-    public void setCurrentSan(int currentSan) {
-        this.currentSan = currentSan;
-    }
-
     public int getMaxCourage() {
         return maxCourage;
     }
@@ -412,14 +354,6 @@ public class PlayerAttributesData {
 
     public void setStrengthWarned(boolean strengthWarned) {
         this.strengthWarned = strengthWarned;
-    }
-
-    public boolean isSanWarned() {
-        return sanWarned;
-    }
-
-    public void setSanWarned(boolean sanWarned) {
-        this.sanWarned = sanWarned;
     }
 
     public boolean isCourageWarned() {

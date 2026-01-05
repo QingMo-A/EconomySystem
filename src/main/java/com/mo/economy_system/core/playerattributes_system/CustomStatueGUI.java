@@ -1,7 +1,8 @@
-package com.mo.economy_system.core.playerattributes_system.ui;
+package com.mo.economy_system.core.playerattributes_system;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.core.playerattributes_system.strength.StrengthBarRenderer;
+import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
+import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
@@ -43,6 +44,8 @@ public class CustomStatueGUI {
     // 颜色配置
     private static final int FOOD_BAR_COLOR = (255 << 24) | 0xFFFF88;
     private static final int STRENGTH_BAR_COLOR = (255 << 24) | 0x33FF33;
+    // 勇气值进度条为紫色
+    private static final int COURAGE_BAR_COLOR = (255 << 24) | 0xCC66FF;
 
     //缓存路径，优化
     private static final Map<String, ResourceLocation> PLAYER_HEALTH_TEXTURES = new HashMap<>();
@@ -67,6 +70,9 @@ public class CustomStatueGUI {
     private static int CACHED_FOOD_BAR_Y = 0;
     private static int CACHED_STRENGTH_BAR_X = 0;
     private static int CACHED_STRENGTH_BAR_Y = 0;
+    // 勇气值进度条坐标缓存（最左侧）
+    private static int CACHED_COURAGE_BAR_X = 0;
+    private static int CACHED_COURAGE_BAR_Y = 0;
 
     /**
      * 计算并缓存小人坐标 + 进度条坐标
@@ -84,12 +90,15 @@ public class CustomStatueGUI {
         CACHED_PLAYER_ICON_Y = screenHeight - PLAYER_ICON_Y_OFFSET - PLAYER_ICON_SIZE;
 
         //同步计算并缓存进度条坐标
-        // 复用你原来的饥饿条坐标公式
+
         CACHED_FOOD_BAR_X = CACHED_PLAYER_ICON_X - BAR_TO_PLAYER_SPACING - BAR_WIDTH;
         CACHED_FOOD_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
-        // 复用你原来的体力条坐标公式
+
         CACHED_STRENGTH_BAR_X = CACHED_FOOD_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
         CACHED_STRENGTH_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        // 勇气值进度条坐标（最左侧）：体力条左侧
+        CACHED_COURAGE_BAR_X = CACHED_STRENGTH_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
+        CACHED_COURAGE_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
 
         //更新参数缓存
         CACHED_SCREEN_WIDTH = screenWidth;
@@ -136,6 +145,9 @@ public class CustomStatueGUI {
         int foodBarY = CACHED_FOOD_BAR_Y;
         int strengthBarX = CACHED_STRENGTH_BAR_X;
         int strengthBarY = CACHED_STRENGTH_BAR_Y;
+        // 勇气值进度条缓存坐标
+        int courageBarX = CACHED_COURAGE_BAR_X;
+        int courageBarY = CACHED_COURAGE_BAR_Y;
 
         //获取玩家当前血量和最大血量
         float currentHealth = player.getHealth();
@@ -168,12 +180,19 @@ public class CustomStatueGUI {
         drawVerticalProgressBar(guiGraphics, foodBarX, foodBarY, currentFood, maxFood, FOOD_BAR_COLOR);
 
         //绘制体力竖向进度条
-        int currentStrength = StrengthBarRenderer.getCurrentStrengthClient(player);
-        int maxStrength = StrengthBarRenderer.getMaxStrengthClient(player);
+        int currentStrength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
+        int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
         if (maxStrength <= 0) maxStrength = 100;
         // 体力条坐标：饥饿条左侧，纵向居中
         //绘制体力进度条
         drawVerticalProgressBar(guiGraphics, strengthBarX, strengthBarY, currentStrength, maxStrength, STRENGTH_BAR_COLOR);
+
+        // 绘制勇气值竖向进度条
+        int currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
+        int maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+        if (maxCourage <= 0) maxCourage = 100; // 避免除以0异常
+        // 绘制勇气值进度条（最左侧，样式与其他进度条统一）
+        drawVerticalProgressBar(guiGraphics, courageBarX, courageBarY, currentCourage, maxCourage, COURAGE_BAR_COLOR);
     }
 
     /**
