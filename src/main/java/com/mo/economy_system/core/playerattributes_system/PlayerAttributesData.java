@@ -22,8 +22,8 @@ public class PlayerAttributesData {
     private int currentStrength;
 
     // 勇气值
-    private int maxCourage;
-    private int currentCourage;
+    private float maxCourage;
+    private float currentCourage;
 
     // 感染值（0-100，100为完全感染）
     private int currentInfection;
@@ -102,7 +102,7 @@ public class PlayerAttributesData {
         this.currentStrength = maxStrength;
 
         this.maxCourage = calculateMaxCourageByLevel(level);
-        this.currentCourage = maxCourage;
+        this.currentCourage = maxCourage / 2;
 
         this.maxHealth = calculateMaxHealthByLevel(level);
 
@@ -153,7 +153,7 @@ public class PlayerAttributesData {
 
         // 防止当前属性超过新最大值
         this.currentStrength = Math.min(this.currentStrength, maxStrength);
-        this.currentCourage = this.maxCourage / 2;
+        this.currentCourage = Math.min(this.currentCourage, maxCourage);
 
         // ========== 同步生命值到玩家实体 ==========
         // 同步生命值到玩家实体（使用自定义方法）
@@ -328,15 +328,15 @@ public class PlayerAttributesData {
         this.currentStrength = currentStrength;
     }
 
-    public int getMaxCourage() {
+    public float getMaxCourage() {
         return maxCourage;
     }
 
-    public int getCurrentCourage() {
+    public float getCurrentCourage() {
         return currentCourage;
     }
 
-    public void setCurrentCourage(int currentCourage) {
+    public void setCurrentCourage(float currentCourage) {
         this.currentCourage = currentCourage;
     }
 

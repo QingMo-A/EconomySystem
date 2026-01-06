@@ -158,8 +158,8 @@ public class PlayerDataManager {
         LoginSync.broadcastPlayerDataToAllOnlinePlayers(serverPlayer);
     }
 
-    private static Map<UUID, PlayerData> loadAllPlayerDataFromFile() {
-        Map<UUID, PlayerData> allPlayerData = new HashMap<>();
+    public static Map<UUID, PlayerData> loadAllPlayerDataFromFile() {
+        Map<UUID, PlayerData> allPlayerData = new ConcurrentHashMap<>();
         try (FileReader reader = new FileReader(PLAYER_DATA_FILE)) {
             // 处理空文件：避免Gson解析空字符串报错
             if (PLAYER_DATA_FILE.length() == 0) {
@@ -194,8 +194,11 @@ public class PlayerDataManager {
 
         PlayerData data = getPlayerData(player.getUUID());
         data.setLastLoginTime(System.currentTimeMillis());
-        EconomySystem.LOGGER.info("玩家 {} 登录，记录登录时间: {}",
-                player.getScoreboardName(), data.getLastLoginTime());
+        Map<UUID, PlayerData> allData = loadAllPlayerDataFromFile();
+        allData.put(player.getUUID(), data);
+        saveAllPlayerDataToFile(allData);
+//        EconomySystem.LOGGER.info("玩家 {} 登录，记录登录时间: {}",
+//                player.getScoreboardName(), data.getLastLoginTime());
     }
 
     //离线清理缓存并计算在线时间

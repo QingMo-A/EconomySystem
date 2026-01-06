@@ -8,6 +8,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.awt.geom.FlatteningPathIterator;
 import java.util.function.Supplier;
 
 /**
@@ -15,22 +16,22 @@ import java.util.function.Supplier;
  * 完全模仿 Packet_SyncStrengthData 结构，彻底隔离客户端代码
  */
 public class Packet_SyncCourageData {
-    private final int currentCourage;
-    private final int maxCourage;
+    private final float currentCourage;
+    private final float maxCourage;
 
-    public Packet_SyncCourageData(int currentCourage, int maxCourage) {
+    public Packet_SyncCourageData(float currentCourage, float maxCourage) {
         this.currentCourage = currentCourage;
         this.maxCourage = maxCourage;
     }
 
     public static void encode(Packet_SyncCourageData packet, FriendlyByteBuf buf) {
-        buf.writeInt(packet.currentCourage);
-        buf.writeInt(packet.maxCourage);
+        buf.writeFloat(packet.currentCourage);
+        buf.writeFloat(packet.maxCourage);
     }
 
     public static Packet_SyncCourageData decode(FriendlyByteBuf buf) {
-        int current = buf.readInt();
-        int max = buf.readInt();
+        float current = buf.readFloat();
+        float max = buf.readFloat();
         return new Packet_SyncCourageData(current, max);
     }
 
@@ -38,8 +39,8 @@ public class Packet_SyncCourageData {
     public static void handle(Packet_SyncCourageData packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         // 保存包数据为final，避免lambda中引用问题
-        final int safeCurrentCourage = packet.currentCourage;
-        final int safeMaxCourage = packet.maxCourage;
+        final float safeCurrentCourage = packet.currentCourage;
+        final float safeMaxCourage = packet.maxCourage;
 
         // 提交任务到主线程，调用隔离的处理方法
         context.enqueueWork(() -> processOnMainThread(safeCurrentCourage, safeMaxCourage));
@@ -49,7 +50,7 @@ public class Packet_SyncCourageData {
     /**
      * 隔离的主线程处理方法（无客户端类直接引用）
      */
-    private static void processOnMainThread(int currentCourage, int maxCourage) {
+    private static void processOnMainThread(float currentCourage, float maxCourage) {
         // 模仿参考代码：使用safeRunWhenOn，传入客户端专属Runnable
         DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(currentCourage, maxCourage));
     }
@@ -60,10 +61,10 @@ public class Packet_SyncCourageData {
      */
     @OnlyIn(Dist.CLIENT)
     private static class ClientRunnable implements DistExecutor.SafeRunnable {
-        private final int currentCourage;
-        private final int maxCourage;
+        private final float currentCourage;
+        private final float maxCourage;
 
-        public ClientRunnable(int currentCourage, int maxCourage) {
+        public ClientRunnable(float currentCourage, float maxCourage) {
             this.currentCourage = currentCourage;
             this.maxCourage = maxCourage;
         }
@@ -80,11 +81,11 @@ public class Packet_SyncCourageData {
         }
     }
 
-    public int getCurrentCourage() {
+    public float getCurrentCourage() {
         return currentCourage;
     }
 
-    public int getMaxCourage() {
+    public float getMaxCourage() {
         return maxCourage;
     }
 }

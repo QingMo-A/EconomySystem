@@ -5,6 +5,7 @@ import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -13,8 +14,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -30,20 +30,16 @@ public class PlayerCourageManager {
     private static final int PLAYER_DISTANCE = 30; //一定距离内是否有玩家
     private static final int COURAGE_REDUCE_TICK_INTERVAL = 20; //多少tick一次检测
     private static final int COURAGE_REDUCE_INTERVAL = 200; //多少tick一次扣除（夜晚无人）
-    private static final int COURAGE_REDUCE_AMOUNT = 1; //夜晚无人勇气值一次降低多少
-    private static final int NORMAL_COURAGE = 50; // 常态恢复到的勇气值
-    private static final int MAX_PLAYER_COURAGE = 70; // 附近有多名玩家时恢复到的勇气值
-    private static final int PLAYER_COUNT_THRESHOLD = 4; // 大于等于该数量的玩家才会添加常态勇气值
-    private static final int COURAGE_CHANGE_INTERVAL = 100; //多少tick一次恢复/扣除
-    private static final int COURAGE_CHANGE_AMOUNT = 2; //每次恢复/扣除的勇气值点数（白天）
-    private static final int NIGHT_WITH_PLAYER_COURAGE_CHANGE_AMOUNT = 1; //夜晚有玩家时每次恢复点数
+
+    //黑暗的光照等级阈值
+    private static final int ENVIRONMENT_DARK_LIGHT_LEVEL = 7;
 
     private static final long KILL_TIME_WINDOW = 10000L; //击杀时间窗口（10秒，毫秒级）
     private static final int KILL_THRESHOLD = 5; //时间窗口内需要击杀的敌对生物数量
     private static final int COURAGE_ADD_AMOUNT = 10; //满足条件后增加的勇气值
 
-    private static int CLIENT_CURRENT_COURAGE = 50; //客户端默认值
-    private static int CLIENT_MAX_COURAGE = 100; // 客户端默认值
+    private static final Map<UUID, Float> CLIENT_CURRENT_COURAGE = new ConcurrentHashMap<>();
+    private static final Map<UUID, Float> CLIENT_MAX_COURAGE = new ConcurrentHashMap<>();
     //存储击杀记录
     private static final Map<UUID, List<Long>> PLAYER_KILL_RECORDS = new ConcurrentHashMap<>();
 
@@ -51,8 +47,17 @@ public class PlayerCourageManager {
     private static final Set<EntityType<?>> HOSTILE_ENTITY_TYPES = new HashSet<>();
     //被排除的敌对生物
     private static final Set<EntityType<?>> EXCLUDED_HOSTILE_ENTITY = new HashSet<>();
-    //初始化敌对生物集合
+
+    //消息冷却时间
+    private static final Map<UUID, Integer> COURAGE_MSG_COOLDOWN = new ConcurrentHashMap<>();
+    private static final int MSG_COOLDOWN_TICKS = 1200;
+
+
+    //初始化敌对生物集合和客户端默认值
     static {
+        CLIENT_CURRENT_COURAGE.put(new UUID(0,0), 50.0f);
+        CLIENT_MAX_COURAGE.put(new UUID(0,0), 100.0f);
+
         HOSTILE_ENTITY_TYPES.add(EntityType.BLAZE);
         HOSTILE_ENTITY_TYPES.add(EntityType.CAVE_SPIDER);
         HOSTILE_ENTITY_TYPES.add(EntityType.CREEPER);
@@ -104,6 +109,9 @@ public class PlayerCourageManager {
     @SubscribeEvent
     //判断玩家状态，执行勇气值变更（夜晚无人扣除）与buff逻辑
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) {
+            return;
+        }
         if (event.side.isClient() || !event.player.isAlive() || !(event.player instanceof ServerPlayer serverPlayer)) {
             return;
         }
@@ -117,21 +125,27 @@ public class PlayerCourageManager {
             return; // 空值防护，避免空指针
         }
 
+        //处理提示冷却
+        int currentCooldown = COURAGE_MSG_COOLDOWN.getOrDefault(playerUUID, 0);
+        if (currentCooldown > 0) {
+            COURAGE_MSG_COOLDOWN.put(playerUUID, currentCooldown - 1);
+        }
+        //是否已触发过提示（冷却未结束则跳过）
+        boolean canShowMsg = currentCooldown <= 0;
+
         if (serverPlayer.tickCount % COURAGE_REDUCE_TICK_INTERVAL != 0) {
             return;
         }
 
-        boolean isNight = isNightTime(serverPlayer);
-        boolean hasNoPlayerAround = !hasPlayerAround(serverPlayer);
+        boolean isDarkEnvironment = isEnvironmentDark(serverPlayer);
+        boolean isGameNight = isNightTime(serverPlayer);
         int nearbyPlayerCount = getNearbyPlayerCount(serverPlayer);
-        int maxCourage = attributesData.getMaxCourage();
-        int currentCourage = attributesData.getCurrentCourage();
-        // 动态获取目标勇气值（根据附近玩家数量）
-        int targetCourage = nearbyPlayerCount >= PLAYER_COUNT_THRESHOLD ? MAX_PLAYER_COURAGE : NORMAL_COURAGE;
-        // 目标值不超过最大勇气值
-        targetCourage = Math.min(targetCourage, maxCourage);
-        targetCourage = Math.max(targetCourage, 0);
+        float maxCourage = attributesData.getMaxCourage();
+        float currentCourage = attributesData.getCurrentCourage();
+        int nearbyMonsterCount = getNearbyMonsterEntityCount(serverPlayer);
 
+        double totalAdd = 0.0; // 所有增加类数值
+        double totalReduce = 0.0;
         //buff判断
         if (maxCourage <= 0) {
             return;
@@ -144,54 +158,105 @@ public class PlayerCourageManager {
             MobEffectInstance slownessEffect = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, true);
             serverPlayer.addEffect(weaknessEffect);
             serverPlayer.addEffect(slownessEffect);
+
+            if (canShowMsg) {
+                serverPlayer.displayClientMessage(
+                        Component.literal("§c恐惧充斥了您的身体..."), // 自定义文本
+                        true
+                );
+                COURAGE_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS); // 触发冷却
+            }
 //            EconomySystem.LOGGER.debug("玩家 {} 勇气值不足20%，施加虚弱I和缓慢I效果", serverPlayer.getScoreboardName());
         }
-        // 勇气值≥70%：施加力量I
-        else if (courageRatio >= 0.7F) {
+        // 勇气值高于一定值：施加力量I
+        else if (courageRatio >= 0.85F) {
             MobEffectInstance strengthEffect = new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 0, false, true);
             serverPlayer.addEffect(strengthEffect);
-            EconomySystem.LOGGER.debug("玩家 {} 勇气值≥70%，施加力量I效果", serverPlayer.getScoreboardName());
+
+            if (canShowMsg) {
+                serverPlayer.displayClientMessage(
+                        Component.literal("§a您浑身充满力量，无所畏惧！"), // 自定义文本
+                        true
+                );
+                COURAGE_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS); // 触发冷却
+            }
+//            EconomySystem.LOGGER.debug("玩家 {} 勇气值≥70%，施加力量I效果", serverPlayer.getScoreboardName());
         }
 
-        // 主逻辑
-        //处理夜晚场景
-        if (isNight) {
-            // 夜晚无人：10秒一次扣除勇气值(扣完为止）
-            if (hasNoPlayerAround) {
-                if (serverPlayer.tickCount % COURAGE_REDUCE_INTERVAL != 0) {
-                    return;
-                }
-                changeCourageValue(serverPlayer, attributesData, -COURAGE_REDUCE_AMOUNT, 0, maxCourage);
-            }
-            // 夜晚有人：5秒一次缓慢恢复到70
-            else {
-                // 达到变更间隔才执行
-                if (serverPlayer.tickCount % COURAGE_CHANGE_INTERVAL != 0) {
-                    return;
-                }
-                // 当前勇气值 < 目标值：恢复1点，不超过目标值（70）
-                if (currentCourage < targetCourage) {
-                    changeCourageValue(serverPlayer, attributesData, NIGHT_WITH_PLAYER_COURAGE_CHANGE_AMOUNT, targetCourage, maxCourage);
-                } else if (currentCourage > targetCourage) {
-                     changeCourageValue(serverPlayer, attributesData, -NIGHT_WITH_PLAYER_COURAGE_CHANGE_AMOUNT, targetCourage, maxCourage);
-                }
-            }
+        // 主逻辑（10s计算一次）
+        // 白天————
+        // 所有的增加 * 1.2
+        // 所有的扣除 * 0.8
+        // 晚上————
+        // 所有的增加 * 0.8
+        // 所有的扣除 * 1.2
+        // 光照计算————
+        // 光亮环境下，固定+1点
+        // 黑暗环境下，固定-1点
+        // 附近20格内有怪物计算————
+        // 扣除 （怪物数量 * 0.5）点，5点封顶
+        // 附近30格内有玩家计算————
+        // 增加 （玩家数量 * 0.5） 点，3点封顶
+        // 坐标计算————
+        // y坐标 < 30 且黑暗  扣除0.5点
+        double lightNum = 0.0d;
+        double monsterNum = 0.0d;
+        double playerNum = 0.0d;
+        double yNum = 0.0d;
+        double addMultiNum = 0.0d;
+        double reduceMultiNum = 0.0d;
+        if (isDarkEnvironment) {
+            lightNum = -1.0d;
+        } else {
+            lightNum = 1.0d;
         }
-        //白天
-        else {
-            // 达到5秒一次的变更间隔才执行
-            if (serverPlayer.tickCount % COURAGE_CHANGE_INTERVAL != 0) {
-                return;
-            }
-            // 当前勇气值 < 目标值：恢复2点，不超过目标值
-            if (currentCourage < targetCourage) {
-                changeCourageValue(serverPlayer, attributesData, COURAGE_CHANGE_AMOUNT, targetCourage, maxCourage);
-            }
-            // 当前勇气值 > 目标值：扣除2点，不低于目标值
-            else if (currentCourage > targetCourage) {
-                changeCourageValue(serverPlayer, attributesData, -COURAGE_CHANGE_AMOUNT, targetCourage, maxCourage);
-            }
-            // 当前勇气值 == 目标值：不处理，保持不变
+
+        if (isGameNight) {
+            addMultiNum = 0.8d;
+            reduceMultiNum = 1.2d;
+        } else {
+            addMultiNum = 1.2d;
+            reduceMultiNum = 0.8d;
+        }
+
+        monsterNum = -(nearbyMonsterCount * 0.5);
+        monsterNum = Math.max(monsterNum, -3.0);
+
+        playerNum = nearbyPlayerCount * 0.5;
+        playerNum = Math.min(playerNum, 3.0);
+
+        int playerY = serverPlayer.blockPosition().getY();
+        if (playerY < 30 && isDarkEnvironment) {
+            yNum = -0.5;
+        } else {
+            yNum = 0.0;
+        }
+
+        if (lightNum > 0) {
+            totalAdd += lightNum;
+        } else {
+            totalReduce += Math.abs(lightNum);
+        }
+        totalAdd += playerNum;
+        totalReduce += Math.abs(monsterNum);
+        totalReduce += Math.abs(yNum);
+
+        totalAdd = totalAdd * addMultiNum;
+        totalReduce = totalReduce * reduceMultiNum;
+
+        double finalChangeDouble = totalAdd - totalReduce;
+        float finalChange =  (float) finalChangeDouble;
+
+        if (serverPlayer.tickCount % COURAGE_REDUCE_INTERVAL == 0) {
+            // 执行勇气值变更
+            changeCourageValue(serverPlayer, attributesData, (float) finalChange, maxCourage);
+
+            // 日志输出
+//            EconomySystem.LOGGER.info("===== 玩家{}勇气值计算结果 =====", serverPlayer.getName().getString());
+//            EconomySystem.LOGGER.info("当前勇气值：{} | 最大值：{}", currentCourage, maxCourage);
+//            EconomySystem.LOGGER.info("基础值：光照={}, 怪物={}, 玩家={}, y坐标={}", lightNum, monsterNum, playerNum, yNum);
+//            EconomySystem.LOGGER.info("倍率后：增加={}, 扣除={}", totalAdd, totalReduce);
+//            EconomySystem.LOGGER.info("最终变化：{}点（浮点={}）", finalChange, finalChange);
         }
     }
 
@@ -251,6 +316,29 @@ public class PlayerCourageManager {
     }
 
     /**
+     * 统计附近20格内的敌对生物数量
+     */
+    private static int getNearbyMonsterEntityCount(ServerPlayer player) {
+        if (player == null || player.level() == null) {
+            return 0;
+        }
+        int count = 0;
+        double detectionRangeSqr = 20 * 20;
+
+        // 简化遍历逻辑，直接用玩家的AABB范围
+        for (LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(20))) {
+            if (entity instanceof Player || entity.isDeadOrDying()) continue; // 排除玩家/死亡实体
+            EntityType<?> entityType = entity.getType();
+            if (HOSTILE_ENTITY_TYPES.contains(entityType) && !EXCLUDED_HOSTILE_ENTITY.contains(entityType)) {
+                if (entity.distanceToSqr(player) <= detectionRangeSqr) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
      * 判断玩家是否处于夜晚的野外
      * @return true=夜晚野外，false=非夜晚/非野外
      */
@@ -258,7 +346,7 @@ public class PlayerCourageManager {
         if (player == null || player.level() == null) {
             return false;
         }
-        if (!isNightTime(player)) {
+        if (!isEnvironmentDark(player)) {
             return false;
         }
         if (!isInOpenWild(player)) {
@@ -276,6 +364,27 @@ public class PlayerCourageManager {
     }
 
     /**
+     * 判断玩家当前所在环境是否黑暗（替代原有的“游戏时间黑夜”判断）
+     * @param player 玩家实例
+     * @return true=环境黑暗（光照≤阈值），false=环境明亮
+     */
+    private static boolean isEnvironmentDark(ServerPlayer player) {
+        if (player == null || player.level() == null) {
+            return false;
+        }
+        Level level = player.level();
+        BlockPos playerPos = player.blockPosition();
+
+        // 通过LevelLightEngine获取玩家位置的总光照亮度（适配你的Level类源码）
+        LevelLightEngine lightEngine = level.getLightEngine();
+        // 获取方块光照（光源：火把、熔岩等）+ 天空光照的最大值
+        int totalLight = lightEngine.getRawBrightness(playerPos, 0);
+
+        // 光照≤阈值则判定为环境黑暗
+        return totalLight <= ENVIRONMENT_DARK_LIGHT_LEVEL;
+    }
+
+    /**
      * 判断是否是野外（露天）
      */
     private static boolean isInOpenWild(ServerPlayer player) {
@@ -287,22 +396,6 @@ public class PlayerCourageManager {
         return level.canSeeSky(playerBlockPos.above());
     }
 
-    //判断周围是否有至少1名玩家
-    public static boolean hasPlayerAround(ServerPlayer player) {
-        return getNearbyPlayerCount(player) >= 1;
-    }
-
-    //勇气值降低方法（保留原有方法，内部可复用通用方法）
-    private static void handleCourageReduction(ServerPlayer player, PlayerAttributesData attrData) {
-        UUID playerUUID = player.getUUID();
-        int currentCourage = attrData.getCurrentCourage();
-        int maxCourage = attrData.getMaxCourage();
-
-        if (currentCourage <= 0) {
-            return;
-        }
-        changeCourageValue(player, attrData, -COURAGE_REDUCE_AMOUNT, 0, maxCourage);
-    }
 
     private static void handleKillCourageGain(ServerPlayer player) {
         UUID playerUUID = player.getUUID();
@@ -329,11 +422,17 @@ public class PlayerCourageManager {
                 return;
             }
 
-            int maxCourage = attrData.getMaxCourage();
-            changeCourageValue(player, attrData, COURAGE_ADD_AMOUNT, 0, maxCourage);
+            float maxCourage = attrData.getMaxCourage();
+            changeCourageValue(player, attrData, COURAGE_ADD_AMOUNT , maxCourage);
 
-            EconomySystem.LOGGER.debug("玩家 {} 短时间内击杀{}只敌对生物，勇气值+{}，当前{}点",
-                    player.getScoreboardName(), KILL_THRESHOLD, COURAGE_ADD_AMOUNT, attrData.getCurrentCourage());
+            int currentCooldown = COURAGE_MSG_COOLDOWN.getOrDefault(playerUUID, 0);
+            if (currentCooldown <= 0) {
+                player.displayClientMessage(
+                        Component.literal("§a连续击杀敌对生物让您信心倍增..."), // 自定义文本
+                        true
+                );
+                COURAGE_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS); // 触发冷却
+            }
 
             //清空击杀记录
             PLAYER_KILL_RECORDS.put(playerUUID, new ArrayList<>());
@@ -350,37 +449,29 @@ public class PlayerCourageManager {
         }
         UUID playerUUID = serverPlayer.getUUID();
         PLAYER_KILL_RECORDS.remove(playerUUID);
+        COURAGE_MSG_COOLDOWN.remove(playerUUID);
+
+        CLIENT_CURRENT_COURAGE.remove(playerUUID);
+        CLIENT_MAX_COURAGE.remove(playerUUID);
     }
 
     /**
-     * 勇气值调整方法
+     * 勇气值调整方法（无目标值，直接增减）
      * @param serverPlayer 玩家实例
      * @param attributesData 玩家勇气值数据
      * @param changeAmount 变更数量（正数=增加，负数=减少）
-     * @param targetCourage 目标勇气值（用于限制不超过/不低于该值，0则不限制目标，仅限制最大/最小）
      * @param maxCourage 玩家最大勇气值
      */
-    private static void changeCourageValue(ServerPlayer serverPlayer, PlayerAttributesData attributesData, int changeAmount, int targetCourage, int maxCourage) {
-        int currentCourage = attributesData.getCurrentCourage();
-        int newCourage = currentCourage + changeAmount;
+    private static void changeCourageValue(ServerPlayer serverPlayer, PlayerAttributesData attributesData, float changeAmount, float maxCourage) {
+        float currentCourage = attributesData.getCurrentCourage();
+        float newCourage = currentCourage + changeAmount;
 
-        //限制不低于0，不高于最大勇气值
+        // 只保留基础限制：不低于0，不高于最大勇气值
         newCourage = Math.max(newCourage, 0);
         newCourage = Math.min(newCourage, maxCourage);
 
-        //若目标勇气值>0，限制不超过/不低于目标值（根据变更方向）
-        if (targetCourage > 0) {
-            if (changeAmount > 0) {
-                //增加勇气值：不超过目标值
-                newCourage = Math.min(newCourage, targetCourage);
-            } else if (changeAmount < 0) {
-                //减少勇气值：不低于目标值
-                newCourage = Math.max(newCourage, targetCourage);
-            }
-        }
-
         // 若勇气值未变化，直接返回，避免无效持久化
-        if (currentCourage == newCourage) {
+        if (Math.abs(currentCourage - newCourage) < 0.001f) { // 浮点精度容错
             return;
         }
 
@@ -388,11 +479,9 @@ public class PlayerCourageManager {
         attributesData.setCurrentCourage(newCourage);
         PlayerAttributesDataManager.updatePlayerAttributesData(serverPlayer, attributesData);
 
-        //————————————客户端
-        // 获取最新的当前勇气值和最大勇气值
-        int syncCurrentCourage = attributesData.getCurrentCourage();
-        int syncMaxCourage = attributesData.getMaxCourage();
-        // 调用同步方法，发送给客户端
+        //————————————客户端同步
+        float syncCurrentCourage = attributesData.getCurrentCourage();
+        float syncMaxCourage = attributesData.getMaxCourage();
         PlayerCourageClientSync.sendCourageDataToClient(serverPlayer, syncCurrentCourage, syncMaxCourage);
     }
 
@@ -401,40 +490,40 @@ public class PlayerCourageManager {
     /**
      * 客户端：设置当前勇气值（供Packet_SyncCourageData调用）
      */
-    public static void setCurrentCourage(Player player, int currentCourage) {
+    public static void setCurrentCourage(Player player, float currentCourage) {
         if (player == null || !player.level().isClientSide()) {
             return;
         }
-        CLIENT_CURRENT_COURAGE = currentCourage;
+        CLIENT_CURRENT_COURAGE.put(player.getUUID(), currentCourage);
     }
 
     /**
      * 客户端：设置最大勇气值（供Packet_SyncCourageData调用）
      */
-    public static void setMaxCourage(Player player, int maxCourage) {
+    public static void setMaxCourage(Player player, float maxCourage) {
         if (player == null || !player.level().isClientSide()) {
             return;
         }
-        CLIENT_MAX_COURAGE = maxCourage;
+        CLIENT_MAX_COURAGE.put(player.getUUID(), maxCourage);
     }
 
     /**
      * 客户端：获取当前勇气值（供CustomStatueGUI调用）
      */
-    public static int getCurrentCourageClient(Player player) {
+    public static float getCurrentCourageClient(Player player) {
         if (player == null || !player.level().isClientSide()) {
-            return 50; // 兜底默认值
+            return 50.0f; // 兜底默认值
         }
-        return CLIENT_CURRENT_COURAGE;
+        return CLIENT_CURRENT_COURAGE.getOrDefault(player.getUUID(), 50.0f);
     }
 
     /**
      * 客户端：获取最大勇气值（供CustomStatueGUI调用）
      */
-    public static int getMaxCourageClient(Player player) {
+    public static float getMaxCourageClient(Player player) {
         if (player == null || !player.level().isClientSide()) {
-            return 100; // 兜底默认值
+            return 100.0f; // 兜底默认值
         }
-        return CLIENT_MAX_COURAGE;
+        return CLIENT_MAX_COURAGE.getOrDefault(player.getUUID(), 100.0f);
     }
 }

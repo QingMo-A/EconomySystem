@@ -231,6 +231,7 @@ public class PlayerStrengthManager {
             UUID uuid = player.getUUID();
             //清理所有缓存
             LAST_CONSUME_TICK.remove(uuid);
+            IS_SPRINTING_CACHE.put(uuid, false);
             IS_SPRINTING_CACHE.remove(uuid);
             IS_STRENGTH_EXHAUSTED.remove(uuid);
             HAS_SHOWN_LOW_STRENGTH_TIP.remove(uuid);
