@@ -31,6 +31,8 @@ public class PlayerBlueprintData {
     // 存储需要蓝图的物品ID集合
     private static final Set<ResourceLocation> ITEMS_REQUIRING_BLUEPRINT = new HashSet<>();
 
+    private static Set<String> defaultItems = new HashSet<>();
+
     // 定义一个需要排除的物品关键字集合
     public static final Set<String> EXCLUDED_ITEM_KEYWORDS = new HashSet<>(Arrays.asList(
             "*_wood",
@@ -352,15 +354,17 @@ public class PlayerBlueprintData {
         return items;
     }
 
+    public static void addDefaultUnlockedItems(String itemId) {
+        defaultItems.add(itemId);
+    }
+
     /**
      * 默认解锁的物品列表（基础物品，不需要蓝图）
      */
     public static Set<String> getDefaultUnlockedItems() {
-        Set<String> defaultItems = new HashSet<>();
-
         // 添加原版基础物品
         defaultItems.add("minecraft:stick");
-        defaultItems.add("minecraft:wooden_planks");
+        defaultItems.add("minecraft:oak_planks");
         defaultItems.add("minecraft:torch");
         defaultItems.add("minecraft:crafting_table");
         defaultItems.add("minecraft:wooden_axe");

@@ -171,6 +171,7 @@ public class RecipeManagerMixin extends SimpleJsonResourceReloadListener {
                                     LOGGER.debug("Excluding recipe {} because result matches keyword '{}'",
                                             recipeId, keyword);
                                 }
+                                PlayerBlueprintData.addDefaultUnlockedItems(resultItemId);
                                 return false;
                             }
                         }
