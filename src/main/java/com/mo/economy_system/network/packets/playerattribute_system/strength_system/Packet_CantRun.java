@@ -26,9 +26,16 @@ public class Packet_CantRun {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player == null) return;
 
+                // 强制停止客户端疾跑
+                mc.player.setSprinting(false);
+
+                // 设置客户端耗尽标记
+                PlayerStrengthManager.IS_STRENGTH_EXHAUSTED_CLIENT.put(mc.player.getUUID(), true);
+
+                // 显示提示消息
                 mc.player.displayClientMessage(
-                        Component.literal("§c老己~，跑不动啦歇会儿吧，休息就能恢复体力啦❤"), // 新提示文本
-                        true //物品栏上方
+                        Component.literal("§c老己~，跑不动啦歇会儿吧，休息就能恢复体力啦❤"),
+                        true
                 );
             });
         });

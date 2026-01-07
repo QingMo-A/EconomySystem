@@ -2,6 +2,7 @@ package com.mo.economy_system.core.playerattributes_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
+import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
 import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -46,6 +47,8 @@ public class CustomStatueGUI {
     private static final int STRENGTH_BAR_COLOR = (255 << 24) | 0x33FF33;
     // 勇气值进度条为紫色
     private static final int COURAGE_BAR_COLOR = (255 << 24) | 0xCC66FF;
+    // 感染值进度条为绿色
+    private static final int INFECTION_BAR_COLOR = (255 << 24) | 0x00FF00;
 
     //缓存路径，优化
     private static final Map<String, ResourceLocation> PLAYER_HEALTH_TEXTURES = new HashMap<>();
@@ -73,6 +76,9 @@ public class CustomStatueGUI {
     // 勇气值进度条坐标缓存（最左侧）
     private static int CACHED_COURAGE_BAR_X = 0;
     private static int CACHED_COURAGE_BAR_Y = 0;
+    // 感染值进度条坐标缓存
+    private static int CACHED_INFECTION_BAR_X = 0;
+    private static int CACHED_INFECTION_BAR_Y = 0;
 
     /**
      * 计算并缓存小人坐标 + 进度条坐标
@@ -99,6 +105,9 @@ public class CustomStatueGUI {
         // 勇气值进度条坐标（最左侧）：体力条左侧
         CACHED_COURAGE_BAR_X = CACHED_STRENGTH_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
         CACHED_COURAGE_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        // 感染值进度条坐标：勇气值条左侧
+        CACHED_INFECTION_BAR_X = CACHED_COURAGE_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
+        CACHED_INFECTION_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
 
         //更新参数缓存
         CACHED_SCREEN_WIDTH = screenWidth;
@@ -148,6 +157,9 @@ public class CustomStatueGUI {
         // 勇气值进度条缓存坐标
         int courageBarX = CACHED_COURAGE_BAR_X;
         int courageBarY = CACHED_COURAGE_BAR_Y;
+        // 感染值进度条缓存坐标
+        int infectionBarX = CACHED_INFECTION_BAR_X;
+        int infectionBarY = CACHED_INFECTION_BAR_Y;
 
         //获取玩家当前血量和最大血量
         float currentHealth = player.getHealth();
@@ -193,6 +205,12 @@ public class CustomStatueGUI {
         if (maxCourage <= 0) maxCourage = 100; // 避免除以0异常
         // 绘制勇气值进度条（最左侧，样式与其他进度条统一）
         drawVerticalProgressBar(guiGraphics, courageBarX, courageBarY, currentCourage, maxCourage, COURAGE_BAR_COLOR);
+
+        // 绘制感染值竖向进度条
+        int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+        int maxInfection = 100;
+        // 绘制感染值进度条（在勇气值条左侧）
+        drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, currentInfection, maxInfection, INFECTION_BAR_COLOR);
     }
 
     /**

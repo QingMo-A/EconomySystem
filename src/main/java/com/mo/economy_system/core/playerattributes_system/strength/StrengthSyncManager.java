@@ -28,9 +28,12 @@ public class StrengthSyncManager {
         int currentStrength = playerData.getCurrentStrength();
         int maxStrength = playerData.getMaxStrength();
 
-        // 2. 发送同步包（服务端→客户端）
+        // 2. 判断是否可以疾跑（体力是否≥20）
+        boolean canSprint = currentStrength >= PlayerStrengthManager.MIN_RESPRINT_STRENGTH;
+
+        // 3. 发送同步包（服务端→客户端）
         EconomySystem_NetworkManager.INSTANCE.sendTo(
-                new Packet_SyncStrengthData(currentStrength, maxStrength),
+                new Packet_SyncStrengthData(currentStrength, maxStrength, canSprint),
                 serverPlayer.connection.connection,
                 NetworkDirection.PLAY_TO_CLIENT
         );

@@ -3,10 +3,15 @@ package com.mo.economy_system.core.playerattributes_system.strength;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -33,12 +38,16 @@ public class PlayerStrengthManager {
     private static final int SPRINT_STOP_STRENGTH = 0;     // 强制停跑的体力阈值（归0才停）
     private static final float LOW_STRENGTH_PERCENT = 0.3f; // 低体力提示阈值（30%）
 
-    //缓存
+    //服务端缓存
     private static final Map<UUID, Long> LAST_CONSUME_TICK = new ConcurrentHashMap<>(); // 玩家最后消耗体力的tick
     private static final Map<UUID, Boolean> IS_SPRINTING_CACHE = new ConcurrentHashMap<>(); // 玩家疾跑状态缓存
-    public static final Map<UUID, Boolean> IS_STRENGTH_EXHAUSTED = new ConcurrentHashMap<>(); // 体力耗尽标记
+    public static final Map<UUID, Boolean> IS_STRENGTH_EXHAUSTED = new ConcurrentHashMap<>(); // 服务端体力耗尽标记
     private static final Map<UUID, Boolean> HAS_SHOWN_LOW_STRENGTH_TIP = new ConcurrentHashMap<>(); // 30%体力提示是否已显示
     private static final Map<UUID, Boolean> HAS_SHOWN_EXHAUSTED_TIP = new ConcurrentHashMap<>(); // 无法奔跑提示是否已显示
+
+    //客户端缓存
+    @OnlyIn(Dist.CLIENT)
+    public static final Map<UUID, Boolean> IS_STRENGTH_EXHAUSTED_CLIENT = new ConcurrentHashMap<>(); // 客户端体力耗尽标记
 
     //Tick监听
     @SubscribeEvent
@@ -289,5 +298,62 @@ public class PlayerStrengthManager {
             HAS_SHOWN_LOW_STRENGTH_TIP.put(player.getUUID(), false); // 重置低体力提示
         }
         StrengthSyncManager.syncStrengthToClient(player);
+    }
+
+    //客户端tick监听器：检查体力耗尽标记，强制停止疾跑
+    @OnlyIn(Dist.CLIENT)
+    @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+    public static class ClientTickHandler {
+        @SubscribeEvent
+        public static void onClientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase != TickEvent.Phase.START) return;
+
+            Minecraft mc = Minecraft.getInstance();
+            LocalPlayer player = mc.player;
+            if (player == null || !player.isAlive()) return;
+
+            UUID uuid = player.getUUID();
+            boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
+
+            // 如果体力耗尽，强制停止疾跑（使用更高优先级的方式）
+            if (isExhausted) {
+                // 强制设置疾跑为false（每次tick开始时设置，在输入处理之前）
+                player.setSprinting(false);
+                // 强制设置移动速度为步行速度
+                player.setSpeed(Math.min(player.getSpeed(), 0.1f));
+            }
+        }
+
+        // 监听鼠标和键盘输入事件，阻止疾跑输入
+        @SubscribeEvent
+        public static void onInput(InputEvent.MouseButton event) {
+            Minecraft mc = Minecraft.getInstance();
+            LocalPlayer player = mc.player;
+            if (player == null || !player.isAlive()) return;
+
+            UUID uuid = player.getUUID();
+            boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
+
+            // 如果体力耗尽且正在疾跑，强制停止并取消事件
+            if (isExhausted && player.isSprinting()) {
+                player.setSprinting(false);
+                event.setCanceled(true);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onKeyInput(InputEvent.Key event) {
+            Minecraft mc = Minecraft.getInstance();
+            LocalPlayer player = mc.player;
+            if (player == null || !player.isAlive()) return;
+
+            UUID uuid = player.getUUID();
+            boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
+
+            // 如果体力耗尽且正在疾跑，强制停止
+            if (isExhausted && player.isSprinting()) {
+                player.setSprinting(false);
+            }
+        }
     }
 }

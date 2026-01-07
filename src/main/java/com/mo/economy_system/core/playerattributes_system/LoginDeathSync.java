@@ -2,7 +2,7 @@ package com.mo.economy_system.core.playerattributes_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageClientSync;
-import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
+import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionClientSync;
 import com.mo.economy_system.core.playerattributes_system.strength.StrengthSyncManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -26,8 +26,21 @@ public class LoginDeathSync {
             data.setCurrentCourage(data.getMaxCourage() / 2);
             data.syncMaxHealthToPlayer(player);
             player.setHealth((float) data.getMaxHealth());
-//            EconomySystem.LOGGER.info("玩家 {} 重生，同步最大生命值为{}",
-//                    player.getScoreboardName(), data.getMaxHealth());
+
+            // 立即同步所有属性数据到客户端
+            StrengthSyncManager.syncStrengthToClient(player);
+            PlayerCourageClientSync.sendCourageDataToClient(
+                    player,
+                    data.getCurrentCourage(),
+                    data.getMaxCourage()
+            );
+            PlayerInfectionClientSync.sendInfectionDataToClient(
+                    player,
+                    data.getCurrentInfection()
+            );
+//
+//            EconomySystem.LOGGER.info("玩家 {} 重生，同步所有属性数据",
+//                    player.getScoreboardName());
         }
     }
 
@@ -44,10 +57,15 @@ public class LoginDeathSync {
                     attrData.getCurrentCourage(),
                     attrData.getMaxCourage()
             );
-            EconomySystem.LOGGER.info("玩家 {} 登录，同步勇气值：当前{}，最大{}",
+            PlayerInfectionClientSync.sendInfectionDataToClient(
+                    serverPlayer,
+                    attrData.getCurrentInfection()
+            );
+            EconomySystem.LOGGER.info("玩家 {} 登录，同步属性：勇气值({}/{})，感染值({})",
                     serverPlayer.getScoreboardName(),
                     attrData.getCurrentCourage(),
-                    attrData.getMaxCourage()
+                    attrData.getMaxCourage(),
+                    attrData.getCurrentInfection()
             );
         }
     }

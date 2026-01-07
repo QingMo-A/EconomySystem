@@ -62,26 +62,26 @@ public class PlayerLevelManager {
         int currentLevel = playerData.getLevel();
         long currentExp = playerData.getCurrentExperience();
 
-        // 1. 累加经验
+        //累加经验
         long newExp = currentExp + experienceToAdd;
         playerData.setCurrentExperience(newExp);
 
-        // 2. 循环判断是否满足升级条件（支持一次性多段升级，例如：经验足够连升2级）
+        //循环判断是否满足升级条件（支持一次性多段升级，例如：经验足够连升2级）
         while (true) {
             long expRequiredForNextLevel = getExperienceRequiredForLevel(currentLevel + 1);
-            // 条件1：经验 >= 下一级所需总经验 → 升级
+            // 经验 >= 下一级所需总经验 → 升级
             if (newExp >= expRequiredForNextLevel) {
-                // 2.1 扣除升级所需经验（保留多余经验，支持无限等级）
+                //扣除升级所需经验（保留多余经验，支持无限等级）
                 newExp -= expRequiredForNextLevel;
-                // 2.2 等级+1
+                //等级+1
                 currentLevel += 1;
-                // 2.3 更新玩家等级和经验
+                //更新玩家等级和经验
                 playerData.setLevel(currentLevel);
                 playerData.setCurrentExperience(newExp);
-                // 2.4 发送升级提示（给客户端渲染左上角文字）
+                //发送升级提示（给客户端渲染左上角文字）
                 sendLevelUpNotify(serverPlayer, currentLevel);
             } else {
-                // 条件2：经验不足下一级 → 退出循环
+                //经验不足下一级 → 退出循环
                 break;
             }
         }

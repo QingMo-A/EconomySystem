@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.task_system.taskui;
 
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
+import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
 import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.core.task_system.TaskPlayerData;
@@ -48,6 +49,7 @@ public class TaskUI_Screen extends Screen {
     private static final int TASK_FOOD_COLOR = (255 << 24) | 0xFFFF88; // 饥饿条颜色
     private static final int TASK_STRENGTH_COLOR = (255 << 24) | 0x33FF33; // 体力条颜色
     private static final int TASK_COURAGE_COLOR = (255 << 24) | 0xCC66FF; // 勇气条颜色
+    private static final int TASK_INFECTION_COLOR = (255 << 24) | 0x00FF00; // 感染值条颜色
     // 文本样式（类别+数值）
     private static final int TASK_TEXT_COLOR = 0xFFFFFFFF; // 纯白色文本
     private static final int TASK_VALUE_OFFSET_X = 6; // 数值与进度条右侧的间距
@@ -275,11 +277,11 @@ public class TaskUI_Screen extends Screen {
 
         //排行榜——————————————————
         //请求全服玩家的数据
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
-            TaskUI_Screen.clearAllPlayerCache(); // 清空旧缓存
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestAllPlayerData());
-        }
+//        Minecraft mc = Minecraft.getInstance();
+//        if (mc.player != null) {
+//            TaskUI_Screen.clearAllPlayerCache(); // 清空旧缓存
+//            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestAllPlayerData());
+//        }
     }
 
     @Override
@@ -320,8 +322,8 @@ public class TaskUI_Screen extends Screen {
     //——————————————————————————————————————————————————————————————————————————————
     private void renderMainServerContent(GuiGraphics guiGraphics) {
         int margin = 10;
-        //计算模型尺寸
-        int modelSize = screenUIHeight / 4; // 一半少10像素
+        //计算模型尺寸（稍微大一点，但避免与进度条重叠）
+        int modelSize = screenUIHeight / 5;
 
         LocalPlayer player = Minecraft.getInstance().player;
         float modelRealHeight = 0; // 模型精确视觉高度
@@ -333,9 +335,9 @@ public class TaskUI_Screen extends Screen {
             modelRealHeight = bbHeight * modelSize;
         }
 
-        //模型位置
+        //模型位置（稍微往下一点，但避免与进度条重叠）
         int modelCenterX = uiX + margin * 4 + modelSize / 2; //模型中心X
-        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2) - margin * 3; //脚部的y坐标
+        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2) - margin * 5; //脚部的y坐标
 
         if (player != null) {
             //调用原版背包的渲染方法
@@ -373,6 +375,9 @@ public class TaskUI_Screen extends Screen {
         if (player != null) {
             String levelText = String.valueOf(PlayerLevelManager.getPlayerLevelClient(player));
             String nickName = player.getScoreboardName();
+            int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+            String infectionStatus = currentInfection >= 80 ? "[§c感染者§r]" : "[§a幸存者§r]";
+            String displayName = nickName + " " + infectionStatus;
             int levelWidth = this.font.width(levelText);
             int levelHeight = this.font.lineHeight;
 
@@ -381,6 +386,8 @@ public class TaskUI_Screen extends Screen {
             //原始坐标（和无缩放时一致的位置）
             int circleCenterX = textX;
             int circleCenterY = textY;
+            // 计算实际渲染后的圆圈半径（考虑1.8倍缩放）
+            int scaledCircleRadius = (int)(circleRadius * 1.8f);
 
             //调整缩放锚点，放大后坐标不偏移
             guiGraphics.pose().pushPose();
@@ -399,19 +406,27 @@ public class TaskUI_Screen extends Screen {
             int textDrawY = circleCenterY - levelHeight / 2;
             guiGraphics.drawString(this.font, levelText, textDrawX, textDrawY, 0xFFFFFFFF);
 
-            // 昵称坐标
-            int nickDrawX = circleCenterX + this.font.width(nickName) / 2 + margin / 2;
-            int nickDrawY = circleCenterY - margin / 3;
-            guiGraphics.drawString(this.font, nickName, nickDrawX, nickDrawY, 0xAAAAAA);
+            guiGraphics.pose().popPose();
 
+            // 昵称显示在圆圈右侧（单独放大，作为标题）
+            int nickDrawX = circleCenterX + scaledCircleRadius + 15; // 圆圈右边 + 15px间距
+            int nickDrawY = circleCenterY - this.font.lineHeight / 2; // 垂直居中对齐圆圈
+
+            // 单独缩放昵称（1.3倍，保持标题感）
+            guiGraphics.pose().pushPose();
+            float nameScale = 1.3f;
+            // 以文字左下角为缩放中心，避免位置偏移
+            guiGraphics.pose().translate(nickDrawX, nickDrawY, 0);
+            guiGraphics.pose().scale(nameScale, nameScale, 1.0f);
+            guiGraphics.pose().translate(-nickDrawX, -nickDrawY, 0);
+            guiGraphics.drawString(this.font, displayName, nickDrawX, nickDrawY, 0xAAAAAA);
             guiGraphics.pose().popPose();
 
             //————————————————————————————————————————————————————————————
-            circleRadius = Math.max(this.font.width(levelText), this.font.lineHeight) / 2 + 3;
-            // 左对齐基准点：等级圆形图标的左侧（circleCenterX），确保所有文本左对齐
-            int alignBaseX = circleCenterX - circleRadius;
-            // 垂直起始点：等级圆形图标正下方（circleCenterY + 圆形半径 + 10px间距）
-            int baseY = circleCenterY + circleRadius + 10;
+            // 左对齐基准点：使用实际的圆圈半径（考虑缩放）
+            int alignBaseX = circleCenterX - scaledCircleRadius;
+            // 垂直起始点：等级圆形图标正下方
+            int baseY = circleCenterY + scaledCircleRadius + 10;
 
             //档案标题
             String archiveTitle = "您的梦鱼游戏档案：";
@@ -437,9 +452,9 @@ public class TaskUI_Screen extends Screen {
         //绘制横向属性进度条
         if (player != null) {
             // 进度条起始位置
-            int barStartY = uiY + screenUIHeight - BAR_HEIGHT * 5 - BAR_BAR_SPACING * 2;
+            int barStartY = uiY + screenUIHeight - BAR_HEIGHT * 6 - BAR_BAR_SPACING * 3;
             int categoryTextX = uiX + margin;
-            int barX = categoryTextX + this.font.width("勇气值") + BAR_TO_TEXT_SPACING; // 基于最长类别文本宽度
+            int barX = categoryTextX + this.font.width("感染值") + BAR_TO_TEXT_SPACING; // 基于最长类别文本宽度
 
             // 获取玩家属性值
             float currentHealth = player.getHealth();
@@ -452,19 +467,23 @@ public class TaskUI_Screen extends Screen {
             float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
             float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
             if (maxCourage <= 0) maxCourage = 100;
+            int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+            int maxInfection = 100;
 
             // 绘制血量进度条
             drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY, currentHealth, maxHealth, TASK_HEALTH_COLOR, "血量");
             // 绘制饥饿值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING, currentFood, maxFood, TASK_FOOD_COLOR, "饥饿值");
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING, currentFood, maxFood, TASK_FOOD_COLOR, "饥饿");
             // 绘制体力值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 2, currentStrength, maxStrength, TASK_STRENGTH_COLOR, "体力值");
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 2, currentStrength, maxStrength, TASK_STRENGTH_COLOR, "体力");
             // 绘制勇气值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 3, currentCourage, maxCourage, TASK_COURAGE_COLOR, "勇气值");
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 3, currentCourage, maxCourage, TASK_COURAGE_COLOR, "勇气");
+            // 绘制感染值进度条
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 4, currentInfection, maxInfection, TASK_INFECTION_COLOR, "感染");
         }
 
         //排行榜
-        drawFullRanking(guiGraphics);
+//        drawFullRanking(guiGraphics);
     }
 
     //——————————————————————————————————————————————————————————————————————————————————————————————
