@@ -38,12 +38,4 @@ public class StrengthSyncManager {
         // 可选：打印日志，确认包已发送
         // System.out.println("服务端发送体力同步包：" + currentStrength + "/" + maxStrength);
     }
-
-    @SubscribeEvent
-    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            // 同步初始体力给客户端
-            StrengthSyncManager.syncStrengthToClient(serverPlayer);
-        }
-    }
 }

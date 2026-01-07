@@ -16,6 +16,7 @@ import com.mo.economy_system.network.packets.playerattribute_system.strength_sys
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SprintKeyPress;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestAllPlayerData;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerData;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.network.packets.territory_system.*;
@@ -90,5 +91,6 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_SyncStrengthData.class, Packet_SyncStrengthData::encode, Packet_SyncStrengthData::decode, Packet_SyncStrengthData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SendTipToClient.class, Packet_SendTipToClient::encode, Packet_SendTipToClient::decode, Packet_SendTipToClient::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncCourageData.class, Packet_SyncCourageData::encode, Packet_SyncCourageData::decode, Packet_SyncCourageData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_RequestAllPlayerData.class, Packet_RequestAllPlayerData::encode, Packet_RequestAllPlayerData::decode, Packet_RequestAllPlayerData::handle);
     }
 }

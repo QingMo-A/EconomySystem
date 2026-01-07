@@ -1,8 +1,12 @@
 package com.mo.economy_system.core.task_system.taskui;
 
+import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
+import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.core.task_system.TaskPlayerData;
 import com.mo.economy_system.core.task_system.TaskServerData;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestAllPlayerData;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
@@ -17,6 +21,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component; // 注意：用Component而非MutableComponent
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -24,13 +29,31 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @OnlyIn(Dist.CLIENT)
 public class TaskUI_Screen extends Screen {
+    //进度条ui
+    // 进度条基础样式（改为横向）
+    private static final int BAR_WIDTH = 50; // 横向进度条宽度
+    private static final int BAR_HEIGHT = 8;//横向进度条高度
+    private static final int BAR_TO_TEXT_SPACING = 8; // 类别文本与进度条间距
+    private static final int BAR_BAR_SPACING = 18; // 进度条之间的纵向间距
+    // 进度条颜色
+    private static final int TASK_BG_COLOR = (128 << 24) | 0x000000; // 进度条背景色
+    private static final int TASK_BORDER_COLOR = 0xFFCCCCCC; // 淡灰色边框
+    private static final int TASK_LOW_COLOR = (255 << 24) | 0xFF2222; // 低进度警告色
+    private static final int TASK_HEALTH_COLOR = (255 << 24) | 0xFF4444; // 血量条颜色
+    private static final int TASK_FOOD_COLOR = (255 << 24) | 0xFFFF88; // 饥饿条颜色
+    private static final int TASK_STRENGTH_COLOR = (255 << 24) | 0x33FF33; // 体力条颜色
+    private static final int TASK_COURAGE_COLOR = (255 << 24) | 0xCC66FF; // 勇气条颜色
+    // 文本样式（类别+数值）
+    private static final int TASK_TEXT_COLOR = 0xFFFFFFFF; // 纯白色文本
+    private static final int TASK_VALUE_OFFSET_X = 6; // 数值与进度条右侧的间距
+    private static final float TASK_TEXT_SCALE = 1.0f; // 文本缩放
+
+    //————————————————任务菜单
     //样式参数
     private static final int BACKGROUND_ALPHA = 128; //背景透明度
     private static final float UI_WIDTH_PERCENT = 0.75F; //宽度百分比
@@ -61,6 +84,25 @@ public class TaskUI_Screen extends Screen {
     private int showSubScreen = 0;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    //————————————————————全服排行
+    private static final int RANKING_WIDTH = 220; // 排行榜宽度
+    private static final int RANKING_HEIGHT = 200; // 排行榜高度
+    private static final int RANKING_TITLE_HEIGHT = 20; // 标题栏高度
+    private static final int RANKING_LINE_HEIGHT = 18; // 每行高度
+    private static final int RANKING_MAX_DISPLAY = 10; // 最多显示多少名
+    // 颜色常量
+    private static final int RANKING_BG_COLOR = (128 << 24) | 0x111111; // 半透黑背景
+    private static final int RANKING_BORDER_COLOR = 0xFFFFD700; // 金色边框
+    private static final int RANKING_TITLE_COLOR = 0xFFFFD700; // 标题金色
+    private static final int RANKING_RANK_COLOR = 0xFFFFFF; // 排名默认白色
+    private static final int RANKING_ONLINE_COLOR = 0x00FF00; // 在线绿色
+    private static final int RANKING_OFFLINE_COLOR = 0xAAAAAA; // 离线灰色
+    private static final int RANKING_LEVEL_COLOR = 0x00FFFF; // 等级青色
+    private static final int RANKING_TOP3_COLOR = 0xFFFF00; // TOP3黄色
+    private static final Map<UUID, PlayerRankLevelData> ALL_PLAYER_RANK_LEVEL_CACHE = new ConcurrentHashMap<>();
+    // 在线玩家UUID缓存（标记在线状态）
+    public static final Set<UUID> ONLINE_PLAYER_UUIDS = ConcurrentHashMap.newKeySet();
 
     public TaskUI_Screen() {
         super(Component.literal("任务界面"));
@@ -230,6 +272,14 @@ public class TaskUI_Screen extends Screen {
         this.addRenderableWidget(logoBtn);
         this.addRenderableWidget(serverTaskBtn);
         this.addRenderableWidget(playerTaskBtn);
+
+        //排行榜——————————————————
+        //请求全服玩家的数据
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            TaskUI_Screen.clearAllPlayerCache(); // 清空旧缓存
+            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestAllPlayerData());
+        }
     }
 
     @Override
@@ -271,7 +321,7 @@ public class TaskUI_Screen extends Screen {
     private void renderMainServerContent(GuiGraphics guiGraphics) {
         int margin = 10;
         //计算模型尺寸
-        int modelSize = screenUIHeight / 3; // 一半少10像素
+        int modelSize = screenUIHeight / 4; // 一半少10像素
 
         LocalPlayer player = Minecraft.getInstance().player;
         float modelRealHeight = 0; // 模型精确视觉高度
@@ -284,8 +334,8 @@ public class TaskUI_Screen extends Screen {
         }
 
         //模型位置
-        int modelCenterX = uiX + margin + modelSize / 2; //模型中心X
-        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2); //脚部的y坐标
+        int modelCenterX = uiX + margin * 4 + modelSize / 2; //模型中心X
+        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2) - margin * 3; //脚部的y坐标
 
         if (player != null) {
             //调用原版背包的渲染方法
@@ -305,29 +355,116 @@ public class TaskUI_Screen extends Screen {
             );
         }
 
-        //文字信息
+        //分割线————————————————————
+        int splitLineX = uiX + screenUIWidth / 4; // UI区域1/3宽度位置
+        // 绘制竖直线：X坐标固定，Y从UI顶部到UI底部，宽度1像素
+        guiGraphics.fill(RenderType.gui(),
+                splitLineX,          // 分割线X坐标（UI区域1/3处）
+                uiY,                 // 分割线顶部Y坐标（UI顶部）
+                splitLineX + 1,      // 分割线宽度（1像素，细线条）
+                uiY + screenUIHeight,// 分割线底部Y坐标（UI底部）
+                0x80FFFFFF);         // 分割线颜色（半透明白色，可自行调整）
+
+        //文字区域起始坐标
         int textX = uiX + screenUIWidth / 3;
-        int textY = uiY + margin;
+        int textY = uiY + screenUIHeight / 8;
+
         // 大标题
         if (player != null) {
-            // 大字号渲染
+            String levelText = String.valueOf(PlayerLevelManager.getPlayerLevelClient(player));
+            String nickName = player.getScoreboardName();
+            int levelWidth = this.font.width(levelText);
+            int levelHeight = this.font.lineHeight;
+
+            // 圆形参数（保持放大后的视觉大小）
+            int circleRadius = Math.max(levelWidth, levelHeight) / 2 + 3;
+            //原始坐标（和无缩放时一致的位置）
+            int circleCenterX = textX;
+            int circleCenterY = textY;
+
+            //调整缩放锚点，放大后坐标不偏移
             guiGraphics.pose().pushPose();
-            guiGraphics.pose().scale(2.0f, 2.0f, 2.0f);
-            guiGraphics.drawString(this.font, player.getScoreboardName(),
-                    (int)(textX / 2.0f), (int)(textY / 2.0f), 0xFFFFFF);
+            // 把坐标系原点移到圆形中心（缩放中心）
+            guiGraphics.pose().translate(circleCenterX, circleCenterY, 0);
+            // 放大1.8倍（文字变大）
+            guiGraphics.pose().scale(1.8f, 1.8f, 1.8f);
+            //把坐标系移回原位（这样缩放后的内容仍在原始坐标）
+            guiGraphics.pose().translate(-circleCenterX, -circleCenterY, 0);
+
+            // 绘制白色空心圆边框（坐标还是原始的circleCenterX/Y，位置不变）
+            drawCircleBorder(guiGraphics, circleCenterX, circleCenterY, circleRadius, 0xFFFFFFFF);
+
+            // 等级数字精准居中（坐标不变）
+            int textDrawX = circleCenterX - levelWidth / 2 + margin / 8;
+            int textDrawY = circleCenterY - levelHeight / 2;
+            guiGraphics.drawString(this.font, levelText, textDrawX, textDrawY, 0xFFFFFFFF);
+
+            // 昵称坐标
+            int nickDrawX = circleCenterX + this.font.width(nickName) / 2 + margin / 2;
+            int nickDrawY = circleCenterY - margin / 3;
+            guiGraphics.drawString(this.font, nickName, nickDrawX, nickDrawY, 0xAAAAAA);
+
             guiGraphics.pose().popPose();
+
+            //————————————————————————————————————————————————————————————
+            circleRadius = Math.max(this.font.width(levelText), this.font.lineHeight) / 2 + 3;
+            // 左对齐基准点：等级圆形图标的左侧（circleCenterX），确保所有文本左对齐
+            int alignBaseX = circleCenterX - circleRadius;
+            // 垂直起始点：等级圆形图标正下方（circleCenterY + 圆形半径 + 10px间距）
+            int baseY = circleCenterY + circleRadius + 10;
+
+            //档案标题
+            String archiveTitle = "您的梦鱼游戏档案：";
+            guiGraphics.drawString(this.font, archiveTitle, alignBaseX, baseY + 10, 0xFFFFD700); // 淡金色
+
+            int lineStartY = baseY + 30;
+            int lineHalfWidth = 80;
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX, lineStartY,
+                    alignBaseX + lineHalfWidth, lineStartY + 1,
+                    0x80FFFFFF); // 半透明白色细横线
+
+            //Rank：左对齐，浅灰色
+            String rankText = "RANK:" + PlayerRankManager.getPlayerRankClient(player).getRankName();
+            guiGraphics.drawString(this.font, rankText, alignBaseX, baseY + 40, 0xFFCCCCCC); // 浅灰色
+
+            //称号：左对齐
+            String titleText = "称号:" + PlayerTitleManager.getPlayerTitleClient(player).getTitleName();
+            guiGraphics.drawString(this.font, titleText, alignBaseX, baseY + 55, 0xFF87CEFA); // 淡蓝色
+            //————————————————————————————————————————————————————————————————
         }
-        // 提示文字
-        guiGraphics.drawString(this.font, "您的梦鱼游戏档案：",
-                textX, textY + 20, 0xAAAAAA);
-        guiGraphics.drawString(this.font, "游戏等级" + "Lv" + PlayerLevelManager.getPlayerLevelClient(player),
-                textX, textY + 40, 0xAAAAAA);
-        guiGraphics.drawString(this.font, "RANK:" + PlayerRankManager.getPlayerRankClient(player).getRankName(),
-                textX, textY + 60, 0xAAAAAA);
-        guiGraphics.drawString(this.font, "称号:" + PlayerTitleManager.getPlayerTitleClient(player).getTitleName(),
-                textX, textY + 80, 0xAAAAAA);
-        guiGraphics.drawString(this.font, "更多功能开发中......UI会持续优化",
-                textX, textY + 100, 0xAAAAAA);
+
+        //绘制横向属性进度条
+        if (player != null) {
+            // 进度条起始位置
+            int barStartY = uiY + screenUIHeight - BAR_HEIGHT * 5 - BAR_BAR_SPACING * 2;
+            int categoryTextX = uiX + margin;
+            int barX = categoryTextX + this.font.width("勇气值") + BAR_TO_TEXT_SPACING; // 基于最长类别文本宽度
+
+            // 获取玩家属性值
+            float currentHealth = player.getHealth();
+            float maxHealth = player.getMaxHealth();
+            int currentFood = player.getFoodData().getFoodLevel();
+            int maxFood = 20;
+            int currentStrength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
+            int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
+            if (maxStrength <= 0) maxStrength = 100;
+            float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
+            float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+            if (maxCourage <= 0) maxCourage = 100;
+
+            // 绘制血量进度条
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY, currentHealth, maxHealth, TASK_HEALTH_COLOR, "血量");
+            // 绘制饥饿值进度条
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING, currentFood, maxFood, TASK_FOOD_COLOR, "饥饿值");
+            // 绘制体力值进度条
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 2, currentStrength, maxStrength, TASK_STRENGTH_COLOR, "体力值");
+            // 绘制勇气值进度条
+            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 3, currentCourage, maxCourage, TASK_COURAGE_COLOR, "勇气值");
+        }
+
+        //排行榜
+        drawFullRanking(guiGraphics);
     }
 
     //——————————————————————————————————————————————————————————————————————————————————————————————
@@ -449,7 +586,7 @@ public class TaskUI_Screen extends Screen {
         if (serverTasks.isEmpty()) {
             guiGraphics.drawString(this.font, "懒狗腐竹还没有编写任务", listX, listContentY, 0xAAAAAA);
         } else {
-            // 按任务ID排序（简单处理）
+            // 按任务ID排序
             List<Integer> taskIds = new ArrayList<>(serverTasks.keySet());
             Collections.sort(taskIds);
 
@@ -534,6 +671,256 @@ public class TaskUI_Screen extends Screen {
         }
     }
     //——————————————————————————————————————————————————————————————————————————————————————————————
+
+    private void drawRankingTitle(GuiGraphics guiGraphics, int x, int y) {
+        // 绘制背景
+        guiGraphics.fill(RenderType.gui(), x, y, x + RANKING_WIDTH, y + RANKING_TITLE_HEIGHT, RANKING_BG_COLOR);
+        // 绘制边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + RANKING_WIDTH, y + 1, RANKING_BORDER_COLOR); // 上边框
+        guiGraphics.fill(RenderType.gui(), x, y + RANKING_TITLE_HEIGHT - 1, x + RANKING_WIDTH, y + RANKING_TITLE_HEIGHT, RANKING_BORDER_COLOR); // 下边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + RANKING_TITLE_HEIGHT, RANKING_BORDER_COLOR); // 左边框
+        guiGraphics.fill(RenderType.gui(), x + RANKING_WIDTH - 1, y, x + RANKING_WIDTH, y + RANKING_TITLE_HEIGHT, RANKING_BORDER_COLOR); // 右边框
+        // 绘制标题文字
+        String title = "全服等级排行榜";
+        int titleX = x + (RANKING_WIDTH - this.font.width(title)) / 2;
+        int titleY = y + (RANKING_TITLE_HEIGHT - this.font.lineHeight) / 2;
+        guiGraphics.drawString(this.font, title, titleX, titleY, RANKING_TITLE_COLOR);
+    }
+
+    // 绘制排行榜列表内容
+    private void drawRankingList(GuiGraphics guiGraphics, int x, int y) {
+        // 空数据提示
+        if (ALL_PLAYER_RANK_LEVEL_CACHE.isEmpty()) {
+            String emptyText = "加载全服数据中...";
+            int emptyX = x + (RANKING_WIDTH - this.font.width(emptyText)) / 2;
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(0.9f, 0.9f, 1.0f);
+            guiGraphics.drawString(this.font, emptyText, (int)(emptyX/0.9f), (int)((y + 10)/0.9f), 0xAAAAAA);
+            guiGraphics.pose().popPose();
+            return;
+        }
+
+        //按等级降序排序
+        List<Map.Entry<UUID, PlayerRankLevelData>> sortedPlayers = new ArrayList<>(ALL_PLAYER_RANK_LEVEL_CACHE.entrySet());
+        sortedPlayers.sort((e1, e2) -> {
+            int levelCompare = Integer.compare(e2.getValue().getLevel(), e1.getValue().getLevel());
+            return levelCompare != 0 ? levelCompare :
+                    e1.getValue().getPlayerName().length() - e2.getValue().getPlayerName().length();
+        });
+
+        // 渲染前20名
+        int listY = y;
+        int displayCount = Math.min(RANKING_MAX_DISPLAY, sortedPlayers.size());
+
+        // 表头（
+        String header = "排名 | 玩家| 总游玩时长 | 等级";
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(0.95f, 0.95f, 1.0f);
+        guiGraphics.drawString(this.font, header, (int) ((int)(x + 2)/0.9f), (int) ((int)listY/0.9f), RANKING_TITLE_COLOR);
+        guiGraphics.pose().popPose();
+        listY += RANKING_LINE_HEIGHT + 1;
+
+        for (int i = 0; i < displayCount; i++) {
+            Map.Entry<UUID, PlayerRankLevelData> entry = sortedPlayers.get(i);
+            PlayerRankLevelData data = entry.getValue();
+            UUID playerUUID = entry.getKey();
+            int currentY = listY + i * RANKING_LINE_HEIGHT;
+
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().scale(0.95f, 0.95f, 1.0f);
+            float scale = 0.95f;
+            int scaledX = (int)(x / scale);
+            int scaledY = (int)(currentY / scale);
+
+            // 排名
+            String rankText = String.format("%d.", i + 1);
+            int rankColor = i < 3 ? RANKING_TOP3_COLOR : RANKING_RANK_COLOR;
+            guiGraphics.drawString(this.font, rankText, scaledX + 1, scaledY, rankColor);
+
+            // 玩家名
+            String titlePrefix = "[" + data.getTitleName() + "]";
+            String fullPlayerText = titlePrefix + data.getPlayerName();
+//            if (this.font.width(fullPlayerText) > 150) {
+//                fullPlayerText = this.font.plainSubstrByWidth(fullPlayerText, 65) + "...";
+//            }
+            int nameColor = ONLINE_PLAYER_UUIDS.contains(playerUUID) ? RANKING_ONLINE_COLOR : RANKING_OFFLINE_COLOR;
+            guiGraphics.drawString(this.font, fullPlayerText, scaledX + 12, scaledY, nameColor);
+
+            //等级
+            String levelText = "Lv." + data.getLevel();
+            int levelX = scaledX + (int)(RANKING_WIDTH/scale) - this.font.width(levelText) - 2;
+            // 总游玩时长：等级左侧
+            String totalPlayTime = data.getOnlineTime();
+//            if (this.font.width(totalPlayTime) > 30) {
+//                totalPlayTime = this.font.plainSubstrByWidth(totalPlayTime, 25) + "...";
+//            }
+            // 时长坐标
+            int timeX = levelX - this.font.width(totalPlayTime) - 5;
+            guiGraphics.drawString(this.font, totalPlayTime, timeX, scaledY, 0xAAAAAA);
+
+            // 绘制等级
+            guiGraphics.drawString(this.font, levelText, levelX, scaledY, RANKING_LEVEL_COLOR);
+
+            guiGraphics.pose().popPose();
+        }
+    }
+
+    // 绘制完整的排行榜
+    private void drawFullRanking(GuiGraphics guiGraphics) {
+        // 排行榜位置：UI区域右侧，属性进度条旁边
+        int rankingX = uiX + screenUIWidth - RANKING_WIDTH - 10; // 右内边距20
+        int rankingY = uiY + 10; // 上内边距20
+
+        // 绘制排行榜背景和边框
+        guiGraphics.fill(RenderType.gui(), rankingX, rankingY, rankingX + RANKING_WIDTH, rankingY + RANKING_HEIGHT, RANKING_BG_COLOR);
+        // 外边框
+        guiGraphics.fill(RenderType.gui(), rankingX, rankingY, rankingX + RANKING_WIDTH, rankingY + 1, RANKING_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), rankingX, rankingY + RANKING_HEIGHT - 1, rankingX + RANKING_WIDTH, rankingY + RANKING_HEIGHT, RANKING_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), rankingX, rankingY, rankingX + 1, rankingY + RANKING_HEIGHT, RANKING_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), rankingX + RANKING_WIDTH - 1, rankingY, rankingX + RANKING_WIDTH, rankingY + RANKING_HEIGHT, RANKING_BORDER_COLOR);
+
+        // 绘制标题栏
+        drawRankingTitle(guiGraphics, rankingX, rankingY);
+        // 绘制列表
+        drawRankingList(guiGraphics, rankingX, rankingY + RANKING_TITLE_HEIGHT + 5);
+    }
+
+    //画圆
+    private void drawCircleBorder(GuiGraphics guiGraphics, int centerX, int centerY, int radius, int color) {
+        int segments = 128;
+        float step = (float) (2 * Math.PI / segments);
+        float angle = 0;
+
+        int lastX = centerX + (int) (radius * Math.cos(angle));
+        int lastY = centerY + (int) (radius * Math.sin(angle));
+        angle += step;
+
+        // 逐段绘制线段
+        for (int i = 1; i <= segments; i++) {
+            int x = centerX + (int) (Math.round(radius * Math.cos(angle))); // 四舍五入
+            int y = centerY + (int) (Math.round(radius * Math.sin(angle)));
+
+            // 用hLine/vLine补全，确保无断点
+            guiGraphics.hLine(lastX, x, lastY, color);
+            guiGraphics.vLine(x, lastY, y, color);
+
+            lastX = x;
+            lastY = y;
+            angle += step;
+        }
+        // 闭合最后一段，避免圆有缺口
+        int firstX = centerX + (int) (radius * Math.cos(0));
+        int firstY = centerY + (int) (radius * Math.sin(0));
+        guiGraphics.hLine(lastX, firstX, lastY, color);
+        guiGraphics.vLine(firstX, lastY, firstY, color);
+    }
+
+    // 横向进度条绘制（int版本）
+    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, int currentValue, int maxValue, int normalColor, String category) {
+        // 绘制左侧类别文本
+        guiGraphics.drawString(this.font, category, x - this.font.width(category) - BAR_TO_TEXT_SPACING, y + (BAR_HEIGHT - this.font.lineHeight) / 2, TASK_TEXT_COLOR);
+
+        // 绘制进度条背景
+        guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, TASK_BG_COLOR);
+        // 计算进度（横向从左到右填充）
+        float progress = Math.max(0, Math.min(1, (float) currentValue / maxValue));
+        int fillWidth = (int) (BAR_WIDTH * progress);
+        // 绘制进度（低进度变红）
+        if (fillWidth > 0) {
+            int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
+            guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
+        }
+        // 绘制边框
+        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制右侧数值文本
+        drawTaskProgressValueText(guiGraphics, x, y, String.format("%d/%d", currentValue, maxValue));
+    }
+
+    // 横向进度条绘制（float版本） ==========
+    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor, String category) {
+        // 绘制左侧类别文本
+        guiGraphics.drawString(this.font, category, x - this.font.width(category) - BAR_TO_TEXT_SPACING, y + (BAR_HEIGHT - this.font.lineHeight) / 2, TASK_TEXT_COLOR);
+
+        // 绘制进度条背景
+        guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, TASK_BG_COLOR);
+        // 计算进度（横向从左到右填充）
+        float progress = Math.max(0, Math.min(1, currentValue / maxValue));
+        int fillWidth = (int) (BAR_WIDTH * progress);
+        // 绘制进度（低进度变红）
+        if (fillWidth > 0) {
+            int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
+            guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
+        }
+        // 绘制边框
+        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制右侧数值文本
+        drawTaskProgressValueText(guiGraphics, x, y, String.format("%.1f/%.1f", currentValue, maxValue));
+    }
+
+    // 绘制进度条边框
+    private void drawTaskBorder(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        // 上边框
+        guiGraphics.fill(x, y, x + width, y + 1, TASK_BORDER_COLOR);
+        // 下边框
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, TASK_BORDER_COLOR);
+        // 左边框
+        guiGraphics.fill(x, y, x + 1, y + height, TASK_BORDER_COLOR);
+        // 右边框
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, TASK_BORDER_COLOR);
+    }
+
+    //绘制进度条数值文本（右侧显示）
+//    private void drawTaskProgressValueText(GuiGraphics guiGraphics, int barX, int barY, String valueText) {
+//        Minecraft mc = Minecraft.getInstance();
+//        // 文本位置：进度条右侧 + 间距，纵向居中
+//        int textX = barX + BAR_WIDTH + TASK_VALUE_OFFSET_X;
+//        int textY = barY + (BAR_HEIGHT - mc.font.lineHeight) / 2;
+//
+//        // 绘制文本（无缩放，无阴影）
+//        guiGraphics.drawString(
+//                mc.font,
+//                valueText,
+//                textX,
+//                textY,
+//                TASK_TEXT_COLOR,
+//                false
+//        );
+//    }
+    //进度条上方
+    private void drawTaskProgressValueText(GuiGraphics guiGraphics, int barX, int barY, String valueText) {
+        Minecraft mc = Minecraft.getInstance();
+        // 文本缩放比例（0.8f 表示80%大小，可按需调整为0.7f/0.9f等）
+        float textScale = 0.8f;
+
+        //计算原始文本位置
+        int originalTextX = barX + BAR_WIDTH / 2 - mc.font.width(valueText)/2; // 水平居中
+        int originalTextY = barY - mc.font.lineHeight; // 进度条上方
+
+        //开始缩放文本
+        guiGraphics.pose().pushPose();
+        // 缩放中心点设为文本中心，避免缩放后位置偏移
+        guiGraphics.pose().translate(originalTextX + mc.font.width(valueText)/2 * textScale,
+                originalTextY + mc.font.lineHeight/2 * textScale,
+                0);
+        guiGraphics.pose().scale(textScale, textScale, 1.0f); // X/Y轴缩放，Z轴不变
+        // 缩放后回移，保持原始位置
+        guiGraphics.pose().translate(-(originalTextX + mc.font.width(valueText)/2 * textScale),
+                -(originalTextY + mc.font.lineHeight/2 * textScale),
+                0);
+
+        //绘制小号文本
+        guiGraphics.drawString(
+                mc.font,
+                valueText,
+                originalTextX,
+                originalTextY,
+                TASK_TEXT_COLOR,
+                false
+        );
+
+        //结束缩放
+        guiGraphics.pose().popPose();
+    }
 
     private String formatTime(long timestamp) {
         try {
@@ -639,5 +1026,45 @@ public class TaskUI_Screen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false; // 打开界面时不暂停游戏
+    }
+
+    //————————————————————————————————————————————排行榜
+    @OnlyIn(Dist.CLIENT)
+    private static class PlayerRankLevelData {
+        private final int level;
+        private final String playerName;
+        private final String rankName;    // 新增：Rank名称
+        private final String titleName;   // 新增：头衔/称号
+        private final String onlineTime;  // 新增：在线时间（易读格式）
+
+        public PlayerRankLevelData(int level, String playerName, String rankName, String titleName, String onlineTime) {
+            this.level = level;
+            this.playerName = playerName == null ? "未知玩家" : playerName;
+            this.rankName = rankName == null ? "无Rank" : rankName;
+            this.titleName = titleName == null ? "无头衔" : titleName;
+            this.onlineTime = onlineTime == null ? "未知" : onlineTime;
+        }
+
+        // 补充getter方法
+        public int getLevel() { return level; }
+        public String getPlayerName() { return playerName; }
+        public String getRankName() { return rankName; }
+        public String getTitleName() { return titleName; }
+        public String getOnlineTime() { return onlineTime; }
+    }
+
+    // 客户端缓存更新方法（供Packet_SyncPlayerData调用）
+    @OnlyIn(Dist.CLIENT)
+    public static void updatePlayerRankLevelCache(UUID playerUUID, String playerName, int level, String rankName, String titleName, String onlineTime) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.level == null) return;
+        // 更新缓存
+        ALL_PLAYER_RANK_LEVEL_CACHE.put(playerUUID, new PlayerRankLevelData(level, playerName, rankName, titleName, onlineTime));
+    }
+
+    // 清空全服缓存（用于重新请求数据）
+    @OnlyIn(Dist.CLIENT)
+    public static void clearAllPlayerCache() {
+        ALL_PLAYER_RANK_LEVEL_CACHE.clear();
     }
 }

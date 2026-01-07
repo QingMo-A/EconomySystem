@@ -188,8 +188,8 @@ public class CustomStatueGUI {
         drawVerticalProgressBar(guiGraphics, strengthBarX, strengthBarY, currentStrength, maxStrength, STRENGTH_BAR_COLOR);
 
         // 绘制勇气值竖向进度条
-        int currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
-        int maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+        float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
+        float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
         if (maxCourage <= 0) maxCourage = 100; // 避免除以0异常
         // 绘制勇气值进度条（最左侧，样式与其他进度条统一）
         drawVerticalProgressBar(guiGraphics, courageBarX, courageBarY, currentCourage, maxCourage, COURAGE_BAR_COLOR);
@@ -204,6 +204,24 @@ public class CustomStatueGUI {
 
         //计算进度并绘制填充（低进度红色警告色）
         float progress = Math.max(0, Math.min(1, (float) currentValue / maxValue));
+        int fillHeight = (int) (BAR_HEIGHT * progress);
+        int fillStartY = y + BAR_HEIGHT - fillHeight; // 从下往上填充
+
+        if (fillHeight > 0) {
+            int finalColor = progress < 0.2f ? LOW_COLOR : normalColor;
+            guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
+        }
+
+        // 绘制淡色边框
+        drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+    }
+    //重载 float
+    private static void drawVerticalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor) {
+        //绘制背景
+        guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, BG_COLOR);
+
+        //计算进度并绘制填充（低进度红色警告色）
+        float progress = Math.max(0, Math.min(1, currentValue / maxValue)); // 直接用float计算，无强转
         int fillHeight = (int) (BAR_HEIGHT * progress);
         int fillStartY = y + BAR_HEIGHT - fillHeight; // 从下往上填充
 

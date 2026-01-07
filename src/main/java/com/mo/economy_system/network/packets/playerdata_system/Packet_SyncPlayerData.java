@@ -2,6 +2,7 @@ package com.mo.economy_system.network.packets.playerdata_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.task_system.taskui.TaskUI_Screen;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
@@ -21,41 +22,70 @@ import java.util.function.Supplier;
 
 public class Packet_SyncPlayerData {
     private final UUID playerUUID;
+    private final String playerName;
+    private final boolean isOnline;
     private final String rankName;
     private final String titleName;
     private final int level;
+    private final String onlineTime;
 
-    // 服务端专用构造器
+    // 服务端专用构造器（在线玩家）
     public Packet_SyncPlayerData(ServerPlayer serverPlayer) {
         this.playerUUID = serverPlayer.getUUID();
+        this.playerName = serverPlayer.getScoreboardName();
+        this.isOnline = true;
         this.rankName = PlayerRankManager.getPlayerRankServer(serverPlayer).getRankName();
         this.titleName = PlayerTitleManager.getPlayerTitleServer(serverPlayer).getTitleName();
         this.level = PlayerLevelManager.getPlayerLevelServer(serverPlayer);
+        this.onlineTime = getPlayerOnlineTime(serverPlayer);
     }
 
-    // 解码专用构造器
-    public Packet_SyncPlayerData(UUID playerUUID, String rankName, String titleName, int level) {
+    // 离线玩家构造器
+    public Packet_SyncPlayerData(UUID playerUUID, String playerName, String rankName, String titleName, int level, String onlineTime) {
         this.playerUUID = playerUUID;
+        this.playerName = playerName;
+        this.isOnline = false;
         this.rankName = rankName;
         this.titleName = titleName;
         this.level = level;
+        this.onlineTime = onlineTime;
+    }
+
+    //服务端获取玩家在线时间
+    private static String getPlayerOnlineTime(ServerPlayer player) {
+        //本次在线时长（毫秒转XX小时XX分）
+        long loginTime = com.mo.economy_system.server.playerdata.PlayerDataManager.getPlayerData(player.getUUID()).getLastLoginTime();
+        long onlineMs = System.currentTimeMillis() - loginTime;
+        long hours = onlineMs / 3600000;
+        long minutes = (onlineMs % 3600000) / 60000;
+        return hours + "小时" + minutes + "分";
+
+        // 方式2：最后在线时间（离线玩家用）
+        // long lastOnlineMs = player.getLastSeen();
+        // return LocalDateTime.ofInstant(Instant.ofEpochMilli(lastOnlineMs), ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
     }
 
     // 编码
     public static void encode(Packet_SyncPlayerData packet, FriendlyByteBuf buf) {
         buf.writeUUID(packet.playerUUID);
+        buf.writeUtf(packet.playerName);
+        buf.writeBoolean(packet.isOnline);
         buf.writeUtf(packet.rankName);
         buf.writeUtf(packet.titleName);
         buf.writeInt(packet.level);
+        buf.writeUtf(packet.onlineTime);
     }
 
     // 解码
     public static Packet_SyncPlayerData decode(FriendlyByteBuf buf) {
         UUID uuid = buf.readUUID();
+        String playerName = buf.readUtf();
+        boolean isOnline = buf.readBoolean();
         String rankName = buf.readUtf();
         String titleName = buf.readUtf();
         int level = buf.readInt();
-        return new Packet_SyncPlayerData(uuid, rankName, titleName, level);
+        String onlineTime = buf.readUtf();
+        return new Packet_SyncPlayerData(uuid, playerName, rankName, titleName, level, onlineTime);
     }
 
     //处理逻辑，无客户端类引用
@@ -66,44 +96,53 @@ public class Packet_SyncPlayerData {
 
         // 传递不可变参数，避免lambda捕获导致的类引用
         final UUID safeUUID = packet.playerUUID;
+        final String safePlayerName = packet.playerName;
+        final boolean safeIsOnline = packet.isOnline;
         final String safeRank = packet.rankName;
         final String safeTitle = packet.titleName;
         final int safeLevel = packet.level;
+        final String safeOnlineTime = packet.onlineTime;
 
         // 主线程执行（仅分发，无客户端逻辑）
-        context.enqueueWork(() -> processOnMainThread(safeUUID, safeRank, safeTitle, safeLevel));
+        context.enqueueWork(() -> processOnMainThread(safeUUID, safePlayerName, safeIsOnline, safeRank, safeTitle, safeLevel,  safeOnlineTime));
     }
 
     //分发方法，无客户端类引用
-    private static void processOnMainThread(UUID playerUUID, String rankName, String titleName, int level) {
+    private static void processOnMainThread(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
         //用SafeRunnable隔离客户端逻辑，服务器端仅加载接口，不加载实现
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientSyncRunnable(playerUUID, rankName, titleName, level));
+        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientSyncRunnable(playerUUID, playerName, isOnline, rankName, titleName, level, onlineTime));
     }
 
     //纯客户端逻辑（@OnlyIn标记，服务器完全不加载）=
     @OnlyIn(Dist.CLIENT)
     private static class ClientSyncRunnable implements DistExecutor.SafeRunnable {
         private final UUID playerUUID;
+        private final String playerName;
+        private final boolean isOnline;
         private final String rankName;
         private final String titleName;
         private final int level;
+        private final String onlineTime;
 
-        public ClientSyncRunnable(UUID playerUUID, String rankName, String titleName, int level) {
+        public ClientSyncRunnable(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
             this.playerUUID = playerUUID;
+            this.playerName = playerName;
+            this.isOnline = isOnline;
             this.rankName = rankName;
             this.titleName = titleName;
             this.level = level;
+            this.onlineTime = onlineTime;
         }
 
         @Override
         public void run() {
-            syncPlayerDataOnClient(playerUUID, rankName, titleName, level);
+            syncPlayerDataOnClient(playerUUID, playerName, isOnline, rankName, titleName, level, onlineTime);
         }
     }
 
     // 客户端方法
     @OnlyIn(Dist.CLIENT)
-    private static void syncPlayerDataOnClient(UUID playerUUID, String rankName, String titleName, int level) {
+    private static void syncPlayerDataOnClient(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (mc == null || mc.player == null) {
@@ -111,9 +150,16 @@ public class Packet_SyncPlayerData {
                 return;
             }
 
+            if (isOnline) {
+                TaskUI_Screen.ONLINE_PLAYER_UUIDS.add(playerUUID);
+            } else {
+                TaskUI_Screen.ONLINE_PLAYER_UUIDS.remove(playerUUID);
+            }
+
             Player targetPlayer = mc.level.getPlayerByUUID(playerUUID);
             if (targetPlayer == null) {
                 EconomySystem.LOGGER.warn("客户端同步数据失败：未找到UUID为{}的玩家", playerUUID);
+                TaskUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
                 return;
             }
 
@@ -124,6 +170,9 @@ public class Packet_SyncPlayerData {
             PlayerRankManager.setPlayerRankClient(targetPlayer, rank);
             PlayerTitleManager.setPlayerTitleClient(targetPlayer, title);
             PlayerLevelManager.setPlayerLevelClient(targetPlayer, level);
+
+            //排行榜
+            TaskUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
 
             EconomySystem.LOGGER.info("客户端同步数据成功：Rank={}, Title={}, Level={}",
                     rank.getRankName(), title.getTitleName(), level);
