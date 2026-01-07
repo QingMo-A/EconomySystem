@@ -112,7 +112,7 @@ public class HiveZombieEntity extends Monster {
     // 创建属性构建器
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 20.0D)  // 生命值
+                .add(Attributes.MAX_HEALTH, 60.0D)  // 生命值
                 .add(Attributes.MOVEMENT_SPEED, 0.23F)  // 移动速度
                 .add(Attributes.ATTACK_DAMAGE, 3.0D)  // 攻击伤害
                 .add(Attributes.ARMOR, 2.0D)  // 护甲

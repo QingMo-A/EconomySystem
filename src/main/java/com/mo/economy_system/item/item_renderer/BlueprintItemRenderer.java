@@ -1,7 +1,8 @@
 package com.mo.economy_system.item.item_renderer;
 
-import com.mo.economy_system.item.items.BlueprintItem;
+import com.mo.economy_system.item.items.Item_Blueprint;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -14,69 +15,56 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.registries.ForgeRegistries;
 
-@OnlyIn(Dist.CLIENT)
 public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
-
-    private final ItemRenderer itemRenderer;
 
     public BlueprintItemRenderer() {
         super(
                 Minecraft.getInstance().getBlockEntityRenderDispatcher(),
                 Minecraft.getInstance().getEntityModels()
         );
-        this.itemRenderer = Minecraft.getInstance().getItemRenderer();
     }
 
     @Override
     public void renderByItem(
             ItemStack stack,
-            ItemDisplayContext context,
+            ItemDisplayContext transformType,
             PoseStack poseStack,
             MultiBufferSource buffer,
-            int light,
-            int overlay
+            int packedLight,
+            int packedOverlay
     ) {
-        // ① 渲染蓝图本体（模型 + layer0）
-        itemRenderer.renderStatic(
+        String itemId = Item_Blueprint.getUnlockedItemId(stack);
+
+        if (itemId != null && !itemId.isEmpty()) {
+            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+            if (item != null) {
+                ItemStack targetStack = new ItemStack(item);
+
+                Minecraft.getInstance().getItemRenderer().renderStatic(
+                        targetStack,
+                        transformType,
+                        packedLight,
+                        packedOverlay,
+                        poseStack,
+                        buffer,
+                        Minecraft.getInstance().level,
+                        0
+                );
+                return;
+            }
+        }
+
+        // 没 NBT 或异常 → 渲染默认蓝图
+        Minecraft.getInstance().getItemRenderer().renderStatic(
                 stack,
-                context,
-                light,
-                overlay,
+                transformType,
+                packedLight,
+                packedOverlay,
                 poseStack,
                 buffer,
                 Minecraft.getInstance().level,
                 0
         );
-
-        // ② 读取 NBT
-        String itemId = BlueprintItem.getUnlockedItemId(stack);
-        if (itemId == null || itemId.isEmpty()) return;
-
-        Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
-        if (item == null) return;
-
-        ItemStack overlayStack = new ItemStack(item);
-
-        // ③ 叠加渲染
-        poseStack.pushPose();
-
-        // ⭐ 关键：Z 轴前移，否则一定被遮挡
-        poseStack.translate(0.0F, 0.0F, 0.01F);
-
-        // 缩放到蓝图中间
-        poseStack.scale(0.5F, 0.5F, 0.5F);
-
-        itemRenderer.renderStatic(
-                overlayStack,
-                ItemDisplayContext.GUI,
-                light,
-                overlay,
-                poseStack,
-                buffer,
-                Minecraft.getInstance().level,
-                1
-        );
-
-        poseStack.popPose();
     }
 }
+

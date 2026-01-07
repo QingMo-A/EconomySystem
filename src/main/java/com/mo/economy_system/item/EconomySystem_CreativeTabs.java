@@ -2,21 +2,13 @@ package com.mo.economy_system.item;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
-import com.mo.economy_system.item.items.BlueprintItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
 
 public class EconomySystem_CreativeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =
@@ -34,6 +26,8 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.DREAMINGFISH.get());
                         output.accept(EconomySystem_Items.HIVE_ZOMBIE_SPAWN_EGG.get());
                         output.accept(EconomySystem_Items.EASY_AID_KIT.get());
+                        output.accept(EconomySystem_Items.ADVANCED_AID_KIT.get());
+                        output.accept(EconomySystem_Items.PROFESSIONAL_AID_KIT.get());
                     })
                     .build()
     );

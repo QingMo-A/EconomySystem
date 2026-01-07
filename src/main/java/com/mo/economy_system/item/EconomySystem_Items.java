@@ -82,7 +82,7 @@ public class EconomySystem_Items {
 
     // 自定义蓝图物品（可选，如果不想用地图）
     public static final RegistryObject<Item> BLUEPRINT_ITEM = ITEMS.register("blueprint",
-            () -> new BlueprintItem(new Item.Properties()
+            () -> new Item_Blueprint(new Item.Properties()
                     .stacksTo(1)  // 蓝图只能堆叠1个
                     .fireResistant()  // 防火（重要物品）
             ));
@@ -94,8 +94,40 @@ public class EconomySystem_Items {
             ));
 
     //药品注册————————————————————————————————————————————————————————————————————————
+    // 简易急救包（初级）
     public static final RegistryObject<Item> EASY_AID_KIT = ITEMS.register("easy_aid_kit",
-            () -> new Easy_Aid_Kit() // 实例化简易急救包
+            () -> new Item_AidKit(
+                    20,      // healInterval: 20刻 = 1秒
+                    1.0,     // perHealAmount: 每次治疗1点生命值
+                    20,      // durabilityConsumeInterval: 每20刻消耗1耐久
+                    1000,    // cooldown: 1000刻 = 50秒冷却
+                    100,     // startDelay: 100刻 = 5秒启动延迟
+                    "简易急救包" // displayName: 显示名称
+            )
+    );
+
+    // 高级急救包（中级）
+    public static final RegistryObject<Item> ADVANCED_AID_KIT = ITEMS.register("advanced_aid_kit",
+            () -> new Item_AidKit(
+                    15,      // 更短的治疗间隔
+                    2.0,     // 每次治疗2点生命值
+                    30,      // 更耐用的耐久消耗间隔
+                    800,     // 更短的冷却时间
+                    80,      // 更短的启动延迟
+                    "高级急救包"
+            )
+    );
+
+    // 专业急救包（高级）
+    public static final RegistryObject<Item> PROFESSIONAL_AID_KIT = ITEMS.register("professional_aid_kit",
+            () -> new Item_AidKit(
+                    10,      // 非常短的治疗间隔
+                    3.0,     // 每次治疗3点生命值
+                    40,      // 非常耐用的耐久消耗间隔
+                    600,     // 很短的冷却时间
+                    60,      // 很短的启动延迟
+                    "专业急救包"
+            )
     );
 
 

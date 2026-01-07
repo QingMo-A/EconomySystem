@@ -1,15 +1,13 @@
 package com.mo.economy_system.core.blueprint_system;
 
-import com.mo.economy_system.item.items.BlueprintItem;
+import com.mo.economy_system.item.items.Item_Blueprint;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
@@ -280,7 +278,7 @@ public class PlayerBlueprintData {
         }
 
         for (String itemId : itemsRequiringBlueprint) {
-            itemStackList.add(BlueprintItem.createBlueprint(itemId));
+            itemStackList.add(Item_Blueprint.createBlueprint(itemId));
         }
     }
 
