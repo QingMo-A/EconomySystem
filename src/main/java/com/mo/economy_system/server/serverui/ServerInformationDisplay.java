@@ -203,14 +203,18 @@ public class ServerInformationDisplay {
         long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(mc.player);
         String expNeededText = "§7还需: §f" + nextLevelExp + " §7经验";
 
-        // 计算rank+称号行的完整宽度（包含emoji、分隔符和颜色代码）
+        // 计算rank+称号行的完整宽度（分段计算每段宽度并相加）
         Title titleObj = TitleRegistry.getTitleByName(titleName);
         int titleColor = titleObj != null ? titleObj.getColor() : 0xFFAAAAAA;
-        String titleColorCode = rgbToColorCode(titleColor);
-        String rankTitleFullText = "§7🎖️ §r" + rankId + " §r§7 | §r" + titleColorCode + titleName;
+
+        // 分段计算rank+称号行的宽度，与实际渲染逻辑完全一致
+        int prefixWidth = font.width(Component.literal("§7🎖️ "));
+        int rankWidth = font.width(Component.literal(rankId));
+        int separatorWidth = font.width(Component.literal(" §r§7 | §r🏅 "));
+        int titleWidth = font.width(titleName);
+        int rankTitleWidth = prefixWidth + rankWidth + separatorWidth + titleWidth;
 
         int nameWidth = font.width(nameText);
-        int rankTitleWidth = font.width(rankTitleFullText);  // 使用完整文本计算宽度
         int levelTextWidth = font.width(levelText);
         int expNeededWidth = font.width(expNeededText);
 
@@ -252,11 +256,9 @@ public class ServerInformationDisplay {
         guiGraphics.drawString(font, Component.literal("§7🎖️ "), currentX, line2Y, 0xFFAAAAAA);
         currentX += font.width("§7🎖️ ");
 
-        // 渲染 rank
+        // 渲染 rank（复用上面计算的宽度）
         int rankColor = getRankColorByName(rankId);
-        String rankDisplay = rankId;
-        int rankWidth = font.width(Component.literal(rankDisplay));
-        guiGraphics.drawString(font, Component.literal(rankDisplay), currentX, line2Y, rankColor);
+        guiGraphics.drawString(font, Component.literal(rankId), currentX, line2Y, rankColor);
         currentX += rankWidth;
 
         // 渲染 " §r§7 | §r🏅 "
@@ -267,10 +269,10 @@ public class ServerInformationDisplay {
         // 渲染称号（使用前面获取的颜色）
         guiGraphics.drawString(font, Component.literal(titleName), currentX, line2Y, titleColor);
 
-        // 第三行：进度条
+        // 第三行：进度条（使用框的完整宽度，确保进度条顶到右边并完整显示称号）
         int progressBarY = line2Y + lineHeight + spacing;
         int progressBarX = boxX + padding;
-        int progressBarWidth = bottomLineWidth;
+        int progressBarWidth = boxWidth - padding * 2;  // 使用框的内部宽度
 
         // 进度条背景
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
@@ -295,12 +297,13 @@ public class ServerInformationDisplay {
         guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 1, progressBarY,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
 
-        // 第四行：等级 + 经验信息
+        // 第四行：等级 + 经验信息（左对齐等级，右对齐经验文本）
         int belowProgressBarY = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
         int levelX = boxX + padding;
         guiGraphics.drawString(font, Component.literal(levelText), levelX, belowProgressBarY, 0xFFFFFF);
 
-        int expNeededX = boxX + padding + levelTextWidth + spacing;
+        // 经验文本右对齐到进度条右边缘
+        int expNeededX = boxX + padding + progressBarWidth - expNeededWidth;
         guiGraphics.drawString(font, Component.literal(expNeededText), expNeededX, belowProgressBarY, 0xFFFFFF);
     }
 
