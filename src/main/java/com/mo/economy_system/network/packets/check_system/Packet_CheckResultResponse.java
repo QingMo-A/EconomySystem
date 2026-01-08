@@ -85,6 +85,56 @@ public class Packet_CheckResultResponse {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                /*File gameDir = mc.gameDirectory;
+                File destFile = new File(gameDir, msg.playerName + "_check_result.json");
+
+                try (FileWriter writer = new FileWriter(destFile, StandardCharsets.UTF_8)) {
+                    writer.write(msg.result);
+
+                    if (localPlayer != null) {
+                        // 创建消息组件
+                        Component filePathMessage = Component.literal("已保存 " + msg.playerName + " 的检查结果到: ");
+
+                        // 创建可点击的文件路径组件
+                        Component clickableFilePath = Component.literal(destFile.getAbsolutePath())
+                                .withStyle(Style.EMPTY
+                                        .withColor(0x55FF55) // 绿色
+                                        .withUnderlined(true)
+                                        .withHoverEvent(new HoverEvent(
+                                                HoverEvent.Action.SHOW_TEXT,
+                                                Component.literal("点击打开文件")
+                                        ))
+                                        .withClickEvent(new ClickEvent(
+                                                ClickEvent.Action.RUN_COMMAND,
+                                                "/economy_system:open_file \"" + destFile.getAbsolutePath().replace("\\", "\\\\") + "\""
+                                        ))
+                                );
+
+                        // 添加打开文件按钮
+                        Component openFileButton = Component.literal(" [打开文件]")
+                                .withStyle(Style.EMPTY
+                                        .withColor(0xAAAAFF) // 浅蓝色
+                                        .withHoverEvent(new HoverEvent(
+                                                HoverEvent.Action.SHOW_TEXT,
+                                                Component.literal("点击用系统默认程序打开文件")
+                                        ))
+                                        .withClickEvent(new ClickEvent(
+                                                ClickEvent.Action.RUN_COMMAND,
+                                                "/economy_system:open_file_system \"" + destFile.getAbsolutePath().replace("\\", "\\\\") + "\""
+                                        ))
+                                );
+
+                        // 发送组合消息
+                        localPlayer.sendSystemMessage(Component.literal(
+                                "已保存 " + msg.playerName + " 的检查结果到: " + destFile.getAbsolutePath()
+                        ).append(clickableFilePath).append(openFileButton));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    if (localPlayer != null) {
+                        localPlayer.sendSystemMessage(Component.literal("§c保存文件失败: " + e.getMessage()));
+                    }
+                }*/
 
                 // ----------------------------------------
                 // 3. 解析远程JSON，获取远程文件映射

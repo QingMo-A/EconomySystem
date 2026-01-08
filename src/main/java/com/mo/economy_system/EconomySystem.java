@@ -1,5 +1,7 @@
 package com.mo.economy_system;
 
+import com.mo.economy_system.armor.ArmorTickHandler;
+import com.mo.economy_system.armor.armors.CustomHitboxRenderer;
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.init.Init;
@@ -12,6 +14,7 @@ import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.sound.EconomySystem_Sounds;
 import com.mojang.logging.LogUtils;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -44,6 +47,9 @@ public class EconomySystem {
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
         // 注册实体
         EconomySystem_Entities.ENTITIES.register(modEventBus);
+        // 注册世界渲染事件
+        // modEventBus.addListener(CustomHitboxRenderer::onRenderWorld);
+        // modEventBus.addListener(ArmorTickHandler::onPlayerTick);
 
         new Init();
         // 启动文件监听器
