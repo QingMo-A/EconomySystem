@@ -20,16 +20,61 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerLevelManager {
     /**
-     * 计算指定等级所需的总经验
+     * 计算指定等级升级所需的总经验（累积经验）
+     * 分段公式：1-50级简单期，51级+困难期
      * @param level 目标等级
-     * @return 该等级升级所需的总经验
+     * @return 升级到该等级所需的累积总经验
      */
     private static long getExperienceRequiredForLevel(int level) {
-        // 示例占位符：请替换为你的经验需求公式（支持无限等级）
-        // 例如1：线性递增：return (long) level * 1000;
-        // 例如2：指数递增：return (long) (Math.pow(level, 1.5) * 1000);
-        // 目前留空，返回临时值，后续修改
-        return 0L;
+        if (level <= 1) return 0L;
+
+        if (level <= 50) {
+            // ===== 简单期（1-50级）：低难度线性增长 =====
+            // 公式：level × 500 + level² × 20
+            // 示例：
+            // Lv.1 -> Lv.2: 520 经验
+            // Lv.10: 7,000 经验
+            // Lv.20: 18,000 经验
+            // Lv.30: 33,000 经验
+            // Lv.50: 75,000 经验
+            long levelSquared = (long) level * level;
+            return level * 500 + levelSquared * 20;
+        } else {
+            // ===== 困难期（51级+）：高难度指数增长 =====
+            // 公式：(level-50)³ × 500 + (level-50)² × 5000 + (level-50) × 10000 + 75000
+            // 从51级开始，以50级的75,000为基数，难度指数级上升
+            // 示例：
+            // Lv.51: 80,500 经验（+5,500）
+            // Lv.60: 175,000 经验（+100,000）
+            // Lv.70: 475,000 经验（+400,000）
+            // Lv.100: 1,575,000 经验（+1,500,000）
+            int levelOver50 = level - 50;
+            long levelCubed = (long) levelOver50 * levelOver50 * levelOver50;
+            long levelSquared = (long) levelOver50 * levelOver50;
+            long baseExp = 75000; // 50级时的经验值
+            return baseExp + levelCubed * 500 + levelSquared * 5000 + levelOver50 * 10000;
+        }
+    }
+
+    /**
+     * 获取从当前等级升级到下一级所需的经验
+     * @param currentLevel 当前等级
+     * @return 升级到下一级所需的额外经验
+     */
+    public static long getExperienceNeededForNextLevel(int currentLevel) {
+        long currentLevelTotalExp = getExperienceRequiredForLevel(currentLevel);
+        long nextLevelTotalExp = getExperienceRequiredForLevel(currentLevel + 1);
+        return nextLevelTotalExp - currentLevelTotalExp;
+    }
+
+    /**
+     * 获取当前等级已获得的累积经验（用于显示进度条）
+     * @param currentLevel 当前等级
+     * @param currentExp 当前等级内的经验
+     * @return 当前等级的总累积经验
+     */
+    public static long getTotalExperienceAtLevel(int currentLevel, long currentExp) {
+        return getExperienceRequiredForLevel(currentLevel) + currentExp;
     }
 
     /**
@@ -147,5 +192,31 @@ public class PlayerLevelManager {
     public static long getPlayerExperienceClient(Player clientPlayer) {
         if (clientPlayer == null) return 0L;
         return CLIENT_EXPERIENCE_CACHE.getOrDefault(clientPlayer.getUUID(), 0L);
+    }
+
+    /**
+     * 客户端获取从当前等级升级到下一级所需的经验
+     * @param clientPlayer 客户端玩家
+     * @return 升级所需经验
+     */
+    public static long getExperienceNeededForNextLevelClient(Player clientPlayer) {
+        if (clientPlayer == null) return 0L;
+        int currentLevel = getPlayerLevelClient(clientPlayer);
+        return getExperienceNeededForNextLevel(currentLevel);
+    }
+
+    /**
+     * 客户端获取当前等级内的经验进度百分比（用于进度条）
+     * @param clientPlayer 客户端玩家
+     * @return 0.0-1.0 之间的进度值
+     */
+    public static float getExperienceProgressClient(Player clientPlayer) {
+        if (clientPlayer == null) return 0.0f;
+        int currentLevel = getPlayerLevelClient(clientPlayer);
+        long currentExp = getPlayerExperienceClient(clientPlayer);
+        long neededExp = getExperienceNeededForNextLevel(currentLevel);
+
+        if (neededExp <= 0) return 0.0f;
+        return (float) currentExp / neededExp;
     }
 }

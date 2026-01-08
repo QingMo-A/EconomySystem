@@ -305,7 +305,7 @@ public class PlayerStrengthManager {
 
         @SubscribeEvent
         public static void onClientTick(TickEvent.ClientTickEvent event) {
-            if (event.phase != TickEvent.Phase.START) return;
+            if (event.phase != TickEvent.Phase.END) return;
 
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer player = mc.player;
@@ -314,18 +314,58 @@ public class PlayerStrengthManager {
             UUID uuid = player.getUUID();
             boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
 
-            // 如果体力耗尽，强制停止疾跑（使用更高优先级的方式）
+            // 如果体力耗尽，强制停止疾跑并限制移动速度
             if (isExhausted) {
-                // 强制设置疾跑为false（每次tick开始时设置，在输入处理之前）
-                player.setSprinting(false);
-                // 强制设置移动速度为步行速度
-                player.setSpeed(Math.min(player.getSpeed(), 0.1f));
+                // 强制设置疾跑为false
+                if (player.isSprinting()) {
+                    player.setSprinting(false);
+                }
+
+                // 限制移动速度（防止疾跑加速）
+                float currentSpeed = player.getSpeed();
+                if (currentSpeed > 0.1f) {
+                    player.setSpeed(0.1f);
+                }
             }
         }
 
-        // 监听鼠标和键盘输入事件，阻止疾跑输入
+        // 监听玩家跳跃事件，体力耗尽时限制跳跃速度
         @SubscribeEvent
-        public static void onInput(InputEvent.MouseButton event) {
+        public static void onPlayerJump(LivingEvent.LivingJumpEvent event) {
+            // 仅在客户端执行
+            if (event.getEntity().level().isClientSide() && event.getEntity() instanceof LocalPlayer player) {
+                UUID uuid = player.getUUID();
+                boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
+
+                if (isExhausted) {
+                    // 体力耗尽时降低跳跃速度（减少向前的动量）
+                    // 获取玩家的视角方向
+                    float yaw = player.getYRot();
+                    float pitch = player.getXRot();
+
+                    // 计算运动方向
+                    float moveForward = player.zza;
+                    float moveStrafe = player.xxa;
+
+                    // 如果玩家在移动，降低向前的速度
+                    if (moveForward != 0.0f || moveStrafe != 0.0f) {
+                        // 降低跳跃时的水平速度（步行速度的50%）
+                        player.setDeltaMovement(
+                            player.getDeltaMovement().x * 0.5,
+                            player.getDeltaMovement().y,
+                            player.getDeltaMovement().z * 0.5
+                        );
+                    }
+
+                    // 确保不会疾跑
+                    player.setSprinting(false);
+                }
+            }
+        }
+
+        // 监听玩家输入事件，在输入阶段拦截疾跑键
+        @SubscribeEvent
+        public static void onPlayerInput(InputEvent.Key event) {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer player = mc.player;
             if (player == null || !player.isAlive()) return;
@@ -333,15 +373,19 @@ public class PlayerStrengthManager {
             UUID uuid = player.getUUID();
             boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
 
-            // 如果体力耗尽且正在疾跑，强制停止并取消事件
-            if (isExhausted && player.isSprinting()) {
-                player.setSprinting(false);
-                event.setCanceled(true);
+            // 如果体力耗尽，阻止疾跑键（W键+Ctrl的默认疾跑组合）
+            if (isExhausted) {
+                // Minecraft的疾跑键码是通常键码29（左Ctrl）或键键码341（右Ctrl）
+                // 但我们应该在任何情况下阻止疾跑状态
+                if (player.isSprinting()) {
+                    player.setSprinting(false);
+                }
             }
         }
 
+        // 监听鼠标输入事件
         @SubscribeEvent
-        public static void onKeyInput(InputEvent.Key event) {
+        public static void onMouseInput(InputEvent.MouseButton event) {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer player = mc.player;
             if (player == null || !player.isAlive()) return;
@@ -350,6 +394,23 @@ public class PlayerStrengthManager {
             boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
 
             // 如果体力耗尽且正在疾跑，强制停止
+            if (isExhausted && player.isSprinting()) {
+                player.setSprinting(false);
+            }
+        }
+
+        // 监听玩家 tick 事件，在物理更新前阻止疾跑加速
+        @SubscribeEvent
+        public static void onTick(TickEvent.PlayerTickEvent event) {
+            if (!event.side.isClient() || event.phase != TickEvent.Phase.START) return;
+
+            // 只处理本地玩家，忽略其他玩家（RemotePlayer）
+            if (!(event.player instanceof LocalPlayer player)) return;
+            if (player == null || !player.isAlive()) return;
+
+            UUID uuid = player.getUUID();
+            boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
+
             if (isExhausted && player.isSprinting()) {
                 player.setSprinting(false);
             }

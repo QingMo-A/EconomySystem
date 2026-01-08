@@ -27,6 +27,7 @@ public class Packet_SyncPlayerData {
     private final String rankName;
     private final String titleName;
     private final int level;
+    private final long experience; // 当前等级内的经验
     private final String onlineTime;
 
     // 服务端专用构造器（在线玩家）
@@ -37,17 +38,19 @@ public class Packet_SyncPlayerData {
         this.rankName = PlayerRankManager.getPlayerRankServer(serverPlayer).getRankName();
         this.titleName = PlayerTitleManager.getPlayerTitleServer(serverPlayer).getTitleName();
         this.level = PlayerLevelManager.getPlayerLevelServer(serverPlayer);
+        this.experience = PlayerLevelManager.getPlayerExperienceServer(serverPlayer);
         this.onlineTime = getPlayerOnlineTime(serverPlayer);
     }
 
     // 离线玩家构造器
-    public Packet_SyncPlayerData(UUID playerUUID, String playerName, String rankName, String titleName, int level, String onlineTime) {
+    public Packet_SyncPlayerData(UUID playerUUID, String playerName, String rankName, String titleName, int level, long experience, String onlineTime) {
         this.playerUUID = playerUUID;
         this.playerName = playerName;
         this.isOnline = false;
         this.rankName = rankName;
         this.titleName = titleName;
         this.level = level;
+        this.experience = experience;
         this.onlineTime = onlineTime;
     }
 
@@ -73,6 +76,7 @@ public class Packet_SyncPlayerData {
         buf.writeUtf(packet.rankName);
         buf.writeUtf(packet.titleName);
         buf.writeInt(packet.level);
+        buf.writeLong(packet.experience); // 写入经验
         buf.writeUtf(packet.onlineTime);
     }
 
@@ -84,8 +88,9 @@ public class Packet_SyncPlayerData {
         String rankName = buf.readUtf();
         String titleName = buf.readUtf();
         int level = buf.readInt();
+        long experience = buf.readLong(); // 读取经验
         String onlineTime = buf.readUtf();
-        return new Packet_SyncPlayerData(uuid, playerName, rankName, titleName, level, onlineTime);
+        return new Packet_SyncPlayerData(uuid, playerName, rankName, titleName, level, experience, onlineTime);
     }
 
     //处理逻辑，无客户端类引用
@@ -101,16 +106,17 @@ public class Packet_SyncPlayerData {
         final String safeRank = packet.rankName;
         final String safeTitle = packet.titleName;
         final int safeLevel = packet.level;
+        final long safeExperience = packet.experience; // 添加经验
         final String safeOnlineTime = packet.onlineTime;
 
         // 主线程执行（仅分发，无客户端逻辑）
-        context.enqueueWork(() -> processOnMainThread(safeUUID, safePlayerName, safeIsOnline, safeRank, safeTitle, safeLevel,  safeOnlineTime));
+        context.enqueueWork(() -> processOnMainThread(safeUUID, safePlayerName, safeIsOnline, safeRank, safeTitle, safeLevel, safeExperience, safeOnlineTime));
     }
 
     //分发方法，无客户端类引用
-    private static void processOnMainThread(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
+    private static void processOnMainThread(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, long experience, String onlineTime) {
         //用SafeRunnable隔离客户端逻辑，服务器端仅加载接口，不加载实现
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientSyncRunnable(playerUUID, playerName, isOnline, rankName, titleName, level, onlineTime));
+        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientSyncRunnable(playerUUID, playerName, isOnline, rankName, titleName, level, experience, onlineTime));
     }
 
     //纯客户端逻辑（@OnlyIn标记，服务器完全不加载）=
@@ -122,27 +128,29 @@ public class Packet_SyncPlayerData {
         private final String rankName;
         private final String titleName;
         private final int level;
+        private final long experience; // 添加经验字段
         private final String onlineTime;
 
-        public ClientSyncRunnable(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
+        public ClientSyncRunnable(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, long experience, String onlineTime) {
             this.playerUUID = playerUUID;
             this.playerName = playerName;
             this.isOnline = isOnline;
             this.rankName = rankName;
             this.titleName = titleName;
             this.level = level;
+            this.experience = experience;
             this.onlineTime = onlineTime;
         }
 
         @Override
         public void run() {
-            syncPlayerDataOnClient(playerUUID, playerName, isOnline, rankName, titleName, level, onlineTime);
+            syncPlayerDataOnClient(playerUUID, playerName, isOnline, rankName, titleName, level, experience, onlineTime);
         }
     }
 
     // 客户端方法
     @OnlyIn(Dist.CLIENT)
-    private static void syncPlayerDataOnClient(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, String onlineTime) {
+    private static void syncPlayerDataOnClient(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, long experience, String onlineTime) {
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (mc == null || mc.player == null) {
@@ -170,12 +178,13 @@ public class Packet_SyncPlayerData {
             PlayerRankManager.setPlayerRankClient(targetPlayer, rank);
             PlayerTitleManager.setPlayerTitleClient(targetPlayer, title);
             PlayerLevelManager.setPlayerLevelClient(targetPlayer, level);
+            PlayerLevelManager.setPlayerExperienceClient(targetPlayer, experience); // 同步经验
 
             //排行榜
             TaskUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
 
-            EconomySystem.LOGGER.info("客户端同步数据成功：Rank={}, Title={}, Level={}",
-                    rank.getRankName(), title.getTitleName(), level);
+            EconomySystem.LOGGER.info("客户端同步数据成功：Rank={}, Title={}, Level={}, Exp={}",
+                    rank.getRankName(), title.getTitleName(), level, experience);
         } catch (Exception e) {
             EconomySystem.LOGGER.error("客户端同步玩家数据失败", e);
         }

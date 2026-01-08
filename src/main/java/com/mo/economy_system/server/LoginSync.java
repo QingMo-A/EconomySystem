@@ -12,7 +12,7 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Collection;
 
-@Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.DEDICATED_SERVER)
+@Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class LoginSync {
 
     @SubscribeEvent

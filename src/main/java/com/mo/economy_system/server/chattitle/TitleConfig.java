@@ -48,7 +48,7 @@ public class TitleConfig {
                     System.err.println("重复的称号名称：" + data.titleName + "，已跳过");
                     continue;
                 }
-                Title title = new Title(data.titleId, data.titleName);
+                Title title = new Title(data.titleId, data.titleName, data.color);
                 titleMap.put(data.titleId, title);
                 nameToTitleMap.put(data.titleName, title); // 同步到名称映射
             }
@@ -63,9 +63,9 @@ public class TitleConfig {
     private static void createDefaultConfig() {
         try {
             List<TitleData> defaultTitles = List.of(
-                    new TitleData(0, "萌新鱼友"),
-                    new TitleData(1, "TEST"),
-                    new TitleData(2, "TEST2")
+                    new TitleData(0, "萌新鱼友", 0xFFFFFF),  // 白色（纯RGB）
+                    new TitleData(1, "TEST", 0xFF5555),      // 红色（纯RGB）
+                    new TitleData(2, "TEST2", 0x55FFFF)     // 青色（纯RGB）
             );
 
             File parentDir = TITLE_CONFIG_FILE.getParentFile();
@@ -80,7 +80,7 @@ public class TitleConfig {
             titleMap.clear();
             nameToTitleMap.clear();
             for (TitleData data : defaultTitles) {
-                Title title = new Title(data.titleId, data.titleName);
+                Title title = new Title(data.titleId, data.titleName, data.color);
                 titleMap.put(data.titleId, title);
                 nameToTitleMap.put(data.titleName, title);
             }
@@ -122,7 +122,7 @@ public class TitleConfig {
             }
 
             List<TitleData> titleDataList = titleMap.values().stream()
-                    .map(title -> new TitleData(title.getTitleID(), title.getTitleName()))
+                    .map(title -> new TitleData(title.getTitleID(), title.getTitleName(), title.getColor()))
                     .toList();
 
             try (FileWriter writer = new FileWriter(TITLE_CONFIG_FILE)) {
@@ -138,11 +138,13 @@ public class TitleConfig {
     private static class TitleData {
         int titleId;
         String titleName;
+        int color = 0xFFFFFFFF; // 默认白色
 
         // 新增带参构造器（简化默认配置创建）
-        public TitleData(int titleId, String titleName) {
+        public TitleData(int titleId, String titleName, int color) {
             this.titleId = titleId;
             this.titleName = titleName;
+            this.color = color;
         }
 
         public TitleData() {}

@@ -56,31 +56,34 @@ public class HeadDisplay {
             return;
         }
 
-        ChatFormatting textColorFormatting;
-        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
-            textColorFormatting = ChatFormatting.WHITE;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
-        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH.getRankName())) {
-            textColorFormatting = ChatFormatting.GREEN;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
-        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS.getRankName())) {
-            textColorFormatting = ChatFormatting.AQUA;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
-        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.FISH_PLUS_PLUS.getRankName())) {
-            textColorFormatting = ChatFormatting.GOLD;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
-        } else if  (Objects.equals(playerRank.getRankName(), RankRegistry.OPERATOR.getRankName())) {
-            textColorFormatting = ChatFormatting.RED;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerRank.getRankName() + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
+        // 获取rank颜色
+        ChatFormatting rankColorFormatting = switch (playerRank.getRankName()) {
+            case "FISH" -> ChatFormatting.GREEN;
+            case "FISH+" -> ChatFormatting.AQUA;
+            case "FISH++" -> ChatFormatting.GOLD;
+            case "OPERATOR" -> ChatFormatting.RED;
+            default -> ChatFormatting.WHITE;
+        };
+
+        // 获取称号颜色
+        int titleColor = playerTitle.getColor();
+
+        // 构建显示文本：等级和rank用rank颜色，称号用称号自己的颜色
+        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName()) ||
+            Objects.equals(playerRank.getRankName(), RankRegistry.NULL.getRankName())) {
+            // 无特殊rank：等级白色，称号自己的颜色
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] ")
+                    .withStyle(ChatFormatting.WHITE)
+                    .append(Component.literal("[" + playerTitle.getTitleName() + "]")
+                            .withStyle(s -> s.withColor(titleColor)));
         } else {
-            textColorFormatting = ChatFormatting.WHITE;
-            displayText = Component.literal("[" + "Lv" + playerLevel + "] [" + playerTitle.getTitleName() + "]")
-                    .withStyle(textColorFormatting);
+            // 有特殊rank：等级和rank用rank颜色，称号用称号自己的颜色
+            displayText = Component.literal("[" + "Lv" + playerLevel + "] ")
+                    .withStyle(rankColorFormatting)
+                    .append(Component.literal("[" + playerRank.getRankName() + "] ")
+                            .withStyle(rankColorFormatting))
+                    .append(Component.literal("[" + playerTitle.getTitleName() + "]")
+                            .withStyle(s -> s.withColor(titleColor)));
         }
 
 

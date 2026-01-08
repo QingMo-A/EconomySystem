@@ -63,9 +63,9 @@ public class TipDisplayRenderer {
         }
         totalHeight -= LINE_SPACING; // 减去最后一行的多余行间距
 
-        // 计算黑框位置
+        // 计算黑框位置（Y坐标偏移服务器信息框的高度）
         int x = MARGIN;
-        int y = MARGIN;
+        int y = MARGIN + TipDisplayManager.getServerInfoHeight();  // 在服务器信息框下方
         int boxWidth = maxTextWidth + MARGIN * 2;
         int boxHeight = totalHeight;
 

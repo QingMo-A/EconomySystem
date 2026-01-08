@@ -65,6 +65,7 @@ public class Packet_RequestAllPlayerData {
                             data.getRank().getRankName(),
                             data.getTitle().getTitleName(),
                             data.getLevel(),
+                            data.getCurrentExperience(), // 添加经验
                             lastOnlineTime
                     );
                     EconomySystem_NetworkManager.INSTANCE.send(

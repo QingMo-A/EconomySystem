@@ -9,6 +9,19 @@ public class TipDisplayManager {
     // 使用线程安全的列表存储信息
     private static final List<TipMessage> messages = new CopyOnWriteArrayList<>();
 
+    // 服务器信息框的高度（Tips需要避开）
+    private static int serverInfoHeight = 0;
+
+    // 设置服务器信息框高度（由ServerInformationDisplay调用）
+    public static void setServerInfoHeight(int height) {
+        serverInfoHeight = height;
+    }
+
+    // 获取服务器信息框高度
+    public static int getServerInfoHeight() {
+        return serverInfoHeight;
+    }
+
     // 添加信息
     public static void addMessage(String text) {
         addMessage(text, 5000);

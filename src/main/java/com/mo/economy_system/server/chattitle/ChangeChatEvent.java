@@ -20,13 +20,18 @@ public class ChangeChatEvent {
         ServerPlayer player = event.getPlayer();
         Title playerTitle = PlayerTitleManager.getPlayerTitleServer(player);
         String titleName = playerTitle.getTitleName();
+        int titleColor = playerTitle.getColor(); // 称号自己的颜色（RGB格式）
         String playerRank = PlayerRankManager.getPlayerRankServer(player).getRankName();
         int playerLevel = PlayerLevelManager.getPlayerLevelServer(player); // 获取等级
+
+        // 调试日志
+        EconomySystem.LOGGER.info("聊天格式化 - 玩家:{}, 称号:{}, 称号颜色:0x{}, Rank:{}", player.getScoreboardName(), titleName, Integer.toHexString(titleColor), playerRank);
+
         event.setCanceled(true);
 
         Component customMessage = null;
         ChatFormatting rankColor = switch (playerRank) {
-            case "FISH" -> ChatFormatting.GREEN;
+            case "FISH" -> ChatFormatting.WHITE;
             case "FISH+" -> ChatFormatting.AQUA;
             case "FISH++" -> ChatFormatting.GOLD;
             case "OPERATOR" -> ChatFormatting.RED;
@@ -37,23 +42,25 @@ public class ChangeChatEvent {
         String levelPrefix = String.format("[Lv.%d] ", playerLevel);
 
         if (playerRank.equals("NO_RANK") || playerRank.equals("NULL")) {
-            // 无特殊Rank：等级+称号+玩家名+消息（均为默认白色）
+            // 无特殊Rank：等级白色，称号使用自己的颜色
             customMessage = Component.literal(levelPrefix)
-                    .append(Component.literal("[" + titleName + "] ").withStyle(rankColor))
+                    .append(Component.literal("[" + titleName + "] ").withStyle(style -> style.withColor(net.minecraft.network.chat.TextColor.fromRgb(titleColor))))
                     .append(player.getDisplayName())
-                    .append(Component.literal(": ").withStyle(rankColor))
+                    .append(Component.literal(": "))
                     .append(event.getRawText());
         } else if (playerRank.equals("OPERATOR")) {
-            // 管理员等级和Rank为红色，玩家ID和内容为白色
+            // 管理员：等级红色，Rank红色，称号自己的颜色，玩家ID和内容白色
             customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级红色
-                    .append(Component.literal("[" + playerRank + "]" + " | " + titleName + "] ").withStyle(rankColor)) // Rank红色
+                    .append(Component.literal("[" + playerRank + "] ").withStyle(rankColor)) // Rank红色
+                    .append(Component.literal("[" + titleName + "] ").withStyle(style -> style.withColor(net.minecraft.network.chat.TextColor.fromRgb(titleColor)))) // 称号自己的颜色
                     .append(Component.literal(player.getDisplayName().getString()).withStyle(ChatFormatting.WHITE)) // 玩家ID白色
                     .append(Component.literal(": ").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(event.getRawText()).withStyle(ChatFormatting.WHITE)); // 内容白色
         } else {
-            // 其他Rank所有部分均使用对应Rank颜色
+            // 其他Rank：等级使用Rank颜色，Rank使用Rank颜色，称号使用自己的颜色
             customMessage = Component.literal(levelPrefix).withStyle(rankColor) // 等级
-                    .append(Component.literal("[" + playerRank + "]" + " | " + titleName + "] ").withStyle(rankColor)) // Rank+称号
+                    .append(Component.literal("[" + playerRank + "] ").withStyle(rankColor)) // Rank
+                    .append(Component.literal("[" + titleName + "] ").withStyle(style -> style.withColor(net.minecraft.network.chat.TextColor.fromRgb(titleColor)))) // 称号自己的颜色
                     .append(Component.literal(player.getDisplayName().getString()).withStyle(rankColor))// 玩家ID
                     .append(Component.literal(": ").withStyle(rankColor)) // 冒号
                     .append(Component.literal(event.getRawText()).withStyle(rankColor)); // 消息内容

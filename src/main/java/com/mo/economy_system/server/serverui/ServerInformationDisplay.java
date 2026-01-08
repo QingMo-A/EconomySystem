@@ -10,6 +10,8 @@ import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.chattitle.Title;
+import com.mo.economy_system.server.chattitle.TitleRegistry;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.server.rank.RankRegistry;
@@ -40,11 +42,13 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class ServerInformationDisplay {
     private static boolean SHOW_UI = true;                  // UI开关
-    private static final int BOX_PADDING = 8;              // 框内边距（更宽松）
-    private static final int BOX_SPACING = 1;              // 框之间间距
+    private static final int BOX_PADDING = 8;              // 框内边距
+    private static final int BOX_SPACING = 3;              // 框之间间距
     private static final int RIGHT_OFFSET = 2;             // 右侧偏移
     private static final int TOP_OFFSET = 3;               // 顶部偏移
-    private static final int BOX_HEIGHT = 11;              // 框高度
+    private static final int BOX_HEIGHT = 10;              // 框高度
+    private static final int INFO_BOX_TEXT_PADDING = 4;    // 文字左右内边距
+    private static final float INFO_TEXT_SCALE = 0.75f;    // 文字缩放比例
     private static final int PROGRESS_BAR_HEIGHT = 5;      // 进度条高度
 
     // 客户端缓存数据（从网络包获取）
@@ -109,7 +113,7 @@ public class ServerInformationDisplay {
         }
     }
 
-    // HUD渲染（分为两部分：中间顶部服务器信息 + 右上角玩家信息）
+    // HUD渲染（左上角小框 + 右上角玩家信息）
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
@@ -122,6 +126,7 @@ public class ServerInformationDisplay {
         GuiGraphics guiGraphics = event.getGuiGraphics();
         Font font = mc.font;
         int screenWidth = event.getWindow().getGuiScaledWidth();
+        int screenHeight = event.getWindow().getGuiScaledHeight();
 
         // 获取玩家数据
         Rank playerRank = PlayerRankManager.getPlayerRankClient(mc.player);
@@ -132,109 +137,92 @@ public class ServerInformationDisplay {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
 
-        // ========== 第一部分：中间顶部服务器信息 ==========
-        List<InfoBox> centerBoxes = new ArrayList<>();
-
-        // 1. DreamingFish标题框 - RGB动态边框 + 淡黑色背景
-        centerBoxes.add(new InfoBox(
-            Component.literal("§bDreaming§dFish"),
-            getDynamicBorderColor(),
-            0xB0202020  // 淡黑色背景
-        ));
-
-        // 2. 在线人数框 - 黄色边框 + 淡黑色背景
-        centerBoxes.add(new InfoBox(
-            Component.literal("§e在线: §f" + ONLINE_PLAYERS),
+        // ========== 第一部分：左上角服务器信息（三个小框） ==========
+        List<InfoBox> leftBoxes = new ArrayList<>();
+        leftBoxes.add(new InfoBox(
+            Component.literal("§b§r§bDreaming§dFish"),
             0xFFDD00,  // 黄色边框
             0xB0202020  // 淡黑色背景
         ));
-
-        // 3. 游戏时间框 - 彩虹色边框 + 淡黑色背景
-        String gameTime = getGameTimeString(mc);
-        centerBoxes.add(new InfoBox(
-            Component.literal("§a" + gameTime),
+        leftBoxes.add(new InfoBox(
+            Component.literal("§e📊 §f在线: " + ONLINE_PLAYERS),
+            0xFFDD00,  // 黄色边框
+            0xB0202020
+        ));
+        leftBoxes.add(new InfoBox(
+            Component.literal("§a🕐 " + getGameTimeString(mc)),
             0x00FF88,  // 青绿色边框
-            0xB0202020  // 淡黑色背景
+            0xB0202020
         ));
 
-        // 渲染中间顶部信息框
-        renderCenterBoxes(guiGraphics, font, screenWidth, centerBoxes);
+        renderLeftBoxes(guiGraphics, font, leftBoxes);
 
         // ========== 第二部分：右上角玩家信息 ==========
-        renderPlayerInfo(guiGraphics, font, screenWidth, mc, rankId, titleName, playerLevel);
+        renderPlayerInfo(guiGraphics, font, screenWidth, screenHeight, mc, rankId, titleName, playerLevel);
 
         poseStack.popPose();
     }
 
-    // 获取游戏时间字符串（简写格式：2026.1.8 14:30）
-    private static String getGameTimeString(Minecraft mc) {
-        if (mc.level == null) return "未知";
-
-        // 使用真实世界时间
-        java.time.LocalDateTime realTime = java.time.LocalDateTime.now();
-        int year = realTime.getYear();
-        int month = realTime.getMonthValue();
-        int day = realTime.getDayOfMonth();
-        int hour = realTime.getHour();
-        int minute = realTime.getMinute();
-
-        return String.format("%d.%d.%d %02d:%02d", year, month, day, hour, minute);
-    }
-
-    // 渲染中间顶部信息框
-    private static void renderCenterBoxes(GuiGraphics guiGraphics, Font font, int screenWidth, List<InfoBox> boxes) {
-        // 计算总宽度
+    // 渲染左上角小框（水平排列）
+    private static void renderLeftBoxes(GuiGraphics guiGraphics, Font font, List<InfoBox> boxes) {
         int totalWidth = 0;
         for (InfoBox box : boxes) {
             box.textWidth = font.width(box.text);
-            box.boxWidth = box.textWidth + 12;  // 文字两边各6像素边距
+            int scaledTextWidth = (int)(box.textWidth * INFO_TEXT_SCALE);
+            box.boxWidth = scaledTextWidth + INFO_BOX_TEXT_PADDING * 2;
             totalWidth += box.boxWidth;
         }
         totalWidth += (boxes.size() - 1) * BOX_SPACING;
 
-        // 居中计算起始X坐标
-        int currentX = (screenWidth - totalWidth) / 2;
+        // 左上角起始坐标
+        int currentX = TOP_OFFSET;
         int baseY = TOP_OFFSET;
 
-        // 渲染所有框框
+        // 计算服务器信息框总高度（供Tips使用）
+        int serverInfoHeight = BOX_HEIGHT;
+
+        // 渲染所有小框
         for (InfoBox box : boxes) {
-            renderBox(guiGraphics, font, currentX, baseY, box);
+            renderSmallBox(guiGraphics, font, currentX, baseY, box);
             currentX += box.boxWidth + BOX_SPACING;
         }
+
+        // 设置服务器信息高度（包含间距）
+        TipDisplayManager.setServerInfoHeight(serverInfoHeight + BOX_SPACING);
     }
 
-    // 渲染右上角玩家信息（三行布局，无头像）
-    private static void renderPlayerInfo(GuiGraphics guiGraphics, Font font, int screenWidth,
+    // 渲染右上角玩家信息框
+    private static void renderPlayerInfo(GuiGraphics guiGraphics, Font font, int screenWidth, int screenHeight,
                                          Minecraft mc, String rankId, String titleName, int playerLevel) {
         int baseY = TOP_OFFSET;
 
         // 计算文本宽度
         String nameText = "§e" + mc.player.getName().getString();
-        String rankTitleText = "§7" + rankId + " §r§7| §r" + titleName;  // rank | 称号
         String levelText = "§6Lv." + playerLevel;
+        long currentExp = PlayerLevelManager.getPlayerExperienceClient(mc.player);
+        long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(mc.player);
+        String expNeededText = "§7还需: §f" + nextLevelExp + " §7经验";
 
-        // 计算距离下一级所需经验
-        int currentExp = mc.player.totalExperience;
-        int nextLevelExp = mc.player.getXpNeededForNextLevel();
-        String expNeededText = "§7还需要: §f" + nextLevelExp + " §7经验升级";
+        // 计算rank+称号行的完整宽度（包含emoji、分隔符和颜色代码）
+        Title titleObj = TitleRegistry.getTitleByName(titleName);
+        int titleColor = titleObj != null ? titleObj.getColor() : 0xFFAAAAAA;
+        String titleColorCode = rgbToColorCode(titleColor);
+        String rankTitleFullText = "§7🎖️ §r" + rankId + " §r§7 | §r" + titleColorCode + titleName;
 
         int nameWidth = font.width(nameText);
-        int rankTitleWidth = font.width(rankTitleText);
+        int rankTitleWidth = font.width(rankTitleFullText);  // 使用完整文本计算宽度
         int levelTextWidth = font.width(levelText);
         int expNeededWidth = font.width(expNeededText);
 
-        // 计算框的宽度和高度（四边等宽）
-        int padding = 3;  // 四周边框的间距
+        // 计算框的宽度和高度
+        int padding = 3;
         int lineHeight = font.lineHeight;
-        int spacing = 3;  // 所有间距都相同（行间距、进度条间距）
+        int spacing = 3;
 
-        // 计算第三行文本的总宽度（等级 + 间距 + 经验文本）
         int bottomLineWidth = levelTextWidth + spacing + expNeededWidth;
-        // 框宽度为所有文本的最大值
         int minBoxWidth = Math.max(nameWidth, Math.max(rankTitleWidth, bottomLineWidth));
         int boxWidth = minBoxWidth + padding * 2;
 
-        // 计算框高度：顶部padding + 昵称行 + 间距 + rank行 + 间距 + 进度条 + 间距 + 等级行 + 底部padding
         int boxHeight = padding + lineHeight + spacing + lineHeight + spacing + PROGRESS_BAR_HEIGHT + spacing + lineHeight + padding;
 
         // 框的位置（右上角）
@@ -245,25 +233,43 @@ public class ServerInformationDisplay {
         int bgColor = 0xB0202020;
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + boxHeight, bgColor);
 
-        // 边框
-        int borderColor = 0xFFAAAAAA;
+        // RGB动态边框
+        int borderColor = getDynamicBorderColor();
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + 1, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + 1, boxY + boxHeight, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, borderColor);
 
-        // 第一行：玩家昵称（左对齐）
+        // 第一行：玩家昵称
         int line1Y = boxY + padding;
         guiGraphics.drawString(font, Component.literal(nameText), boxX + padding, line1Y, 0xFFFFFF);
 
-        // 第二行：rank | 称号（左对齐）
+        // 第二行：rank | 称号
         int line2Y = line1Y + lineHeight + spacing;
-        guiGraphics.drawString(font, Component.literal(rankTitleText), boxX + padding, line2Y, 0xFFFFFF);
+        int currentX = boxX + padding;
 
-        // 第三行：进度条（根据底部文本宽度自适应）
+        // 渲染 "🎖️ " 前缀
+        guiGraphics.drawString(font, Component.literal("§7🎖️ "), currentX, line2Y, 0xFFAAAAAA);
+        currentX += font.width("§7🎖️ ");
+
+        // 渲染 rank
+        int rankColor = getRankColorByName(rankId);
+        String rankDisplay = rankId;
+        int rankWidth = font.width(Component.literal(rankDisplay));
+        guiGraphics.drawString(font, Component.literal(rankDisplay), currentX, line2Y, rankColor);
+        currentX += rankWidth;
+
+        // 渲染 " §r§7 | §r🏅 "
+        String separator = " §r§7 | §r🏅 ";
+        guiGraphics.drawString(font, Component.literal(separator), currentX, line2Y, 0xFFAAAAAA);
+        currentX += font.width(separator);
+
+        // 渲染称号（使用前面获取的颜色）
+        guiGraphics.drawString(font, Component.literal(titleName), currentX, line2Y, titleColor);
+
+        // 第三行：进度条
         int progressBarY = line2Y + lineHeight + spacing;
         int progressBarX = boxX + padding;
-        // 进度条宽度与底部文本总宽度相同
         int progressBarWidth = bottomLineWidth;
 
         // 进度条背景
@@ -271,7 +277,7 @@ public class ServerInformationDisplay {
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xFF333333);
 
         // 进度条前景
-        float experienceProgress = mc.player.experienceProgress;
+        float experienceProgress = PlayerLevelManager.getExperienceProgressClient(mc.player);
         int progressWidth = (int)(progressBarWidth * experienceProgress);
         if (progressWidth > 0) {
             guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
@@ -289,23 +295,62 @@ public class ServerInformationDisplay {
         guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 1, progressBarY,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
 
-        // 进度条下方文字（与上面等间距）
+        // 第四行：等级 + 经验信息
         int belowProgressBarY = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
-
-        // 左边：当前等级
         int levelX = boxX + padding;
         guiGraphics.drawString(font, Component.literal(levelText), levelX, belowProgressBarY, 0xFFFFFF);
 
-        // 右边：距离下一级所需经验
         int expNeededX = boxX + padding + levelTextWidth + spacing;
         guiGraphics.drawString(font, Component.literal(expNeededText), expNeededX, belowProgressBarY, 0xFFFFFF);
+    }
+
+    // 渲染小框（带文字缩放）
+    private static void renderSmallBox(GuiGraphics guiGraphics, Font font, int x, int y, InfoBox box) {
+        // 背景
+        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + BOX_HEIGHT, box.backgroundColor);
+
+        // 边框（上、下、左、右）
+        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + 1, box.borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y + BOX_HEIGHT - 1, x + box.boxWidth, y + BOX_HEIGHT, box.borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + BOX_HEIGHT, box.borderColor);
+        guiGraphics.fill(RenderType.gui(), x + box.boxWidth - 1, y, x + box.boxWidth, y + BOX_HEIGHT, box.borderColor);
+
+        // 文本居中渲染（应用缩放）
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose();
+
+        float scaledTextWidth = box.textWidth * INFO_TEXT_SCALE;
+        float scaledTextHeight = font.lineHeight * INFO_TEXT_SCALE;
+
+        int textX = x + (box.boxWidth - (int)scaledTextWidth) / 2;
+        int textY = y + (BOX_HEIGHT - (int)scaledTextHeight) / 2;
+
+        poseStack.translate(textX, textY, 0);
+        poseStack.scale(INFO_TEXT_SCALE, INFO_TEXT_SCALE, 1.0f);
+        guiGraphics.drawString(font, box.text, 0, 0, 0xFFFFFF);
+
+        poseStack.popPose();
+    }
+
+    // 获取游戏时间字符串
+    private static String getGameTimeString(Minecraft mc) {
+        if (mc.level == null) return "未知";
+
+        java.time.LocalDateTime realTime = java.time.LocalDateTime.now();
+        int year = realTime.getYear();
+        int month = realTime.getMonthValue();
+        int day = realTime.getDayOfMonth();
+        int hour = realTime.getHour();
+        int minute = realTime.getMinute();
+
+        return String.format("%d.%d.%d %02d:%02d", year, month, day, hour, minute);
     }
 
     // 信息框数据类
     private static class InfoBox {
         Component text;
         int borderColor;
-        int backgroundColor;  // 新增背景色
+        int backgroundColor;
         int textWidth;
         int boxWidth;
 
@@ -316,70 +361,72 @@ public class ServerInformationDisplay {
         }
     }
 
-    // 渲染单个信息框（普通矩形边框）
-    private static void renderBox(GuiGraphics guiGraphics, Font font, int x, int y, InfoBox box) {
-        // 使用自定义彩色背景
-        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + BOX_HEIGHT, box.backgroundColor);
-
-        // 边框（上、下、左、右）
-        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + 1, box.borderColor);
-        guiGraphics.fill(RenderType.gui(), x, y + BOX_HEIGHT - 1, x + box.boxWidth, y + BOX_HEIGHT, box.borderColor);
-        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + BOX_HEIGHT, box.borderColor);
-        guiGraphics.fill(RenderType.gui(), x + box.boxWidth - 1, y, x + box.boxWidth, y + BOX_HEIGHT, box.borderColor);
-
-        // 文本居中渲染
-        int textX = x + (box.boxWidth - box.textWidth) / 2;
-        int textY = y + (BOX_HEIGHT - font.lineHeight) / 2;
-        guiGraphics.drawString(font, box.text, textX, textY, 0xFFFFFF);
-    }
-
-    // 将ChatFormatting转换为颜色代码
-    private static String getRankColorCode(ChatFormatting formatting) {
-        if (formatting == ChatFormatting.BLACK) return "§0";
-        if (formatting == ChatFormatting.DARK_BLUE) return "§1";
-        if (formatting == ChatFormatting.DARK_GREEN) return "§2";
-        if (formatting == ChatFormatting.DARK_AQUA) return "§3";
-        if (formatting == ChatFormatting.DARK_RED) return "§4";
-        if (formatting == ChatFormatting.DARK_PURPLE) return "§5";
-        if (formatting == ChatFormatting.GOLD) return "§6";
-        if (formatting == ChatFormatting.GRAY) return "§7";
-        if (formatting == ChatFormatting.DARK_GRAY) return "§8";
-        if (formatting == ChatFormatting.BLUE) return "§9";
-        if (formatting == ChatFormatting.GREEN) return "§a";
-        if (formatting == ChatFormatting.AQUA) return "§b";
-        if (formatting == ChatFormatting.RED) return "§c";
-        if (formatting == ChatFormatting.LIGHT_PURPLE) return "§d";
-        if (formatting == ChatFormatting.YELLOW) return "§e";
-        if (formatting == ChatFormatting.WHITE) return "§f";
-        return "§f";  // 默认白色
-    }
-
     /**
      * 获取动态RGB变色的边框颜色（基于系统时间循环）
-     * @return ARGB格式的颜色值（透明度255）
      */
     private static int getDynamicBorderColor() {
         long currentTime = System.currentTimeMillis();
-        // 正弦函数周期：0.001控制变色速度（值越小越慢），+2/+4让三通道错位，实现彩虹渐变
-        int red = (int) (Math.sin(currentTime * 0.001) * 127 + 128);   // 0-255范围
+        int red = (int) (Math.sin(currentTime * 0.001) * 127 + 128);
         int green = (int) (Math.sin(currentTime * 0.001 + 2) * 127 + 128);
         int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 127 + 128);
-        // 组合为ARGB格式（0xFF开头表示透明度100%）
         return 0xFF000000 | (red << 16) | (green << 8) | blue;
     }
 
-    // 对外控制方法 =
-    //切换UI显示/隐藏
+    /**
+     * 根据Rank名称获取对应的颜色
+     */
+    private static int getRankColorByName(String rankName) {
+        return switch (rankName) {
+            case "FISH" -> 0xFF55FF55;
+            case "FISH+" -> 0xFF55FFFF;
+            case "FISH++" -> 0xFFFFD700;
+            case "OPERATOR" -> 0xFFFF5555;
+            default -> 0xFFFFFFFF;
+        };
+    }
+
+    /**
+     * 将RGB颜色值转换为Minecraft颜色代码
+     * @param rgb RGB颜色值（如0xFFFFFF）
+     * @return 颜色代码字符串（如"§f"）
+     */
+    private static String rgbToColorCode(int rgb) {
+        // 提取RGB分量
+        int red = (rgb >> 16) & 0xFF;
+        int green = (rgb >> 8) & 0xFF;
+        int blue = rgb & 0xFF;
+
+        // 寻找最接近的Minecraft颜色
+        if (red == 0 && green == 0 && blue == 0) return "§0";       // 黑色
+        if (red == 0 && green == 0 && blue == 170) return "§1";   // 深蓝色
+        if (red == 0 && green == 170 && blue == 0) return "§2";   // 深绿色
+        if (red == 0 && green == 170 && blue == 170) return "§3"; // 深青色
+        if (red == 170 && green == 0 && blue == 0) return "§4";   // 深红色
+        if (red == 170 && green == 0 && blue == 170) return "§5"; // 深紫色
+        if (red == 255 && green == 170 && blue == 0) return "§6"; // 金色
+        if (red == 170 && green == 170 && blue == 170) return "§7"; // 灰色
+        if (red == 85 && green == 85 && blue == 85) return "§8";  // 深灰色
+        if (red == 85 && green == 85 && blue == 255) return "§9"; // 蓝色
+        if (red == 85 && green == 255 && blue == 85) return "§a"; // 绿色
+        if (red == 85 && green == 255 && blue == 255) return "§b"; // 青色
+        if (red == 255 && green == 85 && blue == 85) return "§c";  // 红色
+        if (red == 255 && green == 85 && blue == 255) return "§d"; // 粉色
+        if (red == 255 && green == 255 && blue == 85) return "§e"; // 黄色
+        if (red == 255 && green == 255 && blue == 255) return "§f"; // 白色
+
+        // 默认白色（如果找不到精确匹配）
+        return "§f";
+    }
+
+    // 对外控制方法
     public static void toggleUI() {
         SHOW_UI = !SHOW_UI;
     }
 
-    //获取UI显示状态
     public static boolean isShowUI() {
         return SHOW_UI;
     }
 
-    //手动刷新数据
     public static void refreshData() {
         LAST_PLAYER_LIST_UPDATE = 0;
         LAST_BALANCE_UPDATE = 0;

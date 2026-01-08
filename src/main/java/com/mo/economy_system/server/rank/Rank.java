@@ -1,8 +1,12 @@
 package com.mo.economy_system.server.rank;
 
 public class Rank {
-    private final String rankName;
-    private final int rankLevel;
+    private String rankName;
+    private int rankLevel;
+
+    // 无参构造函数（Gson反序列化需要）
+    public Rank() {
+    }
 
     public Rank(String rankName, int rankLevel) {
         this.rankName = rankName;
