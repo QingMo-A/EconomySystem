@@ -45,10 +45,6 @@ public class PlayerStrengthManager {
     private static final Map<UUID, Boolean> HAS_SHOWN_LOW_STRENGTH_TIP = new ConcurrentHashMap<>(); // 30%体力提示是否已显示
     private static final Map<UUID, Boolean> HAS_SHOWN_EXHAUSTED_TIP = new ConcurrentHashMap<>(); // 无法奔跑提示是否已显示
 
-    //客户端缓存
-    @OnlyIn(Dist.CLIENT)
-    public static final Map<UUID, Boolean> IS_STRENGTH_EXHAUSTED_CLIENT = new ConcurrentHashMap<>(); // 客户端体力耗尽标记
-
     //Tick监听
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -304,6 +300,9 @@ public class PlayerStrengthManager {
     @OnlyIn(Dist.CLIENT)
     @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
     public static class ClientTickHandler {
+        // 客户端体力耗尽标记
+        private static final Map<UUID, Boolean> IS_STRENGTH_EXHAUSTED_CLIENT = new ConcurrentHashMap<>();
+
         @SubscribeEvent
         public static void onClientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.START) return;
@@ -354,6 +353,16 @@ public class PlayerStrengthManager {
             if (isExhausted && player.isSprinting()) {
                 player.setSprinting(false);
             }
+        }
+
+        // 公开方法：设置客户端体力耗尽标记（供同步管理器调用）
+        public static void setClientStrengthExhausted(UUID uuid, boolean exhausted) {
+            IS_STRENGTH_EXHAUSTED_CLIENT.put(uuid, exhausted);
+        }
+
+        // 公开方法：获取客户端体力耗尽标记
+        public static boolean isClientStrengthExhausted(UUID uuid) {
+            return IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
         }
     }
 }

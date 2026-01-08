@@ -30,7 +30,7 @@ public class Packet_CantRun {
                 mc.player.setSprinting(false);
 
                 // 设置客户端耗尽标记
-                PlayerStrengthManager.IS_STRENGTH_EXHAUSTED_CLIENT.put(mc.player.getUUID(), true);
+                PlayerStrengthManager.ClientTickHandler.setClientStrengthExhausted(mc.player.getUUID(), true);
 
                 // 显示提示消息
                 mc.player.displayClientMessage(

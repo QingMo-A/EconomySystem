@@ -90,10 +90,10 @@ public class Packet_SyncStrengthData {
             // 更新客户端耗尽标记
             if (canSprint) {
                 // 体力足够，清除耗尽标记
-                PlayerStrengthManager.IS_STRENGTH_EXHAUSTED_CLIENT.remove(player.getUUID());
+                PlayerStrengthManager.ClientTickHandler.setClientStrengthExhausted(player.getUUID(), false);
             } else {
                 // 体力耗尽，设置耗尽标记并强制停止疾跑
-                PlayerStrengthManager.IS_STRENGTH_EXHAUSTED_CLIENT.put(player.getUUID(), true);
+                PlayerStrengthManager.ClientTickHandler.setClientStrengthExhausted(player.getUUID(), true);
                 if (player.isSprinting()) {
                     player.setSprinting(false);
                 }
