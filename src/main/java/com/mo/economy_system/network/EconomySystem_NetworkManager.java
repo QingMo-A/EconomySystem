@@ -2,6 +2,7 @@ package com.mo.economy_system.network;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.packets.*;
+import com.mo.economy_system.network.packets.auth_system.*;
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
@@ -92,5 +93,18 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_SyncCourageData.class, Packet_SyncCourageData::encode, Packet_SyncCourageData::decode, Packet_SyncCourageData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncInfectionData.class, Packet_SyncInfectionData::encode, Packet_SyncInfectionData::decode, Packet_SyncInfectionData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_RequestAllPlayerData.class, Packet_RequestAllPlayerData::encode, Packet_RequestAllPlayerData::decode, Packet_RequestAllPlayerData::handle);
+        INSTANCE.registerMessage(packetId++, Packet_LoginRequest.class, Packet_LoginRequest::encode, Packet_LoginRequest::decode, Packet_LoginRequest::handle);
+        INSTANCE.registerMessage(packetId++, Packet_RegisterRequest.class, Packet_RegisterRequest::encode, Packet_RegisterRequest::decode, Packet_RegisterRequest::handle);
+        INSTANCE.registerMessage(packetId++, Packet_LoginResponse.class, Packet_LoginResponse::encode, Packet_LoginResponse::decode, Packet_LoginResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_RegisterResponse.class, Packet_RegisterResponse::encode, Packet_RegisterResponse::decode, Packet_RegisterResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+
+        // 新的认证系统网络包
+        INSTANCE.registerMessage(packetId++, Packet_AuthChallenge.class, Packet_AuthChallenge::encode, Packet_AuthChallenge::decode, Packet_AuthChallenge::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_AuthResponse.class, Packet_AuthResponse::encode, Packet_AuthResponse::decode, Packet_AuthResponse::handle);
+        INSTANCE.registerMessage(packetId++, Packet_AuthResult.class, Packet_AuthResult::encode, Packet_AuthResult::decode, Packet_AuthResult::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+    }
+
+    public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {
+        INSTANCE.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player), packet);
     }
 }
