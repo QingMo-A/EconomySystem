@@ -141,7 +141,7 @@ public class ServerInformationDisplay {
         List<InfoBox> leftBoxes = new ArrayList<>();
         leftBoxes.add(new InfoBox(
             Component.literal("§b§r§bDreaming§dFish"),
-            0xFFDD00,  // 黄色边框
+            0xFF9988FF,  // 梦幻蓝紫色边框
             0xB0202020  // 淡黑色背景
         ));
         leftBoxes.add(new InfoBox(
@@ -183,7 +183,7 @@ public class ServerInformationDisplay {
 
         // 渲染所有小框
         for (InfoBox box : boxes) {
-            renderSmallBox(guiGraphics, font, currentX, baseY, box);
+            renderEnhancedSmallBox(guiGraphics, font, currentX, baseY, box);
             currentX += box.boxWidth + BOX_SPACING;
         }
 
@@ -191,23 +191,24 @@ public class ServerInformationDisplay {
         TipDisplayManager.setServerInfoHeight(serverInfoHeight + BOX_SPACING);
     }
 
-    // 渲染右上角玩家信息框
+    // 渲染右上角玩家信息框（优化版）
     private static void renderPlayerInfo(GuiGraphics guiGraphics, Font font, int screenWidth, int screenHeight,
                                          Minecraft mc, String rankId, String titleName, int playerLevel) {
         int baseY = TOP_OFFSET;
 
         // 计算文本宽度
         String nameText = "§e" + mc.player.getName().getString();
-        String levelText = "§6Lv." + playerLevel;
+        String levelText = "§6✦ Lv." + playerLevel;
         long currentExp = PlayerLevelManager.getPlayerExperienceClient(mc.player);
         long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(mc.player);
-        String expNeededText = "§7还需: §f" + nextLevelExp + " §7经验";
+        float expProgress = PlayerLevelManager.getExperienceProgressClient(mc.player);
+        int expPercent = (int)(expProgress * 100);
+        String expNeededText = "§7" + expPercent + "% §8(§7还需: §f" + nextLevelExp + "§7)";
 
-        // 计算rank+称号行的完整宽度（分段计算每段宽度并相加）
+        // 计算rank+称号行的完整宽度
         Title titleObj = TitleRegistry.getTitleByName(titleName);
         int titleColor = titleObj != null ? titleObj.getColor() : 0xFFAAAAAA;
 
-        // 分段计算rank+称号行的宽度，与实际渲染逻辑完全一致
         int prefixWidth = font.width(Component.literal("§7🎖️ "));
         int rankWidth = font.width(Component.literal(rankId));
         int separatorWidth = font.width(Component.literal(" §r§7 | §r🏅 "));
@@ -218,10 +219,10 @@ public class ServerInformationDisplay {
         int levelTextWidth = font.width(levelText);
         int expNeededWidth = font.width(expNeededText);
 
-        // 计算框的宽度和高度
-        int padding = 3;
+        // 计算框的宽度和高度（增加内边距使布局更舒适）
+        int padding = 5;
         int lineHeight = font.lineHeight;
-        int spacing = 3;
+        int spacing = 4;
 
         int bottomLineWidth = levelTextWidth + spacing + expNeededWidth;
         int minBoxWidth = Math.max(nameWidth, Math.max(rankTitleWidth, bottomLineWidth));
@@ -233,22 +234,32 @@ public class ServerInformationDisplay {
         int boxX = screenWidth - boxWidth - RIGHT_OFFSET;
         int boxY = baseY;
 
-        // 淡黑色背景
-        int bgColor = 0xB0202020;
+        // ========== 渐变背景 ==========
+        // 主背景
+        int bgColor = 0xD0181818;  // 更深的半透明背景
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + boxHeight, bgColor);
 
-        // RGB动态边框
-        int borderColor = getDynamicBorderColor();
+        // ========== 获取动态RGB颜色 ==========
+        int dynamicColor = getDynamicBorderColor();
+
+        // ========== 微妙的RGB外发光效果 ==========
+        int glowColor = 0x30000000 | (dynamicColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), boxX - 1, boxY - 1, boxX + boxWidth + 1, boxY + boxHeight + 1, glowColor);
+
+        // ========== RGB动态边框效果 ==========
+        int borderColor = dynamicColor;  // 动态RGB边框
+
+        // 主边框
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + 1, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + 1, boxY + boxHeight, borderColor);
         guiGraphics.fill(RenderType.gui(), boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, borderColor);
 
-        // 第一行：玩家昵称
+        // ========== 第一行：玩家昵称 ==========
         int line1Y = boxY + padding;
         guiGraphics.drawString(font, Component.literal(nameText), boxX + padding, line1Y, 0xFFFFFF);
 
-        // 第二行：rank | 称号
+        // ========== 第二行：rank | 称号 ==========
         int line2Y = line1Y + lineHeight + spacing;
         int currentX = boxX + padding;
 
@@ -256,7 +267,7 @@ public class ServerInformationDisplay {
         guiGraphics.drawString(font, Component.literal("§7🎖️ "), currentX, line2Y, 0xFFAAAAAA);
         currentX += font.width("§7🎖️ ");
 
-        // 渲染 rank（复用上面计算的宽度）
+        // 渲染 rank
         int rankColor = getRankColorByName(rankId);
         guiGraphics.drawString(font, Component.literal(rankId), currentX, line2Y, rankColor);
         currentX += rankWidth;
@@ -266,48 +277,99 @@ public class ServerInformationDisplay {
         guiGraphics.drawString(font, Component.literal(separator), currentX, line2Y, 0xFFAAAAAA);
         currentX += font.width(separator);
 
-        // 渲染称号（使用前面获取的颜色）
+        // 渲染称号
         guiGraphics.drawString(font, Component.literal(titleName), currentX, line2Y, titleColor);
 
-        // 第三行：进度条（使用框的完整宽度，确保进度条顶到右边并完整显示称号）
+        // ========== 第三行：经验进度条 ==========
         int progressBarY = line2Y + lineHeight + spacing;
         int progressBarX = boxX + padding;
-        int progressBarWidth = boxWidth - padding * 2;  // 使用框的内部宽度
+        int progressBarWidth = boxWidth - padding * 2;
 
-        // 进度条背景
+        // 进度条背景（渐变效果）
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
+            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xDD1A1A1A);
+        // 进度条背景内边框
+        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
+            progressBarX + progressBarWidth, progressBarY + 1, 0xFF333333);
+        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY + PROGRESS_BAR_HEIGHT - 1,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xFF333333);
 
-        // 进度条前景
-        float experienceProgress = PlayerLevelManager.getExperienceProgressClient(mc.player);
-        int progressWidth = (int)(progressBarWidth * experienceProgress);
+        // 进度条前景（金色渐变）
+        int progressWidth = (int)(progressBarWidth * expProgress);
         if (progressWidth > 0) {
-            guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
-                progressBarX + progressWidth, progressBarY + PROGRESS_BAR_HEIGHT - 1, 0xFFCC8800);
+            // 主体
+            for (int i = 0; i < progressWidth - 2; i++) {
+                float ratio = (float)i / progressBarWidth;
+                int r = Math.min(255, (int)(204 + ratio * 51));
+                int g = Math.min(255, (int)(136 + ratio * 51));
+                int b = Math.min(255, (int)(0 + ratio * 85));
+                int segmentColor = 0xFF000000 | (r << 16) | (g << 8) | b;
+                guiGraphics.fill(RenderType.gui(), progressBarX + 2 + i, progressBarY + 1,
+                    progressBarX + 2 + i + 1, progressBarY + PROGRESS_BAR_HEIGHT - 1, segmentColor);
+            }
+
+            // 高光效果（顶部亮线）
+            if (progressWidth > 2) {
+                guiGraphics.fill(RenderType.gui(), progressBarX + 2, progressBarY + 1,
+                    progressBarX + progressWidth - 1, progressBarY + 2, 0xFFFFDD88);
+            }
         }
 
-        // 进度条边框
-        int progressBorderColor = 0xFFDDAA55;
+        // 进度条外边框（使用动态RGB颜色）
+        int progressBorderColor = dynamicColor;
+        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
+            progressBarX + 2, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
+        guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 2, progressBarY,
+            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
             progressBarX + progressBarWidth, progressBarY + 1, progressBorderColor);
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY + PROGRESS_BAR_HEIGHT - 1,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
-        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
-            progressBarX + 1, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
-        guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 1, progressBarY,
-            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
 
-        // 第四行：等级 + 经验信息（左对齐等级，右对齐经验文本）
+        // ========== 第四行：等级 + 经验信息 ==========
         int belowProgressBarY = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
+
+        // 等级信息（左对齐）
         int levelX = boxX + padding;
         guiGraphics.drawString(font, Component.literal(levelText), levelX, belowProgressBarY, 0xFFFFFF);
 
-        // 经验文本右对齐到进度条右边缘
+        // 经验百分比（右对齐）
         int expNeededX = boxX + padding + progressBarWidth - expNeededWidth;
         guiGraphics.drawString(font, Component.literal(expNeededText), expNeededX, belowProgressBarY, 0xFFFFFF);
     }
 
-    // 渲染小框（带文字缩放）
+    // 渲染增强版小框（带发光背景，无边框线）
+    private static void renderEnhancedSmallBox(GuiGraphics guiGraphics, Font font, int x, int y, InfoBox box) {
+        int boxHeight = BOX_HEIGHT;
+
+        // ========== 背景效果 ==========
+        // 主背景（淡黑色半透明）
+        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + boxHeight, box.backgroundColor);
+
+        // ========== 微妙的发光背景效果 ==========
+        int glowColor = 0x30000000 | (box.borderColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), x - 1, y - 1, x + box.boxWidth + 1, y + boxHeight + 1, glowColor);
+
+        // ========== 文本居中渲染（应用缩放）==========
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose();
+
+        float scaledTextWidth = box.textWidth * INFO_TEXT_SCALE;
+        float scaledTextHeight = font.lineHeight * INFO_TEXT_SCALE;
+
+        int textX = x + (box.boxWidth - (int)scaledTextWidth) / 2;
+        int textY = y + (boxHeight - (int)scaledTextHeight) / 2;
+
+        poseStack.translate(textX, textY, 0);
+        poseStack.scale(INFO_TEXT_SCALE, INFO_TEXT_SCALE, 1.0f);
+
+        // 主文字
+        guiGraphics.drawString(font, box.text, 0, 0, 0xFFFFFFFF);
+
+        poseStack.popPose();
+    }
+
+    // 渲染小框（带文字缩放）- 保留旧方法备用
     private static void renderSmallBox(GuiGraphics guiGraphics, Font font, int x, int y, InfoBox box) {
         // 背景
         guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + BOX_HEIGHT, box.backgroundColor);
@@ -365,13 +427,13 @@ public class ServerInformationDisplay {
     }
 
     /**
-     * 获取动态RGB变色的边框颜色（基于系统时间循环）
+     * 获取动态RGB变色的边框颜色（基于系统时间循环，颜色更淡）
      */
     private static int getDynamicBorderColor() {
         long currentTime = System.currentTimeMillis();
-        int red = (int) (Math.sin(currentTime * 0.001) * 127 + 128);
-        int green = (int) (Math.sin(currentTime * 0.001 + 2) * 127 + 128);
-        int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 127 + 128);
+        int red = (int) (Math.sin(currentTime * 0.001) * 100 + 155);
+        int green = (int) (Math.sin(currentTime * 0.001 + 2) * 100 + 155);
+        int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 100 + 155);
         return 0xFF000000 | (red << 16) | (green << 8) | blue;
     }
 
