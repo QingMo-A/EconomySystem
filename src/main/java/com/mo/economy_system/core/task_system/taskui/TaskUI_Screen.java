@@ -41,15 +41,15 @@ public class TaskUI_Screen extends Screen {
     private static final int BAR_HEIGHT = 8;//横向进度条高度
     private static final int BAR_TO_TEXT_SPACING = 8; // 类别文本与进度条间距
     private static final int BAR_BAR_SPACING = 18; // 进度条之间的纵向间距
-    // 进度条颜色
+    // 进度条颜色（深饱和鲜艳版本）
     private static final int TASK_BG_COLOR = (128 << 24) | 0x000000; // 进度条背景色
-    private static final int TASK_BORDER_COLOR = 0xFFCCCCCC; // 淡灰色边框
+    private static final int TASK_BORDER_COLOR = 0xFFFFFFFF; // 白色边框，更明显
     private static final int TASK_LOW_COLOR = (255 << 24) | 0xFF2222; // 低进度警告色
-    private static final int TASK_HEALTH_COLOR = (255 << 24) | 0xFF4444; // 血量条颜色
-    private static final int TASK_FOOD_COLOR = (255 << 24) | 0xFFFF88; // 饥饿条颜色
-    private static final int TASK_STRENGTH_COLOR = (255 << 24) | 0x33FF33; // 体力条颜色
-    private static final int TASK_COURAGE_COLOR = (255 << 24) | 0xCC66FF; // 勇气条颜色
-    private static final int TASK_INFECTION_COLOR = (255 << 24) | 0x00FF00; // 感染值条颜色
+    private static final int TASK_HEALTH_COLOR = (255 << 24) | 0xFF8888; // 血量条颜色（深鲜艳红）
+    private static final int TASK_FOOD_COLOR = (255 << 24) | 0xFFCC00; // 饥饿条颜色（深金黄色）
+    private static final int TASK_STRENGTH_COLOR = (255 << 24) | 0x00DD00; // 体力条颜色（深绿色）
+    private static final int TASK_COURAGE_COLOR = (255 << 24) | 0xCC00FF; // 勇气条颜色（深紫色）
+    private static final int TASK_INFECTION_COLOR = (255 << 24) | 0x00DD00; // 感染值条颜色（深绿色）
     // 文本样式（类别+数值）
     private static final int TASK_TEXT_COLOR = 0xFFFFFFFF; // 纯白色文本
     private static final int TASK_VALUE_OFFSET_X = 6; // 数值与进度条右侧的间距
@@ -849,8 +849,8 @@ public class TaskUI_Screen extends Screen {
             int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
             guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
         }
-        // 绘制边框
-        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制边框（带淡色发光）
+        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
         // 绘制右侧数值文本
         drawTaskProgressValueText(guiGraphics, x, y, String.format("%d/%d", currentValue, maxValue));
     }
@@ -870,14 +870,18 @@ public class TaskUI_Screen extends Screen {
             int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
             guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
         }
-        // 绘制边框
-        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制边框（带淡色发光）
+        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
         // 绘制右侧数值文本
         drawTaskProgressValueText(guiGraphics, x, y, String.format("%.1f/%.1f", currentValue, maxValue));
     }
 
-    // 绘制进度条边框
-    private void drawTaskBorder(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    // 绘制进度条边框（带鲜艳发光效果）
+    private void drawTaskBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int barColor) {
+        // 外发光效果（更鲜艳，使用进度条自身的颜色）
+        int glowColor = 0x60000000 | (barColor & 0x00FFFFFF);
+        guiGraphics.fill(x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
+
         // 上边框
         guiGraphics.fill(x, y, x + width, y + 1, TASK_BORDER_COLOR);
         // 下边框

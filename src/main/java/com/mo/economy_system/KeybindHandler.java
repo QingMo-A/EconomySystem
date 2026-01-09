@@ -53,15 +53,14 @@ public class KeybindHandler {
                 Minecraft.getInstance().setScreen(new Screen_Home());
             }
             if (INFORMATION_UI_KEY.consumeClick()) {
-                if (mc.isSingleplayer()) {
-                    return;
-                }
                 ServerInformationDisplay.toggleUI();
-                mc.player.sendSystemMessage(
+                if (mc.player != null) {
+                    mc.player.sendSystemMessage(
                         ServerInformationDisplay.isShowUI() ?
-                                Component.literal("§a[EconomySystem]信息面板已开启，再次按下O关闭！") :
-                                Component.literal("§c[EconomySystem]信息面板已关闭，再次按下O开启！")
-                );
+                            Component.literal("§a[EconomySystem]信息面板已开启，再次按下O关闭！") :
+                            Component.literal("§c[EconomySystem]信息面板已关闭，再次按下O开启！")
+                    );
+                }
             }
             if (TASK_UI_KEY.consumeClick()) {
                 TaskUI.toggleUI();

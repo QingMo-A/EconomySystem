@@ -59,6 +59,11 @@ public class ServerInformationDisplay {
     private static long LAST_BALANCE_UPDATE = 0;           // 余额最后刷新时间
     private static final long UPDATE_INTERVAL = 5000;      // 5秒刷新一次
 
+    // 性能优化：缓存RGB颜色值
+    private static int CACHED_DYNAMIC_COLOR = 0xFFDDAA55;
+    private static long LAST_COLOR_UPDATE = 0;
+    private static final long COLOR_UPDATE_INTERVAL = 100; // 100ms更新一次颜色
+
     // 获取当前玩家UUID
     public static UUID getCurrentPlayerUUID() {
         Minecraft mc = Minecraft.getInstance();
@@ -74,10 +79,14 @@ public class ServerInformationDisplay {
     @SubscribeEvent
     public static void onClientLoginToServer(ClientPlayerNetworkEvent.LoggingIn event) {
         Minecraft mc = Minecraft.getInstance();
-        // 仅多人服务器生效，单人跳过
-        if (!mc.isSingleplayer()) {
-            SHOW_UI = true;
-            System.out.println("玩家进服：默认开启信息面板");
+
+        // 单人游戏和多人游戏都显示UI
+        SHOW_UI = true;
+        System.out.println("玩家进服：默认开启信息面板");
+
+        // 单人游戏发送提示消息
+        if (mc.isSingleplayer() && mc.player != null) {
+            mc.player.sendSystemMessage(Component.literal("§e[EconomySystem]§f您处于单人游戏，可以按§6O§f隐藏服务器UI"));
         }
     }
 
@@ -117,9 +126,6 @@ public class ServerInformationDisplay {
     @SubscribeEvent
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-
-        // 单人游戏直接返回
-        if (mc.isSingleplayer()) return;
 
         if (!SHOW_UI || mc.isPaused() || mc.screen != null || mc.player == null) return;
 
@@ -285,46 +291,36 @@ public class ServerInformationDisplay {
         int progressBarX = boxX + padding;
         int progressBarWidth = boxWidth - padding * 2;
 
-        // 进度条背景（渐变效果）
+        // 进度条背景
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xDD1A1A1A);
-        // 进度条背景内边框
-        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
-            progressBarX + progressBarWidth, progressBarY + 1, 0xFF333333);
-        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY + PROGRESS_BAR_HEIGHT - 1,
-            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xFF333333);
 
-        // 进度条前景（金色渐变）
+        // 进度条前景（纯金色，性能优化）
         int progressWidth = (int)(progressBarWidth * expProgress);
-        if (progressWidth > 0) {
-            // 主体
-            for (int i = 0; i < progressWidth - 2; i++) {
-                float ratio = (float)i / progressBarWidth;
-                int r = Math.min(255, (int)(204 + ratio * 51));
-                int g = Math.min(255, (int)(136 + ratio * 51));
-                int b = Math.min(255, (int)(0 + ratio * 85));
-                int segmentColor = 0xFF000000 | (r << 16) | (g << 8) | b;
-                guiGraphics.fill(RenderType.gui(), progressBarX + 2 + i, progressBarY + 1,
-                    progressBarX + 2 + i + 1, progressBarY + PROGRESS_BAR_HEIGHT - 1, segmentColor);
-            }
+        if (progressWidth > 2) {
+            // 主进度条（纯色，移除逐像素渐变）
+            guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
+                progressBarX + progressWidth - 1, progressBarY + PROGRESS_BAR_HEIGHT - 1, 0xFFCC8800);
 
-            // 高光效果（顶部亮线）
-            if (progressWidth > 2) {
-                guiGraphics.fill(RenderType.gui(), progressBarX + 2, progressBarY + 1,
-                    progressBarX + progressWidth - 1, progressBarY + 2, 0xFFFFDD88);
-            }
+            // 顶部高光
+            guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
+                progressBarX + progressWidth - 1, progressBarY + 2, 0xFFFFDD88);
         }
 
-        // 进度条外边框（使用动态RGB颜色）
-        int progressBorderColor = dynamicColor;
+        // 进度条发光边框
+        // 外发光
+        int progressGlowColor = 0x40000000 | (dynamicColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), progressBarX - 1, progressBarY - 1,
+            progressBarX + progressBarWidth + 1, progressBarY + PROGRESS_BAR_HEIGHT + 1, progressGlowColor);
+        // 主边框
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
-            progressBarX + 2, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
-        guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 2, progressBarY,
-            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
-        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
-            progressBarX + progressBarWidth, progressBarY + 1, progressBorderColor);
+            progressBarX + progressBarWidth, progressBarY + 1, dynamicColor);
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY + PROGRESS_BAR_HEIGHT - 1,
-            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, progressBorderColor);
+            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, dynamicColor);
+        guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
+            progressBarX + 1, progressBarY + PROGRESS_BAR_HEIGHT, dynamicColor);
+        guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 1, progressBarY,
+            progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, dynamicColor);
 
         // ========== 第四行：等级 + 经验信息 ==========
         int belowProgressBarY = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
@@ -427,14 +423,21 @@ public class ServerInformationDisplay {
     }
 
     /**
-     * 获取动态RGB变色的边框颜色（基于系统时间循环，颜色更淡）
+     * 获取动态RGB变色的边框颜色（基于系统时间循环，颜色更淡，使用缓存优化性能）
      */
     private static int getDynamicBorderColor() {
         long currentTime = System.currentTimeMillis();
-        int red = (int) (Math.sin(currentTime * 0.001) * 100 + 155);
-        int green = (int) (Math.sin(currentTime * 0.001 + 2) * 100 + 155);
-        int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 100 + 155);
-        return 0xFF000000 | (red << 16) | (green << 8) | blue;
+
+        // 每100ms更新一次颜色，避免每帧计算
+        if (currentTime - LAST_COLOR_UPDATE > COLOR_UPDATE_INTERVAL) {
+            int red = (int) (Math.sin(currentTime * 0.001) * 100 + 155);
+            int green = (int) (Math.sin(currentTime * 0.001 + 2) * 100 + 155);
+            int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 100 + 155);
+            CACHED_DYNAMIC_COLOR = 0xFF000000 | (red << 16) | (green << 8) | blue;
+            LAST_COLOR_UPDATE = currentTime;
+        }
+
+        return CACHED_DYNAMIC_COLOR;
     }
 
     /**

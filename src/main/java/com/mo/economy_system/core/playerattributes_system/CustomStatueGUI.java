@@ -33,7 +33,7 @@ public class CustomStatueGUI {
     //样式常量
     // 基础样式
     private static final int BACKGROUND_ALPHA = 128;
-    private static final int BORDER_COLOR = 0xFFCCCCCC; // 淡灰色边框
+    private static final int BORDER_COLOR = 0xFFFFFFFF; // 白色边框，更明显
     private static final int BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x000000;
     private static final int LOW_COLOR = (255 << 24) | 0xFF2222;
 
@@ -42,13 +42,13 @@ public class CustomStatueGUI {
     private static final int BAR_TO_PLAYER_SPACING = 1; //进度条与小人的间距）
     private static final int BAR_BAR_SPACING = 3; //两进度条之间的间距
 
-    // 颜色配置
-    private static final int FOOD_BAR_COLOR = (255 << 24) | 0xFFFF88;
-    private static final int STRENGTH_BAR_COLOR = (255 << 24) | 0x33FF33;
-    // 勇气值进度条为紫色
-    private static final int COURAGE_BAR_COLOR = (255 << 24) | 0xCC66FF;
-    // 感染值进度条为绿色
-    private static final int INFECTION_BAR_COLOR = (255 << 24) | 0x00FF00;
+    // 颜色配置（深饱和鲜艳版本）
+    private static final int FOOD_BAR_COLOR = (255 << 24) | 0xFFCC00;      // 深金黄色
+    private static final int STRENGTH_BAR_COLOR = (255 << 24) | 0x00DD00;   // 深绿色
+    // 勇气值进度条为深紫色
+    private static final int COURAGE_BAR_COLOR = (255 << 24) | 0xCC00FF;    // 深紫色
+    // 感染值进度条为深绿色
+    private static final int INFECTION_BAR_COLOR = (255 << 24) | 0x00DD00;  // 深绿色
 
     //缓存路径，优化
     private static final Map<String, ResourceLocation> PLAYER_HEALTH_TEXTURES = new HashMap<>();
@@ -230,8 +230,8 @@ public class CustomStatueGUI {
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
         }
 
-        // 绘制淡色边框
-        drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制边框（带淡色发光）
+        drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
     }
     //重载 float
     private static void drawVerticalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor) {
@@ -248,14 +248,18 @@ public class CustomStatueGUI {
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
         }
 
-        // 绘制淡色边框
-        drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT);
+        // 绘制边框（带淡色发光）
+        drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
     }
 
     /**
-     * 绘制进度条边框
+     * 绘制进度条边框（带鲜艳发光效果）
      */
-    private static void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    private static void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int barColor) {
+        // 外发光效果（更鲜艳，使用进度条自身的颜色）
+        int glowColor = 0x60000000 | (barColor & 0x00FFFFFF);
+        guiGraphics.fill(x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
+
         // 上边框
         guiGraphics.fill(x, y, x + width, y + 1, BORDER_COLOR);
         // 下边框

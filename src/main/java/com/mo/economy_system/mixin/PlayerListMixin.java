@@ -29,20 +29,25 @@ public class PlayerListMixin {
     private void economySystem$afterPlayerPlace(Connection connection, ServerPlayer player, CallbackInfo ci) {
         EconomySystem.LOGGER.info("PlayerListMixin.placeNewPlayer 被调用，玩家: " + player.getName().getString());
 
+        // 单人游戏跳过登录系统
+        if (player.getServer() != null && player.getServer().isSingleplayer()) {
+            EconomySystem.LOGGER.info("单人游戏模式，跳过登录系统");
+            return;
+        }
+
         // 检查玩家是否需要认证
         AuthSavedData authData = AuthSavedData.getInstance(player.serverLevel());
         boolean isLoggedIn = authData.isLoggedIn(player.getUUID());
-        boolean isRegistered = authData.isRegistered(player.getUUID());
 
-        EconomySystem.LOGGER.info("玩家登录状态 - 已登录: " + isLoggedIn + ", 已注册: " + isRegistered);
+        EconomySystem.LOGGER.info("玩家登录状态 - 已登录: " + isLoggedIn);
 
         // 只有在玩家未登录时才发送认证挑战
-        // 不要强制logout，否则会覆盖快速登录的效果
+        // 快速登录和登录消息由EventHandler_PlayerAuth处理，避免重复
         if (!isLoggedIn) {
             EconomySystem.LOGGER.info("玩家未登录，准备发送认证挑战");
             ServerAuthHandler.sendAuthChallenge(player);
         } else {
-            EconomySystem.LOGGER.info("玩家已登录（可能是快速登录），跳过认证挑战");
+            EconomySystem.LOGGER.info("玩家已登录，跳过认证挑战");
         }
     }
 }

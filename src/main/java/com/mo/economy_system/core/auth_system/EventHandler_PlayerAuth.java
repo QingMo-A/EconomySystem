@@ -27,6 +27,12 @@ public class EventHandler_PlayerAuth {
     public static void onPlayerJoin(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (event.getLevel() instanceof ServerLevel level && !level.isClientSide) {
+            // 单人游戏跳过登录系统
+            if (level.getServer() != null && level.getServer().isSingleplayer()) {
+                EconomySystem.LOGGER.info("单人游戏模式，跳过登录系统");
+                return;
+            }
+
             EconomySystem.LOGGER.info("=== EventHandler_PlayerAuth.onPlayerJoin 被调用 ===");
             EconomySystem.LOGGER.info("玩家: " + player.getName().getString());
             EconomySystem.LOGGER.info("维度: " + level.dimension().location());
@@ -130,6 +136,11 @@ public class EventHandler_PlayerAuth {
         if (event.phase != TickEvent.Phase.START) return;
         if (!(event.player instanceof ServerPlayer player)) return;
 
+        // 单人游戏跳过
+        if (player.getServer() != null && player.getServer().isSingleplayer()) {
+            return;
+        }
+
         ServerLevel level = player.serverLevel();
         AuthSavedData data = AuthSavedData.getInstance(level);
 
@@ -210,6 +221,12 @@ public class EventHandler_PlayerAuth {
     @SubscribeEvent
     public static void onPlayerRespawn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // 单人游戏跳过
+            if (player.getServer() != null && player.getServer().isSingleplayer()) {
+                EconomySystem.LOGGER.info("单人游戏模式，跳过重生登录检查");
+                return;
+            }
+
             // 玩家重生，保持登录状态不变
             ServerLevel level = player.serverLevel();
             AuthSavedData data = AuthSavedData.getInstance(level);

@@ -102,8 +102,8 @@ public class ServerAuthHandler {
             // 设置为生存模式
             player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
 
-            // 发送左上角登录成功提示
-            TipPushHelper.sendTipToPlayer(player, "§a登录成功！欢迎回来");
+            // 登录界面会显示登录成功消息，不需要额外发送左上角提示
+            // 避免重复显示
 
             // 检查是否需要播放新手教程
             if (!authData.hasCompletedGuide(player.getUUID())) {
