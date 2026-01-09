@@ -8,8 +8,6 @@ import com.mo.economy_system.commands.economy_system.Command_RedPacket;
 import com.mo.economy_system.commands.territory_system.Command_Territory;
 import com.mo.economy_system.commands.territory_system.Command_TerritoryClaim;
 import com.mo.economy_system.commands.tpa_system.Command_Tpa;
-import com.mo.economy_system.core.auth_system.Command_Login;
-import com.mo.economy_system.core.auth_system.Command_Register;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
@@ -63,8 +61,6 @@ public class EconomySystem_EventHandler {
         Command_Info.register(event.getServer().getCommands().getDispatcher());
         // StarterKitCommand.register(event.getServer().getCommands().getDispatcher());
         Command_Check.register(event.getServer().getCommands().getDispatcher());
-        Command_Register.register(event.getServer().getCommands().getDispatcher());
-        Command_Login.register(event.getServer().getCommands().getDispatcher());
 
         // 初始化 经济系统
         EconomySavedData.getInstance(overworld);

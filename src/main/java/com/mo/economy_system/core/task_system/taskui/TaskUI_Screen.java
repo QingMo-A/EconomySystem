@@ -60,8 +60,13 @@ public class TaskUI_Screen extends Screen {
     private static final int BACKGROUND_ALPHA = 128; //背景透明度
     private static final float UI_WIDTH_PERCENT = 0.75F; //宽度百分比
     private static final float UI_HEIGHT_PERCENT = 0.7F; //高度百分比
-    private static final int BORDER_COLOR = 0xFFFFFFFF; // 白色边框（ARGB：0xFF=全透，FFFFFF=白色）
+    private static final int BORDER_COLOR = 0xFFFFFFFF; // 白色边框（用于分隔线等）
     private static final int BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x000000; //半透明黑背景
+
+    // 性能优化：缓存RGB颜色值
+    private static int CACHED_DYNAMIC_BORDER_COLOR = 0xFFDDAA55;
+    private static long LAST_BORDER_COLOR_UPDATE = 0;
+    private static final long BORDER_COLOR_UPDATE_INTERVAL = 100; // 100ms更新一次颜色
 
     //按钮参数
     private static final int BTN_WIDTH = 60;
@@ -153,8 +158,9 @@ public class TaskUI_Screen extends Screen {
                     //绘制Logo按钮背景
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
-                    //绘制白色边框
-                    int borderColor = 0xFFFFFFFF;
+
+                    //绘制动态RGB边框
+                    int borderColor = getDynamicBorderColor();
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + 1, borderColor);
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 1,
@@ -199,8 +205,8 @@ public class TaskUI_Screen extends Screen {
                     // 绘制按钮背景
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
-                    // 绘制白色边框
-                    int borderColor = 0xFFFFFFFF;
+                    // 绘制动态RGB边框
+                    int borderColor = getDynamicBorderColor();
                     // 上边框
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + 1, borderColor);
@@ -248,7 +254,8 @@ public class TaskUI_Screen extends Screen {
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
 
-                    int borderColor = 0xFFFFFFFF;
+                    // 绘制动态RGB边框
+                    int borderColor = getDynamicBorderColor();
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
                             this.getX() + this.getWidth(), this.getY() + 1, borderColor);
                     guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 1,
@@ -286,16 +293,23 @@ public class TaskUI_Screen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 获取动态RGB边框颜色
+        int dynamicBorderColor = getDynamicBorderColor();
+
+        // 渲染主界面背景发光效果
+        int glowColor = 0x30000000 | (dynamicBorderColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), uiX - 2, uiY - 2, uiX + screenUIWidth + 2, uiY + screenUIHeight + 2, glowColor);
+
         // 渲染主界面背景和边框
         guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + screenUIWidth, uiY + screenUIHeight, BG_COLOR);
         // 上边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + screenUIWidth, uiY + 1, BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + screenUIWidth, uiY + 1, dynamicBorderColor);
         // 下边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY + screenUIHeight - 1, uiX + screenUIWidth, uiY + screenUIHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), uiX, uiY + screenUIHeight - 1, uiX + screenUIWidth, uiY + screenUIHeight, dynamicBorderColor);
         // 左边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + 1, uiY + screenUIHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + 1, uiY + screenUIHeight, dynamicBorderColor);
         // 右边框
-        guiGraphics.fill(RenderType.gui(), uiX + screenUIWidth - 1, uiY, uiX + screenUIWidth, uiY + screenUIHeight, BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), uiX + screenUIWidth - 1, uiY, uiX + screenUIWidth, uiY + screenUIHeight, dynamicBorderColor);
 
         //渲染按钮，父类方法会渲染已添加的所有按钮
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -692,6 +706,10 @@ public class TaskUI_Screen extends Screen {
     //——————————————————————————————————————————————————————————————————————————————————————————————
 
     private void drawRankingTitle(GuiGraphics guiGraphics, int x, int y) {
+        // 绘制发光效果
+        int titleGlowColor = 0x40000000 | (RANKING_BORDER_COLOR & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), x - 2, y - 2, x + RANKING_WIDTH + 2, y + RANKING_TITLE_HEIGHT + 2, titleGlowColor);
+
         // 绘制背景
         guiGraphics.fill(RenderType.gui(), x, y, x + RANKING_WIDTH, y + RANKING_TITLE_HEIGHT, RANKING_BG_COLOR);
         // 绘制边框
@@ -789,6 +807,10 @@ public class TaskUI_Screen extends Screen {
         // 排行榜位置：UI区域右侧，属性进度条旁边
         int rankingX = uiX + screenUIWidth - RANKING_WIDTH - 10; // 右内边距20
         int rankingY = uiY + 10; // 上内边距20
+
+        // 绘制排行榜发光效果
+        int rankingGlowColor = 0x40000000 | (RANKING_BORDER_COLOR & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), rankingX - 2, rankingY - 2, rankingX + RANKING_WIDTH + 2, rankingY + RANKING_HEIGHT + 2, rankingGlowColor);
 
         // 绘制排行榜背景和边框
         guiGraphics.fill(RenderType.gui(), rankingX, rankingY, rankingX + RANKING_WIDTH, rankingY + RANKING_HEIGHT, RANKING_BG_COLOR);
@@ -957,6 +979,24 @@ public class TaskUI_Screen extends Screen {
             // 异常时返回原始时间戳
             return String.valueOf(timestamp);
         }
+    }
+
+    /**
+     * 获取动态RGB变色的边框颜色（基于系统时间循环，使用缓存优化性能）
+     */
+    private static int getDynamicBorderColor() {
+        long currentTime = System.currentTimeMillis();
+
+        // 每100ms更新一次颜色，避免每帧计算
+        if (currentTime - LAST_BORDER_COLOR_UPDATE > BORDER_COLOR_UPDATE_INTERVAL) {
+            int red = (int) (Math.sin(currentTime * 0.001) * 100 + 155);
+            int green = (int) (Math.sin(currentTime * 0.001 + 2) * 100 + 155);
+            int blue = (int) (Math.sin(currentTime * 0.001 + 4) * 100 + 155);
+            CACHED_DYNAMIC_BORDER_COLOR = 0xFF000000 | (red << 16) | (green << 8) | blue;
+            LAST_BORDER_COLOR_UPDATE = currentTime;
+        }
+
+        return CACHED_DYNAMIC_BORDER_COLOR;
     }
 
     private void drawStringWithWrap(GuiGraphics guiGraphics, String text, int x, int y, int maxWidth, int lineHeight, int color) {

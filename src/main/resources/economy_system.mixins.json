@@ -13,8 +13,7 @@
     "RecipeManagerMixin",
     "BedBlockMixin",
     "ServerLevelMixin",
-    "AnvilBlockMixin",
-    "PlayerListMixin"
+    "AnvilBlockMixin"
   ],
   "injectors": {
     "defaultRequire": 1
