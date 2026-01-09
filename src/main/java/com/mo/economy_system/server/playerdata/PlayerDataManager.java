@@ -7,7 +7,6 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.chattitle.Title;
-import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.rank.Rank;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -93,8 +92,7 @@ public class PlayerDataManager {
         allPlayerData.put(playerUUID, newPlayerData);
         saveAllPlayerDataToFile(allPlayerData);
 
-        //新手教程
-        NewPlayerGuide.sendNewPlayerGuide(player);
+        // 注意：新手教程已移至玩家首次登录成功后触发（在 ServerAuthHandler 中）
 
         EconomySystem.LOGGER.info("新玩家 {} 数据初始化完成（默认Rank={}, Title={}, Level={}）",
                 player.getScoreboardName(),

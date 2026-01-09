@@ -4,6 +4,8 @@ import com.mo.economy_system.core.auth_system.AuthSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.auth_system.Packet_AuthChallenge;
 import com.mo.economy_system.network.packets.auth_system.Packet_AuthResult;
+import com.mo.economy_system.server.notice.NewPlayerGuide;
+import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -69,7 +71,7 @@ public class ServerAuthHandler {
                 success = false;
                 message = "你还没有注册！";
             } else {
-                success = authData.login(player.getUUID(), password);
+                success = authData.loginImmediate(player.getUUID(), password, player.serverLevel());
                 message = success ? "登录成功！" : "密码错误！";
             }
         } else {
@@ -81,7 +83,7 @@ public class ServerAuthHandler {
                 success = false;
                 message = "密码长度至少需要4个字符！";
             } else {
-                success = authData.register(player.getUUID(), password);
+                success = authData.registerImmediate(player.getUUID(), password, player.serverLevel());
                 message = success ? "注册成功！请登录。" : "注册失败！";
             }
         }
@@ -99,6 +101,16 @@ public class ServerAuthHandler {
 
             // 设置为生存模式
             player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+
+            // 发送左上角登录成功提示
+            TipPushHelper.sendTipToPlayer(player, "§a登录成功！欢迎回来");
+
+            // 检查是否需要播放新手教程
+            if (!authData.hasCompletedGuide(player.getUUID())) {
+                com.mo.economy_system.EconomySystem.LOGGER.info("玩家 " + player.getName().getString() + " 首次登录，播放新手教程");
+                NewPlayerGuide.sendNewPlayerGuide(player);
+                authData.markGuideCompletedImmediate(player.getUUID(), player.serverLevel());
+            }
 
             com.mo.economy_system.EconomySystem.LOGGER.info("玩家 " + player.getName().getString() + " 登录成功，切换到生存模式");
         }

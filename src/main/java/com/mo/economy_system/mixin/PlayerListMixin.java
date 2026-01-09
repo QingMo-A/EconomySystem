@@ -19,7 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class PlayerListMixin {
 
     /**
-     * 在玩家加入世界后发送认证挑战
+     * 在玩家加入世界后检查认证状态
+     * 注意：不要在这里强制logout，否则会覆盖快速登录的效果
      */
     @Inject(
         method = "placeNewPlayer",
@@ -35,13 +36,13 @@ public class PlayerListMixin {
 
         EconomySystem.LOGGER.info("玩家登录状态 - 已登录: " + isLoggedIn + ", 已注册: " + isRegistered);
 
-        // 强制设置为未登录状态
-        authData.logout(player.getUUID());
-
-        if (!authData.isLoggedIn(player.getUUID())) {
-            // 玩家未登录，发送认证挑战
+        // 只有在玩家未登录时才发送认证挑战
+        // 不要强制logout，否则会覆盖快速登录的效果
+        if (!isLoggedIn) {
             EconomySystem.LOGGER.info("玩家未登录，准备发送认证挑战");
             ServerAuthHandler.sendAuthChallenge(player);
+        } else {
+            EconomySystem.LOGGER.info("玩家已登录（可能是快速登录），跳过认证挑战");
         }
     }
 }
