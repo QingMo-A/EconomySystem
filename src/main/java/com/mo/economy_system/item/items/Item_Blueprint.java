@@ -20,18 +20,24 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class Item_Blueprint extends Item {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Item_Blueprint.class);
+
     public Item_Blueprint(Properties props) {
         // 设置最大堆叠数为1
         super(props.stacksTo(1));
+        LOGGER.info("[Blueprint] Item_Blueprint constructor called!");
     }
 
     @Override
@@ -155,19 +161,25 @@ public class Item_Blueprint extends Item {
         // tag.putInt("tier", getTierForItem(itemId));
     }
 
+    // 创建自定义渲染器实例
+    private static BlueprintItemRenderer RENDERER = null;
+
     // 在你的Item_Blueprint类中添加
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        LOGGER.info("[Blueprint] initializeClient called for Item_Blueprint!");
+
         consumer.accept(new IClientItemExtensions() {
-
-            private BlueprintItemRenderer renderer;
-
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    renderer = new BlueprintItemRenderer();
+                LOGGER.info("[Blueprint] getCustomRenderer called!");
+
+                if (RENDERER == null) {
+                    LOGGER.info("[Blueprint] Creating new BlueprintItemRenderer!");
+                    RENDERER = new BlueprintItemRenderer();
                 }
-                return renderer;
+                LOGGER.info("[Blueprint] Returning renderer: {}", RENDERER);
+                return RENDERER;
             }
         });
     }

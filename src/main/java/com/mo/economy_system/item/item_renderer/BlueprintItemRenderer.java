@@ -2,20 +2,22 @@ package com.mo.economy_system.item.item_renderer;
 
 import com.mo.economy_system.item.items.Item_Blueprint;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BlueprintItemRenderer.class);
 
     public BlueprintItemRenderer() {
         super(
@@ -35,11 +37,20 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
     ) {
         String itemId = Item_Blueprint.getUnlockedItemId(stack);
 
+        LOGGER.info("Blueprint rendering - itemId: {}", itemId);
+
         if (itemId != null && !itemId.isEmpty()) {
             Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+            LOGGER.info("Found item: {} for itemId: {}", item, itemId);
+
             if (item != null) {
+                // 渲染目标物品（正常大小）
+                LOGGER.info("Rendering target item...");
+                poseStack.pushPose();
+
                 ItemStack targetStack = new ItemStack(item);
 
+                // 使用 renderStatic 渲染目标物品
                 Minecraft.getInstance().getItemRenderer().renderStatic(
                         targetStack,
                         transformType,
@@ -47,24 +58,16 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
                         packedOverlay,
                         poseStack,
                         buffer,
-                        Minecraft.getInstance().level,
+                        null,
                         0
                 );
+
+                poseStack.popPose();
                 return;
             }
         }
 
-        // 没 NBT 或异常 → 渲染默认蓝图
-        Minecraft.getInstance().getItemRenderer().renderStatic(
-                stack,
-                transformType,
-                packedLight,
-                packedOverlay,
-                poseStack,
-                buffer,
-                Minecraft.getInstance().level,
-                0
-        );
+        // 没 NBT 或异常 → 不渲染任何东西
+        LOGGER.info("No NBT or invalid item, showing nothing");
     }
 }
-
