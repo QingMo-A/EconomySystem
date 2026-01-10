@@ -22,6 +22,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -46,6 +48,8 @@ public class ServerInformationDisplay {
     private static final int BOX_SPACING = 3;              // 框之间间距
     private static final int RIGHT_OFFSET = 2;             // 右侧偏移
     private static final int TOP_OFFSET = 3;               // 顶部偏移
+    private static final int LEFT_OFFSET = 2;              // 左侧偏移
+    private static final int BOTTOM_OFFSET = 2;            // 底部偏移
     private static final int BOX_HEIGHT = 10;              // 框高度
     private static final int INFO_BOX_TEXT_PADDING = 4;    // 文字左右内边距
     private static final float INFO_TEXT_SCALE = 0.75f;    // 文字缩放比例
@@ -197,97 +201,89 @@ public class ServerInformationDisplay {
         TipDisplayManager.setServerInfoHeight(serverInfoHeight + BOX_SPACING);
     }
 
-    // 渲染右上角玩家信息框（优化版）
+    // 渲染左下角玩家信息框（简化版 + 头像）
     private static void renderPlayerInfo(GuiGraphics guiGraphics, Font font, int screenWidth, int screenHeight,
                                          Minecraft mc, String rankId, String titleName, int playerLevel) {
-        int baseY = TOP_OFFSET;
-
         // 计算文本宽度
-        String nameText = "§e" + mc.player.getName().getString();
-        String levelText = "§6✦ Lv." + playerLevel;
+        String nameText = mc.player.getName().getString();
+        String levelText = "Lv." + playerLevel;
         long currentExp = PlayerLevelManager.getPlayerExperienceClient(mc.player);
         long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(mc.player);
         float expProgress = PlayerLevelManager.getExperienceProgressClient(mc.player);
-        int expPercent = (int)(expProgress * 100);
-        String expNeededText = "§7" + expPercent + "% §8(§7还需: §f" + nextLevelExp + "§7)";
+        String expNeededText = "还需" + nextLevelExp + "经验升级";
 
-        // 计算rank+称号行的完整宽度
+        // 获取颜色
         Title titleObj = TitleRegistry.getTitleByName(titleName);
         int titleColor = titleObj != null ? titleObj.getColor() : 0xFFAAAAAA;
+        int rankColor = getRankColorByName(rankId);
 
-        int prefixWidth = font.width(Component.literal("§7🎖️ "));
-        int rankWidth = font.width(Component.literal(rankId));
-        int separatorWidth = font.width(Component.literal(" §r§7 | §r🏅 "));
-        int titleWidth = font.width(titleName);
-        int rankTitleWidth = prefixWidth + rankWidth + separatorWidth + titleWidth;
+        // ========== 获取玩家头像 ==========
+        int avatarSize = 8; // 头像大小（和Tab列表一样）
+        int avatarSpacing = 2; // 头像和文字的间距
 
+        // 计算各部分宽度
         int nameWidth = font.width(nameText);
-        int levelTextWidth = font.width(levelText);
+        int rankWidth = font.width(rankId);
+        int titleWidth = font.width(titleName);
+        int levelWidth = font.width(levelText);
         int expNeededWidth = font.width(expNeededText);
 
-        // 计算框的宽度和高度（增加内边距使布局更舒适）
-        int padding = 5;
+        // 框的尺寸
+        int padding = 4;
         int lineHeight = font.lineHeight;
-        int spacing = 4;
+        int spacing = 3;
+        int elementSpacing = 2; // 元素之间的间距
 
-        int bottomLineWidth = levelTextWidth + spacing + expNeededWidth;
-        int minBoxWidth = Math.max(nameWidth, Math.max(rankTitleWidth, bottomLineWidth));
-        int boxWidth = minBoxWidth + padding * 2;
+        // 第一行总宽度：头像 + 头像间距 + 昵称 + rank + 称号
+        int line1Width = avatarSize + avatarSpacing + nameWidth + elementSpacing + rankWidth + elementSpacing + titleWidth;
+        // 第三行总宽度：等级 + 经验
+        int line3Width = levelWidth + elementSpacing + expNeededWidth;
 
-        int boxHeight = padding + lineHeight + spacing + lineHeight + spacing + PROGRESS_BAR_HEIGHT + spacing + lineHeight + padding;
+        int boxWidth = Math.max(line1Width, line3Width) + padding * 2;
+        int boxHeight = padding + lineHeight + spacing + PROGRESS_BAR_HEIGHT + spacing + lineHeight + padding;
 
-        // 框的位置（右上角）
-        int boxX = screenWidth - boxWidth - RIGHT_OFFSET;
-        int boxY = baseY;
+        // 框的位置（左下角）
+        int boxX = LEFT_OFFSET;
+        int boxY = screenHeight - boxHeight - BOTTOM_OFFSET;
 
-        // ========== 渐变背景 ==========
-        // 主背景
-        int bgColor = 0xD0181818;  // 更深的半透明背景
+        // ========== 背景和边框 ==========
+        int bgColor = 0xD0181818;
         guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + boxHeight, bgColor);
 
-        // ========== 获取动态RGB颜色 ==========
         int dynamicColor = getDynamicBorderColor();
-
-        // ========== 微妙的RGB外发光效果 ==========
         int glowColor = 0x30000000 | (dynamicColor & 0x00FFFFFF);
         guiGraphics.fill(RenderType.gui(), boxX - 1, boxY - 1, boxX + boxWidth + 1, boxY + boxHeight + 1, glowColor);
 
-        // ========== RGB动态边框效果 ==========
-        int borderColor = dynamicColor;  // 动态RGB边框
-
         // 主边框
-        guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + 1, borderColor);
-        guiGraphics.fill(RenderType.gui(), boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, borderColor);
-        guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + 1, boxY + boxHeight, borderColor);
-        guiGraphics.fill(RenderType.gui(), boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, borderColor);
+        guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + boxWidth, boxY + 1, dynamicColor);
+        guiGraphics.fill(RenderType.gui(), boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, dynamicColor);
+        guiGraphics.fill(RenderType.gui(), boxX, boxY, boxX + 1, boxY + boxHeight, dynamicColor);
+        guiGraphics.fill(RenderType.gui(), boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, dynamicColor);
 
-        // ========== 第一行：玩家昵称 ==========
+        // ========== 第一行：玩家头像 + 昵称 + rank + 称号 ==========
         int line1Y = boxY + padding;
-        guiGraphics.drawString(font, Component.literal(nameText), boxX + padding, line1Y, 0xFFFFFF);
-
-        // ========== 第二行：rank | 称号 ==========
-        int line2Y = line1Y + lineHeight + spacing;
         int currentX = boxX + padding;
 
-        // 渲染 "🎖️ " 前缀
-        guiGraphics.drawString(font, Component.literal("§7🎖️ "), currentX, line2Y, 0xFFAAAAAA);
-        currentX += font.width("§7🎖️ ");
+        // 渲染玩家头像
+        PlayerInfo playerInfo = mc.player.connection.getPlayerInfo(mc.player.getUUID());
+        if (playerInfo != null) {
+            PlayerFaceRenderer.draw(guiGraphics, playerInfo.getSkinLocation(), currentX, line1Y, avatarSize);
+            currentX += avatarSize + avatarSpacing;
+        }
 
-        // 渲染 rank
-        int rankColor = getRankColorByName(rankId);
-        guiGraphics.drawString(font, Component.literal(rankId), currentX, line2Y, rankColor);
-        currentX += rankWidth;
+        // 玩家昵称（黄色）
+        guiGraphics.drawString(font, Component.literal(nameText), currentX, line1Y, 0xFFFFAA);
+        currentX += nameWidth + elementSpacing;
 
-        // 渲染 " §r§7 | §r🏅 "
-        String separator = " §r§7 | §r🏅 ";
-        guiGraphics.drawString(font, Component.literal(separator), currentX, line2Y, 0xFFAAAAAA);
-        currentX += font.width(separator);
+        // rank（带颜色）
+        guiGraphics.drawString(font, Component.literal(rankId), currentX, line1Y, rankColor);
+        currentX += rankWidth + elementSpacing;
 
-        // 渲染称号
-        guiGraphics.drawString(font, Component.literal(titleName), currentX, line2Y, titleColor);
+        // 称号（带颜色）
+        guiGraphics.drawString(font, Component.literal(titleName), currentX, line1Y, titleColor);
 
-        // ========== 第三行：经验进度条 ==========
-        int progressBarY = line2Y + lineHeight + spacing;
+        // ========== 第二行：经验进度条 ==========
+        int progressBarY = line1Y + lineHeight + spacing;
         int progressBarX = boxX + padding;
         int progressBarWidth = boxWidth - padding * 2;
 
@@ -295,24 +291,19 @@ public class ServerInformationDisplay {
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, 0xDD1A1A1A);
 
-        // 进度条前景（纯金色，性能优化）
+        // 进度条前景
         int progressWidth = (int)(progressBarWidth * expProgress);
         if (progressWidth > 2) {
-            // 主进度条（纯色，移除逐像素渐变）
             guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
                 progressBarX + progressWidth - 1, progressBarY + PROGRESS_BAR_HEIGHT - 1, 0xFFCC8800);
-
-            // 顶部高光
             guiGraphics.fill(RenderType.gui(), progressBarX + 1, progressBarY + 1,
                 progressBarX + progressWidth - 1, progressBarY + 2, 0xFFFFDD88);
         }
 
-        // 进度条发光边框
-        // 外发光
+        // 进度条边框
         int progressGlowColor = 0x40000000 | (dynamicColor & 0x00FFFFFF);
         guiGraphics.fill(RenderType.gui(), progressBarX - 1, progressBarY - 1,
             progressBarX + progressBarWidth + 1, progressBarY + PROGRESS_BAR_HEIGHT + 1, progressGlowColor);
-        // 主边框
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY,
             progressBarX + progressBarWidth, progressBarY + 1, dynamicColor);
         guiGraphics.fill(RenderType.gui(), progressBarX, progressBarY + PROGRESS_BAR_HEIGHT - 1,
@@ -322,16 +313,16 @@ public class ServerInformationDisplay {
         guiGraphics.fill(RenderType.gui(), progressBarX + progressBarWidth - 1, progressBarY,
             progressBarX + progressBarWidth, progressBarY + PROGRESS_BAR_HEIGHT, dynamicColor);
 
-        // ========== 第四行：等级 + 经验信息 ==========
-        int belowProgressBarY = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
+        // ========== 第三行：等级 和 经验信息 ==========
+        int line3Y = progressBarY + PROGRESS_BAR_HEIGHT + spacing;
+        currentX = boxX + padding;
 
-        // 等级信息（左对齐）
-        int levelX = boxX + padding;
-        guiGraphics.drawString(font, Component.literal(levelText), levelX, belowProgressBarY, 0xFFFFFF);
+        // 等级信息（金色）
+        guiGraphics.drawString(font, Component.literal(levelText), currentX, line3Y, 0xFFCC8800);
+        currentX += levelWidth + elementSpacing;
 
-        // 经验百分比（右对齐）
-        int expNeededX = boxX + padding + progressBarWidth - expNeededWidth;
-        guiGraphics.drawString(font, Component.literal(expNeededText), expNeededX, belowProgressBarY, 0xFFFFFF);
+        // 经验信息（灰色）
+        guiGraphics.drawString(font, Component.literal(expNeededText), currentX, line3Y, 0xFFAAAAAA);
     }
 
     // 渲染增强版小框（带发光背景，无边框线）
