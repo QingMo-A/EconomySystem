@@ -1,11 +1,10 @@
-package com.mo.economy_system.server;
+package com.mo.economy_system.server.serverui.customsystemui;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager; // 新增：导入网络管理器
 import com.mo.economy_system.network.packets.Packet_JoinMessage;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
-import com.mo.economy_system.server.rank.RankRegistry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -16,8 +15,6 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
 import net.minecraftforge.network.PacketDistributor;
-
-import java.util.Objects;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)

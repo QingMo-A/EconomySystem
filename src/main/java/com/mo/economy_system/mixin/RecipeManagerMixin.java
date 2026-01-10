@@ -1,219 +1,107 @@
 package com.mo.economy_system.mixin;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.gson.*;
+import com.google.gson.JsonElement;
 import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
-import com.mojang.logging.LogUtils;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.common.crafting.CraftingHelper;
-import net.minecraftforge.common.crafting.conditions.ICondition;
-import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Iterator;
 import java.util.Map;
 
 @Mixin(RecipeManager.class)
-public class RecipeManagerMixin extends SimpleJsonResourceReloadListener {
+public class RecipeManagerMixin {
 
-    private static final Gson GSON = (new GsonBuilder()).setPrettyPrinting().disableHtmlEscaping().create();
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipes;
+    @Shadow
     private Map<ResourceLocation, Recipe<?>> byName;
-    private boolean hasErrors;
-    private final ICondition.IContext context;
-
-    public RecipeManagerMixin(ICondition.IContext context) {
-        super(GSON, "recipes");
-
-        this.recipes = ImmutableMap.of();
-        this.byName = ImmutableMap.of();
-        this.context = context;
-    }
 
     /**
-     * @author
-     * @reason
+     * 在配方加载开始时清空工作台配方缓存
      */
-    @Overwrite
-    protected void apply(Map<ResourceLocation, JsonElement> p_44037_, ResourceManager p_44038_, ProfilerFiller p_44039_) {
+    @Inject(
+            method = "apply",
+            at = @At("HEAD")
+    )
+    private void economy_system$clearWorkbenchRecipes(Map<ResourceLocation, JsonElement> recipeList, ResourceManager resourceManager, ProfilerFiller profiler, CallbackInfo ci) {
         PlayerBlueprintData.clearWorkbenchRecipes();
+    }
 
-        this.hasErrors = false;
-        Map<RecipeType<?>, ImmutableMap.Builder<ResourceLocation, Recipe<?>>> map = Maps.newHashMap();
-        ImmutableMap.Builder<ResourceLocation, Recipe<?>> builder = ImmutableMap.builder();
-        Iterator var6 = p_44037_.entrySet().iterator();
+    /**
+     * 在配方加载完成后收集所有工作台配方
+     */
+    @Inject(
+            method = "apply",
+            at = @At("RETURN")
+    )
+    private void economy_system$collectWorkbenchRecipes(Map<ResourceLocation, JsonElement> recipeList, ResourceManager resourceManager, ProfilerFiller profiler, CallbackInfo ci) {
+        // 遍历所有配方，收集工作台配方
+        for (Map.Entry<ResourceLocation, Recipe<?>> entry : this.byName.entrySet()) {
+            ResourceLocation recipeId = entry.getKey();
+            Recipe<?> recipe = entry.getValue();
 
-        while(true) {
-            Map.Entry entry;
-            ResourceLocation resourcelocation;
-            do {
-                if (!var6.hasNext()) {
-                    this.recipes = (Map)map.entrySet().stream().collect(ImmutableMap.toImmutableMap(Map.Entry::getKey, (p_44033_) -> {
-                        return ((ImmutableMap.Builder)p_44033_.getValue()).build();
-                    }));
-                    this.byName = builder.build();
-                    LOGGER.info("Loaded {} recipes", map.size());
-                    return;
+            // 检查是否为工作台合成配方
+            if (recipe.getType() == RecipeType.CRAFTING) {
+                // 检查是否为有效的合成配方（排除特殊配方）
+                if (isValidCraftingRecipe(recipeId, recipe)) {
+                    // 添加到PlayerBlueprintData的recipeMap
+                    PlayerBlueprintData.addWorkbenchRecipe(recipeId, recipe);
                 }
-
-                entry = (Map.Entry)var6.next();
-                resourcelocation = (ResourceLocation)entry.getKey();
-            } while(resourcelocation.getPath().startsWith("_"));
-
-            try {
-                if (((JsonElement)entry.getValue()).isJsonObject() && !CraftingHelper.processConditions(((JsonElement)entry.getValue()).getAsJsonObject(), "conditions", this.context)) {
-                    LOGGER.debug("Skipping loading recipe {} as it's conditions were not met", resourcelocation);
-                } else {
-                    Recipe<?> recipe = RecipeManager.fromJson(resourcelocation, GsonHelper.convertToJsonObject((JsonElement)entry.getValue(), "top element"), this.context);
-                    if (recipe == null) {
-                        LOGGER.info("Skipping loading recipe {} as it's serializer returned null", resourcelocation);
-                    } else {
-                        // ========== 关键代码：收集工作台配方 ==========
-                        // 检查是否为工作台合成配方
-                        if (recipe.getType() == RecipeType.CRAFTING) {
-                            // 检查是否为有效的合成配方（排除特殊配方）
-                            if (isValidCraftingRecipe(resourcelocation, (JsonElement)entry.getValue(), recipe)) {
-                                // 添加到PlayerBlueprintData的recipeMap
-                                PlayerBlueprintData.addWorkbenchRecipe(resourcelocation, recipe);
-
-                                // 可选：调试输出
-                                if (LOGGER.isDebugEnabled()) {
-                                    try {
-                                        ItemStack output = recipe.getResultItem(null);
-                                        if (output != null) {
-                                            LOGGER.debug("Added workbench recipe: {} -> {}",
-                                                    resourcelocation,
-                                                    net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(output.getItem()));
-                                        }
-                                    } catch (Exception e) {
-                                        // 忽略
-                                    }
-                                }
-                            }
-                        }
-
-                        // 原版逻辑
-                        ((ImmutableMap.Builder)map.computeIfAbsent(recipe.getType(), (p_44075_) -> {
-                            return ImmutableMap.builder();
-                        })).put(resourcelocation, recipe);
-                        builder.put(resourcelocation, recipe);
-                    }
-                }
-            } catch (JsonParseException | IllegalArgumentException var10) {
-                RuntimeException jsonparseexception = var10;
-                LOGGER.error("Parsing error loading recipe {}", resourcelocation, jsonparseexception);
             }
         }
     }
 
-    // 添加一个辅助方法来判断是否为有效的工作台配方
-    /*private boolean isValidCraftingRecipe(ResourceLocation recipeId, JsonElement element, Recipe<?> recipe) {
+    /**
+     * 判断是否为有效的工作台配方
+     */
+    private boolean isValidCraftingRecipe(ResourceLocation recipeId, Recipe<?> recipe) {
         // 排除特殊配方
         if (recipeId.getPath().contains("crafting_special_")) {
             return false;
         }
 
-        // 检查配方类型（通过JSON）
-        if (element.isJsonObject()) {
-            JsonObject json = element.getAsJsonObject();
-            if (json.has("type")) {
-                String type = json.get("type").getAsString();
-                // 只收集标准的合成配方，排除特殊合成
-                if (type.equals("minecraft:crafting_shaped") ||
-                        type.equals("minecraft:crafting_shapeless")) {
-                    return true;
+        // 获取配方结果物品ID
+        String resultItemId = getResultItemIdFromRecipe(recipe);
+
+        if (resultItemId != null) {
+            // 转换为小写以进行不区分大小写的比较
+            String lowerResultId = resultItemId.toLowerCase();
+
+            // 检查是否匹配排除关键词
+            for (String keyword : PlayerBlueprintData.EXCLUDED_ITEM_KEYWORDS) {
+                if (matchesKeyword(lowerResultId, keyword)) {
+                    // 添加到默认解锁物品列表
+                    PlayerBlueprintData.addDefaultUnlockedItems(resultItemId);
+                    return false;
                 }
             }
-        }
-
-        return false;
-    }*/
-    private boolean isValidCraftingRecipe(ResourceLocation recipeId, JsonElement element, Recipe<?> recipe) {
-        // 排除特殊配方
-        if (recipeId.getPath().contains("crafting_special_")) {
-            return false;
-        }
-
-        // 检查配方类型（通过JSON）
-        if (element.isJsonObject()) {
-            JsonObject json = element.getAsJsonObject();
-
-            // 1. 检查配方类型
-            if (json.has("type")) {
-                String type = json.get("type").getAsString();
-
-                // 只收集标准的合成配方，排除特殊合成
-                if (type.equals("minecraft:crafting_shaped") ||
-                        type.equals("minecraft:crafting_shapeless")) {
-
-                    // 2. 检查结果物品是否包含排除关键词
-                    String resultItemId = getResultItemIdFromJson(json);
-                    if (resultItemId != null) {
-                        // 转换为小写以进行不区分大小写的比较
-                        String lowerResultId = resultItemId.toLowerCase();
-
-                        // 检查是否匹配排除关键词
-                        for (String keyword : PlayerBlueprintData.EXCLUDED_ITEM_KEYWORDS) {
-                            if (matchesKeyword(lowerResultId, keyword)) {
-                                // 可选：记录排除日志
-                                if (LOGGER.isDebugEnabled()) {
-                                    LOGGER.debug("Excluding recipe {} because result matches keyword '{}'",
-                                            recipeId, keyword);
-                                }
-                                PlayerBlueprintData.addDefaultUnlockedItems(resultItemId);
-                                return false;
-                            }
-                        }
-                        return true;
-                    }
-                }
-            }
+            return true;
         }
 
         return false;
     }
 
     /**
-     * 从JSON中提取结果物品ID
+     * 从配方中提取结果物品ID
      */
-    private String getResultItemIdFromJson(JsonObject json) {
+    private String getResultItemIdFromRecipe(Recipe<?> recipe) {
         try {
-            // 检查是否有"result"字段
-            if (json.has("result")) {
-                JsonElement resultElement = json.get("result");
-
-                if (resultElement.isJsonObject()) {
-                    // 格式: {"item": "minecraft:stone", "count": 1}
-                    return resultElement.getAsJsonObject().get("item").getAsString();
-                } else if (resultElement.isJsonPrimitive()) {
-                    // 格式: "minecraft:stone"
-                    return resultElement.getAsString();
-                }
+            // 尝试从配方结果获取物品ID
+            // 使用空RegistryAccess（仅用于获取物品ID，不需要完整访问）
+            RegistryAccess registryAccess = RegistryAccess.EMPTY;
+            if (recipe.getResultItem(registryAccess) != null &&
+                recipe.getResultItem(registryAccess).getItem() != null) {
+                return recipe.getResultItem(registryAccess).getItem().toString();
             }
-
-            // 某些配方可能使用"output"字段
-            if (json.has("output")) {
-                JsonElement outputElement = json.get("output");
-                if (outputElement.isJsonObject()) {
-                    return outputElement.getAsJsonObject().get("item").getAsString();
-                } else if (outputElement.isJsonPrimitive()) {
-                    return outputElement.getAsString();
-                }
-            }
-
         } catch (Exception e) {
-            LOGGER.warn("Failed to extract result item ID from recipe JSON", e);
+            // 忽略错误，返回null
         }
 
         return null;
@@ -276,7 +164,6 @@ public class RecipeManagerMixin extends SimpleJsonResourceReloadListener {
 
             return itemId.matches(regex);
         } catch (Exception e) {
-            LOGGER.warn("Failed to match wildcard pattern '{}' for item '{}'", pattern, itemId, e);
             return false;
         }
     }

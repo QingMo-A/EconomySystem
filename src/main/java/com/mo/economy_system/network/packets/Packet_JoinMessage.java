@@ -64,17 +64,12 @@ public class Packet_JoinMessage {
     private static void showToastOnClient(Component title, Component content) {
         try {
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-            if (minecraft != null && minecraft.isSameThread() && minecraft.getToasts() != null && minecraft.player != null) {
-                minecraft.getToasts().addToast(
-                        new net.minecraft.client.gui.components.toasts.SystemToast(
-                                net.minecraft.client.gui.components.toasts.SystemToast.SystemToastIds.TUTORIAL_HINT,
-                                title,
-                                content
-                        )
-                );
+            if (minecraft != null && minecraft.isSameThread() && minecraft.player != null) {
+                // 改为使用系统消息显示框（而不是弹窗）
+                com.mo.economy_system.server.serverui.SystemMessageDisplay.addMessage(content);
             }
         } catch (Exception e) {
-            EconomySystem.LOGGER.error("显示进服/离开弹窗失败", e);
+            EconomySystem.LOGGER.error("显示系统消息失败", e);
         }
     }
 }

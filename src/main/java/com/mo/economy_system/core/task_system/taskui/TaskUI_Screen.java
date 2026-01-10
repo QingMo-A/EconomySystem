@@ -442,24 +442,75 @@ public class TaskUI_Screen extends Screen {
             // 垂直起始点：等级圆形图标正下方
             int baseY = circleCenterY + scaledCircleRadius + 10;
 
+            // 等级进度条（在档案标题上面）
+            int levelBarY = baseY + 5;
+            int currentLevel = PlayerLevelManager.getPlayerLevelClient(player);
+            long currentExp = PlayerLevelManager.getPlayerExperienceClient(player);
+            long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
+
+            // 计算进度条宽度（延伸到昵称和幸存者状态的位置）
+            int displayNameWidth = (int)(this.font.width(displayName) * 1.3f); // 考虑昵称缩放
+            int levelBarWidth = nickDrawX - alignBaseX + displayNameWidth + 20; // 延伸到幸存者位置
+            int levelBarHeight = 8;
+
+            // 进度条背景
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX, levelBarY,
+                    alignBaseX + levelBarWidth, levelBarY + levelBarHeight,
+                    0xDD1A1A1A);
+
+            // 进度条前景（使用动态RGB颜色）
+            float expProgress = PlayerLevelManager.getExperienceProgressClient(player);
+            int progressWidth = (int)(levelBarWidth * expProgress);
+
+            // 获取动态RGB边框颜色
+            int dynamicColor = getDynamicBorderColor();
+
+            if (progressWidth > 2) {
+                guiGraphics.fill(RenderType.gui(),
+                        alignBaseX + 1, levelBarY + 1,
+                        alignBaseX + progressWidth - 1, levelBarY + levelBarHeight - 1,
+                        dynamicColor);
+                guiGraphics.fill(RenderType.gui(),
+                        alignBaseX + 1, levelBarY + 1,
+                        alignBaseX + progressWidth - 1, levelBarY + 3,
+                        0xFFFFFFFF);
+            }
+
+            // 进度条边框（使用动态RGB颜色）
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX - 1, levelBarY - 1,
+                    alignBaseX + levelBarWidth + 1, levelBarY,
+                    dynamicColor); // 上边框
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX - 1, levelBarY + levelBarHeight,
+                    alignBaseX + levelBarWidth + 1, levelBarY + levelBarHeight + 1,
+                    dynamicColor); // 下边框
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX - 1, levelBarY,
+                    alignBaseX, levelBarY + levelBarHeight,
+                    dynamicColor); // 左边框
+            guiGraphics.fill(RenderType.gui(),
+                    alignBaseX + levelBarWidth, levelBarY,
+                    alignBaseX + levelBarWidth + 1, levelBarY + levelBarHeight,
+                    dynamicColor); // 右边框
+
+            // 在进度条下方显示经验数值（xxx/xxx），间距增大
+            String expText = "(" + currentExp + "/" + nextLevelExp + ")";
+            guiGraphics.drawString(this.font, expText, alignBaseX, levelBarY + levelBarHeight + 6, dynamicColor);
+
             //档案标题
             String archiveTitle = "您的梦鱼游戏档案：";
-            guiGraphics.drawString(this.font, archiveTitle, alignBaseX, baseY + 10, 0xFFFFD700); // 淡金色
-
-            int lineStartY = baseY + 30;
-            int lineHalfWidth = 80;
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX, lineStartY,
-                    alignBaseX + lineHalfWidth, lineStartY + 1,
-                    0x80FFFFFF); // 半透明白色细横线
+            int archiveTitleY = levelBarY + levelBarHeight + 18; // 增加间距
+            guiGraphics.drawString(this.font, archiveTitle, alignBaseX, archiveTitleY, 0xFFFFD700); // 淡金色
 
             //Rank：左对齐，浅灰色
             String rankText = "RANK:" + PlayerRankManager.getPlayerRankClient(player).getRankName();
-            guiGraphics.drawString(this.font, rankText, alignBaseX, baseY + 40, 0xFFCCCCCC); // 浅灰色
+            guiGraphics.drawString(this.font, rankText, alignBaseX, archiveTitleY + 20, 0xFFCCCCCC); // 浅灰色
 
             //称号：左对齐
             String titleText = "称号:" + PlayerTitleManager.getPlayerTitleClient(player).getTitleName();
-            guiGraphics.drawString(this.font, titleText, alignBaseX, baseY + 55, 0xFF87CEFA); // 淡蓝色
+            guiGraphics.drawString(this.font, titleText, alignBaseX, archiveTitleY + 35, 0xFF87CEFA); // 淡蓝色
             //————————————————————————————————————————————————————————————————
         }
 

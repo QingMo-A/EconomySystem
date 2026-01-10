@@ -82,6 +82,7 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataRequest.class, Packet_SingleTerritoryDataRequest::encode, Packet_SingleTerritoryDataRequest::decode, Packet_SingleTerritoryDataRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataResponse.class, Packet_SingleTerritoryDataResponse::encode, Packet_SingleTerritoryDataResponse::decode, Packet_SingleTerritoryDataResponse::handle);
         INSTANCE.registerMessage(packetId++, Packet_JoinMessage.class, Packet_JoinMessage::encode, Packet_JoinMessage::decode, Packet_JoinMessage::handle);
+        INSTANCE.registerMessage(packetId++, Packet_DeathMessage.class, Packet_DeathMessage::encode, Packet_DeathMessage::decode, Packet_DeathMessage::handle);
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountRequest.class, Packet_OnlinePlayerCountRequest::encode, Packet_OnlinePlayerCountRequest::decode,Packet_OnlinePlayerCountRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountResponse.class, Packet_OnlinePlayerCountResponse::encode, Packet_OnlinePlayerCountResponse::decode, Packet_OnlinePlayerCountResponse::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncPlayerData.class, Packet_SyncPlayerData::encode, Packet_SyncPlayerData::decode, Packet_SyncPlayerData::handle);
