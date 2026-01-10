@@ -34,9 +34,50 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             int packedLight,
             int packedOverlay
     ) {
+
+        // 如果不在GUI中(物品栏)
+        if (transformType != ItemDisplayContext.GUI) {
+            // 只渲染底层贴图
+            renderBase(stack, poseStack, buffer, packedLight, packedOverlay);
+
+            return;
+        }
+
         String itemId = Item_Blueprint.getUnlockedItemId(stack);
 
         // 第一步：渲染蓝图自己的材质（底层）
+        renderBase(stack, poseStack, buffer, packedLight, packedOverlay);
+
+        // 第二步：如果有目标物品，在蓝图上方叠加渲染目标物品图标
+        if (itemId != null && !itemId.isEmpty()) {
+            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+            if (item != null) {
+                ItemStack targetStack = new ItemStack(item);
+
+                poseStack.pushPose();
+
+                // Z 轴偏移必须在最前面，确保目标物品在蓝图上方
+                poseStack.translate(0.3F, 0.3F, 0.7F);
+
+                // 缩小到 60%（因为物品原点在中心，缩放后自动居中）
+                poseStack.scale(0.6F, 0.6F, 0.6F);
+
+                Minecraft.getInstance().getItemRenderer().renderStatic(
+                        targetStack,
+                        transformType,
+                        packedLight,
+                        packedOverlay,
+                        poseStack,
+                        buffer,
+                        Minecraft.getInstance().level,
+                        0
+                );
+                poseStack.popPose();
+            }
+        }
+    }
+
+    private void renderBase(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
         ModelManager modelManager = Minecraft.getInstance().getModelManager();
         BakedModel blueprintModel = modelManager.getModel(
                 new ModelResourceLocation(new ResourceLocation("economy_system", "blueprint"), "inventory")
@@ -55,33 +96,5 @@ public class BlueprintItemRenderer extends BlockEntityWithoutLevelRenderer {
             );
         }
         poseStack.popPose();
-
-        // 第二步：如果有目标物品，在蓝图上方叠加渲染目标物品图标
-        if (itemId != null && !itemId.isEmpty()) {
-            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
-            if (item != null) {
-                ItemStack targetStack = new ItemStack(item);
-
-                poseStack.pushPose();
-
-                // Z 轴偏移必须在最前面，确保目标物品在蓝图上方
-                poseStack.translate(0.0F, 0.0F, -0.1F);
-
-                // 缩小到 60%（因为物品原点在中心，缩放后自动居中）
-                poseStack.scale(0.6F, 0.6F, 0.6F);
-
-                Minecraft.getInstance().getItemRenderer().renderStatic(
-                        targetStack,
-                        transformType,
-                        packedLight,
-                        packedOverlay,
-                        poseStack,
-                        buffer,
-                        Minecraft.getInstance().level,
-                        0
-                );
-                poseStack.popPose();
-            }
-        }
     }
 }

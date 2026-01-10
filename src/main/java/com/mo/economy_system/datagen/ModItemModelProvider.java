@@ -47,7 +47,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.EASY_AID_KIT);
         simpleItem(EconomySystem_Items.ADVANCED_AID_KIT);
         simpleItem(EconomySystem_Items.PROFESSIONAL_AID_KIT);
-        simpleItem(EconomySystem_Items.DREAMINGFISH, "minecraft:item/cod");
+        simpleItem(EconomySystem_Items.DREAMINGFISH);
 
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
@@ -56,13 +56,6 @@ public class ModItemModelProvider extends ItemModelProvider {
         return withExistingParent(itemRegistryObject.getId().getPath(),
                 new ResourceLocation("item/generated")).texture("layer0",
                 new ResourceLocation(EconomySystem.MODID, "item/" + itemRegistryObject.getId().getPath()));
-    }
-
-    //方法重载，以后做了贴图就删（史山（bushi））
-    private ItemModelBuilder simpleItem(RegistryObject<Item> itemRegistryObject, String customLayer0) {
-        return withExistingParent(itemRegistryObject.getId().getPath(),
-                new ResourceLocation("item/generated")).texture("layer0",
-                new ResourceLocation(customLayer0));
     }
 
     private ItemModelBuilder simpleTool(RegistryObject<Item> itemRegistryObject) {
