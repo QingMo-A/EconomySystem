@@ -2,7 +2,7 @@ package com.mo.economy_system;
 
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.server.serverui.ServerInformationDisplay;
-import com.mo.economy_system.core.task_system.taskui.TaskUI;
+import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -63,7 +63,7 @@ public class KeybindHandler {
                 }
             }
             if (TASK_UI_KEY.consumeClick()) {
-                TaskUI.toggleUI();
+                ServerScreenUI.toggleUI();
             }
         }
     }

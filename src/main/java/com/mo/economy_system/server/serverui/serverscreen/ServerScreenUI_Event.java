@@ -1,4 +1,4 @@
-package com.mo.economy_system.core.task_system.taskui;
+package com.mo.economy_system.server.serverui.serverscreen;
 
 import com.mo.economy_system.EconomySystem;
 import net.minecraft.client.Minecraft;
@@ -12,11 +12,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
-public class TaskUI_Event {
+public class ServerScreenUI_Event {
     @SubscribeEvent
     public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (TaskUI.isShowUI() && mc.player != null) {
+        if (ServerScreenUI.isShowUI() && mc.player != null) {
             // 调用修复后的判断方法，无类型不匹配问题
             boolean isVanillaSystemOverlay = isVanillaSystemOverlay(event);
             if (isVanillaSystemOverlay) {

@@ -3,6 +3,7 @@ package com.mo.economy_system.network.packets.login_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.login_system.PlayerLoginData;
 import com.mo.economy_system.core.login_system.PlayerLoginDataManager;
+import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -104,6 +105,17 @@ public class Packet_PlayerLoginResponse {
 
                 EconomySystem.LOGGER.info("发送提示消息");
                 TipPushHelper.sendTipToPlayer(serverPlayer, "§a注册成功！享受服务器吧！");
+                // 发送新手教程（仅未完成过教程的玩家）
+                if (!newPlayerLoginData.hasCompletedNewPlayerGuidence()) {
+                    EconomySystem.LOGGER.info("玩家未完成新手教程，开始推送");
+                    NewPlayerGuide.sendNewPlayerGuide(serverPlayer);
+                    // 标记为已完成并保存
+                    newPlayerLoginData.setHasCompletedNewPlayerGuidence(true);
+                    PlayerLoginDataManager.saveLoginData(playerUUID, newPlayerLoginData);
+                    EconomySystem.LOGGER.info("新手教程推送完成，已标记玩家已完成教程");
+                } else {
+                    EconomySystem.LOGGER.info("玩家已完成过新手教程，跳过推送");
+                }
                 EconomySystem.LOGGER.info("发送注册结果包");
                 sendResult(serverPlayer, true, "注册成功！");
             } else {

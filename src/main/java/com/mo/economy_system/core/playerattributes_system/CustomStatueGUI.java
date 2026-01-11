@@ -222,7 +222,7 @@ public class CustomStatueGUI {
     }
 
     /**
-     * 绘制竖向进度条
+     * 绘制竖向进度条（带左侧高光效果）
      */
     private static void drawVerticalProgressBar(GuiGraphics guiGraphics, int x, int y, int currentValue, int maxValue, int normalColor) {
         //绘制背景
@@ -236,12 +236,16 @@ public class CustomStatueGUI {
         if (fillHeight > 0) {
             int finalColor = progress < 0.2f ? LOW_COLOR : normalColor;
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
+            // 左侧高光效果（白色半透明细线）
+            if (fillHeight > 2) {
+                guiGraphics.fill(x + 1, fillStartY, x + Math.min(3, BAR_WIDTH / 2), y + BAR_HEIGHT, 0x60FFFFFF);
+            }
         }
 
         // 绘制边框（带淡色发光）
         drawBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
     }
-    //重载 float
+    //重载 float（带左侧高光效果）
     private static void drawVerticalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor) {
         //绘制背景
         guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, BG_COLOR);
@@ -254,6 +258,10 @@ public class CustomStatueGUI {
         if (fillHeight > 0) {
             int finalColor = progress < 0.2f ? LOW_COLOR : normalColor;
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
+            // 左侧高光效果（白色半透明细线）
+            if (fillHeight > 2) {
+                guiGraphics.fill(x + 1, fillStartY, x + Math.min(3, BAR_WIDTH / 2), y + BAR_HEIGHT, 0x60FFFFFF);
+            }
         }
 
         // 绘制边框（带淡色发光）

@@ -14,11 +14,9 @@ import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
-import com.mo.economy_system.server.rank.RankRegistry;
+import com.mo.economy_system.server.serverui.customsystemui.SystemMessageDisplay;
 import com.mo.economy_system.server.serverui.tips.TipDisplayManager;
-import com.mo.economy_system.utils.Util_Skull;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -26,7 +24,6 @@ import net.minecraft.client.gui.components.PlayerFaceRenderer;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -37,7 +34,6 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 
