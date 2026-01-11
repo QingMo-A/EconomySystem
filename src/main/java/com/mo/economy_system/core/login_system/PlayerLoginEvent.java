@@ -3,6 +3,7 @@ package com.mo.economy_system.core.login_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest;
+import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -70,6 +71,11 @@ public class PlayerLoginEvent {
                 // 发送提示消息
                 TipPushHelper.sendTipToPlayer(player, "§a欢迎回来！已自动登录（5分钟内重连）");
                 player.sendSystemMessage(Component.literal("§a欢迎回来！已自动登录（5分钟内同IP重连）"));
+
+                //如果没有完成新手教程，继续新手教程
+                if (!loginData.gethasCompletedNewPlayerGuidence()) {
+                    NewPlayerGuide.sendNewPlayerGuide(player);
+                }
 
                 EconomySystem.LOGGER.info("玩家 {} 快速登录成功", player.getName().getString());
             } else {

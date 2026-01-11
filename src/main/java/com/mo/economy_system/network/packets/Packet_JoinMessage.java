@@ -1,12 +1,12 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.serverui.customsystemui.SystemMessageDisplay;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
@@ -66,7 +66,7 @@ public class Packet_JoinMessage {
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             if (minecraft != null && minecraft.isSameThread() && minecraft.player != null) {
                 // 改为使用系统消息显示框（而不是弹窗）
-                com.mo.economy_system.server.serverui.SystemMessageDisplay.addMessage(content);
+                SystemMessageDisplay.addMessage(content);
             }
         } catch (Exception e) {
             EconomySystem.LOGGER.error("显示系统消息失败", e);

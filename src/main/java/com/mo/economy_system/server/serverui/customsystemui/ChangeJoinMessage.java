@@ -162,13 +162,6 @@ public class ChangeJoinMessage {
         // 获取玩家Rank
         Rank playerRank = PlayerRankManager.getPlayerRankServer(serverPlayer);
 
-        //只有尊贵的rank用户才有提示
-//        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
-//            return;
-//        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.NULL.getRankName())) {
-//            return;
-//        }
-
         // 根据Rank获取消息并替换占位符
         String rawMsg = getJoinMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
@@ -198,13 +191,6 @@ public class ChangeJoinMessage {
 
         // 获取玩家Rank
         Rank playerRank = PlayerRankManager.getPlayerRankServer(serverPlayer);
-
-        //只有尊贵的rank用户才有提示
-//        if (Objects.equals(playerRank.getRankName(), RankRegistry.NO_RANK.getRankName())) {
-//            return;
-//        } else if (Objects.equals(playerRank.getRankName(), RankRegistry.NULL.getRankName())) {
-//            return;
-//        }
         // 根据Rank获取消息并替换占位符
         String rawMsg = getLeaveMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());

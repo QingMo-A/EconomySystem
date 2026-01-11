@@ -3,6 +3,7 @@ package com.mo.economy_system.network.packets.login_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.login_system.PlayerLoginData;
 import com.mo.economy_system.core.login_system.PlayerLoginDataManager;
+import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -58,7 +59,7 @@ public class Packet_PlayerLoginResponse {
         }
 
         com.mo.economy_system.EconomySystem.LOGGER.info("玩家 {} 发送密码响应，loginOrRegister={}",
-            serverPlayer.getName().getString(), playerLoginResponse.loginOrRegister);
+                serverPlayer.getName().getString(), playerLoginResponse.loginOrRegister);
 
         boolean loginOrRegister = playerLoginResponse.loginOrRegister;
         String password = playerLoginResponse.password;
@@ -104,6 +105,14 @@ public class Packet_PlayerLoginResponse {
 
                 EconomySystem.LOGGER.info("发送提示消息");
                 TipPushHelper.sendTipToPlayer(serverPlayer, "§a注册成功！享受服务器吧！");
+                // 发送新手教程（仅未完成过教程的玩家）
+                if (!newPlayerLoginData.gethasCompletedNewPlayerGuidence()) {
+                    NewPlayerGuide.sendNewPlayerGuide(serverPlayer);
+                    // 标记为已完成并保存
+                    EconomySystem.LOGGER.info("新手教程推送完成，已标记玩家已完成教程");
+                } else {
+                    EconomySystem.LOGGER.info("玩家已完成过新手教程，跳过推送");
+                }
                 EconomySystem.LOGGER.info("发送注册结果包");
                 sendResult(serverPlayer, true, "注册成功！");
             } else {
@@ -123,10 +132,14 @@ public class Packet_PlayerLoginResponse {
                     }
                     serverPlayer.setGameMode(lastGameMode);
                     EconomySystem.LOGGER.info("玩家 {} 登录成功，游戏模式恢复为: {}",
-                        serverPlayer.getName().getString(), lastGameMode);
+                            serverPlayer.getName().getString(), lastGameMode);
 
                     TipPushHelper.sendTipToPlayer(serverPlayer, "§a登录成功！欢迎回来！");
                     sendResult(serverPlayer, true, "登录成功！");
+
+                    if (!playerLoginData.gethasCompletedNewPlayerGuidence()) {
+                        NewPlayerGuide.sendNewPlayerGuide(serverPlayer);
+                    }
                 } else {
                     // 密码错误
                     sendResult(serverPlayer, false, "密码错误！请重新输入。");
@@ -138,8 +151,8 @@ public class Packet_PlayerLoginResponse {
 
     private static void sendResult(ServerPlayer player, boolean success, String message) {
         com.mo.economy_system.network.EconomySystem_NetworkManager.sendToClient(
-            new Packet_PlayerLoginResult(success, message),
-            player
+                new Packet_PlayerLoginResult(success, message),
+                player
         );
     }
 }

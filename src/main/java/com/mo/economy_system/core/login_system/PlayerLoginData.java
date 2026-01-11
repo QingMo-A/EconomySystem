@@ -18,6 +18,7 @@ public class PlayerLoginData {
     private String lastLoginTime;  //上次登录后的时间
     private GameType lastGameMode;
     private long lastLogoutTime;  //上次退出时间戳（毫秒）- 用于快速登录判断
+    private boolean hasCompletedNewPlayerGuidence;  // 是否已完成新手教程
 
     //无参构造
     public PlayerLoginData() {
@@ -231,5 +232,13 @@ public class PlayerLoginData {
 //        EconomySystem.LOGGER.info("  时间检查(<=300秒): " + withinTimeLimit);
 
         return ipMatches && withinTimeLimit;
+    }
+
+    public boolean gethasCompletedNewPlayerGuidence() {
+        return hasCompletedNewPlayerGuidence;
+    }
+
+    public void setHasCompletedNewPlayerGuidence(boolean hasCompletedNewPlayerGuidence) {
+        this.hasCompletedNewPlayerGuidence = hasCompletedNewPlayerGuidence;
     }
 }

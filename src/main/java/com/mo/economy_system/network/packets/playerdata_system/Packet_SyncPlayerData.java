@@ -2,7 +2,7 @@ package com.mo.economy_system.network.packets.playerdata_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
-import com.mo.economy_system.core.task_system.taskui.TaskUI_Screen;
+import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;
@@ -158,16 +158,20 @@ public class Packet_SyncPlayerData {
                 return;
             }
 
+            // TODO: 排行榜功能暂时注释，等待重写
+            /*
             if (isOnline) {
-                TaskUI_Screen.ONLINE_PLAYER_UUIDS.add(playerUUID);
+                ServerScreenUI_Screen.ONLINE_PLAYER_UUIDS.add(playerUUID);
             } else {
-                TaskUI_Screen.ONLINE_PLAYER_UUIDS.remove(playerUUID);
+                ServerScreenUI_Screen.ONLINE_PLAYER_UUIDS.remove(playerUUID);
             }
+            */
 
             Player targetPlayer = mc.level.getPlayerByUUID(playerUUID);
             if (targetPlayer == null) {
                 EconomySystem.LOGGER.warn("客户端同步数据失败：未找到UUID为{}的玩家", playerUUID);
-                TaskUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
+                // TODO: 排行榜功能暂时注释，等待重写
+                // ServerScreenUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
                 return;
             }
 
@@ -180,8 +184,8 @@ public class Packet_SyncPlayerData {
             PlayerLevelManager.setPlayerLevelClient(targetPlayer, level);
             PlayerLevelManager.setPlayerExperienceClient(targetPlayer, experience); // 同步经验
 
-            //排行榜
-            TaskUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
+            // TODO: 排行榜功能暂时注释，等待重写
+            // ServerScreenUI_Screen.updatePlayerRankLevelCache(playerUUID, playerName, level, rankName, titleName, onlineTime);
 
             EconomySystem.LOGGER.info("客户端同步数据成功：Rank={}, Title={}, Level={}, Exp={}",
                     rank.getRankName(), title.getTitleName(), level, experience);

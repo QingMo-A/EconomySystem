@@ -1,6 +1,7 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.serverui.customsystemui.SystemMessageDisplay;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
@@ -60,7 +61,7 @@ public class Packet_DeathMessage {
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             if (minecraft != null && minecraft.isSameThread() && minecraft.player != null) {
                 // 使用系统消息显示框
-                com.mo.economy_system.server.serverui.SystemMessageDisplay.addMessage(deathMessage);
+                SystemMessageDisplay.addMessage(deathMessage);
             }
         } catch (Exception e) {
             EconomySystem.LOGGER.error("显示死亡消息失败", e);
