@@ -190,6 +190,8 @@ public class CustomStatueGUI {
         // 饥饿条坐标：小人左侧
         //绘制饥饿进度条
         drawVerticalProgressBar(guiGraphics, foodBarX, foodBarY, currentFood, maxFood, FOOD_BAR_COLOR);
+        // 绘制饥饿图标（进度条上方）
+        drawIcon(guiGraphics, "🍖", foodBarX + BAR_WIDTH / 2, foodBarY - 8, FOOD_BAR_COLOR);
 
         //绘制体力竖向进度条
         int currentStrength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
@@ -198,6 +200,8 @@ public class CustomStatueGUI {
         // 体力条坐标：饥饿条左侧，纵向居中
         //绘制体力进度条
         drawVerticalProgressBar(guiGraphics, strengthBarX, strengthBarY, currentStrength, maxStrength, STRENGTH_BAR_COLOR);
+        // 绘制体力图标（进度条上方）
+        drawIcon(guiGraphics, "💪", strengthBarX + BAR_WIDTH / 2, strengthBarY - 8, STRENGTH_BAR_COLOR);
 
         // 绘制勇气值竖向进度条
         float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
@@ -205,12 +209,16 @@ public class CustomStatueGUI {
         if (maxCourage <= 0) maxCourage = 100; // 避免除以0异常
         // 绘制勇气值进度条（最左侧，样式与其他进度条统一）
         drawVerticalProgressBar(guiGraphics, courageBarX, courageBarY, currentCourage, maxCourage, COURAGE_BAR_COLOR);
+        // 绘制勇气图标（进度条上方）
+        drawIcon(guiGraphics, "⚡", courageBarX + BAR_WIDTH / 2, courageBarY - 8, COURAGE_BAR_COLOR);
 
         // 绘制感染值竖向进度条
         int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
         int maxInfection = 100;
         // 绘制感染值进度条（在勇气值条左侧）
         drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, currentInfection, maxInfection, INFECTION_BAR_COLOR);
+        // 绘制感染图标（进度条上方）
+        drawIcon(guiGraphics, "☣", infectionBarX + BAR_WIDTH / 2, infectionBarY - 8, INFECTION_BAR_COLOR);
     }
 
     /**
@@ -268,6 +276,25 @@ public class CustomStatueGUI {
         guiGraphics.fill(x, y, x + 1, y + height, BORDER_COLOR);
         // 右边框
         guiGraphics.fill(x + width - 1, y, x + width, y + height, BORDER_COLOR);
+    }
+
+    /**
+     * 绘制属性图标（在进度条上方）
+     */
+    private static void drawIcon(GuiGraphics guiGraphics, String icon, int x, int y, int color) {
+        Minecraft mc = Minecraft.getInstance();
+        float iconScale = 0.8f; // 图标缩放比例
+
+        // 绘制缩放后的图标
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(x, y, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-x, -y, 0);
+
+        // 绘制图标（居中对齐）
+        guiGraphics.drawCenteredString(mc.font, icon, x, y - mc.font.lineHeight / 2, color);
+
+        guiGraphics.pose().popPose();
     }
 
     /**

@@ -1,0 +1,56 @@
+package com.mo.economy_system.core.task_system.taskui;
+
+import com.mo.economy_system.EconomySystem;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/**
+ * 客户端事件处理器：处理UI状态恢复（如重生后）
+ */
+@Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
+public class TaskUI_ClientEventHandler {
+    private static int tickCounter = 0;
+
+    /**
+     * 每秒检查一次UI状态，确保SHOW_UI状态与实际显示一致
+     * 处理死亡重生后UI消失的问题
+     */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+
+        // 每20 tick（1秒）检查一次
+        tickCounter++;
+        if (tickCounter < 20) return;
+        tickCounter = 0;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        // 检查是否在死亡界面或重生界面，如果是则不恢复UI
+        if (mc.screen instanceof DeathScreen) {
+            // 在死亡/重生界面，不显示TaskUI
+            if (TaskUI.isShowUI()) {
+                EconomySystem.LOGGER.info("在死亡界面，保持UI开启状态但不显示");
+            }
+            return;
+        }
+
+        // 如果UI应该显示但没有显示（例如重生后）
+        if (TaskUI.isShowUI() && !(mc.screen instanceof TaskUI_Screen)) {
+            EconomySystem.LOGGER.info("检测到UI状态不一致，重新打开TaskUI");
+            mc.setScreen(new TaskUI_Screen());
+        }
+        // 如果UI不应该显示但还在显示
+        else if (!TaskUI.isShowUI() && mc.screen instanceof TaskUI_Screen) {
+            EconomySystem.LOGGER.info("检测到UI状态不一致，关闭TaskUI");
+            mc.setScreen(null);
+        }
+    }
+}

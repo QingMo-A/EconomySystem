@@ -56,12 +56,13 @@ public class TaskUI_Screen extends Screen {
     private static final float TASK_TEXT_SCALE = 1.0f; // 文本缩放
 
     //————————————————任务菜单
-    //样式参数
-    private static final int BACKGROUND_ALPHA = 128; //背景透明度
-    private static final float UI_WIDTH_PERCENT = 0.75F; //宽度百分比
-    private static final float UI_HEIGHT_PERCENT = 0.7F; //高度百分比
-    private static final int BORDER_COLOR = 0xFFFFFFFF; // 白色边框（用于分隔线等）
-    private static final int BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x000000; //半透明黑背景
+    // 样式参数
+    private static final int BACKGROUND_ALPHA = 64; // 背景透明度（降低透明度，让现代化UI模组能添加高斯模糊）
+    private static final float UI_WIDTH_PERCENT = 0.75F;
+    private static final float UI_HEIGHT_PERCENT = 0.7F;
+    private static final int BORDER_COLOR = 0xFFFFFFFF;
+    private static final int BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x000000;
+    private static final int PANEL_BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x101010; // 面板背景（深灰色半透明）
 
     // 性能优化：缓存RGB颜色值
     private static int CACHED_DYNAMIC_BORDER_COLOR = 0xFFDDAA55;
@@ -81,6 +82,14 @@ public class TaskUI_Screen extends Screen {
     private int screenUIHeight;
     private int uiX;
     private int uiY;
+
+    // 布局区域定义（全屏布局）
+    private float leftPanelWidthRatio = 0.18f;   // 左侧面板占屏幕宽度的18%
+    private float rightPanelWidthRatio = 0.35f;  // 右侧面板占屏幕宽度的35%（增大，让进度条更长）
+    private int leftPanelX;    // 左侧面板X坐标
+    private int leftPanelWidth; // 左侧面板宽度
+    private int rightPanelX;   // 右侧面板X坐标
+    private int rightPanelWidth; // 右侧面板宽度
 
     // 按钮对象
     private Button serverTaskBtn;
@@ -118,437 +127,511 @@ public class TaskUI_Screen extends Screen {
     @Override
     protected void init() {
         super.init();
-        // 计算黑框坐标
+
+        // 计算全屏布局参数
         this.screenWidth = this.width;
         this.screenHeight = this.height;
-        this.screenUIWidth = (int) (screenWidth * UI_WIDTH_PERCENT);
+        this.leftPanelWidth = (int) (screenWidth * leftPanelWidthRatio);
+        this.rightPanelWidth = (int) (screenWidth * rightPanelWidthRatio);
+        this.leftPanelX = 0;
+        this.rightPanelX = screenWidth - rightPanelWidth;
+
+        // UI中心区域（任务列表显示在中间区域）
+        this.screenUIWidth = (int) (screenWidth * (1.0f - leftPanelWidthRatio - rightPanelWidthRatio));
         this.screenUIHeight = (int) (screenHeight * UI_HEIGHT_PERCENT);
-        this.uiX = (screenWidth - screenUIWidth) / 2;
+        this.uiX = leftPanelWidth;
         this.uiY = (screenHeight - screenUIHeight) / 2;
 
-        // 按钮坐标（黑框上方10像素，水平居中）
-        int totalBtnWidth = BTN_WIDTH * 2 + BTN_GAP;
-        int btnStartX = LOGO_BTN_WIDTH + 2 + uiX;
-        int btnY = uiY - BTN_HEIGHT - 2;
+        // 按钮参数
+        int btnWidth = Math.min(120, leftPanelWidth - 20); // 动态宽度
+        int btnHeight = 25;
+        int btnGap = 8;
+        int startX = leftPanelX + (leftPanelWidth - btnWidth) / 2; // 居中
+        int startY = screenHeight / 3; // 从1/3处开始
 
-        //Logo按钮————————————————————————————————————————————————————————————
-        int logoBtnX = uiX;
-        Button.Builder logoBtnBuilder = Button.builder(Component.literal("§bDreaming§dFish"), new Button.OnPress() {
+        // Logo按钮（仅作显示）
+        int logoBtnWidth = leftPanelWidth - 20;
+        int logoBtnX = leftPanelX + 10;
+        int logoBtnY = 50;
+
+        logoBtn = Button.builder(Component.literal(""), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
-                        showSubScreen = 0; // 切换到服务器任务子界面（不跳转Screen）
+                        showSubScreen = 0;
                     }
                 })
-                .pos(logoBtnX, btnY) //Logo按钮位置）
-                .size(LOGO_BTN_WIDTH, BTN_HEIGHT); // Logo按钮尺寸
+                .pos(logoBtnX, logoBtnY)
+                .size(logoBtnWidth, 40)
+                .build((builder) -> {
+                    return new Button(builder) {
+                        @Override
+                        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+                            // 透明背景
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
+                                    this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x00000000);
 
-        //创建LOGO按钮
-        logoBtn = logoBtnBuilder.build((builder) -> {
-            return new Button(builder) {
-                // 标记按钮不可交互
-//                @Override
-//                public boolean isActive() {
-//                    return false;
-//                }
+                            // 绘制大标题（自适应缩放，确保不超出面板）
+                            String title = "§bDreaming§dFish";
+                            int titleWidth = Minecraft.getInstance().font.width(title);
+                            float maxScale = this.getWidth() / (float)(titleWidth + 10);
+                            float titleScale = Math.min(1.5f, Math.max(0.6f, maxScale));
 
-                @Override
-                public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-                    //背景色固定为半透黑，无悬浮高亮
-                    int bgColor = (128 << 24) | 0x000000;
-                    //绘制Logo按钮背景
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
+                            guiGraphics.pose().pushPose();
+                            guiGraphics.pose().translate(this.getX() + this.getWidth() / 2, this.getY() + this.getHeight() / 2, 0);
+                            guiGraphics.pose().scale(titleScale, titleScale, 1.0f);
+                            guiGraphics.drawCenteredString(Minecraft.getInstance().font,
+                                    Component.literal(title), 0, -Minecraft.getInstance().font.lineHeight / 2, 0xFFFFFF);
+                            guiGraphics.pose().popPose();
+                        }
+                    };
+                });
 
-                    //绘制动态RGB边框
-                    int borderColor = getDynamicBorderColor();
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + 1, borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 1,
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + 1, this.getY() + this.getHeight(), borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX() + this.getWidth() - 1, this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
-
-                    int textColor = 0xFFFFFF; // 默认白色
-                    if (showSubScreen == 0) { // 服务器任务按钮被选中
-                        textColor = 0xFFD700;
-                    }
-                    //绘制Logo文字
-                    guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
-                            this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFF);
-                }
-            };
-        });
-        //————————————————————————————————————————————————————————————————————————————————————————————————————————
-
-        //服务器按钮————————————————————————————————————————————————————————————————————————————————————————————————
-        Button.Builder serverBtnBuilder = Button.builder(Component.literal("故事"), new Button.OnPress() {
+        // 服务器任务按钮
+        serverTaskBtn = Button.builder(Component.literal("故事"), new Button.OnPress() {
                     @Override
                     public void onPress(Button btn) {
-                        showSubScreen = 1; // 切换到服务器任务子界面（不跳转Screen）
-                    }
-                }).pos(btnStartX, btnY)
-                .size(BTN_WIDTH, BTN_HEIGHT);
-
-        //创建自定义按钮（重写renderWidget）
-        serverTaskBtn = serverBtnBuilder.build((builder) -> {
-            // 创建Button子类，重写渲染方法
-            return new Button(builder) {
-                @Override
-                public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-                    // 背景色（半透黑，悬浮高亮）
-                    int bgColor = (128 << 24) | 0x000000;
-                    if (this.isHoveredOrFocused()) {
-                        bgColor = (180 << 24) | 0x111111;
-                    }
-                    // 绘制按钮背景
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
-                    // 绘制动态RGB边框
-                    int borderColor = getDynamicBorderColor();
-                    // 上边框
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + 1, borderColor);
-                    // 下边框
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 1,
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
-                    // 左边框
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + 1, this.getY() + this.getHeight(), borderColor);
-                    // 右边框
-                    guiGraphics.fill(RenderType.gui(), this.getX() + this.getWidth() - 1, this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
-                    // 绘制居中文字（选中时高亮）
-                    int textColor = 0xFFFFFF; // 默认白色
-                    if (showSubScreen == 1) { // 服务器任务按钮被选中
-                        textColor = 0xFFD700;
-                    }
-
-                    guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
-                            this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, textColor);
-                }
-            };
-        });
-        //————————————————————————————————————————————————————————————————————————————————————————————————————
-
-        //个人任务——————————————————————————————————————————————————————————————————————————————————————————————————
-        Button.Builder playerBtnBuilder = Button.builder(Component.literal("个人任务"), new Button.OnPress() {
-                    @Override
-                    public void onPress(Button btn) {
-                        showSubScreen = 2; // 切换到个人任务子界面（不跳转Screen）
+                        showSubScreen = 1;
                     }
                 })
-                .pos(btnStartX + BTN_WIDTH + BTN_GAP, btnY)
-                .size(BTN_WIDTH, BTN_HEIGHT);
+                .pos(startX, startY)
+                .size(btnWidth, btnHeight)
+                .build((builder) -> {
+                    return new Button(builder) {
+                        @Override
+                        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+                            // 使用带颜色的透明背景
+                            int bgColor = showSubScreen == 1 ? 0x600000AA : 0x40000000; // 透明度更高的紫色/黑色
+                            if (this.isHoveredOrFocused()) {
+                                bgColor = showSubScreen == 1 ? 0x800000AA : 0x60000000; // 悬浮时更不透明
+                            }
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
+                                    this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
 
+                            int borderColor = showSubScreen == 1 ? 0xFF00FFFF : getDynamicBorderColor();
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
+                                    this.getX() + this.getWidth(), this.getY() + 2, borderColor);
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 2,
+                                    this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
 
-        playerTaskBtn = playerBtnBuilder.build((builder) -> {
-            return new Button(builder) {
-                @Override
-                public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-                    int bgColor = (128 << 24) | 0x000000;
-                    if (this.isHoveredOrFocused()) {
-                        bgColor = (180 << 24) | 0x111111;
+                            guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
+                                    this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2,
+                                    showSubScreen == 1 ? 0xFFD700 : 0xFFFFFF);
+                        }
+                    };
+                });
+
+        // 个人任务按钮
+        playerTaskBtn = Button.builder(Component.literal("个人任务"), new Button.OnPress() {
+                    @Override
+                    public void onPress(Button btn) {
+                        showSubScreen = 2;
                     }
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
+                })
+                .pos(startX, startY + btnHeight + btnGap)
+                .size(btnWidth, btnHeight)
+                .build((builder) -> {
+                    return new Button(builder) {
+                        @Override
+                        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+                            // 使用带颜色的透明背景
+                            int bgColor = showSubScreen == 2 ? 0x600000AA : 0x40000000; // 透明度更高的紫色/黑色
+                            if (this.isHoveredOrFocused()) {
+                                bgColor = showSubScreen == 2 ? 0x800000AA : 0x60000000; // 悬浮时更不透明
+                            }
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
+                                    this.getX() + this.getWidth(), this.getY() + this.getHeight(), bgColor);
 
-                    // 绘制动态RGB边框
-                    int borderColor = getDynamicBorderColor();
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + 1, borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 1,
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
-                            this.getX() + 1, this.getY() + this.getHeight(), borderColor);
-                    guiGraphics.fill(RenderType.gui(), this.getX() + this.getWidth() - 1, this.getY(),
-                            this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
+                            int borderColor = showSubScreen == 2 ? 0xFF00FFFF : getDynamicBorderColor();
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY(),
+                                    this.getX() + this.getWidth(), this.getY() + 2, borderColor);
+                            guiGraphics.fill(RenderType.gui(), this.getX(), this.getY() + this.getHeight() - 2,
+                                    this.getX() + this.getWidth(), this.getY() + this.getHeight(), borderColor);
 
-                    int textColor = 0xFFFFFF;
-                    if (showSubScreen == 2) { // 个人任务按钮被选中
-                        textColor = 0xFFD700;
-                    }
+                            guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
+                                    this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2,
+                                    showSubScreen == 2 ? 0xFFD700 : 0xFFFFFF);
+                        }
+                    };
+                });
 
-                    guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
-                            this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, textColor);
-                }
-            };
-        });
-        //————————————————————————————————————————————————————————————————————————————————————————————————————————————————
-
-        // 添加按钮到屏幕
+        // 添加按钮
         this.addRenderableWidget(logoBtn);
         this.addRenderableWidget(serverTaskBtn);
         this.addRenderableWidget(playerTaskBtn);
-
-        //排行榜——————————————————
-        //请求全服玩家的数据
-//        Minecraft mc = Minecraft.getInstance();
-//        if (mc.player != null) {
-//            TaskUI_Screen.clearAllPlayerCache(); // 清空旧缓存
-//            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestAllPlayerData());
-//        }
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 获取动态RGB边框颜色
-        int dynamicBorderColor = getDynamicBorderColor();
+        // 渲染左侧和右侧面板背景（半透明，让现代化UI模组添加高斯模糊）
+        guiGraphics.fill(RenderType.gui(), leftPanelX, 0, leftPanelX + leftPanelWidth, screenHeight, PANEL_BG_COLOR);
+        guiGraphics.fill(RenderType.gui(), rightPanelX, 0, rightPanelX + rightPanelWidth, screenHeight, PANEL_BG_COLOR);
 
-        // 渲染主界面背景发光效果
-        int glowColor = 0x30000000 | (dynamicBorderColor & 0x00FFFFFF);
-        guiGraphics.fill(RenderType.gui(), uiX - 2, uiY - 2, uiX + screenUIWidth + 2, uiY + screenUIHeight + 2, glowColor);
+        // 绘制面板边框（动态RGB颜色）
+        int borderColor = getDynamicBorderColor();
+        guiGraphics.fill(RenderType.gui(), leftPanelX + leftPanelWidth - 2, 0, leftPanelX + leftPanelWidth, screenHeight, borderColor);
+        guiGraphics.fill(RenderType.gui(), rightPanelX, 0, rightPanelX + 2, screenHeight, borderColor);
 
-        // 渲染主界面背景和边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + screenUIWidth, uiY + screenUIHeight, BG_COLOR);
-        // 上边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + screenUIWidth, uiY + 1, dynamicBorderColor);
-        // 下边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY + screenUIHeight - 1, uiX + screenUIWidth, uiY + screenUIHeight, dynamicBorderColor);
-        // 左边框
-        guiGraphics.fill(RenderType.gui(), uiX, uiY, uiX + 1, uiY + screenUIHeight, dynamicBorderColor);
-        // 右边框
-        guiGraphics.fill(RenderType.gui(), uiX + screenUIWidth - 1, uiY, uiX + screenUIWidth, uiY + screenUIHeight, dynamicBorderColor);
-
-        //渲染按钮，父类方法会渲染已添加的所有按钮
+        // 渲染按钮和内容
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
-        //根据子界面标识渲染对应内容
+        // 根据子界面标识渲染对应内容
         switch (showSubScreen) {
             case 0:
                 renderMainServerContent(guiGraphics);
                 break;
             case 1:
-                renderServerTaskContent(guiGraphics); // 渲染服务器任务列表及详情
+                renderServerTaskContent(guiGraphics);
                 break;
             case 2:
-                renderPlayerTaskContent(guiGraphics); // 渲染个人任务列表及详情
+                renderPlayerTaskContent(guiGraphics);
                 break;
             default:
-                // 初始状态提示文字
-                guiGraphics.drawString(this.font, "请选择任务类型", uiX + 20, uiY + 20, 0xFFFFFF);
+                renderMainServerContent(guiGraphics);
         }
     }
 
-    private int selectedServerTaskId = -1; // 选中的服务器任务ID，-1表示未选中
+    private int selectedServerTaskId = -1;
     private int selectedPlayerTaskId = -1;
-    //——————————————————————————————————————————————————————————————————————————————
+
+    // ============================================================
+    // 主界面渲染（右侧显示玩家信息）
+    // ============================================================
+
     private void renderMainServerContent(GuiGraphics guiGraphics) {
-        int margin = 10;
-        //计算模型尺寸（稍微大一点，但避免与进度条重叠）
-        int modelSize = screenUIHeight / 5;
-
         LocalPlayer player = Minecraft.getInstance().player;
-        float modelRealHeight = 0; // 模型精确视觉高度
-        if (player != null) {
-            //获取玩家碰撞箱高度（基础高度）
-            float bbHeight = player.getBbHeight();
-            //修正渲染偏移
-            // 缩放系数：modelSize是渲染缩放，对应UI像素的比例
-            modelRealHeight = bbHeight * modelSize;
-        }
+        if (player == null) return;
 
-        //模型位置（稍微往下一点，但避免与进度条重叠）
-        int modelCenterX = uiX + margin * 4 + modelSize / 2; //模型中心X
-        int modelCenterY = uiY + screenUIHeight - (int)((screenUIHeight - modelRealHeight) / 2) - margin * 5; //脚部的y坐标
+        int margin = 12;
+        int centerX = rightPanelX + rightPanelWidth / 2;
 
-        if (player != null) {
-            //调用原版背包的渲染方法
-            // guiGraphics - 渲染上下文
-            // modelCenterX/modelCenterY - 模型中心坐标
-            // modelSize - 模型尺寸
-            // 0/0 - 鼠标偏移（设为0则模型固定朝向，不跟随鼠标）
-            // player - 要渲染的玩家
-            InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    guiGraphics,
-                    modelCenterX,
-                    modelCenterY,
-                    modelSize,
-                    0.0F, // 鼠标X偏移（固定为0，模型不旋转）
-                    0.0F, // 鼠标Y偏移（固定为0，模型不旋转）
-                    (LivingEntity) player
-            );
-        }
+        // 渲染玩家模型
+        int modelY = renderPlayerModel(guiGraphics, player, centerX, margin);
 
-        //分割线————————————————————
-        int splitLineX = uiX + screenUIWidth / 4; // UI区域1/3宽度位置
-        // 绘制竖直线：X坐标固定，Y从UI顶部到UI底部，宽度1像素
-        guiGraphics.fill(RenderType.gui(),
-                splitLineX,          // 分割线X坐标（UI区域1/3处）
-                uiY,                 // 分割线顶部Y坐标（UI顶部）
-                splitLineX + 1,      // 分割线宽度（1像素，细线条）
-                uiY + screenUIHeight,// 分割线底部Y坐标（UI底部）
-                0x80FFFFFF);         // 分割线颜色（半透明白色，可自行调整）
+        // 渲染玩家信息
+        int currentY = renderPlayerInfo(guiGraphics, player, centerX, modelY, margin);
 
-        //文字区域起始坐标
-        int textX = uiX + screenUIWidth / 3;
-        int textY = uiY + screenUIHeight / 8;
+        // 渲染属性进度条
+        renderAttributeBars(guiGraphics, player, currentY, margin);
+    }
 
-        // 大标题
-        if (player != null) {
-            String levelText = String.valueOf(PlayerLevelManager.getPlayerLevelClient(player));
-            String nickName = player.getScoreboardName();
-            int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
-            String infectionStatus = currentInfection >= 80 ? "[§c感染者§r]" : "[§a幸存者§r]";
-            String displayName = nickName + " " + infectionStatus;
-            int levelWidth = this.font.width(levelText);
-            int levelHeight = this.font.lineHeight;
+    /**
+     * 渲染玩家模型
+     * @return 模型底部Y坐标
+     */
+    private int renderPlayerModel(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int margin) {
+        // 缩小模型大小，确保头部不超出屏幕
+        int modelSize = Math.min(rightPanelWidth - margin * 2, screenHeight / 10);
+        int modelY = 50; // 下移，避免头部被挡住
 
-            // 圆形参数（保持放大后的视觉大小）
-            int circleRadius = Math.max(levelWidth, levelHeight) / 2 + 3;
-            //原始坐标（和无缩放时一致的位置）
-            int circleCenterX = textX;
-            int circleCenterY = textY;
-            // 计算实际渲染后的圆圈半径（考虑1.8倍缩放）
-            int scaledCircleRadius = (int)(circleRadius * 1.8f);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(
+                guiGraphics,
+                centerX,
+                modelY + modelSize / 2,
+                modelSize,
+                0.0F,
+                0.0F,
+                player
+        );
 
-            //调整缩放锚点，放大后坐标不偏移
+        return modelY + modelSize;
+    }
+
+    /**
+     * 渲染玩家信息（等级圆圈、昵称、进度条、档案信息）
+     * @return 信息区域底部Y坐标
+     */
+    private int renderPlayerInfo(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int modelBottomY, int margin) {
+        int currentY = modelBottomY + 8; // 减小间距，避免挤压底部区域
+
+        // 绘制等级圆圈
+        currentY = renderLevelCircle(guiGraphics, player, centerX, currentY);
+
+        // 绘制昵称和状态
+        currentY = renderPlayerName(guiGraphics, player, centerX, currentY);
+
+        // 绘制等级进度条
+        currentY = renderLevelProgressBar(guiGraphics, player, centerX, currentY, margin);
+
+        // 绘制档案信息
+        currentY = renderArchiveInfo(guiGraphics, player, centerX, currentY);
+
+        return currentY;
+    }
+
+    /**
+     * 绘制等级圆圈（带星星装饰）
+     */
+    private int renderLevelCircle(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int startY) {
+        String levelText = String.valueOf(PlayerLevelManager.getPlayerLevelClient(player));
+        int levelWidth = this.font.width(levelText);
+
+        // 放大等级圆圈和文字（主题元素，需要更显眼）
+        float levelScale = 1.5f; // 从1.8f降低到1.5f
+        int scaledLevelWidth = (int)(levelWidth * levelScale);
+        int circleRadius = Math.max(scaledLevelWidth, (int)(this.font.lineHeight * levelScale)) / 2 + 6;
+        int circleCenterX = centerX;
+        int circleCenterY = startY + circleRadius;
+
+        // 绘制放大的等级圆圈
+        drawCircleBorder(guiGraphics, circleCenterX, circleCenterY, circleRadius, 0xFFFFFFFF);
+
+        // 绘制放大的等级数字
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(centerX, circleCenterY, 0);
+        guiGraphics.pose().scale(levelScale, levelScale, 1.0f);
+        guiGraphics.pose().translate(-centerX, -circleCenterY, 0);
+        guiGraphics.drawCenteredString(this.font, levelText, circleCenterX, circleCenterY - this.font.lineHeight / 2, 0xFFFFFFFF);
+        guiGraphics.pose().popPose();
+
+        // 在圆圈上方绘制星星装饰（放大）
+        String starIcon = "⭐";
+        float starScale = 0.7f; // 从0.8f降低
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(centerX, circleCenterY - circleRadius - 6, 0);
+        guiGraphics.pose().scale(starScale, starScale, 1.0f);
+        guiGraphics.pose().translate(-centerX, -(circleCenterY - circleRadius - 6), 0);
+        guiGraphics.drawCenteredString(this.font, starIcon, centerX, circleCenterY - circleRadius - 6 - this.font.lineHeight / 2, 0xFFFFD700);
+        guiGraphics.pose().popPose();
+
+        return circleCenterY + circleRadius + 10; // 减小返回间距
+    }
+
+    /**
+     * 绘制玩家昵称和感染状态（带状态图标）
+     */
+    private int renderPlayerName(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int startY) {
+        String nickName = player.getScoreboardName();
+        int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+
+        // 根据感染状态使用不同图标
+        String statusIcon = currentInfection >= 80 ? "☣ " : "💚 ";
+        String infectionStatus = currentInfection >= 80 ? "§c感染者§r" : "§a幸存者§r";
+        String displayName = nickName + " " + statusIcon + infectionStatus;
+
+        // 缩小昵称（避免重叠）
+        float nameScale = Math.max(0.9f, Math.min(1.2f, rightPanelWidth / 240.0f)); // 从1.4f降到1.2f
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(centerX, startY, 0);
+        guiGraphics.pose().scale(nameScale, nameScale, 1.0f);
+        guiGraphics.pose().translate(-centerX, -startY, 0);
+        guiGraphics.drawCenteredString(this.font, displayName, centerX, startY, 0xAAAAAA);
+        guiGraphics.pose().popPose();
+
+        return startY + (int)(this.font.lineHeight * nameScale) + 6; // 减小间距
+    }
+
+    /**
+     * 绘制等级进度条（带经验图标）
+     */
+    private int renderLevelProgressBar(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int startY, int margin) {
+        long currentExp = PlayerLevelManager.getPlayerExperienceClient(player);
+        long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
+        float expProgress = PlayerLevelManager.getExperienceProgressClient(player);
+
+        int barWidth = rightPanelWidth - margin * 2;
+        int barHeight = 5;
+        int barX = centerX - barWidth / 2;
+        int barY = startY;
+
+        // 绘制进度条
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, expProgress, getDynamicBorderColor());
+
+        // 经验值文本（带经验瓶图标）
+        String expIcon = "✦ ";
+        String expText = expIcon + currentExp + "/" + nextLevelExp;
+        guiGraphics.drawCenteredString(this.font, expText, centerX, barY + barHeight + 5, getDynamicBorderColor()); // 从6改为5
+
+        return barY + barHeight + 11; // 减小间距
+    }
+
+    /**
+     * 绘制档案信息（带图标装饰）
+     */
+    private int renderArchiveInfo(GuiGraphics guiGraphics, LocalPlayer player, int centerX, int startY) {
+        int lineHeight = 11; // 进一步减小行高
+        int currentY = startY + 4; // 减小顶部间距
+
+        // 标题（带文件夹图标）
+        String titleIcon = "📁 ";
+        String titleText = titleIcon + "梦鱼游戏档案";
+        int titleWidth = this.font.width(titleText);
+        guiGraphics.drawString(this.font, titleText, centerX - titleWidth / 2, currentY, 0xFFFFD700);
+        currentY += lineHeight;
+
+        // Rank（带奖杯图标）
+        String rankIcon = "🏆 ";
+        String rankName = PlayerRankManager.getPlayerRankClient(player).getRankName();
+        String rankText = rankIcon + "RANK: " + rankName;
+        int rankWidth = this.font.width(rankText);
+        // 根据Rank名称获取对应的颜色
+        int rankColor = switch (rankName) {
+            case "FISH" -> 0xFFFFFFFF;
+            case "FISH+" -> 0xFF55FFFF;
+            case "FISH++" -> 0xFFAA00;
+            case "OPERATOR" -> 0xFF5555;
+            default -> 0xFFFFFFFF; // NO_RANK/NULL默认白色
+        };
+        guiGraphics.drawString(this.font, rankText, centerX - rankWidth / 2, currentY, rankColor);
+        currentY += lineHeight;
+
+        // 称号（带星星图标）
+        String titleIcon2 = "⭐ ";
+        String titleText2 = titleIcon2 + "称号: " + PlayerTitleManager.getPlayerTitleClient(player).getTitleName();
+        int titleWidth2 = this.font.width(titleText2);
+        // 使用称号自己的颜色
+        int titleColor = 0xFF000000 | PlayerTitleManager.getPlayerTitleClient(player).getColor();
+        guiGraphics.drawString(this.font, titleText2, centerX - titleWidth2 / 2, currentY, titleColor);
+        currentY += lineHeight + 3; // 减小底部间距
+
+        return currentY;
+    }
+
+    /**
+     * 渲染属性进度条（横向排列，带图标和数值）
+     */
+    private void renderAttributeBars(GuiGraphics guiGraphics, LocalPlayer player, int startY, int margin) {
+        // 横向排列5个进度条
+        int barCount = 5;
+        int barSpacing = 12;
+        int totalSpacing = barSpacing * (barCount - 1);
+        int availableWidth = rightPanelWidth - margin * 2 - totalSpacing;
+        int barWidth = availableWidth / barCount;
+        int barHeight = 5; // 降低进度条高度
+
+        // 计算进度条Y坐标：确保在上方文字下方，同时尽量靠近屏幕底部
+        int preferredBarY = screenHeight - margin - barHeight - 45;
+        int minBarY = startY + 20; // 在上方文字至少留出20像素间距
+        int barY = Math.max(preferredBarY, minBarY); // 取两者中的较大值，确保不重叠
+
+        // 获取属性值
+        float currentHealth = player.getHealth();
+        float maxHealth = player.getMaxHealth();
+        int currentFood = player.getFoodData().getFoodLevel();
+        int currentStrength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
+        int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
+        if (maxStrength <= 0) maxStrength = 100;
+        float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
+        float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+        if (maxCourage <= 0) maxCourage = 100;
+        int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+
+        // 准备数值文本
+        String[] valueTexts = {
+            String.format("%.0f/%.0f", currentHealth, maxHealth),
+            String.format("%d/20", currentFood),
+            String.format("%d/%d", currentStrength, maxStrength),
+            String.format("%.0f/%.0f", currentCourage, maxCourage),
+            String.format("%d/100", currentInfection)
+        };
+
+        // 横向绘制5个进度条
+        int barX = rightPanelX + margin;
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, currentHealth / maxHealth, TASK_HEALTH_COLOR & 0x00FFFFFF);
+        barX += barWidth + barSpacing;
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, currentFood / 20.0f, TASK_FOOD_COLOR & 0x00FFFFFF);
+        barX += barWidth + barSpacing;
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, currentStrength / (float)maxStrength, TASK_STRENGTH_COLOR & 0x00FFFFFF);
+        barX += barWidth + barSpacing;
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, currentCourage / maxCourage, TASK_COURAGE_COLOR & 0x00FFFFFF);
+        barX += barWidth + barSpacing;
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, currentInfection / 100.0f, TASK_INFECTION_COLOR & 0x00FFFFFF);
+
+        // 在进度条上方显示属性图标（放大显示）
+        int iconY = barY - 16; // 从-18改为-16
+        barX = rightPanelX + margin + barWidth / 2;
+        float iconScale = 1.0f; // 从1.2f改为1.0f，缩小图标
+
+        // 血量图标
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(barX, iconY, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-barX, -iconY, 0);
+        guiGraphics.drawCenteredString(this.font, "❤", barX, iconY, TASK_HEALTH_COLOR);
+        guiGraphics.pose().popPose();
+
+        // 饥饿图标
+        barX += barWidth + barSpacing;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(barX, iconY, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-barX, -iconY, 0);
+        guiGraphics.drawCenteredString(this.font, "🍖", barX, iconY, TASK_FOOD_COLOR);
+        guiGraphics.pose().popPose();
+
+        // 体力图标
+        barX += barWidth + barSpacing;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(barX, iconY, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-barX, -iconY, 0);
+        guiGraphics.drawCenteredString(this.font, "💪", barX, iconY, TASK_STRENGTH_COLOR);
+        guiGraphics.pose().popPose();
+
+        // 勇气图标
+        barX += barWidth + barSpacing;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(barX, iconY, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-barX, -iconY, 0);
+        guiGraphics.drawCenteredString(this.font, "⚡", barX, iconY, TASK_COURAGE_COLOR);
+        guiGraphics.pose().popPose();
+
+        // 感染图标
+        barX += barWidth + barSpacing;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(barX, iconY, 0);
+        guiGraphics.pose().scale(iconScale, iconScale, 1.0f);
+        guiGraphics.pose().translate(-barX, -iconY, 0);
+        guiGraphics.drawCenteredString(this.font, "☣", barX, iconY, TASK_INFECTION_COLOR);
+        guiGraphics.pose().popPose();
+
+        // 在进度条下方显示数值文本
+        int textY = barY + barHeight + 4;
+        barX = rightPanelX + margin + barWidth / 2;
+        float textScale = 0.5f; // 从0.6f改为0.5f，进一步缩小
+
+        for (int i = 0; i < 5; i++) {
             guiGraphics.pose().pushPose();
-            // 把坐标系原点移到圆形中心（缩放中心）
-            guiGraphics.pose().translate(circleCenterX, circleCenterY, 0);
-            // 放大1.8倍（文字变大）
-            guiGraphics.pose().scale(1.8f, 1.8f, 1.8f);
-            //把坐标系移回原位（这样缩放后的内容仍在原始坐标）
-            guiGraphics.pose().translate(-circleCenterX, -circleCenterY, 0);
-
-            // 绘制白色空心圆边框（坐标还是原始的circleCenterX/Y，位置不变）
-            drawCircleBorder(guiGraphics, circleCenterX, circleCenterY, circleRadius, 0xFFFFFFFF);
-
-            // 等级数字精准居中（坐标不变）
-            int textDrawX = circleCenterX - levelWidth / 2 + margin / 8;
-            int textDrawY = circleCenterY - levelHeight / 2;
-            guiGraphics.drawString(this.font, levelText, textDrawX, textDrawY, 0xFFFFFFFF);
-
+            guiGraphics.pose().translate(barX, textY, 0);
+            guiGraphics.pose().scale(textScale, textScale, 1.0f);
+            guiGraphics.pose().translate(-barX, -textY, 0);
+            guiGraphics.drawCenteredString(this.font, valueTexts[i], barX, textY, 0xFFFFFFFF);
             guiGraphics.pose().popPose();
+            barX += barWidth + barSpacing;
+        }
+    }
 
-            // 昵称显示在圆圈右侧（单独放大，作为标题）
-            int nickDrawX = circleCenterX + scaledCircleRadius + 15; // 圆圈右边 + 15px间距
-            int nickDrawY = circleCenterY - this.font.lineHeight / 2; // 垂直居中对齐圆圈
+    /**
+     * 绘制进度条的通用方法（保留原色和发光效果，加深颜色）
+     */
+    private void drawProgressBar(GuiGraphics guiGraphics, int x, int y, int width, int height, float progress, int color) {
+        // 外发光效果（彩色光晕）
+        int glowColor = 0x40000000 | (color & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
 
-            // 单独缩放昵称（1.3倍，保持标题感）
-            guiGraphics.pose().pushPose();
-            float nameScale = 1.3f;
-            // 以文字左下角为缩放中心，避免位置偏移
-            guiGraphics.pose().translate(nickDrawX, nickDrawY, 0);
-            guiGraphics.pose().scale(nameScale, nameScale, 1.0f);
-            guiGraphics.pose().translate(-nickDrawX, -nickDrawY, 0);
-            guiGraphics.drawString(this.font, displayName, nickDrawX, nickDrawY, 0xAAAAAA);
-            guiGraphics.pose().popPose();
+        // 背景（半透明白色）
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, 0x80FFFFFF);
 
-            //————————————————————————————————————————————————————————————
-            // 左对齐基准点：使用实际的圆圈半径（考虑缩放）
-            int alignBaseX = circleCenterX - scaledCircleRadius;
-            // 垂直起始点：等级圆形图标正下方
-            int baseY = circleCenterY + scaledCircleRadius + 10;
-
-            // 等级进度条（在档案标题上面）
-            int levelBarY = baseY + 5;
-            int currentLevel = PlayerLevelManager.getPlayerLevelClient(player);
-            long currentExp = PlayerLevelManager.getPlayerExperienceClient(player);
-            long nextLevelExp = PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
-
-            // 计算进度条宽度（延伸到昵称和幸存者状态的位置）
-            int displayNameWidth = (int)(this.font.width(displayName) * 1.3f); // 考虑昵称缩放
-            int levelBarWidth = nickDrawX - alignBaseX + displayNameWidth + 20; // 延伸到幸存者位置
-            int levelBarHeight = 8;
-
-            // 进度条背景
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX, levelBarY,
-                    alignBaseX + levelBarWidth, levelBarY + levelBarHeight,
-                    0xDD1A1A1A);
-
-            // 进度条前景（使用动态RGB颜色）
-            float expProgress = PlayerLevelManager.getExperienceProgressClient(player);
-            int progressWidth = (int)(levelBarWidth * expProgress);
-
-            // 获取动态RGB边框颜色
-            int dynamicColor = getDynamicBorderColor();
-
-            if (progressWidth > 2) {
-                guiGraphics.fill(RenderType.gui(),
-                        alignBaseX + 1, levelBarY + 1,
-                        alignBaseX + progressWidth - 1, levelBarY + levelBarHeight - 1,
-                        dynamicColor);
-                guiGraphics.fill(RenderType.gui(),
-                        alignBaseX + 1, levelBarY + 1,
-                        alignBaseX + progressWidth - 1, levelBarY + 3,
-                        0xFFFFFFFF);
-            }
-
-            // 进度条边框（使用动态RGB颜色）
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX - 1, levelBarY - 1,
-                    alignBaseX + levelBarWidth + 1, levelBarY,
-                    dynamicColor); // 上边框
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX - 1, levelBarY + levelBarHeight,
-                    alignBaseX + levelBarWidth + 1, levelBarY + levelBarHeight + 1,
-                    dynamicColor); // 下边框
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX - 1, levelBarY,
-                    alignBaseX, levelBarY + levelBarHeight,
-                    dynamicColor); // 左边框
-            guiGraphics.fill(RenderType.gui(),
-                    alignBaseX + levelBarWidth, levelBarY,
-                    alignBaseX + levelBarWidth + 1, levelBarY + levelBarHeight,
-                    dynamicColor); // 右边框
-
-            // 在进度条下方显示经验数值（xxx/xxx），间距增大
-            String expText = "(" + currentExp + "/" + nextLevelExp + ")";
-            guiGraphics.drawString(this.font, expText, alignBaseX, levelBarY + levelBarHeight + 6, dynamicColor);
-
-            //档案标题
-            String archiveTitle = "您的梦鱼游戏档案：";
-            int archiveTitleY = levelBarY + levelBarHeight + 18; // 增加间距
-            guiGraphics.drawString(this.font, archiveTitle, alignBaseX, archiveTitleY, 0xFFFFD700); // 淡金色
-
-            //Rank：左对齐，浅灰色
-            String rankText = "RANK:" + PlayerRankManager.getPlayerRankClient(player).getRankName();
-            guiGraphics.drawString(this.font, rankText, alignBaseX, archiveTitleY + 20, 0xFFCCCCCC); // 浅灰色
-
-            //称号：左对齐
-            String titleText = "称号:" + PlayerTitleManager.getPlayerTitleClient(player).getTitleName();
-            guiGraphics.drawString(this.font, titleText, alignBaseX, archiveTitleY + 35, 0xFF87CEFA); // 淡蓝色
-            //————————————————————————————————————————————————————————————————
+        // 前景（带高光，加深颜色）
+        int progressWidth = (int)(width * Math.max(0, Math.min(1, progress)));
+        if (progressWidth > 2) {
+            // 加深进度颜色（降低亮度，增加饱和度）
+            int deepColor = 0xFF000000 | (color & 0x00FFFFFF);
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + progressWidth - 1, y + height - 1, deepColor);
+            // 顶部高光
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + progressWidth - 1, y + Math.min(3, height / 2), 0x60FFFFFF);
         }
 
-        //绘制横向属性进度条
-        if (player != null) {
-            // 进度条起始位置
-            int barStartY = uiY + screenUIHeight - BAR_HEIGHT * 6 - BAR_BAR_SPACING * 3;
-            int categoryTextX = uiX + margin;
-            int barX = categoryTextX + this.font.width("感染值") + BAR_TO_TEXT_SPACING; // 基于最长类别文本宽度
-
-            // 获取玩家属性值
-            float currentHealth = player.getHealth();
-            float maxHealth = player.getMaxHealth();
-            int currentFood = player.getFoodData().getFoodLevel();
-            int maxFood = 20;
-            int currentStrength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
-            int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
-            if (maxStrength <= 0) maxStrength = 100;
-            float currentCourage = PlayerCourageManager.getCurrentCourageClient(player);
-            float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
-            if (maxCourage <= 0) maxCourage = 100;
-            int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
-            int maxInfection = 100;
-
-            // 绘制血量进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY, currentHealth, maxHealth, TASK_HEALTH_COLOR, "血量");
-            // 绘制饥饿值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING, currentFood, maxFood, TASK_FOOD_COLOR, "饥饿");
-            // 绘制体力值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 2, currentStrength, maxStrength, TASK_STRENGTH_COLOR, "体力");
-            // 绘制勇气值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 3, currentCourage, maxCourage, TASK_COURAGE_COLOR, "勇气");
-            // 绘制感染值进度条
-            drawTaskHorizontalProgressBar(guiGraphics, barX, barStartY + BAR_BAR_SPACING * 4, currentInfection, maxInfection, TASK_INFECTION_COLOR, "感染");
-        }
-
-        //排行榜
-//        drawFullRanking(guiGraphics);
+        // 边框（细边框）
+        int borderColor = 0xFFFFFFFF; // 白色边框
+        // 上边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, borderColor);
+        // 下边框
+        guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, borderColor);
+        // 左边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, borderColor);
+        // 右边框
+        guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + height, borderColor);
     }
 
     //——————————————————————————————————————————————————————————————————————————————————————————————
@@ -907,46 +990,46 @@ public class TaskUI_Screen extends Screen {
         guiGraphics.vLine(firstX, lastY, firstY, color);
     }
 
-    // 横向进度条绘制（int版本）
-    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, int currentValue, int maxValue, int normalColor, String category) {
+    // 横向进度条绘制（int版本，支持自定义宽度）
+    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, int currentValue, int maxValue, int normalColor, String category, int barWidth) {
         // 绘制左侧类别文本
         guiGraphics.drawString(this.font, category, x - this.font.width(category) - BAR_TO_TEXT_SPACING, y + (BAR_HEIGHT - this.font.lineHeight) / 2, TASK_TEXT_COLOR);
 
         // 绘制进度条背景
-        guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, TASK_BG_COLOR);
+        guiGraphics.fill(x, y, x + barWidth, y + BAR_HEIGHT, TASK_BG_COLOR);
         // 计算进度（横向从左到右填充）
         float progress = Math.max(0, Math.min(1, (float) currentValue / maxValue));
-        int fillWidth = (int) (BAR_WIDTH * progress);
+        int fillWidth = (int) (barWidth * progress);
         // 绘制进度（低进度变红）
         if (fillWidth > 0) {
             int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
             guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
         }
         // 绘制边框（带淡色发光）
-        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
+        drawTaskBorder(guiGraphics, x, y, barWidth, BAR_HEIGHT, normalColor);
         // 绘制右侧数值文本
-        drawTaskProgressValueText(guiGraphics, x, y, String.format("%d/%d", currentValue, maxValue));
+        drawTaskProgressValueText(guiGraphics, x, y, barWidth, String.format("%d/%d", currentValue, maxValue));
     }
 
-    // 横向进度条绘制（float版本） ==========
-    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor, String category) {
+    // 横向进度条绘制（float版本，支持自定义宽度）
+    private void drawTaskHorizontalProgressBar(GuiGraphics guiGraphics, int x, int y, float currentValue, float maxValue, int normalColor, String category, int barWidth) {
         // 绘制左侧类别文本
         guiGraphics.drawString(this.font, category, x - this.font.width(category) - BAR_TO_TEXT_SPACING, y + (BAR_HEIGHT - this.font.lineHeight) / 2, TASK_TEXT_COLOR);
 
         // 绘制进度条背景
-        guiGraphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, TASK_BG_COLOR);
+        guiGraphics.fill(x, y, x + barWidth, y + BAR_HEIGHT, TASK_BG_COLOR);
         // 计算进度（横向从左到右填充）
         float progress = Math.max(0, Math.min(1, currentValue / maxValue));
-        int fillWidth = (int) (BAR_WIDTH * progress);
+        int fillWidth = (int) (barWidth * progress);
         // 绘制进度（低进度变红）
         if (fillWidth > 0) {
             int finalColor = progress < 0.2f ? TASK_LOW_COLOR : normalColor;
             guiGraphics.fill(x, y, x + fillWidth, y + BAR_HEIGHT, finalColor);
         }
         // 绘制边框（带淡色发光）
-        drawTaskBorder(guiGraphics, x, y, BAR_WIDTH, BAR_HEIGHT, normalColor);
+        drawTaskBorder(guiGraphics, x, y, barWidth, BAR_HEIGHT, normalColor);
         // 绘制右侧数值文本
-        drawTaskProgressValueText(guiGraphics, x, y, String.format("%.1f/%.1f", currentValue, maxValue));
+        drawTaskProgressValueText(guiGraphics, x, y, barWidth, String.format("%.1f/%.1f", currentValue, maxValue));
     }
 
     // 绘制进度条边框（带鲜艳发光效果）
@@ -982,14 +1065,14 @@ public class TaskUI_Screen extends Screen {
 //                false
 //        );
 //    }
-    //进度条上方
-    private void drawTaskProgressValueText(GuiGraphics guiGraphics, int barX, int barY, String valueText) {
+    //进度条上方（支持自定义宽度）
+    private void drawTaskProgressValueText(GuiGraphics guiGraphics, int barX, int barY, int barWidth, String valueText) {
         Minecraft mc = Minecraft.getInstance();
         // 文本缩放比例（0.8f 表示80%大小，可按需调整为0.7f/0.9f等）
         float textScale = 0.8f;
 
         //计算原始文本位置
-        int originalTextX = barX + BAR_WIDTH / 2 - mc.font.width(valueText)/2; // 水平居中
+        int originalTextX = barX + barWidth / 2 - mc.font.width(valueText)/2; // 水平居中
         int originalTextY = barY - mc.font.lineHeight; // 进度条上方
 
         //开始缩放文本
