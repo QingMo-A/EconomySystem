@@ -9,6 +9,7 @@ import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -34,6 +35,9 @@ public class ServerScreenUI_Screen extends Screen {
     private static final int BAR_COURAGE_COLOR = 0xFFCC00FF;    // 勇气
     private static final int BAR_INFECTION_COLOR = 0xFF00DD00;  // 感染
 
+    // 边框动画相关
+    private long openTime = 0;                           // UI打开时间戳
+    private static final long ANIMATION_DURATION = 400;  // 动画持续时间（毫秒）
 
     //构造方法
     public ServerScreenUI_Screen() {
@@ -53,10 +57,18 @@ public class ServerScreenUI_Screen extends Screen {
     protected void init() {
         super.init();
 
+        openTime = Util.getMillis();
+
         //玩家模型
         MODEL_HEIGHT = this.height / 4;
         MODEL_SIZE = (int) (MODEL_HEIGHT / 1.8);
         MODEL_FOOT_Y = this.height / 50 + MODEL_HEIGHT;
+    }
+
+    //获取动画进度百分比
+    private float getAnimationProgress() {
+        long elapsed = Util.getMillis() - openTime;
+        return Math.min(1.0f, (float) elapsed / ANIMATION_DURATION);
     }
 
     //渲染方法
@@ -74,6 +86,9 @@ public class ServerScreenUI_Screen extends Screen {
             return;
         }
 
+        //获取当前动画进度
+        float animationProgress = getAnimationProgress();
+
         int leftWidth = (int) (this.width * LEFT_PANEL_PERCENT);
         int rightWidth = (int) (this.width * RIGHT_PANEL_PERCENT);
 
@@ -86,17 +101,33 @@ public class ServerScreenUI_Screen extends Screen {
         //右侧透明黑背景
         guiGraphics.fill(RenderType.gui(), RIGHT_PANEL_START_X, 0, this.width, this.height, PANEL_BACKGROUND_COLOR);
 
-        // 左侧右边框（1像素宽）
-        guiGraphics.fill(RenderType.gui(), leftWidth - 1, 0, leftWidth, this.height, PANEL_BORDER_COLOR);
-        // 右侧左边框
-        guiGraphics.fill(RenderType.gui(), RIGHT_PANEL_START_X, 0, RIGHT_PANEL_START_X + 1, this.height, PANEL_BORDER_COLOR);
+        // 左侧右边框：从上到下逐渐绘制
+        int leftBorderHeight = (int) (this.height * animationProgress);
+        if (leftBorderHeight > 0) {
+            guiGraphics.fill(RenderType.gui(), leftWidth - 1, 0, leftWidth, leftBorderHeight, PANEL_BORDER_COLOR);
+        }
+
+        // 右侧左边框：从下到上逐渐绘制
+        int rightBorderHeight = (int) (this.height * animationProgress);
+        if (rightBorderHeight > 0) {
+            int rightBorderY = this.height - rightBorderHeight;  // 从底部向上
+            guiGraphics.fill(RenderType.gui(), RIGHT_PANEL_START_X, rightBorderY, RIGHT_PANEL_START_X + 1, this.height, PANEL_BORDER_COLOR);
+        }
 
         //————————————左侧标题————————————
         //绘制标题
         String serverTitle = "§bDreaming§dFish";
 
-        //设置标题渲染坐标
-        int serverTitleY = (int) (this.height * 0.2);  //屏幕纵像素1/5
+        // 标题动画：从上往下滑入
+        float titleAnimDuration = 600f;  // 标题动画持续时间(ms)
+        float titleProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / titleAnimDuration);
+        // 缓动函数：easeOutCubic 让动画更自然
+        titleProgress = 1.0f - (float) Math.pow(1.0f - titleProgress, 3);
+
+        //设置标题渲染坐标（从上方滑入）
+        int targetTitleY = (int) (this.height * 0.2);  // 目标Y坐标
+        int slideDistance = 80;  // 滑动距离
+        int currentTitleY = targetTitleY - (int) ((1.0f - titleProgress) * slideDistance);
         int serverTitleX = leftWidth / 2;  //渲染中心
 
         // 获取文字原始宽度
@@ -109,7 +140,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().pushPose();  //保存当前坐标系状态（位置、缩放、旋转等）
 
         //移动坐标原点到titlex，titiley，保证坐标不被缩放
-        guiGraphics.pose().translate(serverTitleX, serverTitleY, 0);
+        guiGraphics.pose().translate(serverTitleX, currentTitleY, 0);
         //进行缩放
         guiGraphics.pose().scale(scale, scale, 1.0f);   //三个参数为x，y，z分别缩放多少
         //进行渲染，颜色随便填都可以，已经用特殊符号§显示颜色
@@ -119,13 +150,20 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().popPose();  // 恢复之前的状态
 
         //————————————右侧——————————————————————————————————————————————————————————————————————————
+        // 右侧动画：从下往上滑入
+        float rightAnimDuration = 800f;
+        float rightProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / rightAnimDuration);
+        rightProgress = 1.0f - (float) Math.pow(1.0f - rightProgress, 3);
+        int rightSlideDistance = 100;
+        int rightOffsetY = (int) ((1.0f - rightProgress) * rightSlideDistance);
+
         //玩家模型
-        renderPlayerModel(guiGraphics);
+        renderPlayerModel(guiGraphics, rightOffsetY);
 
         String starEmoji = "⭐";
         int starWidth = this.font.width(starEmoji);
 
-        guiGraphics.drawString(this.font, starEmoji, rightCenterX - starWidth / 2, (int) (MODEL_FOOT_Y + this.font.lineHeight * 0.7), 0xFFFF00);
+        guiGraphics.drawString(this.font, starEmoji, rightCenterX - starWidth / 2, (int) (MODEL_FOOT_Y + this.font.lineHeight * 0.7) + rightOffsetY, 0xFFFF00);
         //——————————等级圆渲染————————————————————————————————————————————————————————————————————
         int level = PlayerLevelManager.getPlayerLevelClient(player);
         String levelText = String.valueOf(level);
@@ -144,7 +182,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
         int circleX = rightCenterX;
         //根据半径自适应y坐标
-        int circleY = (int) (MODEL_FOOT_Y + circleRadius * 1.8);
+        int circleY = (int) (MODEL_FOOT_Y + circleRadius * 1.8) + rightOffsetY;
         //画圆进度条
         float progress = PlayerLevelManager.getExperienceProgressClient(player);
         drawProgressCircle(guiGraphics, circleX, circleY, circleRadius, progress);
@@ -181,7 +219,7 @@ public class ServerScreenUI_Screen extends Screen {
         int nameWidth = this.font.width(playerName);
         //名字坐标
         int nameX = this.width - rightWidth / 2;
-        int nameY = (int) (expY + circleRadius * 0.8);
+        int nameY = expY + (int)(this.font.lineHeight * expScale) + 10;  // 经验文本实际高度 + 固定间距
         //玩家昵称缩放计算
         float maxNameWidth = (float) (rightWidth * 0.55f);
         float nameScale = maxNameWidth / nameWidth;
@@ -192,9 +230,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(nameX, nameY, 0);
         guiGraphics.pose().scale(nameScale, nameScale, 1.0f);  // 缩放
-
         guiGraphics.drawString(this.font, playerName, -nameWidth / 2, 0, 0xFFFFFF);
-
         guiGraphics.pose().popPose();
 
         // 绘制玩家名称下方的分割线
@@ -232,18 +268,20 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.drawString(this.font, titleText, titleX, rankTitleY, titleColor);
 
         // 渲染五个属性进度条
-        renderAttributeBars(guiGraphics, player, RIGHT_PANEL_START_X, rightWidth, this.height);
+        renderAttributeBars(guiGraphics, player, RIGHT_PANEL_START_X, rightWidth, this.height, rightOffsetY);
     }
 
     //绘制玩家模型（右侧使用）
-    private void renderPlayerModel(GuiGraphics guiGraphics) {
+    private void renderPlayerModel(GuiGraphics guiGraphics, int offsetY) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         int rightWidth = (int) (this.width * RIGHT_PANEL_PERCENT);  //右侧宽度
         int rightCenterX = this.width - rightWidth / 2;  // 右侧面板中心
 
-        // 渲染玩家模型
+        // 渲染玩家模型（带Y偏移）
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, offsetY, 0);
         InventoryScreen.renderEntityInInventoryFollowsMouse(
                 guiGraphics,
                 rightCenterX,  // 模型中心X坐标
@@ -253,6 +291,7 @@ public class ServerScreenUI_Screen extends Screen {
                 0.0F,
                 player         // 当前玩家
         );
+        guiGraphics.pose().popPose();
     }
 
     //——————————工具方法
@@ -352,8 +391,9 @@ public class ServerScreenUI_Screen extends Screen {
      * @param rightPanelX 右侧面板的起始X坐标
      * @param rightPanelWidth 右侧面板的宽度
      * @param screenHeight 屏幕高度，用于计算进度条的Y坐标
+     * @param offsetY Y轴偏移量（用于动画）
      */
-    private void renderAttributeBars(GuiGraphics guiGraphics, LocalPlayer player, int rightPanelX, int rightPanelWidth, int screenHeight) {
+    private void renderAttributeBars(GuiGraphics guiGraphics, LocalPlayer player, int rightPanelX, int rightPanelWidth, int screenHeight, int offsetY) {
         //尺寸参数
         int margin = 12;              // 进度条距离面板边缘的边距
         int barsPerRow = 3;           // 第一行进度条数量
@@ -374,8 +414,8 @@ public class ServerScreenUI_Screen extends Screen {
 //        int barWidthSecondRow = availableWidthSecondRow / barsSecondRow; // 第二行单个进度条宽度
         int barWidthSecondRow = barWidthFirstRow;      //第二行进度条与第一行长度相同
 
-        //计算进度条Y坐标
-        int barY = screenHeight - margin - barHeight - rowSpacing - bottomMargin;  // 第一行进度条Y坐标
+        //计算进度条Y坐标（应用动画偏移）
+        int barY = screenHeight - margin - barHeight - rowSpacing - bottomMargin + offsetY;  // 第一行进度条Y坐标
 
         //获取玩家属性值
         // 血量百分比
