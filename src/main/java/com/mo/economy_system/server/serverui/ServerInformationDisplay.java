@@ -445,9 +445,9 @@ public class ServerInformationDisplay {
         return switch (rankName) {
             case "FISH" -> 0xFF55FF55;
             case "FISH+" -> 0xFF55FFFF;
-            case "FISH++" -> 0xFFFFD700;
+            case "FISH++" -> 0xFFFFAA00;  // 金色（与 SystemMessage 保持一致）
             case "OPERATOR" -> 0xFFFF5555;
-            default -> 0xFFFFFFFF;
+            default -> 0xAAAAAA;
         };
     }
 

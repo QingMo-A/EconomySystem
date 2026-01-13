@@ -17,16 +17,21 @@ public class LoginSync {
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer newPlayer)) {
-            EconomySystem.LOGGER.debug("非服务端玩家，跳过数据同步");
-            return;
+        if (!(event.getEntity() instanceof ServerPlayer newPlayer)) return;
+
+        //给新加入玩家发所有在线玩家的数据（包括自己）
+        for (ServerPlayer onlinePlayer : newPlayer.getServer().getPlayerList().getPlayers()) {
+            sendSyncPacketToPlayer(newPlayer, onlinePlayer);
         }
 
-        //给新玩家自己发包
-        sendSyncPacketToPlayer(newPlayer, newPlayer);
-        //广播新玩家数据给所有在线玩家
-        broadcastPlayerDataToAllOnlinePlayers(newPlayer);
+        //给其他所有在线玩家发新加入玩家的数据
+        for (ServerPlayer onlinePlayer : newPlayer.getServer().getPlayerList().getPlayers()) {
+            if (!onlinePlayer.getUUID().equals(newPlayer.getUUID())) {
+                sendSyncPacketToPlayer(onlinePlayer, newPlayer);
+            }
+        }
     }
+
 
     //给单个玩家发送指定玩家的同步包
     public static void sendSyncPacketToPlayer(ServerPlayer targetReceiver, ServerPlayer dataOwner) {
@@ -52,25 +57,6 @@ public class LoginSync {
             }
             //给每个在线玩家发送新玩家的数据
             sendSyncPacketToPlayer(onlinePlayer, dataOwner);
-        }
-    }
-
-    //当前玩家进服时，主动推送所有已在线玩家的数据给他
-    @SubscribeEvent
-    public static void onPlayerJoinLevel(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer currentPlayer)) {
-            return;
-        }
-
-        //获取服务器内所有已在线玩家（除了自己）
-        Collection<ServerPlayer> onlinePlayers = currentPlayer.getServer().getPlayerList().getPlayers();
-        for (ServerPlayer onlinePlayer : onlinePlayers) {
-            if (onlinePlayer.getUUID().equals(currentPlayer.getUUID())) {
-                continue;
-            }
-            //给当前玩家发送每个已在线玩家的数据
-            sendSyncPacketToPlayer(currentPlayer, onlinePlayer);
-            EconomySystem.LOGGER.info("玩家{}进服，已经向该玩家发送当前所有在线玩家的数据", currentPlayer.getName());
         }
     }
 }

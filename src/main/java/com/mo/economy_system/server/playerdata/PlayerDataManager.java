@@ -125,7 +125,7 @@ public class PlayerDataManager {
         return playerData;
     }
 
-    public static void updatePlayerData(ServerPlayer serverPlayer, Rank rank, Title title, int level) {
+    public static void updatePlayerData(ServerPlayer serverPlayer, Rank rank, Title title, int level, long experience) {
         UUID playerUUID = serverPlayer.getUUID();
         Map<UUID, PlayerData> allPlayerData = loadAllPlayerDataFromFile();
 
@@ -137,6 +137,7 @@ public class PlayerDataManager {
             playerData.setRank(rank);
             playerData.setTitle(title);
             playerData.setLevel(level);
+            playerData.setCurrentExperience(experience);
         }
 
         PLAYER_DATA_CACHE.put(playerUUID, playerData);
@@ -145,11 +146,12 @@ public class PlayerDataManager {
 
         PlayerAttributesDataManager.initPlayerAttributesData(serverPlayer, level);
 
-        EconomySystem.LOGGER.info("玩家 {} 数据更新成功（Rank={}, Title={}, Level={}）",
+        EconomySystem.LOGGER.info("玩家 {} 数据更新成功（Rank={}, Title={}, Level={}, Exp={}）",
                 serverPlayer.getScoreboardName(),
                 rank.getRankName(),
                 title.getTitleName(),
-                level);
+                level,
+                experience);
 
         //同步数据包给自己和其他玩家
         LoginSync.sendSyncPacketToPlayer(serverPlayer, serverPlayer);

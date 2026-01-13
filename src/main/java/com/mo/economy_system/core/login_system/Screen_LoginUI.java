@@ -158,12 +158,12 @@ public class Screen_LoginUI extends Screen {
         if (!confirmPasswordField.isVisible()) {
             renderInputBackground(guiGraphics, passwordField);
             // 输入框下方的提示文字
-            guiGraphics.drawCenteredString(minecraft.font, "§7设置完密码后按下enter确认", centerX, passwordField.getY() + 30, 0xFFAAAAAA);
+            guiGraphics.drawCenteredString(minecraft.font, "§7设置完密码后按下 [Enter] 确认", centerX, passwordField.getY() + 30, 0xFFAAAAAA);
         } else {
             renderInputBackground(guiGraphics, passwordField);
             renderInputBackground(guiGraphics, confirmPasswordField);
             // 输入框下方的提示文字（只有一行，在两个框下方居中）
-            guiGraphics.drawCenteredString(minecraft.font, "§7设置完密码后按下enter确认", centerX, confirmPasswordField.getY() + 30, 0xFFAAAAAA);
+            guiGraphics.drawCenteredString(minecraft.font, "§7设置完密码后按下 [Enter] 确认", centerX, confirmPasswordField.getY() + 30, 0xFFAAAAAA);
         }
 
         // 底部：DreamingFish.net（dreaming蓝色，fish紫色，.net金色）

@@ -19,7 +19,7 @@ import java.util.UUID;
 public class PlayerRankManager {
     public static void setPlayerRankServer(ServerPlayer serverPlayer, Rank rank) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());
-        PlayerDataManager.updatePlayerData(serverPlayer, rank, playerData.getTitle(), playerData.getLevel());
+        PlayerDataManager.updatePlayerData(serverPlayer, rank, playerData.getTitle(), playerData.getLevel(), playerData.getCurrentExperience());
     }
     public static Rank getPlayerRankServer(ServerPlayer serverPlayer) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());

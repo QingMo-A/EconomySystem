@@ -31,11 +31,11 @@ public class ChangeChatEvent {
 
         Component customMessage = null;
         ChatFormatting rankColor = switch (playerRank) {
-            case "FISH" -> ChatFormatting.WHITE;
+            case "FISH" -> ChatFormatting.GREEN;
             case "FISH+" -> ChatFormatting.AQUA;
             case "FISH++" -> ChatFormatting.GOLD;
             case "OPERATOR" -> ChatFormatting.RED;
-            default -> ChatFormatting.WHITE; // NO_RANK/NULL默认白色
+            default -> ChatFormatting.GRAY; // NO_RANK/NULL默认白色
         };
 
         // 等级前缀

@@ -38,7 +38,7 @@ public class Packet_LevelUpNotify {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
                 // 自定义提示文本，可携带新等级
                 String tipText = "§6您的等级提升了！\n" + "§b当前等级：" + packet.newLevel + "，您的属性增加了";
-                TipDisplayManager.addMessage(tipText,8000); // 调用你已有的提示管理器
+                TipDisplayManager.addMessage(tipText, 8000); // 调用你已有的提示管理器
             });
         });
         ctx.get().setPacketHandled(true);

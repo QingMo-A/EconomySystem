@@ -118,7 +118,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         guiGraphics.pose().popPose();  // 恢复之前的状态
 
-        //————————————右侧——————————
+        //————————————右侧——————————————————————————————————————————————————————————————————————————
         //玩家模型
         renderPlayerModel(guiGraphics);
 
@@ -126,7 +126,7 @@ public class ServerScreenUI_Screen extends Screen {
         int starWidth = this.font.width(starEmoji);
 
         guiGraphics.drawString(this.font, starEmoji, rightCenterX - starWidth / 2, (int) (MODEL_FOOT_Y + this.font.lineHeight * 0.7), 0xFFFF00);
-        //——————————等级圆渲染
+        //——————————等级圆渲染————————————————————————————————————————————————————————————————————
         int level = PlayerLevelManager.getPlayerLevelClient(player);
         String levelText = String.valueOf(level);
         int levelWidth = this.font.width(levelText);
@@ -157,7 +157,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.drawString(this.font, levelText, -levelWidth / 2, -this.font.lineHeight / 2, 0xFFFFFF);
         guiGraphics.pose().popPose();
 
-        //——————————等级经验显示
+        //——————————等级经验显示————————————————————————————————————————————————————————————————————————————————
         String expText = PlayerLevelManager.getPlayerExperienceClient(player) + "/" + PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
         int expWidth = this.font.width(expText);
         int expMaxWidth = (int) (rightWidth * 0.25);
@@ -170,7 +170,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.drawString(this.font, expText, -expWidth / 2, 0, 0xFFFFAA);  // 金色
         guiGraphics.pose().popPose();
 
-        //————————玩家id与感染渲染
+        //————————玩家id与感染渲染————————————————————————————————————————————————————————————————————————————————————
         //玩家名称
         String playerName = "§e" + player.getScoreboardName();
         //感染状态

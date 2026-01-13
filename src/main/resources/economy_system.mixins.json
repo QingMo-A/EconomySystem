@@ -14,7 +14,7 @@
     "BedBlockMixin",
     "ServerLevelMixin",
     "AnvilBlockMixin",
-    "PlayerListMixin"
+    "SystemMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

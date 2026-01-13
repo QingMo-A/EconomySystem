@@ -16,7 +16,7 @@ import java.util.UUID;
 public class PlayerTitleManager {
     public static void setPlayerTitleServer(ServerPlayer serverPlayer, Title title) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());
-        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), title, playerData.getLevel());
+        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), title, playerData.getLevel(), playerData.getCurrentExperience());
     }
     public static Title getPlayerTitleServer(ServerPlayer serverPlayer) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());

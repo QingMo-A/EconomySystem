@@ -1,6 +1,7 @@
 package com.mo.economy_system.server.chattitle;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraftforge.fml.loading.FMLPaths;
 
@@ -15,7 +16,10 @@ import java.util.HashMap;
 public class TitleConfig {
     // 配置文件路径（mod根目录/config/titles.json）
     private static final File TITLE_CONFIG_FILE = FMLPaths.CONFIGDIR.get().resolve("economy_system/economy_titles.json").toFile();
-    private static final Gson GSON = new Gson(); // 用Gson解析JSON（Forge自带Gson，无需额外依赖）
+    private static final Gson GSON = new GsonBuilder() // 用GsonBuilder来配置Gson
+            .setPrettyPrinting()
+            .serializeNulls()
+            .create();
 
     // 存储解析后的称号（ID -> Title）
     private static Map<Integer, Title> titleMap = new HashMap<>();
@@ -27,6 +31,7 @@ public class TitleConfig {
         // 1. 若配置文件不存在，生成默认配置
         if (!TITLE_CONFIG_FILE.exists()) {
             createDefaultConfig();
+            return;
         }
 
         // 2. 读取并解析JSON
@@ -63,7 +68,7 @@ public class TitleConfig {
     private static void createDefaultConfig() {
         try {
             List<TitleData> defaultTitles = List.of(
-                    new TitleData(0, "萌新鱼友", 0xFFFFFF),  // 白色（纯RGB）
+                    new TitleData(0, "萌新鱼友", 0xAAAAAA),  // 灰色（纯RGB）
                     new TitleData(1, "TEST", 0xFF5555),      // 红色（纯RGB）
                     new TitleData(2, "TEST2", 0x55FFFF)     // 青色（纯RGB）
             );

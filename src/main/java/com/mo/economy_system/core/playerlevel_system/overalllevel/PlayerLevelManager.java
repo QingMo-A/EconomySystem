@@ -3,6 +3,7 @@ package com.mo.economy_system.core.playerlevel_system.overalllevel;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_ExperienceGainNotify;
 import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
@@ -73,7 +74,7 @@ public class PlayerLevelManager {
      * @param currentExp 当前等级内的经验
      * @return 当前等级的总累积经验
      */
-    public static long getTotalExperienceAtLevel(int currentLevel, long currentExp) {
+    public static long getTotalExperienceCurrentLevel(int currentLevel, long currentExp) {
         return getExperienceRequiredForLevel(currentLevel) + currentExp;
     }
 
@@ -84,7 +85,7 @@ public class PlayerLevelManager {
         if (serverPlayer == null) return;
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());
         playerData.setLevel(level);
-        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), level);
+        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), level, playerData.getCurrentExperience());
         //发送升级提示
         sendLevelUpNotify(serverPlayer, level);
     }
@@ -113,7 +114,7 @@ public class PlayerLevelManager {
 
         //循环判断是否满足升级条件（支持一次性多段升级，例如：经验足够连升2级）
         while (true) {
-            long expRequiredForNextLevel = getExperienceRequiredForLevel(currentLevel + 1);
+            long expRequiredForNextLevel = getExperienceRequiredForLevel(currentLevel + 1) - getExperienceRequiredForLevel(currentLevel);
             // 经验 >= 下一级所需总经验 → 升级
             if (newExp >= expRequiredForNextLevel) {
                 //扣除升级所需经验（保留多余经验，支持无限等级）
@@ -132,7 +133,7 @@ public class PlayerLevelManager {
         }
 
         // 3. 持久化更新后的数据（等级+经验）
-        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), playerData.getLevel());
+        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), playerData.getLevel(), playerData.getCurrentExperience());
     }
 
     /**
@@ -151,7 +152,7 @@ public class PlayerLevelManager {
         if (serverPlayer == null) return;
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());
         playerData.setCurrentExperience(Math.max(0, experience)); // 经验不能为负
-        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), playerData.getLevel());
+        PlayerDataManager.updatePlayerData(serverPlayer, playerData.getRank(), playerData.getTitle(), playerData.getLevel(), playerData.getCurrentExperience());
     }
 
 

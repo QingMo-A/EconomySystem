@@ -108,8 +108,6 @@ public class Packet_PlayerLoginResponse {
                 // 发送新手教程（仅未完成过教程的玩家）
                 if (!newPlayerLoginData.gethasCompletedNewPlayerGuidence()) {
                     NewPlayerGuide.sendNewPlayerGuide(serverPlayer);
-                    // 标记为已完成并保存
-                    EconomySystem.LOGGER.info("新手教程推送完成，已标记玩家已完成教程");
                 } else {
                     EconomySystem.LOGGER.info("玩家已完成过新手教程，跳过推送");
                 }
