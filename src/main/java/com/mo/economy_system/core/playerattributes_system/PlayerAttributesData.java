@@ -28,6 +28,9 @@ public class PlayerAttributesData {
     // 感染值（0-100，100为完全感染）
     private int currentInfection;
 
+    // 是否为感染者（感染值达到100后转变）
+    private boolean isInfected;
+
     //血量系统
     private double maxHealth; //最大血量
 
@@ -54,6 +57,7 @@ public class PlayerAttributesData {
         this.maxHealth = calculateMaxHealthByLevel(level);
 
         this.currentInfection = 0;
+        this.isInfected = false;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -80,6 +84,7 @@ public class PlayerAttributesData {
         this.syncMaxHealthToPlayer(player);
 
         this.currentInfection = 0;
+        this.isInfected = false;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -107,6 +112,7 @@ public class PlayerAttributesData {
         this.maxHealth = calculateMaxHealthByLevel(level);
 
         this.currentInfection = 0;
+        this.isInfected = false;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -370,5 +376,13 @@ public class PlayerAttributesData {
 
     public void setInfectionWarned(boolean infectionWarned) {
         this.infectionWarned = infectionWarned;
+    }
+
+    public boolean isInfected() {
+        return isInfected;
+    }
+
+    public void setInfected(boolean infected) {
+        isInfected = infected;
     }
 }
