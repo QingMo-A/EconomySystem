@@ -11,6 +11,7 @@ import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
+import com.mo.economy_system.network.packets.blueprint_system.Packet_SyncBlueprintConfig;
 import com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.courage_system.Packet_SyncCourageData;
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
@@ -101,6 +102,8 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::handle);
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        //蓝图系统
+        INSTANCE.registerMessage(packetId++, Packet_SyncBlueprintConfig.class, Packet_SyncBlueprintConfig::encode, Packet_SyncBlueprintConfig::decode, Packet_SyncBlueprintConfig::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {

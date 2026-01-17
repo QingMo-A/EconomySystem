@@ -146,7 +146,7 @@ public class Screen_Home extends EconomySystem_Screen {
                             // 打开 AboutScreen
                             //this.minecraft.setScreen(new Screen_Test());
                             // this.minecraft.setScreen(new a1111_Screen());
-                            this.minecraft.setScreen(new EconomyMainScreen());
+                            this.minecraft.setScreen(new a1111_Screen());
                         })
         );
 
