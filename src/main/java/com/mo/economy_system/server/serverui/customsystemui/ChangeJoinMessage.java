@@ -1,8 +1,8 @@
 package com.mo.economy_system.server.serverui.customsystemui;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.network.EconomySystem_NetworkManager; // 新增：导入网络管理器
-import com.mo.economy_system.network.packets.Packet_JoinMessage;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.Packet_SystemMessage;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
 import net.minecraft.network.chat.Component;
@@ -15,6 +15,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.NetworkDirection;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -166,13 +167,13 @@ public class ChangeJoinMessage {
         String rawMsg = getJoinMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
-        // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
-        Component title = Component.literal("§a鱼友加入");
+        // 服务端发网络包给所有在线玩家的客户端（使用 Packet_SystemMessage）
         Component content = Component.literal(formattedMsg);
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
-            EconomySystem_NetworkManager.INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> onlinePlayer),
-                    new Packet_JoinMessage(title, content)
+            EconomySystem_NetworkManager.INSTANCE.sendTo(
+                    new Packet_SystemMessage(content, -1),  // -1 使用默认边框颜色
+                    onlinePlayer.connection.connection,
+                    NetworkDirection.PLAY_TO_CLIENT
             );
         }
     }
@@ -195,13 +196,13 @@ public class ChangeJoinMessage {
         String rawMsg = getLeaveMessageByRank(playerRank);
         String formattedMsg = rawMsg.replace("%player%", serverPlayer.getName().getString());
 
-        // 服务端发网络包给所有在线玩家的客户端（改用统一的网络管理器）
-        Component title = Component.literal("§c鱼友离开");
+        // 服务端发网络包给所有在线玩家的客户端（使用 Packet_SystemMessage）
         Component content = Component.literal(formattedMsg);
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
-            EconomySystem_NetworkManager.INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> onlinePlayer),
-                    new Packet_JoinMessage(title, content)
+            EconomySystem_NetworkManager.INSTANCE.sendTo(
+                    new Packet_SystemMessage(content, -1),  // -1 使用默认边框颜色
+                    onlinePlayer.connection.connection,
+                    NetworkDirection.PLAY_TO_CLIENT
             );
         }
     }
