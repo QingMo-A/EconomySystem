@@ -62,40 +62,6 @@ public class EconomySystem {
         LOGGER.info("Economy System Mod Initialized!");
     }
 
-
-
-    public EconomySystem() {
-        // 获取 mod 事件总线
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        // 注册客户端事件
-        modEventBus.addListener(this::onClientSetup);
-        // 注册物品
-        EconomySystem_Items.register(modEventBus);
-        // 注册声音
-        EconomySystem_Sounds.SOUND_EVENTS.register(modEventBus);
-        // 注册附魔
-        EconomySystem_Enchants.register(modEventBus);
-        // 注册网络包
-        EconomySystem_NetworkManager.register();
-        // 注册创造物品栏
-        EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
-        // 注册实体
-        EconomySystem_Entities.ENTITIES.register(modEventBus);
-        // 注册世界渲染事件
-        // modEventBus.addListener(CustomHitboxRenderer::onRenderWorld);
-        // modEventBus.addListener(ArmorTickHandler::onPlayerTick);
-
-        new Init();
-        // 启动文件监听器
-        new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
-        new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
-
-        // GeckoLib.initialize();
-        // 日志信息
-        LOGGER.info("Economy System Mod Initialized!");
-    }
-
     private void onClientSetup(FMLClientSetupEvent event) {
         // 注册按键绑定的事件监听
         LOGGER.info("Registering Keybinds...");

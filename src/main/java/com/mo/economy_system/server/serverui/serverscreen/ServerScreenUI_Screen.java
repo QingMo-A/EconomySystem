@@ -79,11 +79,13 @@ public class ServerScreenUI_Screen extends Screen {
     private int rightPanelWidth;     // 右栏宽度（虚拟像素）
     private int rightCenterX;        // 右栏中心 X 坐标（虚拟像素）
     private int RIGHT_PANEL_START_X; // 右侧面板起点 X 坐标（虚拟像素）
+    private int centerCenterX;       // 中间区域中心 X 坐标（虚拟像素）
 
     // 玩家模型位置（虚拟坐标）
     private int MODEL_HEIGHT;        // 模型总高度（虚拟像素）
     private int MODEL_SIZE;          // 模型缩放大小（虚拟像素）
     private int MODEL_FOOT_Y;        // 模型脚部 Y 坐标（虚拟像素）
+    private int MODEL_HEAD_Y;        // 模型头部 Y 坐标（虚拟像素）
 
     // 关闭动画滑动距离（虚拟坐标）
     private int LEFT_PANEL_SLIDE_DISTANCE;   // 左面板向左滑动的最大距离
@@ -154,17 +156,20 @@ public class ServerScreenUI_Screen extends Screen {
         // 例如：virtualWidth=640, rightPanelWidth=224 → RIGHT_PANEL_START_X = 640 * 0.65 = 416
         RIGHT_PANEL_START_X = (int) (virtualWidth * (1.0f - RIGHT_PANEL_PERCENT));
 
+        // 中间区域中心 X 坐标：左栏和右栏之间的区域中心
+        // 例如：virtualWidth=640, leftPanelWidth=128, RIGHT_PANEL_START_X=416 → centerCenterX = 272
+        centerCenterX = (leftPanelWidth + RIGHT_PANEL_START_X) / 2;
+
         // ==================== 计算玩家模型位置（虚拟坐标） ====================
-        // 模型高度：虚拟高度的 1/4
-        // 例如：virtualHeight = 360 → MODEL_HEIGHT = 90
-        MODEL_HEIGHT = virtualHeight / 4;
-
-        // 模型大小：模型高度除以 1.8（renderEntityInInventory 的模型高度系数）
+        // 模型占据屏幕中间 20% 到 60% 的高度
+        // 模型脚部 Y 坐标：虚拟高度的 60%
+        MODEL_FOOT_Y = (int) (virtualHeight * 0.6f);
+        // 模型头部 Y 坐标：虚拟高度的 20%
+        MODEL_HEAD_Y = (int) (virtualHeight * 0.2f);
+        // 模型总高度：头到脚的距离
+        MODEL_HEIGHT = MODEL_FOOT_Y - MODEL_HEAD_Y;
+        // 模型缩放大小：模型高度除以 1.8（renderEntityInInventory 的模型高度系数）
         MODEL_SIZE = (int) (MODEL_HEIGHT / 1.8);
-
-        // 模型脚部 Y 坐标：顶部微小偏移 + 模型高度
-        // 例如：virtualHeight = 360 → MODEL_FOOT_Y = 7.2 + 90 ≈ 97
-        MODEL_FOOT_Y = virtualHeight / 50 + MODEL_HEIGHT;
 
         // ==================== 计算关闭动画滑动距离（虚拟坐标） ====================
         LEFT_PANEL_SLIDE_DISTANCE = (int) (virtualWidth * LEFT_PANEL_PERCENT);    // 左栏宽度
@@ -222,13 +227,12 @@ public class ServerScreenUI_Screen extends Screen {
      * ┌──────────────┬─────────────────────┬─────────────────┐
      * │   左栏 20%   │      中间区域        │    右栏 35%     │
      * │              │                     │                 │
-     * │  DreamingFish│                     │  玩家3D模型      │
-     * │              │                     │  ⭐             │
-     * │  (边框动画)  │                     │  等级圆(进度)   │
-     * │              │                     │  经验值         │
-     * │              │                     │  玩家名称+状态   │
-     * │              │                     │  Rank & Title   │
-     * │              │                     │  属性进度条     │
+     * │  DreamingFish│  玩家名[幸存者]     │ Rank & Title   │
+     * │              │  (模型头上方)        │                 │
+     * │  (边框动画)  │   玩家3D模型         │   属性进度条    │
+     * │              │   (20%-60%)          │                 │
+     * │              │   等级圆+经验值      │                 │
+     * │              │   (60%-100%)         │                 │
      * └──────────────┴─────────────────────┴─────────────────┘
      */
     private void renderPanels(GuiGraphics guiGraphics) {
@@ -253,7 +257,10 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetX = (int) (closeProgress * RIGHT_PANEL_SLIDE_DISTANCE);  // 向右
         }
 
-        // ==================== 绘制左侧面板 ====================
+        // ========================================================================
+        //                           左栏 (LEFT PANEL)
+        // 内容：DreamingFish 标题 + 边框动画
+        // ========================================================================
         guiGraphics.pose().pushPose();
 
         // 关闭时应用向左偏移
@@ -325,7 +332,116 @@ public class ServerScreenUI_Screen extends Screen {
         // 结束左侧面板变换
         guiGraphics.pose().popPose();
 
-        // ==================== 绘制右侧面板 ====================
+        // ========================================================================
+        //                           中栏 (CENTER PANEL)
+        // 布局：
+        // - 模型头部上方：玩家名称 + 幸存者状态
+        // - 20%-60%：玩家3D模型
+        // - 60%-100%：等级圆 + 经验值
+        // ========================================================================
+        // 计算中栏内容的动画偏移（与右栏保持一致）
+        int centerOffsetY;
+        if (!isClosing) {
+            float centerAnimDuration = 800f;
+            float centerProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / centerAnimDuration);
+            centerProgress = 1.0f - (float) Math.pow(1.0f - centerProgress, 3);
+            centerOffsetY = (int) ((1.0f - centerProgress) * 100);
+        } else {
+            centerOffsetY = 0;
+        }
+
+        // ==================== 绘制玩家名称 + 幸存者状态（模型头上方） ====================
+        // 获取感染值并确定状态
+        int infection = PlayerInfectionManager.getCurrentInfectionClient(player);
+        String status = infection >= 100 ? "§c感染者" : "§a幸存者";
+        String playerName = "§e" + player.getScoreboardName() + " §7[" + status + "§7]";
+
+        // 计算名称文字缩放
+        int nameWidthRaw = mc.font.width(playerName);
+        // 中间区域宽度 = RIGHT_PANEL_START_X - leftPanelWidth（虚拟宽度的 45%）
+        float maxNameWidth = (RIGHT_PANEL_START_X - leftPanelWidth) * 0.35f;
+        float nameScale = maxNameWidth / nameWidthRaw;
+        // 限制最大缩放
+        if (nameScale > 1.8f) nameScale = 1.8f;
+
+        // 名称位置：模型头部上方
+        int nameY = MODEL_HEAD_Y - 20 + centerOffsetY;
+
+        // 绘制玩家名称（中间栏居中）
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(centerCenterX, nameY, 0);
+        guiGraphics.pose().scale(nameScale, nameScale, 1.0f);
+        guiGraphics.drawString(mc.font, playerName, -nameWidthRaw / 2, -mc.font.lineHeight, 0xFFFFFF);
+        guiGraphics.pose().popPose();
+
+        // ==================== 绘制玩家模型（20%-60%） ====================
+        renderPlayerModel(guiGraphics, centerOffsetY);
+
+        // ==================== 绘制等级圆和经验值（60%-100%区域） ====================
+        // 布局：等级圆（左） + 经验值（右），水平排列，垂直居中
+
+        int level = PlayerLevelManager.getPlayerLevelClient(player);
+        String levelText = String.valueOf(level);
+
+        // 等级文字缩放
+        float levelScale = 2.0f;
+        int levelWidthRaw = mc.font.width(levelText);
+        int levelHeightScaled = (int) (mc.font.lineHeight * levelScale);
+
+        // 圆的半径：根据缩放后的文字大小计算，紧贴文字边缘
+        int circleRadius = Math.max(levelWidthRaw, levelHeightScaled) / 2 + 6;
+
+        // 整体内容中心 Y 坐标（虚拟高度的 75%）
+        int contentCenterY = (int) (virtualHeight * 0.75f) + centerOffsetY;
+
+        // 圆心位置（整体中心的左侧）
+        int circleX = centerCenterX - 40;
+        int circleY = contentCenterY;
+
+        // 获取经验进度
+        float progress = PlayerLevelManager.getExperienceProgressClient(player);
+
+        // 绘制进度圆（背景圆 + 进度弧）
+        drawProgressCircle(guiGraphics, circleX, circleY, circleRadius, progress);
+
+        // 绘制等级文字（圆心）
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(circleX, circleY, 0);
+        guiGraphics.pose().scale(levelScale, levelScale, 1.0f);
+        guiGraphics.drawString(mc.font, levelText, -levelWidthRaw / 2, -mc.font.lineHeight / 2, 0xFFFFFF);
+        guiGraphics.pose().popPose();
+
+        // ==================== 绘制经验值（圆的右边，垂直居中对齐） ====================
+        String expText = "EXP " + PlayerLevelManager.getPlayerExperienceClient(player) + "/" + PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
+        int expWidthRaw = mc.font.width(expText);
+
+        // 经验值位置：圆的右边，垂直居中
+        int expX = circleX + circleRadius + 12;
+        int expY = contentCenterY;
+
+        // 绘制经验值标签（左对齐，垂直居中）
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(expX, expY, 0);
+        // 文字左对齐，向上偏移半个行高实现垂直居中
+        guiGraphics.drawString(mc.font, expText, 0, -mc.font.lineHeight / 2, 0xFFFFAA);
+        guiGraphics.pose().popPose();
+
+        // ==================== 绘制经验进度条（经验值下方） ====================
+        int barWidth = 80;  // 进度条宽度（虚拟像素）
+        int barHeight = 6;  // 进度条高度
+        int barX = expX;
+        int barY = expY + mc.font.lineHeight / 2 + 8;
+
+        // 绘制经验进度条
+        drawProgressBar(guiGraphics, barX, barY, barWidth, barHeight, progress, 0xFFFFAA00);
+
+        // 保存中间栏底部 Y 坐标，供右栏使用
+        int centerPanelBottomY = barY + barHeight;
+
+        // ========================================================================
+        //                           右栏 (RIGHT PANEL)
+        // 内容：Rank & Title + 属性进度条
+        // ========================================================================
         guiGraphics.pose().pushPose();
 
         // 关闭时应用向右偏移
@@ -364,109 +480,13 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetY = 0;
         }
 
-        // ==================== 绘制玩家模型 ====================
-        renderPlayerModel(guiGraphics, rightOffsetY);
-
-        // ==================== 绘制星星（模型上方） ====================
-        String starEmoji = "⭐";
-        int starWidth = mc.font.width(starEmoji);
-        // X：rightCenterX - starWidth/2（水平居中）
-        // Y：MODEL_FOOT_Y + 行高*0.7 + 动画偏移
-        guiGraphics.drawString(mc.font, starEmoji, rightCenterX - starWidth / 2, (int) (MODEL_FOOT_Y + mc.font.lineHeight * 0.7) + rightOffsetY, 0xFFFF00);
-
-        // ==================== 绘制等级圆（带进度弧） ====================
-        int level = PlayerLevelManager.getPlayerLevelClient(player);
-        String levelText = String.valueOf(level);
-
-        // 计算等级文字缩放
-        int levelWidthRaw = mc.font.width(levelText);
-        float maxLevelWidth = rightPanelWidth * 0.15f;  // 最大宽度为右栏的 15%
-        float levelScale = maxLevelWidth / levelWidthRaw;
-
-        // 计算圆半径
-        int circleRadius = (int) (levelWidthRaw * levelScale * 0.7);
-
-        // 个位数时特殊处理（防止圆太小）
-        if (level < 10) {
-            levelScale = 2.0f;
-            circleRadius = (int) (levelWidthRaw * 3.0f);
-        }
-
-        // 圆心位置
-        int circleX = rightCenterX;  // X：右栏中心
-        // Y：模型下方 + 半径间距 + 动画偏移
-        int circleY = (int) (MODEL_FOOT_Y + circleRadius * 1.8) + rightOffsetY;
-
-        // 获取经验进度
-        float progress = PlayerLevelManager.getExperienceProgressClient(player);
-
-        // 绘制进度圆（背景圆 + 进度弧）
-        drawProgressCircle(guiGraphics, circleX, circleY, circleRadius, progress);
-
-        // 绘制等级文字（圆心）
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(circleX, circleY, 0);  // 移动到圆心
-        guiGraphics.pose().scale(levelScale, levelScale, 1.0f);  // 缩放等级文字
-        // 向左偏移一半宽度、向上偏移半行高实现居中
-        guiGraphics.drawString(mc.font, levelText, -levelWidthRaw / 2, -mc.font.lineHeight / 2, 0xFFFFFF);
-        guiGraphics.pose().popPose();
-
-        // ==================== 绘制经验值 ====================
-        String expText = PlayerLevelManager.getPlayerExperienceClient(player) + "/" + PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
-        int expWidthRaw = mc.font.width(expText);
-        int expMaxWidth = (int) (rightPanelWidth * 0.25);
-        float expScale = (float) expMaxWidth / expWidthRaw;
-
-        // Y 坐标：圆下方 + 半径 + 行高缩放后的间距
-        int expY = circleY + circleRadius + (int) (mc.font.lineHeight * expScale * 0.8f);
-
-        // 绘制经验值（居中）
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(circleX, expY, 0);
-        guiGraphics.pose().scale(expScale, expScale, 1.0f);
-        guiGraphics.drawString(mc.font, expText, -expWidthRaw / 2, 0, 0xFFFFAA);  // 金色
-        guiGraphics.pose().popPose();
-
-        // ==================== 绘制玩家名称 + 感染状态 ====================
-        String playerName = "§e" + player.getScoreboardName();
-
-        // 获取感染值并确定状态
-        int infection = PlayerInfectionManager.getCurrentInfectionClient(player);
-        String status = infection >= 100 ? "§c感染者" : "§a幸存者";
-
-        // 组合名称：颜色 + 玩家名 + 爱心 + 状态
-        playerName = "§7" + playerName + " §c❤" + " §7[" + status + "§7]";
-
-        // 计算名称文字缩放
-        int nameWidthRaw = mc.font.width(playerName);
-        int nameX = rightCenterX;  // X：右栏中心（水平居中）
-        // Y：经验值下方 + 文字高度 + 间距
-        int nameY = expY + (int) (mc.font.lineHeight * expScale) + 10;
-
-        float maxNameWidth = rightPanelWidth * 0.55f;
-        float nameScale = maxNameWidth / nameWidthRaw;
-
-        // 限制最大缩放（防止文字太大）
-        if (nameScale > 1.5f) {
-            nameScale = 1.2f;
-        }
-
-        // 绘制玩家名称（居中）
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(nameX, nameY, 0);
-        guiGraphics.pose().scale(nameScale, nameScale, 1.0f);
-        guiGraphics.drawString(mc.font, playerName, -nameWidthRaw / 2, 0, 0xFFFFFF);
-        guiGraphics.pose().popPose();
-
-        // ==================== 绘制分割线 ====================
-        int underlineWidth = (int) (rightPanelWidth * 0.8);  // 分割线宽度为右栏的 80%
-        // 起点：从右边缘向左偏移右栏的 90%
-        int underlineX = (int) (virtualWidth - rightPanelWidth * 0.9f);
-        int underlineY = (int) (nameY + mc.font.lineHeight + 7);  // Y：名称下方 + 行高 + 间距
-        guiGraphics.fill(RenderType.gui(), underlineX, underlineY, underlineX + underlineWidth, underlineY + 2, 0xFFFFFFFF);
-
         // ==================== 绘制 Rank & Title ====================
-        int rankTitleY = underlineY + 7;  // 分割线下方 7 像素
+        // 计算分割线位置
+        int underlineWidth = (int) (rightPanelWidth * 0.8);  // 分割线宽度为右栏的 80%
+        int underlineX = (int) (virtualWidth - rightPanelWidth * 0.9f);
+
+        // Rank & Title 的 Y 坐标：虚拟高度的 15%
+        int rankTitleY = (int) (virtualHeight * 0.15f) + rightOffsetY;
 
         Rank rank = PlayerRankManager.getPlayerRankClient(player);
         Title title = PlayerTitleManager.getPlayerTitleClient(player);
@@ -508,7 +528,7 @@ public class ServerScreenUI_Screen extends Screen {
         // - size: 模型缩放大小（虚拟）
         // - mouseX, mouseY: 鼠标跟随（设为 0 表示不跟随）
         // - player: 玩家实体
-        InventoryScreen.renderEntityInInventoryFollowsMouse(guiGraphics, rightCenterX, MODEL_FOOT_Y, MODEL_SIZE, 0, 0, player);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(guiGraphics, centerCenterX, MODEL_FOOT_Y, MODEL_SIZE, 0, 0, player);
 
         guiGraphics.pose().popPose();
     }
@@ -707,11 +727,19 @@ public class ServerScreenUI_Screen extends Screen {
         barX = rightPanelX + (rightPanelWidth - secondRowTotalWidth) / 2;
 
         for (int i = barsPerRow; i < 5; i++) {
-            // 绘制进度条
-            drawProgressBar(guiGraphics, barX, barY2, barWidthSecondRow, barHeight, percents[i], colors[i] & 0x00FFFFFF);
+            // 感染值条使用动态颜色（感染值越高颜色越深）
+            int barColor;
+            if (i == 4) {  // 感染值条
+                barColor = getInfectionColor(infectionPercent);
+            } else {
+                barColor = colors[i] & 0x00FFFFFF;
+            }
 
-            // 绘制图标
-            guiGraphics.drawCenteredString(mc.font, icons[i], barX + barWidthSecondRow / 2, iconY2, colors[i]);
+            // 绘制进度条
+            drawProgressBar(guiGraphics, barX, barY2, barWidthSecondRow, barHeight, percents[i], barColor);
+
+            // 绘制图标（使用计算后的颜色）
+            guiGraphics.drawCenteredString(mc.font, icons[i], barX + barWidthSecondRow / 2, iconY2, barColor);
 
             // 绘制数值文本
             guiGraphics.pose().pushPose();
@@ -738,6 +766,37 @@ public class ServerScreenUI_Screen extends Screen {
             case 4 -> 0xFFFF0000;  // OPERATOR - 红色
             default -> 0xFF888888;
         };
+    }
+
+    /**
+     * 根据感染值百分比计算动态颜色
+     * 感染值越高，颜色越深
+     *
+     * 颜色渐变：
+     * - 0%：浅绿色 (0xBBFFBB)
+     * - 50%：中等绿色 (0x00DD00)
+     * - 100%：深绿色 (0x003300)
+     *
+     * @param infectionPercent 感染值百分比（0.0 ~ 1.0）
+     * @return ARGB 颜色值
+     */
+    private int getInfectionColor(float infectionPercent) {
+        // 限制范围在 0.0 ~ 1.0
+        float t = Math.max(0.0f, Math.min(1.0f, infectionPercent));
+
+        // RGB 渐变计算
+        // R: 187 (0xBB) → 0
+        // G: 255 (0xFF) → 221 → 51 (0x33)
+        // B: 187 (0xBB) → 0
+
+        // 使用二次函数让颜色变化更明显（感染值高时颜色加深更快）
+        float factor = t * t;  // 二次缓动
+
+        int r = (int) (187 * (1.0f - factor));           // 187 → 0
+        int g = (int) (255 - (255 - 51) * factor);        // 255 → 51
+        int b = (int) (187 * (1.0f - factor));           // 187 → 0
+
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     /**

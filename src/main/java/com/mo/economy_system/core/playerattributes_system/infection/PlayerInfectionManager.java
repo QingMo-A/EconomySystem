@@ -82,7 +82,7 @@ public class PlayerInfectionManager {
         } else if (infectionRatio >= 0.5F && infectionRatio < 0.8F) {
             if (canShowMsg) {
                 serverPlayer.displayClientMessage(
-                        Component.literal("§e您感到身体有些不适..."),
+                        Component.literal("§e被丧尸多次感染后，您感到身体有些不适..."),
                         true
                 );
                 INFECTION_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS);

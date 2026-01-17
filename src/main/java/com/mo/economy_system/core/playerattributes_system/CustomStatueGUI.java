@@ -215,10 +215,45 @@ public class CustomStatueGUI {
         // 绘制感染值竖向进度条
         int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
         int maxInfection = 100;
+        // 计算动态颜色（感染值越高颜色越深）
+        int infectionColor = getInfectionColor(currentInfection, maxInfection);
         // 绘制感染值进度条（在勇气值条左侧）
-        drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, currentInfection, maxInfection, INFECTION_BAR_COLOR);
-        // 绘制感染图标（进度条上方）
-        drawIcon(guiGraphics, "☣", infectionBarX + BAR_WIDTH / 2, infectionBarY - 8, INFECTION_BAR_COLOR);
+        drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, currentInfection, maxInfection, infectionColor);
+        // 绘制感染图标（进度条上方，使用动态颜色）
+        drawIcon(guiGraphics, "☣", infectionBarX + BAR_WIDTH / 2, infectionBarY - 8, infectionColor);
+    }
+
+    /**
+     * 根据感染值计算动态颜色
+     * 感染值越高，颜色越深
+     *
+     * 颜色渐变：
+     * - 0：浅绿色 (0xBBFFBB)
+     * - 50：中等绿色
+     * - 100：深绿色 (0x003300)
+     *
+     * @param currentInfection 当前感染值
+     * @param maxInfection 最大感染值
+     * @return ARGB 颜色值
+     */
+    private static int getInfectionColor(int currentInfection, int maxInfection) {
+        // 计算感染值百分比（0.0 ~ 1.0）
+        float t = (maxInfection <= 0) ? 0 : (float) currentInfection / maxInfection;
+        t = Math.max(0.0f, Math.min(1.0f, t));
+
+        // RGB 渐变计算
+        // R: 187 (0xBB) → 0
+        // G: 255 (0xFF) → 221 → 51 (0x33)
+        // B: 187 (0xBB) → 0
+
+        // 使用二次函数让颜色变化更明显（感染值高时颜色加深更快）
+        float factor = t * t;  // 二次缓动
+
+        int r = (int) (187 * (1.0f - factor));           // 187 → 0
+        int g = (int) (255 - (255 - 51) * factor);        // 255 → 51
+        int b = (int) (187 * (1.0f - factor));           // 187 → 0
+
+        return (255 << 24) | (r << 16) | (g << 8) | b;
     }
 
     /**
