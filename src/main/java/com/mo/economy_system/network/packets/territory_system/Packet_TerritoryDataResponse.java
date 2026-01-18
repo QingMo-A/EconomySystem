@@ -3,6 +3,8 @@ package com.mo.economy_system.network.packets.territory_system;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
+import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
@@ -51,6 +53,8 @@ public class Packet_TerritoryDataResponse {
             if (Minecraft.getInstance().screen instanceof Screen_Territory screen) {
                 // 更新领地数据
                 screen.updateTerritoryData(msg.owned, msg.authorized);
+            } else if (Minecraft.getInstance().screen instanceof ServerScreenUI_Screen screen) {
+                ServerInformationDisplay.setPlayerTerritories(msg.owned, msg.authorized);
             }
         });
         context.setPacketHandled(true);

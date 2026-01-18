@@ -43,6 +43,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ServerScreenUI_Screen extends Screen {
 
+    private static final String VERSION = "§bDreaming§dFish §7v0.1(Private)";
+
     // ==================== 虚拟基准尺寸 ====================
     // 基准：2560×1440 全屏 + GUI缩放4 → 内部渲染尺寸 640×360
     // 所有 UI 元素按这个尺寸设计，运行时自动缩放
@@ -213,10 +215,13 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
         // 绘制所有内容（使用虚拟坐标）
-        renderPanels(guiGraphics);
+        renderPanels(guiGraphics, mouseX, mouseY);
 
         // 恢复矩阵状态
         guiGraphics.pose().popPose();
+
+        // ==================== 渲染提示框（使用屏幕坐标） ====================
+        renderTooltips(guiGraphics, mouseX, mouseY);
     }
 
     /**
@@ -252,7 +257,7 @@ public class ServerScreenUI_Screen extends Screen {
      * │              │   (60%-100%)         │                 │
      * └──────────────┴─────────────────────┴─────────────────┘
      */
-    private void renderPanels(GuiGraphics guiGraphics) {
+    private void renderPanels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         LocalPlayer player = mc.player;
         if (player == null) return;
 
@@ -302,10 +307,9 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 绘制左侧标题（左下角，带版本号） ====================
-        String serverTitle = "§bDreaming§dFish §7v内部0.1";
 
         // 获取文字原始宽度（受 GUI 缩放影响）
-        int titleWidth = mc.font.width(serverTitle);
+        int titleWidth = mc.font.width(VERSION);
 
         // 计算缩放比例：使文字宽度适配左栏宽度的 90%
         float maxWidth = leftPanelWidth * 0.90f;
@@ -337,7 +341,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().translate(serverTitleX, titleY, 0);  // 移动到标题位置
         guiGraphics.pose().scale(scale, scale, 1.0f);           // 缩放文字
         // 向左偏移一半宽度居中
-        guiGraphics.drawString(mc.font, serverTitle, -titleWidth / 2, 0, 0xFFFFFF);
+        guiGraphics.drawString(mc.font, VERSION, -titleWidth / 2, 0, 0xFFFFFF);
         guiGraphics.pose().popPose();
 
         // 结束左侧面板变换
@@ -386,7 +390,7 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().popPose();
 
         // ==================== 绘制玩家模型（20%-60%） ====================
-        renderPlayerModel(guiGraphics, centerOffsetY);
+        renderPlayerModel(guiGraphics, centerOffsetY, mouseX, mouseY);
 
         // ==================== 绘制等级圆和经验值（60%-100%区域） ====================
         // 布局：等级圆（左） + 经验值（右），水平排列，垂直居中
@@ -543,21 +547,38 @@ public class ServerScreenUI_Screen extends Screen {
      * 绘制玩家模型
      * @param offsetY Y 轴动画偏移量（虚拟像素）
      */
-    private void renderPlayerModel(GuiGraphics guiGraphics, int offsetY) {
+    private void renderPlayerModel(GuiGraphics guiGraphics, int offsetY, int mouseX, int mouseY) {
         LocalPlayer player = mc.player;
         if (player == null) return;
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(0, offsetY, 0);  // 应用 Y 轴偏移
 
+        // 将屏幕鼠标坐标转换为虚拟坐标
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+
+        // 计算相对于模型位置的鼠标坐标
+        // renderEntityInInventoryFollowsMouse 需要的是相对于模型中心的坐标偏移
+        int relativeMouseX = (int) (virtualMouseX - centerCenterX);
+        int relativeMouseY = (int) ((virtualMouseY - MODEL_FOOT_Y * 0.4) * 0.5);
+
         // renderEntityInInventoryFollowsMouse 参数说明：
         // - guiGraphics: 图形上下文
         // - x: 模型中心 X 坐标（虚拟）
         // - y: 模型脚部 Y 坐标（虚拟）
         // - size: 模型缩放大小（虚拟）
-        // - mouseX, mouseY: 鼠标跟随（设为 0 表示不跟随）
+        // - mouseX, mouseY: 鼠标相对于模型位置的偏移（虚拟坐标）
         // - player: 玩家实体
-        InventoryScreen.renderEntityInInventoryFollowsMouse(guiGraphics, centerCenterX, MODEL_FOOT_Y, MODEL_SIZE, 0, 0, player);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(
+            guiGraphics,
+            centerCenterX,
+            MODEL_FOOT_Y,
+            MODEL_SIZE,
+            -relativeMouseX,
+            -relativeMouseY,
+            player
+        );
 
         guiGraphics.pose().popPose();
     }
@@ -1001,7 +1022,7 @@ public class ServerScreenUI_Screen extends Screen {
         int boxHeight = innerMargin * 2 + lineHeight;
 
         // 获取领地列表
-        java.util.List<Territory> territories = ServerInformationDisplay.PLAYER_TERRITORIES;
+        java.util.List<Territory> territories = ServerInformationDisplay.getTerritories();
 
         // 绘制框（白色边框，半透明填充）
         drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FF8C00, 0xFFFFFFFF);
@@ -1379,6 +1400,8 @@ public class ServerScreenUI_Screen extends Screen {
         if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
             virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
             // 打开商店界面（经济系统）
+            // 先将 SHOW_UI 设置为 false，防止 onClose 调用 toggleUI() 导致重新打开
+            ServerScreenUI.setShowUI(false);
             mc.setScreen(new com.mo.economy_system.screen.economy_system.shop.Screen_Shop());
             return true;
         }
@@ -1387,6 +1410,8 @@ public class ServerScreenUI_Screen extends Screen {
         if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
             virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
             // 打开领地管理界面
+            // 先将 SHOW_UI 设置为 false，防止 onClose 调用 toggleUI() 导致重新打开
+            ServerScreenUI.setShowUI(false);
             mc.setScreen(new com.mo.economy_system.screen.territory_system.Screen_Territory());
             return true;
         }
@@ -1406,5 +1431,60 @@ public class ServerScreenUI_Screen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;  // 不暂停游戏
+    }
+
+    /**
+     * 渲染鼠标悬浮提示框
+     * @param guiGraphics 图形上下文
+     * @param mouseX 鼠标 X 坐标（屏幕坐标）
+     * @param mouseY 鼠标 Y 坐标（屏幕坐标）
+     */
+    private void renderTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // 将屏幕鼠标坐标转换为虚拟坐标
+        double virtualMouseX = mouseX / uiScale;
+        double virtualMouseY = mouseY / uiScale;
+
+        // 计算右侧面板偏移（考虑动画）
+        int rightOffsetY = 0;
+        if (!isClosing) {
+            float rightAnimDuration = 800f;
+            float rightProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / rightAnimDuration);
+            rightProgress = 1.0f - (float) Math.pow(1.0f - rightProgress, 3);
+            rightOffsetY = (int) ((1.0f - rightProgress) * 100);
+        }
+
+        // 检查鼠标是否悬浮在金币框上
+        if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
+            virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
+            // 获取金币余额并创建提示文本
+            int goldBalance = ServerInformationDisplay.PLAYER_BALANCE;
+            Component tooltip = Component.literal("§e点击打开商店界面")
+                .append("\n")
+                .append(Component.literal("§7当前余额: §6" + formatNumber(goldBalance) + " 梦鱼币"));
+
+            // 渲染提示框（使用屏幕坐标）
+            guiGraphics.renderTooltip(mc.font, tooltip, mouseX, mouseY);
+        }
+
+        // 检查鼠标是否悬浮在领地框上
+        if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
+            virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
+            // 获取领地列表并创建提示文本
+            java.util.List<Territory> territories = ServerInformationDisplay.getTerritories();
+            Component tooltip;
+
+            if (territories.isEmpty()) {
+                tooltip = Component.literal("§e点击打开领地管理界面")
+                    .append("\n")
+                    .append(Component.literal("§7您还没有领地"));
+            } else {
+                tooltip = Component.literal("§e点击打开领地管理界面")
+                    .append("\n")
+                    .append(Component.literal("§7您拥有 §a" + territories.size() + " §7个领地"));
+            }
+
+            // 渲染提示框（使用屏幕坐标）
+            guiGraphics.renderTooltip(mc.font, tooltip, mouseX, mouseY);
+        }
     }
 }

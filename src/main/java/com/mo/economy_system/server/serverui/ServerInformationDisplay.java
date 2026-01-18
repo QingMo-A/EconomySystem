@@ -55,7 +55,10 @@ public class ServerInformationDisplay {
     // 客户端缓存数据（从网络包获取）
     public static int ONLINE_PLAYERS = 0;
     public static int PLAYER_BALANCE = 0;
-    public static List<Territory> PLAYER_TERRITORIES = new ArrayList<>();
+    private static List<Territory> allTerritories = new ArrayList<>(); // 拥有的领地
+    private static List<Territory> territorys = new ArrayList<>(); // 领地列表
+    private static List<Territory> ownedTerritories = new ArrayList<>(); // 拥有的领地
+    private static List<Territory> authorizedTerritories = new ArrayList<>(); // 有权限的领地
     public static int EXPLORED_BIOMES_COUNT = 0;           // 已探索群系数量
     public static int UNLOCKED_RECIPES_COUNT = 0;         // 已解锁配方数量
 
@@ -500,5 +503,22 @@ public class ServerInformationDisplay {
     public static void refreshData() {
         LAST_PLAYER_LIST_UPDATE = 0;
         LAST_BALANCE_UPDATE = 0;
+    }
+
+    public static void setPlayerTerritories(List<Territory> owned, List<Territory> authorized) {
+        ownedTerritories.clear(); // 清空旧的拥有领地
+        authorizedTerritories.clear(); // 清空旧的有权限领地
+        ownedTerritories.addAll(owned); // 更新拥有的领地
+        authorizedTerritories.addAll(authorized); // 更新有权限的领地
+
+        allTerritories = new ArrayList<>();
+        territorys = new ArrayList<>();
+        allTerritories.addAll(ownedTerritories); // 首先添加拥有的领地
+        allTerritories.addAll(authorizedTerritories); // 再添加有权限但不重复的领地
+        territorys.addAll(allTerritories);
+    }
+
+    public static List<Territory> getTerritories() {
+        return territorys;
     }
 }
