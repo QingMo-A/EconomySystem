@@ -32,10 +32,36 @@ public class PlayerBlueprintData {
     private static Set<String> defaultItems = new HashSet<>();
 
     // 定义一个需要排除的物品关键字集合
-    public static final Set<String> EXCLUDED_ITEM_KEYWORDS = new HashSet<>();
-
-    // 蓝图配置管理器
-    private static final BlueprintConfigManager CONFIG_MANAGER = BlueprintConfigManager.getInstance();
+    public static final Set<String> EXCLUDED_ITEM_KEYWORDS = new HashSet<>(Arrays.asList(
+            "*_wood",
+            "*_planks",
+            "*_log",
+            "*_terracotta",
+            "*_bed",
+            "*_candle",
+            "*_glass_pane",
+            "*_glass",
+            "*_sign",
+            "*_carpet",
+            "*_stairs",
+            "*_slab",
+            "raw_*",
+            "*_wool",
+            "*_copper",
+            "*_block",
+            "*_button",
+            "*_fence_gate",
+            "*_door",
+            "*_boat",
+            "*_banner",
+            "*_fence",
+            "*_ingot",
+            "*_dye",
+            "*_plate",
+            "*_concrete_powder",
+            "minecraft:snow",
+            "*_trapdoor"
+    ));
 
 
 
@@ -334,21 +360,13 @@ public class PlayerBlueprintData {
      * 默认解锁的物品列表（基础物品，不需要蓝图）
      */
     public static Set<String> getDefaultUnlockedItems() {
-        // 从配置管理器获取默认解锁物品
-        Set<String> configuredDefaults = CONFIG_MANAGER.getDefaultUnlockedItemSet();
-        if (!configuredDefaults.isEmpty()) {
-            return configuredDefaults;
-        }
-
-        // 回退到硬编码的默认值（向后兼容）
-        if (defaultItems.isEmpty()) {
-            defaultItems.add("minecraft:stick");
-            defaultItems.add("minecraft:oak_planks");
-            defaultItems.add("minecraft:torch");
-            defaultItems.add("minecraft:crafting_table");
-            defaultItems.add("minecraft:wooden_axe");
-            defaultItems.add("minecraft:wooden_shovel");
-        }
+        // 添加原版基础物品
+        defaultItems.add("minecraft:stick");
+        defaultItems.add("minecraft:oak_planks");
+        defaultItems.add("minecraft:torch");
+        defaultItems.add("minecraft:crafting_table");
+        defaultItems.add("minecraft:wooden_axe");
+        defaultItems.add("minecraft:wooden_shovel");
 
         return defaultItems;
     }
@@ -357,25 +375,7 @@ public class PlayerBlueprintData {
      * 检查物品是否默认解锁
      */
     public static boolean isDefaultUnlocked(String itemId) {
-        // 先检查配置管理器
-        if (CONFIG_MANAGER.isDefaultUnlocked(itemId)) {
-            return true;
-        }
-
-        // 检查是否匹配排除关键字
-        if (CONFIG_MANAGER.isExcludedByKeyword(itemId)) {
-            return true;
-        }
-
-        // 回退到硬编码列表（向后兼容）
         return getDefaultUnlockedItems().contains(itemId);
-    }
-
-    /**
-     * 初始化配置管理器（在模组启动时调用）
-     */
-    public static void initConfigManager() {
-        CONFIG_MANAGER.loadConfig();
     }
 
     /**
