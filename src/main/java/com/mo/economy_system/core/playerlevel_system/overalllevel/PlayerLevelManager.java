@@ -26,13 +26,14 @@ public class PlayerLevelManager {
      * @return 升级到该等级所需的累积总经验
      */
     private static long getExperienceRequiredForLevel(int level) {
-        if (level <= 1) return 0L;
+        if (level <= 0) return 0L;
 
         if (level <= 50) {
             // ===== 简单期（1-50级）：低难度线性增长 =====
             // 公式：level × 500 + level² × 20
             // 示例：
-            // Lv.1 -> Lv.2: 520 经验
+            // Lv.0 -> Lv.1: 520 经验
+            // Lv.1 -> Lv.2: 560 经验 (1080 - 520)
             // Lv.10: 7,000 经验
             // Lv.20: 18,000 经验
             // Lv.30: 33,000 经验

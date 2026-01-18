@@ -5,6 +5,7 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.Packet_OnlinePlayerCountRequest;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
@@ -54,6 +55,9 @@ public class ServerInformationDisplay {
     // 客户端缓存数据（从网络包获取）
     public static int ONLINE_PLAYERS = 0;
     public static int PLAYER_BALANCE = 0;
+    public static List<Territory> PLAYER_TERRITORIES = new ArrayList<>();
+    public static int EXPLORED_BIOMES_COUNT = 0;           // 已探索群系数量
+    public static int UNLOCKED_RECIPES_COUNT = 0;         // 已解锁配方数量
 
     private static long LAST_PLAYER_LIST_UPDATE = 0;       // 玩家列表最后刷新时间
     private static long LAST_BALANCE_UPDATE = 0;           // 余额最后刷新时间

@@ -4,11 +4,16 @@ import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageM
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
 import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestPlayerStats;
+import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import com.mo.economy_system.server.rank.PlayerRankManager;
 import com.mo.economy_system.server.rank.Rank;
+import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import com.mo.economy_system.core.territory_system.Territory;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -46,7 +51,7 @@ public class ServerScreenUI_Screen extends Screen {
 
     // ==================== 面板比例 ====================
     private static final float LEFT_PANEL_PERCENT = 0.20f;  // 左侧面板占虚拟宽度的 20%
-    private static final float RIGHT_PANEL_PERCENT = 0.35f;  // 右侧面板占虚拟宽度的 35%
+    private static final float RIGHT_PANEL_PERCENT = 0.45f;  // 右侧面板占虚拟宽度的 35%
 
     // ==================== 颜色定义 ====================
     private static final int PANEL_BACKGROUND_COLOR = 0x80000000;  // 半透明黑色背景（alpha=128）
@@ -91,6 +96,14 @@ public class ServerScreenUI_Screen extends Screen {
     private int LEFT_PANEL_SLIDE_DISTANCE;   // 左面板向左滑动的最大距离
     private int RIGHT_PANEL_SLIDE_DISTANCE;  // 右面板向右滑动的最大距离
 
+    // 金币框可点击区域（虚拟坐标）
+    private int goldBoxClickX1, goldBoxClickY1;
+    private int goldBoxClickX2, goldBoxClickY2;
+
+    // 领地管理按钮可点击区域（虚拟坐标）
+    private int territoryButtonClickX1, territoryButtonClickY1;
+    private int territoryButtonClickX2, territoryButtonClickY2;
+
     private final Minecraft mc = Minecraft.getInstance();
 
     public ServerScreenUI_Screen() {
@@ -104,6 +117,10 @@ public class ServerScreenUI_Screen extends Screen {
         openTime = Util.getMillis();
         // 计算缩放比例
         calculateVirtualSize();
+        // 请求领地数据
+        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
+        // 请求统计数据（群系 + 配方）
+        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestPlayerStats());
     }
 
     /**
@@ -161,9 +178,9 @@ public class ServerScreenUI_Screen extends Screen {
         centerCenterX = (leftPanelWidth + RIGHT_PANEL_START_X) / 2;
 
         // ==================== 计算玩家模型位置（虚拟坐标） ====================
-        // 模型占据屏幕中间 20% 到 60% 的高度
-        // 模型脚部 Y 坐标：虚拟高度的 60%
-        MODEL_FOOT_Y = (int) (virtualHeight * 0.6f);
+        // 模型占据屏幕中间 20% 到 70% 的高度
+        // 模型脚部 Y 坐标：虚拟高度的 70%
+        MODEL_FOOT_Y = (int) (virtualHeight * 0.75f);
         // 模型头部 Y 坐标：虚拟高度的 20%
         MODEL_HEAD_Y = (int) (virtualHeight * 0.2f);
         // 模型总高度：头到脚的距离
@@ -284,41 +301,35 @@ public class ServerScreenUI_Screen extends Screen {
             guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, 0, leftPanelWidth, virtualHeight, PANEL_BORDER_COLOR);
         }
 
-        // ==================== 绘制左侧标题（带滑入动画） ====================
-        String serverTitle = "§bDreaming§dFish";
+        // ==================== 绘制左侧标题（左下角，带版本号） ====================
+        String serverTitle = "§bDreaming§dFish §7v内部0.1";
 
         // 获取文字原始宽度（受 GUI 缩放影响）
         int titleWidth = mc.font.width(serverTitle);
 
-        // 计算缩放比例：使文字宽度适配左栏宽度的 85%
-        float maxWidth = leftPanelWidth * 0.85f;
+        // 计算缩放比例：使文字宽度适配左栏宽度的 90%
+        float maxWidth = leftPanelWidth * 0.90f;
         float scale = maxWidth / titleWidth;
+        // 限制最大缩放
+        if (scale > 1.2f) scale = 1.2f;
 
-        // 标题 Y 坐标（带滑入动画）
+        // 标题 Y 坐标（左下角）
         int titleY;
         if (!isClosing) {
-            // 打开时：从上往下滑入
-            float titleAnimDuration = 600f;  // 动画持续 600ms
+            // 打开时：从左往右滑入
+            float titleAnimDuration = 600f;
             float titleProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / titleAnimDuration);
-            // 缓动函数
             titleProgress = 1.0f - (float) Math.pow(1.0f - titleProgress, 3);
 
-            // 目标位置：虚拟高度的 20%
-            int targetTitleY = (int) (virtualHeight * 0.2);
+            int targetTitleY = virtualHeight - mc.font.lineHeight - 10;  // 距底部 10 像素
+            int slideDistance = 60;
 
-            // 滑动距离：80 虚拟像素
-            int slideDistance = 80;
-
-            // 计算当前 Y：目标位置 - (未完成进度 × 滑动距离)
-            // 动画开始时：targetY - 80（在屏幕上方）
-            // 动画结束时：targetY
             titleY = targetTitleY - (int) ((1.0f - titleProgress) * slideDistance);
         } else {
-            // 关闭时：保持固定位置
-            titleY = (int) (virtualHeight * 0.2);
+            titleY = virtualHeight - mc.font.lineHeight - 10;
         }
 
-        // 标题 X 坐标：左栏中心
+        // 标题 X 坐标（左栏中心）
         int serverTitleX = leftPanelWidth / 2;
 
         // 绘制标题（居中）
@@ -359,7 +370,7 @@ public class ServerScreenUI_Screen extends Screen {
         // 计算名称文字缩放
         int nameWidthRaw = mc.font.width(playerName);
         // 中间区域宽度 = RIGHT_PANEL_START_X - leftPanelWidth（虚拟宽度的 45%）
-        float maxNameWidth = (RIGHT_PANEL_START_X - leftPanelWidth) * 0.35f;
+        float maxNameWidth = (RIGHT_PANEL_START_X - leftPanelWidth) * 0.30f;
         float nameScale = maxNameWidth / nameWidthRaw;
         // 限制最大缩放
         if (nameScale > 1.8f) nameScale = 1.8f;
@@ -386,13 +397,14 @@ public class ServerScreenUI_Screen extends Screen {
         // 等级文字缩放
         float levelScale = 2.0f;
         int levelWidthRaw = mc.font.width(levelText);
+        int levelWidthScaled = (int) (levelWidthRaw * levelScale);  // 缩放后的宽度
         int levelHeightScaled = (int) (mc.font.lineHeight * levelScale);
 
-        // 圆的半径：根据缩放后的文字大小计算，紧贴文字边缘
-        int circleRadius = Math.max(levelWidthRaw, levelHeightScaled) / 2 + 6;
+        // 圆的半径：根据缩放后的文字大小计算，确保圆完全包裹文字
+        int circleRadius = Math.max(levelWidthScaled, levelHeightScaled) / 2 + 8;
 
-        // 整体内容中心 Y 坐标（虚拟高度的 75%）
-        int contentCenterY = (int) (virtualHeight * 0.75f) + centerOffsetY;
+        // 整体内容中心 Y 坐标（虚拟高度的 88%）
+        int contentCenterY = (int) (virtualHeight * 0.88f) + centerOffsetY;
 
         // 圆心位置（整体中心的左侧）
         int circleX = centerCenterX - 40;
@@ -440,7 +452,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // ========================================================================
         //                           右栏 (RIGHT PANEL)
-        // 内容：Rank & Title + 属性进度条
+        // 内容：圆角矩形框包裹五个横向排列的属性条
         // ========================================================================
         guiGraphics.pose().pushPose();
 
@@ -480,31 +492,48 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetY = 0;
         }
 
-        // ==================== 绘制 Rank & Title ====================
-        // 计算分割线位置
-        int underlineWidth = (int) (rightPanelWidth * 0.8);  // 分割线宽度为右栏的 80%
-        int underlineX = (int) (virtualWidth - rightPanelWidth * 0.9f);
+        // ==================== 绘制属性进度条（横向排列） ====================
+        renderAttributeBarsHorizontal(guiGraphics, player, RIGHT_PANEL_START_X, rightPanelWidth, rightOffsetY);
 
-        // Rank & Title 的 Y 坐标：虚拟高度的 15%
-        int rankTitleY = (int) (virtualHeight * 0.15f) + rightOffsetY;
+        // ==================== 绘制 Rank 和 Title 框（左右排列，属性框下方） ====================
+        int boxMargin = 5;
+        int innerMargin = 8;
+        int lineHeight = mc.font.lineHeight;
+        int attrBoxHeight = innerMargin * 2 + lineHeight + 2 + 6 + 3 + lineHeight + 8 + lineHeight;
+        int boxSpacing = 8;              // 框之间的间距
 
-        Rank rank = PlayerRankManager.getPlayerRankClient(player);
-        Title title = PlayerTitleManager.getPlayerTitleClient(player);
+        int twoBoxY = boxMargin + attrBoxHeight + boxSpacing + rightOffsetY;
+        int twoBoxWidth = (rightPanelWidth - boxMargin * 2 - boxSpacing) / 2;  // 两个框平分宽度
 
-        int rankColor = getRankColor(rank.getRankLevel());
+        // Rank 框（左侧）
+        int rankBoxX = RIGHT_PANEL_START_X + boxMargin;
+        renderRankBox(guiGraphics, player, rankBoxX, twoBoxY, twoBoxWidth);
 
-        // Rank（左侧对齐）
-        String rankText = "🏆 " + rank.getRankName();
-        guiGraphics.drawString(mc.font, rankText, underlineX, rankTitleY, rankColor);
+        // Title 框（右侧）
+        int titleBoxX = rankBoxX + twoBoxWidth + boxSpacing;
+        renderTitleBox(guiGraphics, player, titleBoxX, twoBoxY, twoBoxWidth);
 
-        // Title（右侧对齐）
-        String titleText = "⭐ " + title.getTitleName();
-        // 靠右对齐：起点 + 宽度 - 文字宽度
-        int titleX = underlineX + underlineWidth - mc.font.width(titleText);
-        guiGraphics.drawString(mc.font, titleText, titleX, rankTitleY, 0xFF000000 | title.getColor());
+        // ==================== 绘制金币和领地框（左右排列，Rank/Title框下方） ====================
+        int thirdBoxY = twoBoxY + (innerMargin * 2 + lineHeight) + boxSpacing;
 
-        // ==================== 绘制属性进度条 ====================
-        renderAttributeBars(guiGraphics, player, RIGHT_PANEL_START_X, rightPanelWidth, virtualHeight, rightOffsetY);
+        // 金币框（左侧）
+        int goldBoxX = RIGHT_PANEL_START_X + boxMargin;
+        renderGoldBox(guiGraphics, goldBoxX, thirdBoxY, twoBoxWidth);
+
+        // 领地框（右侧）
+        int territoryBoxX = goldBoxX + twoBoxWidth + boxSpacing;
+        renderTerritoryBox(guiGraphics, territoryBoxX, thirdBoxY, twoBoxWidth);
+
+        // ==================== 绘制群系和蓝图框（金币/领地框下方，左右排列） ====================
+        int fourthBoxY = thirdBoxY + (innerMargin * 2 + lineHeight) + boxSpacing;
+
+        // 群系框（左侧）
+        int biomesBoxX = RIGHT_PANEL_START_X + boxMargin;
+        renderExplorationStats(guiGraphics, biomesBoxX, fourthBoxY, twoBoxWidth);
+
+        // 蓝图框（右侧）
+        int blueprintBoxX = biomesBoxX + twoBoxWidth + boxSpacing;
+        renderBlueprintBox(guiGraphics, blueprintBoxX, fourthBoxY, twoBoxWidth);
 
         // 结束右侧面板变换
         guiGraphics.pose().popPose();
@@ -628,64 +657,44 @@ public class ServerScreenUI_Screen extends Screen {
     }
 
     /**
-     * 渲染五个属性进度条（两行排列在右侧面板底部）
+     * 渲染五个属性进度条（圆角矩形框包裹，五个竖排）
      *
      * 布局示意：
-     * ┌─────────────────────────────────────────────────────────────┐
-     * │  第一行：❤血量 — 🍖饥饿 — 💪力量                           │
-     * │  第二行：     ⚡勇气 — ☣感染  （居中显示）                    │
-     * └─────────────────────────────────────────────────────────────┘
+     * ┌─────────────────────────────────────┐
+     * │  ┌─────────────────────────────┐   │
+     * │  │ ❤ 20/20  ▓▓▓▓▓▓▓▓▓           │   │
+     * │  │ 🍖 20/20  ▓▓▓▓▓▓▓▓▓           │   │
+     * │  │ 💪 100/100 ▓▓▓▓▓▓▓▓▓          │   │
+     * │  │ ⚡ 50/100  ▓▓▓▓▓              │   │
+     * │  │ ☣ 0/100   ▓▓▓▓▓▓▓▓▓           │   │
+     * │  └─────────────────────────────┘   │
+     * └─────────────────────────────────────┘
      *
      * @param guiGraphics 图形上下文
      * @param player 当前玩家
      * @param rightPanelX 右侧面板起点 X 坐标（虚拟像素）
      * @param rightPanelWidth 右侧面板宽度（虚拟像素）
-     * @param screenHeight 虚拟画布高度
      * @param offsetY Y 轴动画偏移量（虚拟像素）
      */
-    private void renderAttributeBars(GuiGraphics guiGraphics, LocalPlayer player, int rightPanelX, int rightPanelWidth, int screenHeight, int offsetY) {
-        // ==================== 尺寸参数（虚拟像素） ====================
-        int margin = 12;           // 进度条距离面板边缘的边距
-        int barsPerRow = 3;        // 第一行进度条数量
-        int barsSecondRow = 2;     // 第二行进度条数量
-        int barSpacing = 12;       // 进度条之间的间距
-        int rowSpacing = 35;       // 两行之间的间距
-        int barHeight = 7;         // 进度条高度
-        int bottomMargin = 10;     // 进度条与底边的间距
-
-        // ==================== 计算第一行进度条宽度 ====================
-        int totalSpacingFirstRow = barSpacing * (barsPerRow - 1);  // 总间距：12 * 2 = 24
-        // 可用宽度：右栏宽度 - 左右边距 - 总间距
-        int availableWidthFirstRow = rightPanelWidth - margin * 2 - totalSpacingFirstRow;
-        int barWidthFirstRow = availableWidthFirstRow / barsPerRow;  // 单个进度条宽度
-
-        // ==================== 计算第二行进度条宽度 ====================
-        int totalSpacingSecondRow = barSpacing * (barsSecondRow - 1);  // 总间距：12 * 1 = 12
-        int availableWidthSecondRow = rightPanelWidth - margin * 2 - totalSpacingSecondRow;
-        int barWidthSecondRow = barWidthFirstRow;  // 与第一行保持相同宽度
-
-        // ==================== 计算第一行进度条 Y 坐标 ====================
-        // 从底部向上：高度 - 边距 - 高度 - 行间距 - 底边距 + 动画偏移
-        int barY = screenHeight - margin - barHeight - rowSpacing - bottomMargin + offsetY;
-
+    private void renderAttributeBars(GuiGraphics guiGraphics, LocalPlayer player, int rightPanelX, int rightPanelWidth, int offsetY) {
         // ==================== 获取玩家属性值 ====================
-        float healthPercent = player.getHealth() / player.getMaxHealth();  // 血量百分比
-        float foodPercent = (float) player.getFoodData().getFoodLevel() / 20.0f;  // 饥饿值百分比
+        float healthPercent = player.getHealth() / player.getMaxHealth();
+        float foodPercent = (float) player.getFoodData().getFoodLevel() / 20.0f;
 
         int strength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
         int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
-        if (maxStrength <= 0) maxStrength = 100;  // 防止除零
-        float strengthPercent = (float) strength / maxStrength;  // 力量值百分比
+        if (maxStrength <= 0) maxStrength = 100;
+        float strengthPercent = (float) strength / maxStrength;
 
         float courage = PlayerCourageManager.getCurrentCourageClient(player);
         float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
         if (maxCourage <= 0) maxCourage = 100;
-        float couragePercent = courage / maxCourage;  // 勇气值百分比
+        float couragePercent = courage / maxCourage;
 
-        float infectionPercent = (float) PlayerInfectionManager.getCurrentInfectionClient(player) / 100.0f;  // 感染值百分比
+        float infectionPercent = (float) PlayerInfectionManager.getCurrentInfectionClient(player) / 100.0f;
 
         // ==================== 准备进度条数据 ====================
-        String[] icons = {"❤", "🍖", "💪", "⚡", "☣"};  // 进度条上方显示的 emoji 图标
+        String[] icons = {"❤", "🍖", "💪", "⚡", "☣"};
         int[] colors = {BAR_HEALTH_COLOR, BAR_FOOD_COLOR, BAR_STRENGTH_COLOR, BAR_COURAGE_COLOR, BAR_INFECTION_COLOR};
         float[] percents = {healthPercent, foodPercent, strengthPercent, couragePercent, infectionPercent};
         String[] values = {
@@ -696,59 +705,587 @@ public class ServerScreenUI_Screen extends Screen {
                 String.format("%d/100", PlayerInfectionManager.getCurrentInfectionClient(player))
         };
 
-        // ==================== 绘制第一行：3个进度条 ====================
-        int barX = rightPanelX + margin;  // 起始 X 坐标
-        int iconY = barY - 16;  // 图标 Y 坐标（进度条上方 16 像素）
+        // ==================== 布局参数（虚拟像素） ====================
+        int boxMargin = 5;              // 框距离面板边缘的边距
+        int boxWidth = rightPanelWidth - boxMargin * 2;  // 框宽度
+        int innerMargin = 10;           // 框内边距
+        int itemSpacing = 13;           // 每个属性条之间的垂直间距
+        int itemCount = 5;              // 属性条数量
+        int extraPadding = 4;           // 额外的顶部/底部内边距
+        int cornerRadius = 12;           // 圆角半径
+        int barHeight = 7;               // 进度条高度
+        int valueWidth = 45;             // 数值文本宽度
+        int iconWidth = 12;              // 图标宽度
+        int barWidth = boxWidth - innerMargin * 2 - 10;  // 进度条宽度（图标 + 进度条 + 数值）
+        int progressWidth = barWidth - iconWidth - valueWidth - 8 - 10;  // 单进度条宽度
 
-        for (int i = 0; i < barsPerRow; i++) {
-            // 绘制进度条
-            drawProgressBar(guiGraphics, barX, barY, barWidthFirstRow, barHeight, percents[i], colors[i] & 0x00FFFFFF);
+        int boxX = rightPanelX + boxMargin;  // 框 X 坐标
+        int startY = boxMargin + innerMargin + extraPadding + offsetY;  // 起始 Y 坐标
 
-            // 绘制图标（进度条上方，水平居中）
-            guiGraphics.drawCenteredString(mc.font, icons[i], barX + barWidthFirstRow / 2, iconY, colors[i]);
+        // ==================== 绘制五个竖向排列的属性条 ====================
+        for (int i = 0; i < itemCount; i++) {
+            int itemY = startY + i * itemSpacing;
 
-            // 绘制数值文本（进度条下方，缩放到 50%）
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().scale(0.5f, 0.5f, 1.0f);  // 缩小到一半
-            // 坐标 × 2 抵消缩放，使文字绘制在正确位置
-            guiGraphics.drawCenteredString(mc.font, values[i], (barX + barWidthFirstRow / 2) * 2, (barY + barHeight + 4) * 2, 0xFFFFFFFF);
-            guiGraphics.pose().popPose();
-
-            // 移动到下一个进度条位置
-            barX += barWidthFirstRow + barSpacing;
-        }
-
-        // ==================== 绘制第二行：2个进度条（居中显示） ====================
-        int barY2 = barY + rowSpacing;  // 第二行 Y 坐标
-        int iconY2 = barY2 - 16;
-
-        // 计算第二行的起始 X 坐标，使 2 个进度条在右侧面板中水平居中
-        int secondRowTotalWidth = barWidthSecondRow * barsSecondRow + barSpacing * (barsSecondRow - 1);
-        barX = rightPanelX + (rightPanelWidth - secondRowTotalWidth) / 2;
-
-        for (int i = barsPerRow; i < 5; i++) {
-            // 感染值条使用动态颜色（感染值越高颜色越深）
+            // 感染值条使用动态颜色
             int barColor;
-            if (i == 4) {  // 感染值条
+            if (i == 4) {
                 barColor = getInfectionColor(infectionPercent);
             } else {
-                barColor = colors[i] & 0x00FFFFFF;
+                barColor = colors[i];
             }
 
+            // 绘制图标
+            int iconX = boxX + innerMargin;
+            int iconY = itemY - mc.font.lineHeight / 2;
+            guiGraphics.drawString(mc.font, icons[i], iconX, iconY, barColor);
+
             // 绘制进度条
-            drawProgressBar(guiGraphics, barX, barY2, barWidthSecondRow, barHeight, percents[i], barColor);
+            int barX = iconX + iconWidth + 4;
+            int barY = itemY - barHeight / 2;
+            drawProgressBar(guiGraphics, barX, barY, progressWidth, barHeight, percents[i], barColor);
 
-            // 绘制图标（使用计算后的颜色）
-            guiGraphics.drawCenteredString(mc.font, icons[i], barX + barWidthSecondRow / 2, iconY2, barColor);
+            // 绘制数值（右对齐）
+            int valueX = boxX + innerMargin + barWidth - valueWidth;
+            int valueY = itemY - mc.font.lineHeight / 2;
+            guiGraphics.drawString(mc.font, values[i], valueX, valueY, 0xFFFFFFFF);
+        }
 
-            // 绘制数值文本
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().scale(0.5f, 0.5f, 1.0f);
-            guiGraphics.drawCenteredString(mc.font, values[i], (barX + barWidthSecondRow / 2) * 2, (barY2 + barHeight + 4) * 2, 0xFFFFFFFF);
-            guiGraphics.pose().popPose();
+        // ==================== 绘制圆角矩形框（包裹内容，最后绘制） ====================
+        int boxHeight = (itemCount - 1) * itemSpacing + innerMargin * 2 + extraPadding * 2;
+        int boxY = boxMargin + offsetY;  // 框 Y 坐标
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, cornerRadius, 0x40FFAAAA, 0xFFFFFFFF);
+    }
 
-            // 移动到下一个进度条位置
-            barX += barWidthSecondRow + barSpacing;
+    /**
+     * 渲染五个属性进度条（横向排列）
+     *
+     * 布局示意：
+     * ┌─────────────────────────────────────────────────────┐
+     * │ ❤ ▓▓▓▓  🍖 ▓▓▓▓  💪 ▓▓▓▓  ⚡ ▓▓▓▓  ☣ ▓▓▓▓        │
+     * │ 20/20    20/20   100/100  50/100   0/100           │
+     * └─────────────────────────────────────────────────────┘
+     *
+     * @param guiGraphics 图形上下文
+     * @param player 当前玩家
+     * @param rightPanelX 右侧面板起点 X 坐标（虚拟像素）
+     * @param rightPanelWidth 右侧面板宽度（虚拟像素）
+     * @param offsetY Y 轴动画偏移量（虚拟像素）
+     */
+    private void renderAttributeBarsHorizontal(GuiGraphics guiGraphics, LocalPlayer player, int rightPanelX, int rightPanelWidth, int offsetY) {
+        // ==================== 获取玩家属性值 ====================
+        float healthPercent = player.getHealth() / player.getMaxHealth();
+        float foodPercent = (float) player.getFoodData().getFoodLevel() / 20.0f;
+
+        int strength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
+        int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
+        if (maxStrength <= 0) maxStrength = 100;
+        float strengthPercent = (float) strength / maxStrength;
+
+        float courage = PlayerCourageManager.getCurrentCourageClient(player);
+        float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+        if (maxCourage <= 0) maxCourage = 100;
+        float couragePercent = courage / maxCourage;
+
+        float infectionPercent = (float) PlayerInfectionManager.getCurrentInfectionClient(player) / 100.0f;
+
+        // ==================== 准备进度条数据 ====================
+        String[] icons = {"❤", "🍖", "💪", "⚡", "☣"};
+        int[] colors = {BAR_HEALTH_COLOR, BAR_FOOD_COLOR, BAR_STRENGTH_COLOR, BAR_COURAGE_COLOR, BAR_INFECTION_COLOR};
+        float[] percents = {healthPercent, foodPercent, strengthPercent, couragePercent, infectionPercent};
+        String[] values = {
+                String.format("%.0f/%.0f", player.getHealth(), player.getMaxHealth()),
+                String.format("%d/20", player.getFoodData().getFoodLevel()),
+                String.format("%d/%d", strength, maxStrength),
+                String.format("%.0f/%.0f", courage, maxCourage),
+                String.format("%d/100", PlayerInfectionManager.getCurrentInfectionClient(player))
+        };
+
+        // ==================== 布局参数（虚拟像素） ====================
+        int boxMargin = 5;               // 框距离面板边缘的边距
+        int boxWidth = rightPanelWidth - boxMargin * 2;  // 框宽度
+        int innerMargin = 8;             // 框内边距
+        int itemCount = 5;               // 属性条数量
+        int itemSpacing = 8;             // 每个属性条之间的水平间距
+        int extraPadding = 4;            // 额外的左右内边距
+        int cornerRadius = 12;           // 圆角半径
+        int barHeight = 6;               // 进度条高度
+        int lineHeight = mc.font.lineHeight;  // 文本行高度
+        // 框高度 = 图标 + 间距 + 进度条 + 间距 + 文本 + 提示文字间距 + 提示文字(1行) + 内边距
+        int boxHeight = innerMargin * 2 + lineHeight + 2 + barHeight + 3 + lineHeight + 8 + lineHeight;
+
+        int boxX = rightPanelX + boxMargin;  // 框 X 坐标
+        int boxY = boxMargin + offsetY;      // 框 Y 坐标
+
+        // 计算每个属性条的宽度
+        int totalSpacing = (itemCount - 1) * itemSpacing;
+        int itemWidth = (boxWidth - innerMargin * 2 - extraPadding * 2 - totalSpacing) / itemCount;
+
+        int startX = boxX + innerMargin + extraPadding;  // 起始 X 坐标
+        int iconY = boxY + innerMargin;                   // 图标 Y 坐标（在框内顶部）
+        int barY = iconY + mc.font.lineHeight + 2;        // 进度条 Y 坐标（图标下方 + 间距）
+        int textY = barY + barHeight + 3;                 // 文本 Y 坐标（进度条下方 + 间距）
+
+        // ==================== 绘制五个横向排列的属性条 ====================
+        for (int i = 0; i < itemCount; i++) {
+            int itemX = startX + i * (itemWidth + itemSpacing);
+
+            // 感染值条使用动态颜色
+            int barColor;
+            if (i == 4) {
+                barColor = getInfectionColor(infectionPercent);
+            } else {
+                barColor = colors[i];
+            }
+
+            // 绘制图标（居中）
+            int iconX = itemX + itemWidth / 2 - mc.font.width(icons[i]) / 2;
+            guiGraphics.drawString(mc.font, icons[i], iconX, iconY, barColor);
+
+            // 绘制进度条
+            int barX = itemX;
+            drawProgressBar(guiGraphics, barX, barY, itemWidth, barHeight, percents[i], barColor);
+
+            // 绘制数值（居中）
+            int valueX = itemX + itemWidth / 2 - mc.font.width(values[i]) / 2;
+            guiGraphics.drawString(mc.font, values[i], valueX, textY, 0xFFFFFFFF);
+        }
+
+        // ==================== 绘制提示文字（属性条下方） ====================
+        int tipY = textY + lineHeight + 8;  // 提示文字 Y 坐标
+        String tipText = "属性与您的等级密切相关，提升等级可以提高您的属性";
+
+        // 绘制提示文字（居中，灰色）
+        int tipX = boxX + boxWidth / 2 - mc.font.width(tipText) / 2;
+        guiGraphics.drawString(mc.font, tipText, tipX, tipY, 0xFFAAAAAA);
+
+        // ==================== 绘制圆角矩形框（包裹内容，最后绘制） ====================
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, cornerRadius, 0x40FFAAAA, 0xFFFFFFFF);
+    }
+
+    /**
+     * 渲染 Rank 框（属性框下方，左侧）
+     *
+     * 布局示意：
+     * ┌──────────────────────┐
+     * │  🏆 Rank: FISH       │
+     * │  Rank是服务器玩家  │
+     * │  的一种特殊身份... │
+     * └──────────────────────┘
+     *
+     * @param guiGraphics 图形上下文
+     * @param player 当前玩家
+     * @param boxX 框 X 坐标（虚拟像素）
+     * @param boxY 框 Y 坐标（虚拟像素）
+     * @param boxWidth 框宽度（虚拟像素）
+     */
+    private void renderRankBox(GuiGraphics guiGraphics, LocalPlayer player, int boxX, int boxY, int boxWidth) {
+        // ==================== 获取 Rank ====================
+        Rank rank = PlayerRankManager.getPlayerRankClient(player);
+        int rankColor = getRankColor(rank.getRankLevel());
+
+        // ==================== 布局参数（虚拟像素） ====================
+        int innerMargin = 8;             // 框内边距
+        int cornerRadius = 12;           // 圆角半径
+        int lineHeight = mc.font.lineHeight;  // 文本行高度
+
+        // ==================== 计算内容高度 ====================
+        // 内容高度 = 单行高度 + 内边距 * 2
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        // ==================== 绘制框（白色边框，半透明填充） ====================
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40AAAAFF, 0xFFFFFFFF);
+
+        // ==================== 绘制内容 ====================
+        // 左侧：Rank 名称
+        String rankText = "🏆 " + rank.getRankName();
+        guiGraphics.drawString(mc.font, rankText, boxX + innerMargin, boxY + innerMargin, rankColor);
+
+        // 右侧：您的RANK（右对齐）
+        String yourRankText = "- 您的RANK";
+        int yourRankWidth = mc.font.width(yourRankText);
+        guiGraphics.drawString(mc.font, yourRankText, boxX + boxWidth - innerMargin - yourRankWidth, boxY + innerMargin, 0xFFAAAAFF);
+    }
+
+    /**
+     * 渲染 Title 框（属性框下方，右侧）
+     *
+     * 布局示意：
+     * ┌──────────────────────┐
+     * │  ⭐ 称号名称         │
+     * │  称号可以让玩家拥有│
+     * │  聊天前缀...        │
+     * └──────────────────────┘
+     *
+     * @param guiGraphics 图形上下文
+     * @param player 当前玩家
+     * @param boxX 框 X 坐标（虚拟像素）
+     * @param boxY 框 Y 坐标（虚拟像素）
+     * @param boxWidth 框宽度（虚拟像素）
+     */
+    private void renderTitleBox(GuiGraphics guiGraphics, LocalPlayer player, int boxX, int boxY, int boxWidth) {
+        // ==================== 获取 Title ====================
+        Title title = PlayerTitleManager.getPlayerTitleClient(player);
+
+        // ==================== 布局参数（虚拟像素） ====================
+        int innerMargin = 8;             // 框内边距
+        int cornerRadius = 12;           // 圆角半径
+        int lineHeight = mc.font.lineHeight;  // 文本行高度
+        int titleColor = 0xFF000000 | title.getColor();
+
+        // ==================== 计算内容高度 ====================
+        // 内容高度 = 单行高度 + 内边距 * 2
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        // ==================== 绘制框（白色边框，半透明填充） ====================
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FFAAFF, 0xFFFFFFFF);
+
+        // ==================== 绘制内容 ====================
+        // 左侧：Title 名称
+        String titleText = "⭐ " + title.getTitleName();
+        guiGraphics.drawString(mc.font, titleText, boxX + innerMargin, boxY + innerMargin, titleColor);
+
+        // 右侧：您的称号（右对齐）
+        String yourTitleText = "- 您的称号";
+        int yourTitleWidth = mc.font.width(yourTitleText);
+        guiGraphics.drawString(mc.font, yourTitleText, boxX + boxWidth - innerMargin - yourTitleWidth, boxY + innerMargin, 0xFFFFAAFF);
+    }
+
+    /**
+     * 渲染金币框
+     *
+     * @param guiGraphics 图形上下文
+     * @param boxX 框 X 坐标（虚拟像素）
+     * @param boxY 框 Y 坐标（虚拟像素）
+     * @param boxWidth 框宽度（虚拟像素）
+     */
+    private void renderGoldBox(GuiGraphics guiGraphics, int boxX, int boxY, int boxWidth) {
+        int innerMargin = 8;
+        int cornerRadius = 12;
+        int lineHeight = mc.font.lineHeight;
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        // 获取金币余额
+        int goldBalance = ServerInformationDisplay.PLAYER_BALANCE;
+
+        // 绘制框（白色边框，半透明填充）
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FFD700, 0xFFFFFFFF);
+
+        // 左侧：金币图标和数量
+        String goldText = "💰 " + formatNumber(goldBalance);
+        guiGraphics.drawString(mc.font, goldText, boxX + innerMargin, boxY + innerMargin, 0xFFFFD700);
+
+        // 右侧：梦鱼币（右对齐）
+        String yourGoldText = "- 梦鱼币";
+        int goldLabelWidth = mc.font.width(yourGoldText);
+        guiGraphics.drawString(mc.font, yourGoldText, boxX + boxWidth - innerMargin - goldLabelWidth, boxY + innerMargin, 0xFFFFD700);
+
+        // 存储整个框的可点击区域
+        goldBoxClickX1 = boxX;
+        goldBoxClickY1 = boxY;
+        goldBoxClickX2 = boxX + boxWidth;
+        goldBoxClickY2 = boxY + boxHeight;
+    }
+
+    /**
+     * 渲染领地框
+     *
+     * @param guiGraphics 图形上下文
+     * @param boxX 框 X 坐标（虚拟像素）
+     * @param boxY 框 Y 坐标（虚拟像素）
+     * @param boxWidth 框宽度（虚拟像素）
+     */
+    private void renderTerritoryBox(GuiGraphics guiGraphics, int boxX, int boxY, int boxWidth) {
+        int innerMargin = 8;
+        int cornerRadius = 12;
+        int lineHeight = mc.font.lineHeight;
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        // 获取领地列表
+        java.util.List<Territory> territories = ServerInformationDisplay.PLAYER_TERRITORIES;
+
+        // 绘制框（白色边框，半透明填充）
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FF8C00, 0xFFFFFFFF);
+
+        if (territories.isEmpty()) {
+            // 无领地
+            guiGraphics.drawString(mc.font, "🏰 0 个领地", boxX + innerMargin, boxY + innerMargin, 0xFFAAAAAA);
+
+            String manageText = "- 管理您的领地";
+            int manageWidth = mc.font.width(manageText);
+            int manageX = boxX + boxWidth - innerMargin - manageWidth;
+            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, 0xFFFF8C00);
+        } else {
+            // 显示领地数量
+            String territoryText = "🏰 " + territories.size() + " 个领地";
+            guiGraphics.drawString(mc.font, territoryText, boxX + innerMargin, boxY + innerMargin, 0xFFFF8C00);
+
+            String manageText = "- 管理您的领地";
+            int manageWidth = mc.font.width(manageText);
+            int manageX = boxX + boxWidth - innerMargin - manageWidth;
+            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, 0xFFFF8C00);
+        }
+
+        // 存储整个框的可点击区域
+        territoryButtonClickX1 = boxX;
+        territoryButtonClickY1 = boxY;
+        territoryButtonClickX2 = boxX + boxWidth;
+        territoryButtonClickY2 = boxY + boxHeight;
+    }
+
+    /**
+     * 格式化数字（添加千分位分隔符）
+     */
+    private String formatNumber(int num) {
+        return String.format("%,d", num);
+    }
+
+    /**
+     * 渲染群系框
+     */
+    private void renderExplorationStats(GuiGraphics guiGraphics, int boxX, int boxY, int boxWidth) {
+        int innerMargin = 8;
+        int lineHeight = mc.font.lineHeight;
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        int biomesCount = ServerInformationDisplay.EXPLORED_BIOMES_COUNT;
+
+        // 绘制框（白色边框，青色半透明填充）
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x4000DDFF, 0xFFFFFFFF);
+
+        // 左侧：群系数量
+        String biomesText = "🗺️ " + biomesCount;
+        guiGraphics.drawString(mc.font, biomesText, boxX + innerMargin, boxY + innerMargin, 0xFF00DDFF);
+
+        // 右侧：已探索群系（右对齐）
+        String biomesDesc = "- 已探索群系";
+        int biomesDescWidth = mc.font.width(biomesDesc);
+        guiGraphics.drawString(mc.font, biomesDesc, boxX + boxWidth - innerMargin - biomesDescWidth, boxY + innerMargin, 0xFF00DDFF);
+    }
+
+    /**
+     * 渲染蓝图框
+     */
+    private void renderBlueprintBox(GuiGraphics guiGraphics, int boxX, int boxY, int boxWidth) {
+        int innerMargin = 8;
+        int lineHeight = mc.font.lineHeight;
+        int boxHeight = innerMargin * 2 + lineHeight;
+
+        int blueprintCount = ServerInformationDisplay.UNLOCKED_RECIPES_COUNT;
+
+        // 绘制框（白色边框，淡紫色半透明填充）
+        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40DDAAFF, 0xFFFFFFFF);
+
+        // 左侧：蓝图数量
+        String blueprintText = "📜 " + blueprintCount;
+        guiGraphics.drawString(mc.font, blueprintText, boxX + innerMargin, boxY + innerMargin, 0xFFDDAAFF);
+
+        // 右侧：已解锁蓝图（右对齐）
+        String blueprintDesc = "- 已解锁蓝图";
+        int blueprintDescWidth = mc.font.width(blueprintDesc);
+        guiGraphics.drawString(mc.font, blueprintDesc, boxX + boxWidth - innerMargin - blueprintDescWidth, boxY + innerMargin, 0xFFDDAAFF);
+    }
+
+    /**
+     * 将文字按指定宽度换行
+     * @param text 原始文字
+     * @param maxWidth 最大宽度
+     * @return 换行后的文字数组
+     */
+    private String[] wrapText(String text, int maxWidth) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        String remaining = text;
+
+        while (!remaining.isEmpty()) {
+            // 如果剩余文字能在一行显示，直接添加
+            if (mc.font.width(remaining) <= maxWidth) {
+                lines.add(remaining);
+                break;
+            }
+
+            // 找到能放入当前行的最大字符数
+            int maxChars = 0;
+            for (int i = 1; i <= remaining.length(); i++) {
+                if (mc.font.width(remaining.substring(0, i)) > maxWidth) {
+                    maxChars = i - 1;
+                    break;
+                }
+            }
+            if (maxChars == 0) maxChars = 1;
+
+            // 尝试在空格处换行
+            String line = remaining.substring(0, maxChars);
+            int lastSpace = line.lastIndexOf(' ');
+            if (lastSpace > 0) {
+                line = line.substring(0, lastSpace);
+                maxChars = lastSpace + 1;  // 跳过空格
+            }
+
+            lines.add(line);
+            remaining = remaining.substring(maxChars);
+        }
+
+        return lines.toArray(new String[0]);
+    }
+
+    /**
+     * 绘制圆角矩形
+     * @param x 左上角 X 坐标
+     * @param y 左上角 Y 坐标
+     * @param width 宽度
+     * @param height 高度
+     * @param radius 圆角半径
+     * @param fillColor 填充颜色（ARGB）
+     * @param borderColor 边框颜色（ARGB）
+     */
+    private void drawRoundedRect(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int fillColor, int borderColor) {
+        // 绘制填充
+        guiGraphics.fill(RenderType.gui(), x + radius, y, x + width - radius, y + height, fillColor);
+        guiGraphics.fill(RenderType.gui(), x, y + radius, x + width, y + height - radius, fillColor);
+        // 四个圆角
+        guiGraphics.fill(RenderType.gui(), x, y + radius, x + radius, y + radius + radius, fillColor);
+        guiGraphics.fill(RenderType.gui(), x + width - radius, y + radius, x + width, y + radius + radius, fillColor);
+        guiGraphics.fill(RenderType.gui(), x + radius, y, x + width - radius, y + radius, fillColor);
+        guiGraphics.fill(RenderType.gui(), x + radius, y + height - radius, x + width - radius, y + height, fillColor);
+
+        // 绘制边框（使用四个线条）
+        int borderWidth = 1;
+        // 上边
+        guiGraphics.fill(RenderType.gui(), x + radius, y, x + width - radius, y + borderWidth, borderColor);
+        // 下边
+        guiGraphics.fill(RenderType.gui(), x + radius, y + height - borderWidth, x + width - radius, y + height, borderColor);
+        // 左边
+        guiGraphics.fill(RenderType.gui(), x, y + radius, x + borderWidth, y + height - radius, borderColor);
+        // 右边
+        guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y + radius, x + width, y + height - radius, borderColor);
+        // 四个圆角边框（简化为小方块）
+        guiGraphics.fill(RenderType.gui(), x, y, x + radius, y + borderWidth, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y, x + borderWidth, y + radius, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + width - radius, y, x + width, y + borderWidth, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y, x + width, y + radius, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y + height - borderWidth, x + radius, y + height, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y + height - radius, x + borderWidth, y + height, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + width - radius, y + height - borderWidth, x + width, y + height, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y + height - radius, x + width, y + height, borderColor);
+    }
+
+    /**
+     * 绘制带直角边框的矩形
+     * @param x 左上角 X 坐标
+     * @param y 左上角 Y 坐标
+     * @param width 宽度
+     * @param height 高度
+     * @param radius 圆角半径（未使用，保留参数兼容性）
+     * @param fillColor 填充颜色（ARGB）
+     * @param borderColor 边框颜色（ARGB）
+     */
+    private void drawRoundedRectOutline(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int fillColor, int borderColor) {
+        // 绘制填充（整个矩形）
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, fillColor);
+
+        // 绘制直角边框
+        int borderWidth = 1;
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + borderWidth, borderColor);                    // 上边
+        guiGraphics.fill(RenderType.gui(), x, y + height - borderWidth, x + width, y + height, borderColor);  // 下边
+        guiGraphics.fill(RenderType.gui(), x, y, x + borderWidth, y + height, borderColor);                  // 左边
+        guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y, x + width, y + height, borderColor);  // 右边
+    }
+
+    /**
+     * 绘制渐变梦幻色框
+     * @param x 左上角 X 坐标
+     * @param y 左上角 Y 坐标
+     * @param width 宽度
+     * @param height 高度
+     * @param gradientType 渐变类型：0=粉紫蓝, 1=蓝青绿, 2=金橙, 3=橙红
+     */
+    private void drawGradientBox(GuiGraphics guiGraphics, int x, int y, int width, int height, int gradientType) {
+        // 逐像素绘制渐变
+        for (int i = 0; i < width; i++) {
+            float ratio = (float) i / width;
+            int color = getGradientColor(gradientType, ratio);
+
+            // 每次画1像素宽的竖线
+            guiGraphics.fill(RenderType.gui(), x + i, y, x + i + 1, y + height, color);
+        }
+
+        // 绘制白色边框
+        int borderWidth = 1;
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + borderWidth, 0xFFFFFFFF);
+        guiGraphics.fill(RenderType.gui(), x, y + height - borderWidth, x + width, y + height, 0xFFFFFFFF);
+        guiGraphics.fill(RenderType.gui(), x, y, x + borderWidth, y + height, 0xFFFFFFFF);
+        guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y, x + width, y + height, 0xFFFFFFFF);
+    }
+
+    /**
+     * 获取渐变色
+     * @param type 渐变类型
+     * @param ratio 0.0 ~ 1.0
+     * @return ARGB 颜色值
+     */
+    private int getGradientColor(int type, float ratio) {
+        int r, g, b;
+
+        switch (type) {
+            case 0: // 粉紫蓝渐变 (Rank框)
+                // 粉色(255, 182, 193) -> 紫色(186, 85, 211) -> 蓝色(138, 43, 226)
+                if (ratio < 0.5f) {
+                    float t = ratio * 2;
+                    r = (int) (255 + (186 - 255) * t);
+                    g = (int) (182 + (85 - 182) * t);
+                    b = (int) (193 + (211 - 193) * t);
+                } else {
+                    float t = (ratio - 0.5f) * 2;
+                    r = (int) (186 + (138 - 186) * t);
+                    g = (int) (85 + (43 - 85) * t);
+                    b = (int) (211 + (226 - 211) * t);
+                }
+                break;
+            case 1: // 粉紫渐变 (Title框)
+                // 粉色(255, 182, 193) -> 紫色(186, 85, 211)
+                r = (int) (255 + (186 - 255) * ratio);
+                g = (int) (182 + (85 - 182) * ratio);
+                b = (int) (193 + (211 - 193) * ratio);
+                break;
+            case 2: // 金橙渐变 (金币框)
+                // 金色(255, 215, 0) -> 橙色(255, 140, 0)
+                r = 255;
+                g = (int) (215 + (140 - 215) * ratio);
+                b = 0;
+                break;
+            case 3: // 橙红渐变 (领地框)
+                // 橙色(255, 140, 0) -> 红色(255, 69, 0)
+                r = 255;
+                g = (int) (140 + (69 - 140) * ratio);
+                b = 0;
+                break;
+            default:
+                r = g = b = 255;
+        }
+
+        return 0x80000000 | (r << 16) | (g << 8) | b; // 半透明
+    }
+
+    /**
+     * 绘制圆角进度条
+     * @param x 左上角 X 坐标
+     * @param y 左上角 Y 坐标
+     * @param width 宽度
+     * @param height 高度
+     * @param pct 进度 0.0 ~ 1.0
+     * @param color 进度条颜色
+     */
+    private void drawRoundedProgressBar(GuiGraphics guiGraphics, int x, int y, int width, int height, float pct, int color) {
+        int radius = Math.min(height / 2, 4);  // 圆角半径
+
+        // 背景（半透明白色）
+        int bgColor = 0x60FFFFFF;
+        drawRoundedRect(guiGraphics, x, y, width, height, radius, bgColor, bgColor);
+
+        // 进度
+        int progressWidth = (int) (width * Math.max(0, Math.min(1, pct)));
+        if (progressWidth > radius * 2) {
+            int progressColor = 0xFF000000 | (color & 0x00FFFFFF);
+            drawRoundedRect(guiGraphics, x, y, progressWidth, height, radius, progressColor, progressColor);
         }
     }
 
@@ -821,6 +1358,40 @@ public class ServerScreenUI_Screen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 将屏幕坐标转换为虚拟坐标
+        double virtualMouseX = mouseX / uiScale;
+        double virtualMouseY = mouseY / uiScale;
+
+        // 计算右侧面板偏移（考虑动画）
+        int rightOffsetY = 0;
+        if (!isClosing) {
+            float rightAnimDuration = 800f;
+            float rightProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / rightAnimDuration);
+            rightProgress = 1.0f - (float) Math.pow(1.0f - rightProgress, 3);
+            rightOffsetY = (int) ((1.0f - rightProgress) * 100);
+        }
+
+        // 检查是否点击了金币框
+        if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
+            virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
+            // 打开商店界面（经济系统）
+            mc.setScreen(new com.mo.economy_system.screen.economy_system.shop.Screen_Shop());
+            return true;
+        }
+
+        // 检查是否点击了领地框
+        if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
+            virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
+            // 打开领地管理界面
+            mc.setScreen(new com.mo.economy_system.screen.territory_system.Screen_Territory());
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
