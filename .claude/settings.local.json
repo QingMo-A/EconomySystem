@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"D:\\\\Desktop\\\\EconomySystem\\\\gradlew.bat\" compileJava --no-daemon)",
+      "Bash(\"D:\\\\Desktop\\\\EconomySystem\\\\gradlew.bat\" runClient --no-daemon)",
+      "Bash(ping:*)",
+      "Bash(tree:*)",
+      "Bash(D:\\\\Desktop\\\\EconomySystem\\\\gradlew.bat compileJava:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(gradlew.bat:*)",
+      "Bash(git add:*)",
+      "Bash(del:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(D:\\\\Desktop\\\\EconomySystem\\\\gradlew.bat:*)",
+      "Bash(cat:*)",
+      "Bash(cmd:*)",
+      "Bash(D:\\Desktop\\EconomySystem\\gradlew.bat compileJava:*)",
+      "Bash(D:DesktopEconomySystemgradlew.bat compileJava --no-daemon)",
+      "Bash(.gradlew.bat:*)",
+      "Bash(powershell:*)",
+      "Bash(Select-Object -Last 15)",
+      "Bash(D:/Desktop/EconomySystem/gradlew.bat compileJava:*)",
+      "Bash(./gradlew.bat:*)",
+      "Bash(git checkout:*)",
+      "Bash(rm:*)",
+      "Bash(Select-Object:*)",
+      "Bash(java:*)",
+      "Bash(findstr /C:\"error:\" /C:\"Packet\" /C:\"cannot\")",
+      "Bash(Select-String:*)",
+      "Bash(1)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(timeout:*)"
+    ]
+  }
+}

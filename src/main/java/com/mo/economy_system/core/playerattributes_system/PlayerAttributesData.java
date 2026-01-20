@@ -31,6 +31,9 @@ public class PlayerAttributesData {
     // 是否为感染者（感染值达到100后转变）
     private boolean isInfected;
 
+    // 复活点数（0-100，感染者死亡时消耗）
+    private float respawnPoint;
+
     //血量系统
     private double maxHealth; //最大血量
 
@@ -58,6 +61,7 @@ public class PlayerAttributesData {
 
         this.currentInfection = 0;
         this.isInfected = false;
+        this.respawnPoint = 100;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -85,6 +89,7 @@ public class PlayerAttributesData {
 
         this.currentInfection = 0;
         this.isInfected = false;
+        this.respawnPoint = 100;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -113,6 +118,7 @@ public class PlayerAttributesData {
 
         this.currentInfection = 0;
         this.isInfected = false;
+        this.respawnPoint = 100;
 
         // 初始化提示标记
         this.strengthWarned = false;
@@ -392,5 +398,44 @@ public class PlayerAttributesData {
 
     public void setInfected(boolean infected) {
         isInfected = infected;
+    }
+
+    // ========== 复活点数相关 ==========
+    public float getRespawnPoint() {
+        return respawnPoint;
+    }
+
+    public void setRespawnPoint(float respawnPoint) {
+        this.respawnPoint = Math.max(0, Math.min(respawnPoint, 100));
+    }
+
+    /**
+     * 消耗复活点数（感染者死亡时调用）
+     * @param amount 消耗量
+     * @return 是否成功消耗（false=复活点数不足）
+     */
+    public boolean consumeRespawnPoint(float amount) {
+        if (respawnPoint >= amount) {
+            respawnPoint -= amount;
+            return true;
+        }
+        // 不足时扣到0
+        respawnPoint = 0;
+        return false;
+    }
+
+    /**
+     * 恢复复活点数
+     * @param amount 恢复量
+     */
+    public void restoreRespawnPoint(float amount) {
+        respawnPoint = Math.min(respawnPoint + amount, 100);
+    }
+
+    /**
+     * 检查复活点数是否耗尽
+     */
+    public boolean isRespawnPointDepleted() {
+        return respawnPoint <= 0;
     }
 }

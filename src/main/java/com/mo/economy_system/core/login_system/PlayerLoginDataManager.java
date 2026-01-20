@@ -200,6 +200,14 @@ public class PlayerLoginDataManager {
     }
 
     /**
+     * 清除指定玩家的缓存
+     * @param playerUUID 玩家UUID
+     */
+    public static void clearPlayerCache(UUID playerUUID) {
+        LOGIN_DATA_CACHE.remove(playerUUID);
+    }
+
+    /**
      * 重新加载所有数据到缓存
      */
     public static void reloadCache() {

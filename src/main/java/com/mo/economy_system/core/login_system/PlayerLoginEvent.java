@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.login_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.playerattributes_system.death.DeathEventHandler;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest;
 import com.mo.economy_system.server.notice.NewPlayerGuide;
@@ -77,6 +78,12 @@ public class PlayerLoginEvent {
                     NewPlayerGuide.sendNewPlayerGuide(player);
                 }
 
+                // 检查并恢复死亡状态
+                if (DeathEventHandler.hasDeathState(player)) {
+                    EconomySystem.LOGGER.info("玩家 {} 登录时检测到未处理的死亡状态", player.getName().getString());
+                    DeathEventHandler.restoreDeathState(player);
+                }
+
                 EconomySystem.LOGGER.info("玩家 {} 快速登录成功", player.getName().getString());
             } else {
                 // 不符合快速登录条件，需要手动登录
@@ -123,6 +130,9 @@ public class PlayerLoginEvent {
         playerLoginData.setLastLogoutTime(System.currentTimeMillis());
 
         PlayerLoginDataManager.saveLoginData(playerUUID, playerLoginData);
+
+        // 清除该玩家的缓存，下次登录时从文件重新读取
+        PlayerLoginDataManager.clearPlayerCache(playerUUID);
 
         EconomySystem.LOGGER.info("玩家 {} 退出信息已记录：IP={}, 时间={}",
             player.getName().getString(),

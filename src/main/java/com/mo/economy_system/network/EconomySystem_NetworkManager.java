@@ -12,6 +12,11 @@ import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_C
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mo.economy_system.network.packets.playerattribute_system.courage_system.Packet_SyncCourageData;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_DeathScreenData;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_KeepInventoryRequest;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_KeepInventoryResponse;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnRequest;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnResponse;
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
@@ -95,6 +100,11 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_SendTipToClient.class, Packet_SendTipToClient::encode, Packet_SendTipToClient::decode, Packet_SendTipToClient::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncCourageData.class, Packet_SyncCourageData::encode, Packet_SyncCourageData::decode, Packet_SyncCourageData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncInfectionData.class, Packet_SyncInfectionData::encode, Packet_SyncInfectionData::decode, Packet_SyncInfectionData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_KeepInventoryRequest.class, Packet_KeepInventoryRequest::encode, Packet_KeepInventoryRequest::decode, Packet_KeepInventoryRequest::handle);
+        INSTANCE.registerMessage(packetId++, Packet_KeepInventoryResponse.class, Packet_KeepInventoryResponse::encode, Packet_KeepInventoryResponse::decode, Packet_KeepInventoryResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_NormalRespawnRequest.class, Packet_NormalRespawnRequest::encode, Packet_NormalRespawnRequest::decode, Packet_NormalRespawnRequest::handle);
+        INSTANCE.registerMessage(packetId++, Packet_NormalRespawnResponse.class, Packet_NormalRespawnResponse::encode, Packet_NormalRespawnResponse::decode, Packet_NormalRespawnResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_DeathScreenData.class, Packet_DeathScreenData::encode, Packet_DeathScreenData::decode, Packet_DeathScreenData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_RequestAllPlayerData.class, Packet_RequestAllPlayerData::encode, Packet_RequestAllPlayerData::decode, Packet_RequestAllPlayerData::handle);
         INSTANCE.registerMessage(packetId++, Packet_RequestPlayerStats.class, Packet_RequestPlayerStats::encode, Packet_RequestPlayerStats::decode, Packet_RequestPlayerStats::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncPlayerStats.class, Packet_SyncPlayerStats::encode, Packet_SyncPlayerStats::decode, Packet_SyncPlayerStats::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));

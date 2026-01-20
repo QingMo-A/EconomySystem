@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = EconomySystem.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class ClientCacheManager {
     private static final Map<UUID, PlayerData> PLAYER_DATA_CACHE = new ConcurrentHashMap<>();
     private static final Map<UUID, PlayerAttributesData> PLAYER_ATTRIBUTES_DATA_CACHE = new ConcurrentHashMap<>();
