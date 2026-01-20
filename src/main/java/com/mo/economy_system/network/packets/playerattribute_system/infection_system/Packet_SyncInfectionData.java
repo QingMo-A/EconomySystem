@@ -11,38 +11,38 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class Packet_SyncInfectionData {
-    private final int currentInfection;
+    private final float currentInfection;
 
-    public Packet_SyncInfectionData(int currentInfection) {
+    public Packet_SyncInfectionData(float currentInfection) {
         this.currentInfection = currentInfection;
     }
 
     public static void encode(Packet_SyncInfectionData packet, FriendlyByteBuf buf) {
-        buf.writeInt(packet.currentInfection);
+        buf.writeFloat(packet.currentInfection);
     }
 
     public static Packet_SyncInfectionData decode(FriendlyByteBuf buf) {
-        int current = buf.readInt();
+        float current = buf.readFloat();
         return new Packet_SyncInfectionData(current);
     }
 
     public static void handle(Packet_SyncInfectionData packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
-        final int safeCurrentInfection = packet.currentInfection;
+        final float safeCurrentInfection = packet.currentInfection;
 
         context.enqueueWork(() -> processOnMainThread(safeCurrentInfection));
         context.setPacketHandled(true);
     }
 
-    private static void processOnMainThread(int currentInfection) {
+    private static void processOnMainThread(float currentInfection) {
         DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(currentInfection));
     }
 
     @OnlyIn(Dist.CLIENT)
     private static class ClientRunnable implements DistExecutor.SafeRunnable {
-        private final int currentInfection;
+        private final float currentInfection;
 
-        public ClientRunnable(int currentInfection) {
+        public ClientRunnable(float currentInfection) {
             this.currentInfection = currentInfection;
         }
 
@@ -56,7 +56,7 @@ public class Packet_SyncInfectionData {
         }
     }
 
-    public int getCurrentInfection() {
+    public float getCurrentInfection() {
         return currentInfection;
     }
 }

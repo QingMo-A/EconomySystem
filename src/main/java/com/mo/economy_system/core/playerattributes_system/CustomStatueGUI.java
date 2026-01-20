@@ -213,12 +213,12 @@ public class CustomStatueGUI {
         drawIcon(guiGraphics, "⚡", courageBarX + BAR_WIDTH / 2, courageBarY - 8, COURAGE_BAR_COLOR);
 
         // 绘制感染值竖向进度条
-        int currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
+        float currentInfection = PlayerInfectionManager.getCurrentInfectionClient(player);
         int maxInfection = 100;
         // 计算动态颜色（感染值越高颜色越深）
-        int infectionColor = getInfectionColor(currentInfection, maxInfection);
+        int infectionColor = getInfectionColor((int) currentInfection, maxInfection);
         // 绘制感染值进度条（在勇气值条左侧）
-        drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, currentInfection, maxInfection, infectionColor);
+        drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, (int) currentInfection, maxInfection, infectionColor);
         // 绘制感染图标（进度条上方，使用动态颜色）
         drawIcon(guiGraphics, "☣", infectionBarX + BAR_WIDTH / 2, infectionBarY - 8, infectionColor);
     }

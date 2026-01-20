@@ -1,23 +1,20 @@
 package com.mo.economy_system.core.playerattributes_system.infection;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
-import com.mo.economy_system.entity.entities.HiveZombieEntity;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,14 +23,8 @@ public class PlayerInfectionManager {
     private static final int INFECTION_CHECK_INTERVAL = 40;
     private static final int INFECTION_MAX = 100;
 
-    private static final Map<UUID, Integer> CLIENT_CURRENT_INFECTION = new ConcurrentHashMap<>();
-
-    private static final Map<UUID, Integer> INFECTION_MSG_COOLDOWN = new ConcurrentHashMap<>();
-    private static final int MSG_COOLDOWN_TICKS = 1200;
-
-    static {
-        CLIENT_CURRENT_INFECTION.put(new UUID(0, 0), 0);
-    }
+    // 记录玩家已显示过的消息级别：0=无, 1=50%警告, 2=80%警告, 3=100%警告
+    private static final Map<UUID, Integer> INFECTION_MSG_SHOWN = new ConcurrentHashMap<>();
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -53,44 +44,52 @@ public class PlayerInfectionManager {
             return;
         }
 
-        int currentCooldown = INFECTION_MSG_COOLDOWN.getOrDefault(playerUUID, 0);
-        if (currentCooldown > 0) {
-            INFECTION_MSG_COOLDOWN.put(playerUUID, currentCooldown - 1);
-        }
-        boolean canShowMsg = currentCooldown <= 0;
-
         if (serverPlayer.tickCount % INFECTION_CHECK_INTERVAL != 0) {
             return;
         }
 
-        int currentInfection = attributesData.getCurrentInfection();
-        float infectionRatio = (float) currentInfection / INFECTION_MAX;
+        float currentInfection = attributesData.getCurrentInfection();
+        float infectionRatio = currentInfection / INFECTION_MAX;
+        int msgShownLevel = INFECTION_MSG_SHOWN.getOrDefault(playerUUID, 0);
 
-        if (infectionRatio >= 0.8F) {
+        if (infectionRatio >= 1.0F) {
             MobEffectInstance slownessEffect = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, true);
             MobEffectInstance weaknessEffect = new MobEffectInstance(MobEffects.WEAKNESS, 40, 0, false, true);
             serverPlayer.addEffect(slownessEffect);
             serverPlayer.addEffect(weaknessEffect);
 
-            if (canShowMsg) {
+            if (msgShownLevel < 3) {
+                serverPlayer.displayClientMessage(
+                        Component.literal("§4§l您已成为感染者！"),
+                        true
+                );
+                INFECTION_MSG_SHOWN.put(playerUUID, 3);
+            }
+        } else if (infectionRatio >= 0.8F) {
+            MobEffectInstance slownessEffect = new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, true);
+            MobEffectInstance weaknessEffect = new MobEffectInstance(MobEffects.WEAKNESS, 40, 0, false, true);
+            serverPlayer.addEffect(slownessEffect);
+            serverPlayer.addEffect(weaknessEffect);
+
+            if (msgShownLevel < 2) {
                 serverPlayer.displayClientMessage(
                         Component.literal("§c感染值过高，您的身体正在恶化..."),
                         true
                 );
-                INFECTION_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS);
+                INFECTION_MSG_SHOWN.put(playerUUID, 2);
             }
         } else if (infectionRatio >= 0.5F && infectionRatio < 0.8F) {
-            if (canShowMsg) {
+            if (msgShownLevel < 1) {
                 serverPlayer.displayClientMessage(
-                        Component.literal("§e被丧尸多次感染后，您感到身体有些不适..."),
+                        Component.literal("§e您感到身体有些不适..."),
                         true
                 );
-                INFECTION_MSG_COOLDOWN.put(playerUUID, MSG_COOLDOWN_TICKS);
+                INFECTION_MSG_SHOWN.put(playerUUID, 1);
             }
         }
     }
 
-    public static void addInfection(ServerPlayer player, int amount) {
+    public static void addInfection(ServerPlayer player, float amount) {
         if (player == null || amount <= 0) {
             return;
         }
@@ -101,20 +100,30 @@ public class PlayerInfectionManager {
             return;
         }
 
-        int currentInfection = attributesData.getCurrentInfection();
-        int newInfection = Math.min(currentInfection + amount, INFECTION_MAX);
+        float currentInfection = attributesData.getCurrentInfection();
+        float newInfection = Math.min(currentInfection + amount, INFECTION_MAX);
 
-        if (currentInfection == newInfection) {
+        if (Math.abs(newInfection - currentInfection) < 0.01F) {
             return;
         }
 
         attributesData.setCurrentInfection(newInfection);
         PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
 
+        // 感染值达到100时转换为感染者
+        if (newInfection >= INFECTION_MAX && !attributesData.isInfected()) {
+            attributesData.setInfected(true);
+            PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
+            player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal("§4§l你已经完全感染，变成了感染者！"),
+                    true
+            );
+        }
+
         PlayerInfectionClientSync.sendInfectionDataToClient(player, newInfection);
     }
 
-    public static void reduceInfection(ServerPlayer player, int amount) {
+    public static void reduceInfection(ServerPlayer player, float amount) {
         if (player == null || amount <= 0) {
             return;
         }
@@ -125,30 +134,54 @@ public class PlayerInfectionManager {
             return;
         }
 
-        int currentInfection = attributesData.getCurrentInfection();
-        int newInfection = Math.max(currentInfection - amount, 0);
+        float currentInfection = attributesData.getCurrentInfection();
+        float newInfection = Math.max(currentInfection - amount, 0);
 
-        if (currentInfection == newInfection) {
+        if (Math.abs(newInfection - currentInfection) < 0.01F) {
             return;
         }
 
         attributesData.setCurrentInfection(newInfection);
         PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
 
+        // 感染值降低时重置消息级别，允许重新触发警告
+        float newInfectionRatio = newInfection / INFECTION_MAX;
+        int currentMsgLevel = INFECTION_MSG_SHOWN.getOrDefault(playerUUID, 0);
+        int newMsgLevel = currentMsgLevel;
+
+        if (newInfectionRatio < 0.5F) {
+            newMsgLevel = 0; // 低于50%，重置所有警告
+        } else if (newInfectionRatio < 0.8F && currentMsgLevel >= 2) {
+            newMsgLevel = 1; // 低于80%但高于50%，重置80%和100%警告
+        } else if (newInfectionRatio < 1.0F && currentMsgLevel >= 3) {
+            newMsgLevel = 2; // 低于100%但高于80%，只重置100%警告
+        }
+
+        if (newMsgLevel != currentMsgLevel) {
+            if (newMsgLevel == 0) {
+                INFECTION_MSG_SHOWN.remove(playerUUID);
+            } else {
+                INFECTION_MSG_SHOWN.put(playerUUID, newMsgLevel);
+            }
+        }
+
         PlayerInfectionClientSync.sendInfectionDataToClient(player, newInfection);
     }
 
-    public static void setCurrentInfectionClient(Player player, int currentInfection) {
+    public static void setCurrentInfectionClient(Player player, float currentInfection) {
         if (player == null || !player.level().isClientSide()) {
             return;
         }
-        CLIENT_CURRENT_INFECTION.put(player.getUUID(), currentInfection);
+        PlayerAttributesData data = ClientCacheManager.getOrCreatePlayerAttributesData(player.getUUID());
+        data.setCurrentInfection(currentInfection);
+        ClientCacheManager.setPlayerAttributesData(player.getUUID(), data);
     }
 
-    public static int getCurrentInfectionClient(Player player) {
+    public static float getCurrentInfectionClient(Player player) {
         if (player == null || !player.level().isClientSide()) {
             return 0;
         }
-        return CLIENT_CURRENT_INFECTION.getOrDefault(player.getUUID(), 0);
+        PlayerAttributesData data = ClientCacheManager.getPlayerAttributesData(player.getUUID());
+        return data != null ? data.getCurrentInfection() : 0;
     }
 }

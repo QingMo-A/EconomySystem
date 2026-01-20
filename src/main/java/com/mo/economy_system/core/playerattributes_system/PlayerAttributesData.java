@@ -26,7 +26,7 @@ public class PlayerAttributesData {
     private float currentCourage;
 
     // 感染值（0-100，100为完全感染）
-    private int currentInfection;
+    private float currentInfection;
 
     // 是否为感染者（感染值达到100后转变）
     private boolean isInfected;
@@ -276,12 +276,12 @@ public class PlayerAttributesData {
     }
 
     // 感染值增加（上限100）
-    public void addInfection(int amount) {
+    public void addInfection(float amount) {
         currentInfection = Math.min(currentInfection + amount, 100);
     }
 
     // 感染值减少（下限0）
-    public void reduceInfection(int amount) {
+    public void reduceInfection(float amount) {
         currentInfection = Math.max(currentInfection - amount, 0);
         if (currentInfection < 80) { // 感染值低于80重置提示
             this.infectionWarned = false;
@@ -326,6 +326,10 @@ public class PlayerAttributesData {
         return maxStrength;
     }
 
+    public void setMaxStrength(int maxStrength) {
+        this.maxStrength = maxStrength;
+    }
+
     public int getCurrentStrength() {
         return currentStrength;
     }
@@ -338,6 +342,10 @@ public class PlayerAttributesData {
         return maxCourage;
     }
 
+    public void setMaxCourage(float maxCourage) {
+        this.maxCourage = maxCourage;
+    }
+
     public float getCurrentCourage() {
         return currentCourage;
     }
@@ -346,11 +354,11 @@ public class PlayerAttributesData {
         this.currentCourage = currentCourage;
     }
 
-    public int getCurrentInfection() {
+    public float getCurrentInfection() {
         return currentInfection;
     }
 
-    public void setCurrentInfection(int currentInfection) {
+    public void setCurrentInfection(float currentInfection) {
         this.currentInfection = currentInfection;
     }
 

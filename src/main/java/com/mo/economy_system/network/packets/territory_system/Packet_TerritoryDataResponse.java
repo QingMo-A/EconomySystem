@@ -1,9 +1,9 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
-import com.mo.economy_system.server.serverui.ServerInformationDisplay;
 import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -54,7 +54,16 @@ public class Packet_TerritoryDataResponse {
                 // 更新领地数据
                 screen.updateTerritoryData(msg.owned, msg.authorized);
             } else if (Minecraft.getInstance().screen instanceof ServerScreenUI_Screen screen) {
-                ServerInformationDisplay.setPlayerTerritories(msg.owned, msg.authorized);
+                // ServerScreenUI 现在使用 ClientCacheManager
+            }
+
+            // 同步到ClientCacheManager
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                List<Territory> allTerritories = new ArrayList<>();
+                allTerritories.addAll(msg.owned);
+                allTerritories.addAll(msg.authorized);
+                ClientCacheManager.setTerritories(mc.player.getUUID(), allTerritories);
             }
         });
         context.setPacketHandled(true);

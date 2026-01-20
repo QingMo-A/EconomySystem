@@ -1,15 +1,12 @@
 package com.mo.economy_system.server.rank;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 
 /**
@@ -26,17 +23,17 @@ public class PlayerRankManager {
         return playerData.getRank();
     }
 
-    //客户端缓存
-    private static final Map<UUID, Rank> CLIENT_RANK_CACHE = new HashMap<>();
-
+    // 客户端缓存
     public static void setPlayerRankClient(Player clientPlayer, Rank rank) {
         if (clientPlayer == null || rank == null) return;
-        CLIENT_RANK_CACHE.put(clientPlayer.getUUID(), rank);
-        EconomySystem.LOGGER.info("本地rank缓存已保存：{},{}", clientPlayer.getScoreboardName(), rank.getRankName());
+        PlayerData data = ClientCacheManager.getOrCreatePlayerData(clientPlayer.getUUID());
+        data.setRank(rank);
+        ClientCacheManager.setPlayerData(clientPlayer.getUUID(), data);
     }
 
     public static Rank getPlayerRankClient(Player clientPlayer) {
         if (clientPlayer == null) return RankRegistry.NO_RANK;
-        return CLIENT_RANK_CACHE.getOrDefault(clientPlayer.getUUID(), RankRegistry.NO_RANK);
+        PlayerData data = ClientCacheManager.getPlayerData(clientPlayer.getUUID());
+        return data != null ? data.getRank() : RankRegistry.NO_RANK;
     }
 }

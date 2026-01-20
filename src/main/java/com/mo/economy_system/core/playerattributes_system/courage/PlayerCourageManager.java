@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.playerattributes_system.courage;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.entity.EconomySystem_Entities;
@@ -38,8 +39,6 @@ public class PlayerCourageManager {
     private static final int KILL_THRESHOLD = 5; //时间窗口内需要击杀的敌对生物数量
     private static final int COURAGE_ADD_AMOUNT = 10; //满足条件后增加的勇气值
 
-    private static final Map<UUID, Float> CLIENT_CURRENT_COURAGE = new ConcurrentHashMap<>();
-    private static final Map<UUID, Float> CLIENT_MAX_COURAGE = new ConcurrentHashMap<>();
     //存储击杀记录
     private static final Map<UUID, List<Long>> PLAYER_KILL_RECORDS = new ConcurrentHashMap<>();
 
@@ -53,11 +52,8 @@ public class PlayerCourageManager {
     private static final int MSG_COOLDOWN_TICKS = 1200;
 
 
-    //初始化敌对生物集合和客户端默认值
+    //初始化敌对生物集合
     static {
-        CLIENT_CURRENT_COURAGE.put(new UUID(0,0), 50.0f);
-        CLIENT_MAX_COURAGE.put(new UUID(0,0), 100.0f);
-
         HOSTILE_ENTITY_TYPES.add(EntityType.BLAZE);
         HOSTILE_ENTITY_TYPES.add(EntityType.CAVE_SPIDER);
         HOSTILE_ENTITY_TYPES.add(EntityType.CREEPER);
@@ -450,9 +446,6 @@ public class PlayerCourageManager {
         UUID playerUUID = serverPlayer.getUUID();
         PLAYER_KILL_RECORDS.remove(playerUUID);
         COURAGE_MSG_COOLDOWN.remove(playerUUID);
-
-        CLIENT_CURRENT_COURAGE.remove(playerUUID);
-        CLIENT_MAX_COURAGE.remove(playerUUID);
     }
 
     /**
@@ -486,44 +479,38 @@ public class PlayerCourageManager {
     }
 
 
-    //——————————————————————————客户端
-    /**
-     * 客户端：设置当前勇气值（供Packet_SyncCourageData调用）
-     */
+    // 客户端
     public static void setCurrentCourage(Player player, float currentCourage) {
         if (player == null || !player.level().isClientSide()) {
             return;
         }
-        CLIENT_CURRENT_COURAGE.put(player.getUUID(), currentCourage);
+        PlayerAttributesData data = ClientCacheManager.getOrCreatePlayerAttributesData(player.getUUID());
+        data.setCurrentCourage(currentCourage);
+        ClientCacheManager.setPlayerAttributesData(player.getUUID(), data);
     }
 
-    /**
-     * 客户端：设置最大勇气值（供Packet_SyncCourageData调用）
-     */
     public static void setMaxCourage(Player player, float maxCourage) {
         if (player == null || !player.level().isClientSide()) {
             return;
         }
-        CLIENT_MAX_COURAGE.put(player.getUUID(), maxCourage);
+        PlayerAttributesData data = ClientCacheManager.getOrCreatePlayerAttributesData(player.getUUID());
+        data.setMaxCourage(maxCourage);
+        ClientCacheManager.setPlayerAttributesData(player.getUUID(), data);
     }
 
-    /**
-     * 客户端：获取当前勇气值（供CustomStatueGUI调用）
-     */
     public static float getCurrentCourageClient(Player player) {
         if (player == null || !player.level().isClientSide()) {
-            return 50.0f; // 兜底默认值
+            return 50.0f;
         }
-        return CLIENT_CURRENT_COURAGE.getOrDefault(player.getUUID(), 50.0f);
+        PlayerAttributesData data = ClientCacheManager.getPlayerAttributesData(player.getUUID());
+        return data != null ? data.getCurrentCourage() : 50.0f;
     }
 
-    /**
-     * 客户端：获取最大勇气值（供CustomStatueGUI调用）
-     */
     public static float getMaxCourageClient(Player player) {
         if (player == null || !player.level().isClientSide()) {
-            return 100.0f; // 兜底默认值
+            return 100.0f;
         }
-        return CLIENT_MAX_COURAGE.getOrDefault(player.getUUID(), 100.0f);
+        PlayerAttributesData data = ClientCacheManager.getPlayerAttributesData(player.getUUID());
+        return data != null ? data.getMaxCourage() : 100.0f;
     }
 }

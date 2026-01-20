@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.playerlevel_system.overalllevel;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
 import com.mo.economy_system.server.playerdata.PlayerData;
@@ -8,10 +9,6 @@ import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * 玩家无限等级+经验核心管理框架
@@ -170,29 +167,32 @@ public class PlayerLevelManager {
         );
     }
 
-    //客户端缓存
-    private static final Map<UUID, Integer> CLIENT_LEVEL_CACHE = new HashMap<>();
-    private static final Map<UUID, Long> CLIENT_EXPERIENCE_CACHE = new HashMap<>(); // 新增客户端经验缓存
-
+    // 客户端缓存
     public static void setPlayerLevelClient(Player clientPlayer, int level) {
         if (clientPlayer == null) return;
-        CLIENT_LEVEL_CACHE.put(clientPlayer.getUUID(), level);
+        PlayerData data = ClientCacheManager.getOrCreatePlayerData(clientPlayer.getUUID());
+        data.setLevel(level);
+        ClientCacheManager.setPlayerData(clientPlayer.getUUID(), data);
     }
 
     public static int getPlayerLevelClient(Player clientPlayer) {
         if (clientPlayer == null) return 0;
-        return CLIENT_LEVEL_CACHE.getOrDefault(clientPlayer.getUUID(), 0);
+        PlayerData data = ClientCacheManager.getPlayerData(clientPlayer.getUUID());
+        return data != null ? data.getLevel() : 0;
     }
 
     // 客户端经验操作
     public static void setPlayerExperienceClient(Player clientPlayer, long experience) {
         if (clientPlayer == null) return;
-        CLIENT_EXPERIENCE_CACHE.put(clientPlayer.getUUID(), Math.max(0, experience));
+        PlayerData data = ClientCacheManager.getOrCreatePlayerData(clientPlayer.getUUID());
+        data.setCurrentExperience(Math.max(0, experience));
+        ClientCacheManager.setPlayerData(clientPlayer.getUUID(), data);
     }
 
     public static long getPlayerExperienceClient(Player clientPlayer) {
         if (clientPlayer == null) return 0L;
-        return CLIENT_EXPERIENCE_CACHE.getOrDefault(clientPlayer.getUUID(), 0L);
+        PlayerData data = ClientCacheManager.getPlayerData(clientPlayer.getUUID());
+        return data != null ? data.getCurrentExperience() : 0L;
     }
 
     /**

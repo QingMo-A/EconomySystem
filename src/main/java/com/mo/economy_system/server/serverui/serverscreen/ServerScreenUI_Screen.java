@@ -1,5 +1,6 @@
 package com.mo.economy_system.server.serverui.serverscreen;
 
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
 import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
@@ -367,7 +368,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // ==================== 绘制玩家名称 + 幸存者状态（模型头上方） ====================
         // 获取感染值并确定状态
-        int infection = PlayerInfectionManager.getCurrentInfectionClient(player);
+        float infection = PlayerInfectionManager.getCurrentInfectionClient(player);
         String status = infection >= 100 ? "§c感染者" : "§a幸存者";
         String playerName = "§e" + player.getScoreboardName() + " §7[" + status + "§7]";
 
@@ -723,7 +724,7 @@ public class ServerScreenUI_Screen extends Screen {
                 String.format("%d/20", player.getFoodData().getFoodLevel()),
                 String.format("%d/%d", strength, maxStrength),
                 String.format("%.0f/%.0f", courage, maxCourage),
-                String.format("%d/100", PlayerInfectionManager.getCurrentInfectionClient(player))
+                String.format("%.1f/100", PlayerInfectionManager.getCurrentInfectionClient(player))
         };
 
         // ==================== 布局参数（虚拟像素） ====================
@@ -818,7 +819,7 @@ public class ServerScreenUI_Screen extends Screen {
                 String.format("%d/20", player.getFoodData().getFoodLevel()),
                 String.format("%d/%d", strength, maxStrength),
                 String.format("%.0f/%.0f", courage, maxCourage),
-                String.format("%d/100", PlayerInfectionManager.getCurrentInfectionClient(player))
+                String.format("%.1f/100", PlayerInfectionManager.getCurrentInfectionClient(player))
         };
 
         // ==================== 布局参数（虚拟像素） ====================
@@ -986,7 +987,7 @@ public class ServerScreenUI_Screen extends Screen {
         int boxHeight = innerMargin * 2 + lineHeight;
 
         // 获取金币余额
-        int goldBalance = ServerInformationDisplay.PLAYER_BALANCE;
+        int goldBalance = mc.player != null ? ClientCacheManager.getPlayerBalance(mc.player.getUUID()) : 0;
 
         // 绘制框（白色边框，半透明填充）
         drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FFD700, 0xFFFFFFFF);
@@ -1022,7 +1023,7 @@ public class ServerScreenUI_Screen extends Screen {
         int boxHeight = innerMargin * 2 + lineHeight;
 
         // 获取领地列表
-        java.util.List<Territory> territories = ServerInformationDisplay.getTerritories();
+        java.util.List<Territory> territories = mc.player != null ? ClientCacheManager.getTerritories(mc.player.getUUID()) : new java.util.ArrayList<>();
 
         // 绘制框（白色边框，半透明填充）
         drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FF8C00, 0xFFFFFFFF);
@@ -1068,7 +1069,7 @@ public class ServerScreenUI_Screen extends Screen {
         int lineHeight = mc.font.lineHeight;
         int boxHeight = innerMargin * 2 + lineHeight;
 
-        int biomesCount = ServerInformationDisplay.EXPLORED_BIOMES_COUNT;
+        int biomesCount = mc.player != null ? ClientCacheManager.getExploredBiomesCount(mc.player.getUUID()) : 0;
 
         // 绘制框（白色边框，青色半透明填充）
         drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x4000DDFF, 0xFFFFFFFF);
@@ -1091,7 +1092,7 @@ public class ServerScreenUI_Screen extends Screen {
         int lineHeight = mc.font.lineHeight;
         int boxHeight = innerMargin * 2 + lineHeight;
 
-        int blueprintCount = ServerInformationDisplay.UNLOCKED_RECIPES_COUNT;
+        int blueprintCount = mc.player != null ? ClientCacheManager.getUnlockedRecipesCount(mc.player.getUUID()) : 0;
 
         // 绘制框（白色边框，淡紫色半透明填充）
         drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40DDAAFF, 0xFFFFFFFF);
@@ -1457,7 +1458,7 @@ public class ServerScreenUI_Screen extends Screen {
         if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
             virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
             // 获取金币余额并创建提示文本
-            int goldBalance = ServerInformationDisplay.PLAYER_BALANCE;
+            int goldBalance = mc.player != null ? ClientCacheManager.getPlayerBalance(mc.player.getUUID()) : 0;
             Component tooltip = Component.literal("§e点击打开商店界面")
                 .append("\n")
                 .append(Component.literal("§7当前余额: §6" + formatNumber(goldBalance) + " 梦鱼币"));
@@ -1470,7 +1471,7 @@ public class ServerScreenUI_Screen extends Screen {
         if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
             virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
             // 获取领地列表并创建提示文本
-            java.util.List<Territory> territories = ServerInformationDisplay.getTerritories();
+            java.util.List<Territory> territories = mc.player != null ? ClientCacheManager.getTerritories(mc.player.getUUID()) : new java.util.ArrayList<>();
             Component tooltip;
 
             if (territories.isEmpty()) {

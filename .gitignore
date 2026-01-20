@@ -19,7 +19,10 @@ build
 
 # other
 eclipse
+MC源代码
 run
+run-data
+run2
 
 # Files from Forge MDK
 forge*changelog.txt

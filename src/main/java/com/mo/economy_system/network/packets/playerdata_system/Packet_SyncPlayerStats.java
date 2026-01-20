@@ -1,9 +1,10 @@
 package com.mo.economy_system.network.packets.playerdata_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.blueprint_system.PlayerBlueprintData;
 import com.mo.economy_system.server.playerbiomes.PlayerBiomesDataManager;
-import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -36,9 +37,12 @@ public class Packet_SyncPlayerStats {
     public static void handle(Packet_SyncPlayerStats msg, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
-            // 更新客户端缓存
-            ServerInformationDisplay.EXPLORED_BIOMES_COUNT = msg.biomesCount;
-            ServerInformationDisplay.UNLOCKED_RECIPES_COUNT = msg.blueprintCount;
+            // 同步到ClientCacheManager
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                ClientCacheManager.setExploredBiomesCount(mc.player.getUUID(), msg.biomesCount);
+                ClientCacheManager.setUnlockedRecipesCount(mc.player.getUUID(), msg.blueprintCount);
+            }
         });
         context.setPacketHandled(true);
     }
