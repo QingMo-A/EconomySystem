@@ -12,7 +12,7 @@ public class ChangeServerMOTD {
     @SubscribeEvent
     public static void onServerStart(ServerStartingEvent event) {
         if (event.getServer() instanceof DedicatedServer dedicatedServer) {
-            String dynamicMOTD = "§6Dreaming§dFish——§d梦鱼服|§6『守望梦屿』\n§c一个普普通通的世界...一场丧尸的秘密...";
+            String dynamicMOTD = "§6§l✦ §b§lDreaming§d§lFish §6§l✦\n§c§l守望梦屿 §7| §a你，也可以是服务器的救世主 §8✦ §a1.20.1";
             dedicatedServer.setMotd(dynamicMOTD);
         }
     }

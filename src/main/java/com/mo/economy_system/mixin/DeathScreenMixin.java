@@ -87,13 +87,13 @@ public abstract class DeathScreenMixin extends Screen {
         int centerY = this.height / 2;
 
         int boxWidth = 420;
-        int boxHeight = 220;
+        int boxHeight = 235;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
         int buttonWidth = 380;
         int buttonHeight = 24;
-        int buttonStartY = boxY + 110;
+        int buttonStartY = boxY + 124;
         int buttonSpacing = 6;
 
         String respawnType = data.isInfected() ? "感染者" : "幸存者";
@@ -189,13 +189,13 @@ public abstract class DeathScreenMixin extends Screen {
         int centerY = this.height / 2;
 
         int boxWidth = 420;
-        int boxHeight = 220;
+        int boxHeight = 235;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
         int buttonWidth = 380;
         int buttonHeight = 24;
-        int buttonStartY = boxY + 110;
+        int buttonStartY = boxY + 124;
         int buttonSpacing = 6;
 
         String respawnType = data.isInfected() ? "感染者" : "幸存者";
@@ -261,7 +261,7 @@ public abstract class DeathScreenMixin extends Screen {
         int centerY = this.height / 2;
 
         int boxWidth = 420;
-        int boxHeight = 220;
+        int boxHeight = 235;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
@@ -326,12 +326,18 @@ public abstract class DeathScreenMixin extends Screen {
         guiGraphics.drawString(this.font, "§l" + splitValue, splitValueX, splitValueY, splitColor, false);
         poseStack.popPose();
 
-        // 警告文字（当分裂次数过多时显示，右对齐到同一行）
-        if (data.respawnPoint() > 50) {
-            String warningText = "§c冒险需要勇气...但重生也需要代价...";
-            int warningX = boxX + boxWidth - PADDING - font.width(warningText);
-            guiGraphics.drawString(this.font, warningText, warningX, boxY + 70, 0xFF666666, false);
+        // 警告文字（多行，右对齐）
+        String[] warningLines = {
+                "§7人类的赞歌就是勇气的赞歌...",
+                "§7人类的伟大就是勇气的伟大...",
+                "§7但重生需要代价..."
+        };
+        for (int i = 0; i < warningLines.length; i++) {
+            String line = warningLines[i];
+            int lineX = boxX + boxWidth - PADDING - font.width(line);
+            guiGraphics.drawString(this.font, line, lineX, boxY + 70 + i * 12, 0xFF888888, false);
         }
+
 
         // ========== 死亡原因（居中显示，在按钮上方）==========
         String deathReason = data.deathMessage().getString();
@@ -341,14 +347,14 @@ public abstract class DeathScreenMixin extends Screen {
         }
         poseStack.pushPose();
         poseStack.scale(1.15f, 1.15f, 1.0f);
-        int deathReasonScaledY = (int) ((boxY + 95) / 1.15f);
+        int deathReasonScaledY = (int) ((boxY + 107) / 1.15f);
         guiGraphics.drawCenteredString(this.font, "§c" + deathReason, (int) (centerX / 1.15f), deathReasonScaledY, 0xFFFFFFFF);
         poseStack.popPose();
 
         // ========== 死亡位置提示文字（按钮下方）==========
         String posClickText = economySystem$showDeathPos ? "§7点击此处隐藏您的死亡位置" : "§7点击此处查看您当前死亡位置";
         int posClickTextWidth = font.width(posClickText);
-        int posClickY = boxY + 202;  // 按钮下方
+        int posClickY = boxY + 222;  // 按钮底部和下边框中间
         economySystem$posButtonX = centerX - posClickTextWidth / 2;
         economySystem$posButtonY = posClickY;
         economySystem$posButtonWidth = posClickTextWidth;
