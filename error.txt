@@ -1,0 +1,54 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+MixinGradle did not locate the diffplug APT plugin, skipping eclipse task configuration
+
+> Task :downloadMcpConfig
+> Task :extractSrg UP-TO-DATE
+> Task :createMcpToSrg UP-TO-DATE
+
+> Task :compileJava
+注: SpongePowered MIXIN Annotation Processor Version=0.8.5 (MixinGradle Version=0.7.38)
+注: Supported obfuscation types: ObfuscationServiceMCP supports [notch] ObfuscationServiceFG3 supports [searge]
+注: Loading searge mappings from D:\Desktop\EconomySystem\build\createMcpToSrg\output.tsrg
+注: Writing refmap to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-refmap.json
+注: Writing refmap to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-refmap.json
+注: Writing searge composite mappings to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-mappings.tsrg
+D:\Desktop\EconomySystem\src\main\java\com\mo\economy_system\network\packets\playerdata_system\Packet_RequestPlayerStats.java:7: 错误: 程序包net.minecraftforge.event.network不存在
+import net.minecraftforge.event.network.CustomPayloadEvent;
+                                       ^
+D:\Desktop\EconomySystem\src\main\java\com\mo\economy_system\network\packets\playerdata_system\Packet_RequestPlayerStats.java:23: 错误: 程序包CustomPayloadEvent不存在
+    public static void handle(Packet_RequestPlayerStats msg, Supplier<CustomPayloadEvent.Context> contextSupplier) {
+                                                                                        ^
+D:\Desktop\EconomySystem\src\main\java\com\mo\economy_system\network\packets\playerdata_system\Packet_SyncPlayerStats.java:9: 错误: 程序包net.minecraftforge.event.network不存在
+import net.minecraftforge.event.network.CustomPayloadEvent;
+                                       ^
+D:\Desktop\EconomySystem\src\main\java\com\mo\economy_system\network\packets\playerdata_system\Packet_SyncPlayerStats.java:36: 错误: 程序包CustomPayloadEvent不存在
+    public static void handle(Packet_SyncPlayerStats msg, Supplier<CustomPayloadEvent.Context> contextSupplier) {
+                                                                                     ^
+注: Writing refmap to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-refmap.json
+注: Writing refmap to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-refmap.json
+注: Writing searge composite mappings to D:\Desktop\EconomySystem\build\tmp\compileJava\compileJava-mappings.tsrg
+4 个错误
+
+> Task :compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.8/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 9s
+4 actionable tasks: 2 executed, 2 up-to-date
