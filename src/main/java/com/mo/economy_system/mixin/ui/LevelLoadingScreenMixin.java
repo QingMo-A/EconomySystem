@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.level.progress.StoringChunkProgressListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,6 +16,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * LevelLoadingScreen Mixin
@@ -104,6 +108,21 @@ public abstract class LevelLoadingScreenMixin extends Screen {
 
         long time = System.currentTimeMillis();
 
+        // 获取主要状态文本
+        String statusText = getCurrentStatusText();
+
+        // 状态文本 - 显示当前正在处理的内容
+        int statusY = boxY + 80;
+        guiGraphics.drawCenteredString(this.font, "§7" + statusText, centerX, statusY, 0xFFFFFFFF);
+
+        // 旋转字符动画
+        String[] spinChars = {"|", "/", "-", "\\"};
+        int spinIndex = (int) ((time / 100) % 4);
+        String spinText = "§b" + spinChars[spinIndex];
+
+        int spinY = boxY + 105;
+        guiGraphics.drawCenteredString(this.font, spinText, centerX, spinY, 0xFFFFFFFF);
+
         // 获取真实进度
         int realProgress = Mth.clamp(progressListener.getProgress(), 0, 100);
 
@@ -124,11 +143,61 @@ public abstract class LevelLoadingScreenMixin extends Screen {
             guiGraphics.fill(progressBarX, progressBarY, progressBarX + progressWidth, progressBarY + 12, 0x330055FF);
         }
 
-        // 进度百分比
+        // 进度百分比 - 往下移
         String percentText = "§b§l" + realProgress + "%";
-        guiGraphics.drawCenteredString(this.font, percentText, centerX, progressBarY + 15, 0xFFFFFFFF);
+        guiGraphics.drawCenteredString(this.font, percentText, centerX, progressBarY + 25, 0xFFFFFFFF);
 
         guiGraphics.pose().popPose();
+    }
+
+    @Unique
+    private String getCurrentStatusText() {
+        // 统计各状态的区块数量
+        Map<ChunkStatus, Integer> statusCount = new HashMap<>();
+        int diameter = progressListener.getDiameter();
+
+        for (int x = 0; x < diameter; x++) {
+            for (int z = 0; z < diameter; z++) {
+                ChunkStatus status = progressListener.getStatus(x, z);
+                if (status != null) {
+                    statusCount.put(status, statusCount.getOrDefault(status, 0) + 1);
+                }
+            }
+        }
+
+        // 找出数量最多的状态
+        ChunkStatus mostCommonStatus = null;
+        int maxCount = 0;
+        for (Map.Entry<ChunkStatus, Integer> entry : statusCount.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                mostCommonStatus = entry.getKey();
+            }
+        }
+
+        // 根据状态返回对应的中文描述
+        if (mostCommonStatus == null) {
+            return "正在准备生成世界...";
+        }
+
+        return getStatusDisplayName(mostCommonStatus);
+    }
+
+    @Unique
+    private String getStatusDisplayName(ChunkStatus status) {
+        if (status == ChunkStatus.EMPTY) return "正在初始化区块...";
+        if (status == ChunkStatus.STRUCTURE_STARTS) return "正在生成结构起点...";
+        if (status == ChunkStatus.STRUCTURE_REFERENCES) return "正在计算结构引用...";
+        if (status == ChunkStatus.BIOMES) return "正在生成生物群系...";
+        if (status == ChunkStatus.NOISE) return "正在构建地形...";
+        if (status == ChunkStatus.SURFACE) return "正在生成地表...";
+        if (status == ChunkStatus.CARVERS) return "正在构建洞穴...";
+        if (status == ChunkStatus.FEATURES) return "正在生成地物...";
+        if (status == ChunkStatus.INITIALIZE_LIGHT) return "正在初始化光照...";
+        if (status == ChunkStatus.LIGHT) return "正在计算光照...";
+        if (status == ChunkStatus.SPAWN) return "正在设置生成点...";
+        if (status == ChunkStatus.FULL) return "世界生成完成！";
+        return "正在处理: " + status.toString();
     }
 
     @Unique
