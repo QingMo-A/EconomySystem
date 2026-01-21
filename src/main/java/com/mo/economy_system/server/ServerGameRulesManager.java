@@ -10,13 +10,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * 关闭玩家自然回血功能的核心类
+ * 关闭玩家自然回血功能
+ * 同时强制开启死亡不掉落（keepInventory）
  */
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID,  bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class CloseNaturalRegeneration {
+public class ServerGameRulesManager {
 
     /**
      * 核心方法：关闭所有维度的自然回血（推荐使用，全局生效）
+     * 并强制开启死亡不掉落
      */
     @SubscribeEvent
     public static void disableAllDimensionsNaturalRegeneration(ServerStartedEvent event) {
@@ -26,15 +28,17 @@ public class CloseNaturalRegeneration {
             return;
         }
 
-        // 获取 naturalRegeneration 游戏规则的Key（布尔类型）
+        // 获取游戏规则的Key
         GameRules.Key<GameRules.BooleanValue> regenRuleKey = GameRules.RULE_NATURAL_REGENERATION;
+        GameRules.Key<GameRules.BooleanValue> keepInventoryKey = GameRules.RULE_KEEPINVENTORY;
 
         //遍历所有服务端维度（主世界、下界、末地），确保全局生效
         for (ServerLevel level : server.getAllLevels()) {
-            //获取当前维度的游戏规则，并设置为 false（关闭自然回血）
-            // 第二个参数 server：用于同步所有客户端，确保客户端状态与服务端一致
+            //关闭自然回血
             level.getGameRules().getRule(regenRuleKey).set(false, server);
-            LogUtils.getLogger().info("已关闭自然回血功能");
+            //强制开启死亡不掉落
+            level.getGameRules().getRule(keepInventoryKey).set(true, server);
+            LogUtils.getLogger().info("已关闭自然回血功能，已开启死亡不掉落");
         }
     }
 

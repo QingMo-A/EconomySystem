@@ -35,7 +35,7 @@ public class DeathScreenDataStorage {
     public static DeathScreenData getData() {
         if (storedData == null) {
             // 返回默认数据，确保始终显示自定义界面
-            return new DeathScreenData(100.0f, 5.0f, 35.0f, false, Component.literal("您 died"), 0, 64, 0, "minecraft:overworld");
+            return new DeathScreenData(100.0f, 5.0f, 35.0f, false, Component.literal("您 在上一次死亡后直接退出了游戏"), 0, 64, 0, "minecraft:overworld");
         }
         return storedData;
     }

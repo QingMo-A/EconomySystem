@@ -145,19 +145,19 @@ public class ServerInformationDisplay {
         // ========== 第一部分：左上角服务器信息（三个小框） ==========
         List<InfoBox> leftBoxes = new ArrayList<>();
         leftBoxes.add(new InfoBox(
-            Component.literal("§b§r§bDreaming§dFish"),
-            0xFF9988FF,  // 梦幻蓝紫色边框
-            0xB0202020  // 淡黑色背景
+            Component.literal("§b§lDreaming§d§lFish"),
+            0xFF6688CC,  // 柔和蓝紫色边框
+            0xDD151520  // 深色背景
         ));
         leftBoxes.add(new InfoBox(
-            Component.literal("§e📊 §f在线: " + ONLINE_PLAYERS),
-            0xFFDD00,  // 黄色边框
-            0xB0202020
+            Component.literal("§f" + ONLINE_PLAYERS + " §7在线"),
+            0xFF666666,  // 灰色边框
+            0xDD151520
         ));
         leftBoxes.add(new InfoBox(
-            Component.literal("§a🕐 " + getGameTimeString(mc)),
-            0x00FF88,  // 青绿色边框
-            0xB0202020
+            Component.literal("§f" + getGameTimeString(mc)),
+            0xFF666666,  // 灰色边框
+            0xDD151520
         ));
 
         renderLeftBoxes(guiGraphics, font, leftBoxes);

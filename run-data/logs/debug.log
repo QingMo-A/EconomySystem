@@ -445,7 +445,7 @@ java.lang.IllegalAccessException: class io.netty.util.internal.PlatformDependent
 [101��2026 11:50:16.434] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.chattitle.ChangeChatEvent to FORGE
 [101��2026 11:50:16.436] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.chattitle.PlayerTitleManager to FORGE
 [101��2026 11:50:16.437] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.chattitle.TitleRegistry to MOD
-[101��2026 11:50:16.438] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.CloseNaturalRegeneration to FORGE
+[101��2026 11:50:16.438] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.ServerGameRulesManager to FORGE
 [101��2026 11:50:16.439] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.GetServerInstance to FORGE
 [101��2026 11:50:16.440] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.headdisplay.HeadDisplay to FORGE
 [101��2026 11:50:16.446] [modloading-worker-0/DEBUG] [net.minecraftforge.fml.javafmlmod.AutomaticEventSubscriber/LOADING]: Auto-subscribing com.mo.economy_system.server.LoginSync to FORGE

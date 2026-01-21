@@ -38,9 +38,6 @@ public class LoginDeathSync {
                     player,
                     data.getCurrentInfection()
             );
-//
-//            EconomySystem.LOGGER.info("玩家 {} 重生，同步所有属性数据",
-//                    player.getScoreboardName());
         }
     }
 
