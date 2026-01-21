@@ -1,4 +1,4 @@
-package com.mo.economy_system.mixin;
+package com.mo.economy_system.mixin.death;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mo.economy_system.EconomySystem;

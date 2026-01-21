@@ -5,18 +5,24 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "economy_system.refmap.json",
   "client": [
-    "DeathScreenMixin"
+    "death.DeathScreenMixin",
+    "ui.DisconnectedScreenMixin",
+    "ui.ConnectScreenMixin",
+    "ui.ReceivingLevelScreenMixin",
+    "ui.LevelLoadingScreenMixin",
+    "ui.GenericDirtMessageScreenMixin",
+    "ui.GenericWaitingScreenMixin"
   ],
   "server": [
+    "death.RespawnMixin",
+    "CraftingMenuMixin",
+    "RecipeManagerMixin"
   ],
   "mixins": [
-    "CraftingMenuMixin",
-    "RecipeManagerMixin",
     "BedBlockMixin",
     "ServerLevelMixin",
     "AnvilBlockMixin",
-    "SystemMessageMixin",
-    "RespawnMixin"
+    "SystemMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

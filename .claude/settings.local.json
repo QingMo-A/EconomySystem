@@ -31,7 +31,8 @@
       "Bash(1)",
       "Bash(findstr:*)",
       "Bash(dir:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(javap:*)"
     ]
   }
 }

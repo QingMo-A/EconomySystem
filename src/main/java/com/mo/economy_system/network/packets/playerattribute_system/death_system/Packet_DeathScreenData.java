@@ -109,18 +109,18 @@ public class Packet_DeathScreenData {
             );
 
             // 发送死亡坐标消息到聊天栏
-            Minecraft mc = Minecraft.getInstance();
-            String dimensionName = formatDimensionName(packet.dimension);
-            mc.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("")
-                    .append(Component.literal("====================================\n").withStyle(net.minecraft.ChatFormatting.GRAY))
-                    .append(Component.literal("你死亡了！\n").withStyle(net.minecraft.ChatFormatting.RED, net.minecraft.ChatFormatting.BOLD))
-                    .append(Component.literal("死亡位置: ").withStyle(net.minecraft.ChatFormatting.YELLOW))
-                    .append(Component.literal(dimensionName + " ").withStyle(net.minecraft.ChatFormatting.AQUA))
-                    .append(Component.literal(String.format("X: %.0f, Y: %.0f, Z: %.0f\n", packet.deathX, packet.deathY, packet.deathZ)).withStyle(net.minecraft.ChatFormatting.WHITE))
-                    .append(Component.literal("====================================").withStyle(net.minecraft.ChatFormatting.GRAY)),
-                false
-            );
+//            Minecraft mc = Minecraft.getInstance();
+//            String dimensionName = formatDimensionName(packet.dimension);
+//            mc.player.displayClientMessage(
+//                net.minecraft.network.chat.Component.literal("")
+//                    .append(Component.literal("====================================\n").withStyle(net.minecraft.ChatFormatting.GRAY))
+//                    .append(Component.literal("你死亡了！\n").withStyle(net.minecraft.ChatFormatting.RED, net.minecraft.ChatFormatting.BOLD))
+//                    .append(Component.literal("死亡位置: ").withStyle(net.minecraft.ChatFormatting.YELLOW))
+//                    .append(Component.literal(dimensionName + " ").withStyle(net.minecraft.ChatFormatting.AQUA))
+//                    .append(Component.literal(String.format("X: %.0f, Y: %.0f, Z: %.0f\n", packet.deathX, packet.deathY, packet.deathZ)).withStyle(net.minecraft.ChatFormatting.WHITE))
+//                    .append(Component.literal("====================================").withStyle(net.minecraft.ChatFormatting.GRAY)),
+//                false
+//            );
 
             EconomySystem.LOGGER.info("死亡屏幕数据已存储");
         }

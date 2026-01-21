@@ -1,4 +1,4 @@
-package com.mo.economy_system.mixin;
+package com.mo.economy_system.mixin.death;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.death.DeathItemStorage;
