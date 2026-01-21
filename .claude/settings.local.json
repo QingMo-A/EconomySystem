@@ -32,7 +32,8 @@
       "Bash(findstr:*)",
       "Bash(dir:*)",
       "Bash(timeout:*)",
-      "Bash(javap:*)"
+      "Bash(javap:*)",
+      "Bash(D:DesktopEconomySystemgradlew.bat runClient --no-daemon)"
     ]
   }
 }

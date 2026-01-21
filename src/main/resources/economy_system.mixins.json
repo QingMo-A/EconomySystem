@@ -11,7 +11,10 @@
     "ui.ReceivingLevelScreenMixin",
     "ui.LevelLoadingScreenMixin",
     "ui.GenericDirtMessageScreenMixin",
-    "ui.GenericWaitingScreenMixin"
+    "ui.GenericWaitingScreenMixin",
+    "ui.TitleScreenMixin",
+    "ui.SelectWorldScreenMixin",
+    "ui.JoinMultiplayerScreenMixin"
   ],
   "server": [
     "death.RespawnMixin",
