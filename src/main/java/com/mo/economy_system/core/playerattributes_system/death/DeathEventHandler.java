@@ -54,8 +54,8 @@ public class DeathEventHandler {
         // 计算消耗
         int respawnCost = isInfected ? RESPAWN_COST_INFECTED : RESPAWN_COST_NOT_INFECTED;
 
-        // 检查复活点数是否足够
-        if (currentRespawnPoint <= respawnCost) {
+        // 检查复活点数是否足够（严格小于消耗时才封禁）
+        if (currentRespawnPoint < respawnCost) {
             // 复活点不足，封禁并踢出
             UserBanListEntry banEntry = new UserBanListEntry(
                     serverPlayer.getGameProfile(),

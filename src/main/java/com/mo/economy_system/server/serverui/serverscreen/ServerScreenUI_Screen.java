@@ -26,6 +26,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
+import com.mo.economy_system.server.notice.NoticeData;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 /**
  * 服务器UI - 虚拟坐标系统
  *
@@ -106,6 +116,54 @@ public class ServerScreenUI_Screen extends Screen {
     // 领地管理按钮可点击区域（虚拟坐标）
     private int territoryButtonClickX1, territoryButtonClickY1;
     private int territoryButtonClickX2, territoryButtonClickY2;
+
+    // ==================== 左侧灵动岛按钮 ====================
+    private static final String[] LEFT_BUTTON_ICONS = {"👤", "📢", "📖", "🏆", "⭐", "🛒", "🏰", "🎒", "⚙️"};
+    private static final String[] LEFT_BUTTON_NAMES = {"个人档案", "服务器公告", "故事进展", "玩家与排行", "服务器成就", "服务器商店", "领地", "背包", "设置"};
+    private static final int[] LEFT_BUTTON_COLORS = {
+        0xFFAAAAAA,  // 个人档案 - 灰色
+        0xFF4FC3F7,  // 服务器公告 - 淡蓝色
+        0xFFAAFFAA,  // 故事进展 - 绿色
+        0xFFFFD700,  // 玩家与排行 - 金色
+        0xFFFFFFAA,  // 服务器成就 - 黄色
+        0xFFFF8C00,  // 服务器商店 - 橙色
+        0xFFDDAAFF,  // 领地 - 紫色
+        0xFFFFAAAA,  // 背包 - 粉色
+        0xFF888888   // 设置 - 深灰色
+    };
+
+    // 左侧按钮可点击区域（虚拟坐标）
+    private int[] leftButtonX1 = new int[LEFT_BUTTON_ICONS.length];
+    private int[] leftButtonY1 = new int[LEFT_BUTTON_ICONS.length];
+    private int[] leftButtonX2 = new int[LEFT_BUTTON_ICONS.length];
+    private int[] leftButtonY2 = new int[LEFT_BUTTON_ICONS.length];
+
+    // 当前选中的左侧按钮索引（0=个人档案，默认选中）
+    private int selectedLeftButtonIndex = 0;
+    // 箭头动画时间
+    private long arrowAnimTime = 0;
+    // 上次选中的按钮索引（用于动画检测）
+    private int lastSelectedIndex = -1;
+
+    // ==================== 极简按钮配色 ====================
+    private static final int BTN_BG = 0x25FFFFFF;           // 极淡背景
+    private static final int BTN_BG_HOVER = 0x35FFFFFF;     // 悬停背景
+    private static final int BTN_BG_SELECTED = 0x45FFFFFF;  // 选中背景
+    private static final int BTN_TEXT = 0xB0FFFFFF;         // 文字颜色
+    private static final int BTN_TEXT_SELECTED = 0xFFFFFFFF; // 选中文字颜色
+    private static final int BTN_ACCENT = 0xFF4FC3F7;       // 强调色（淡蓝色）
+
+    // ==================== 服务器信息区域配色 ====================
+    private static final int INFO_BG = 0x40FFFFFF;          // 信息区背景
+    private static final int INFO_TEXT = 0x90FFFFFF;         // 信息文字颜色
+    private static final int INFO_ACCENT = 0xFF4FC3F7;       // 信息强调色
+
+    // ==================== 公告系统数据 ====================
+    private static List<NoticeData> cachedNotices = new ArrayList<>();
+    private static Set<Integer> cachedReadNoticeIds = new java.util.HashSet<>();
+    private static long noticeScrollOffset = 0;  // 滚动偏移量
+    private static final int NOTICE_CARD_HEIGHT = 52;  // 每个公告卡片高度（虚拟像素）
+    private static final int VISIBLE_NOTICES = 5;  // 可见公告数量
 
     private final Minecraft mc = Minecraft.getInstance();
 
@@ -282,7 +340,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // ========================================================================
         //                           左栏 (LEFT PANEL)
-        // 内容：DreamingFish 标题 + 边框动画
+        // 内容：灵动岛（按钮网格） + 版本号
         // ========================================================================
         guiGraphics.pose().pushPose();
 
@@ -306,6 +364,9 @@ public class ServerScreenUI_Screen extends Screen {
             // 关闭时：保持完整边框
             guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, 0, leftPanelWidth, virtualHeight, PANEL_BORDER_COLOR);
         }
+
+        // ==================== 绘制左侧灵动岛（按钮容器） ====================
+        renderLeftDynamicIsland(guiGraphics, mouseX, mouseY);
 
         // ==================== 绘制左侧标题（左下角，带版本号） ====================
 
@@ -483,6 +544,14 @@ public class ServerScreenUI_Screen extends Screen {
             guiGraphics.fill(RenderType.gui(), RIGHT_PANEL_START_X, 0, RIGHT_PANEL_START_X + 1, virtualHeight, PANEL_BORDER_COLOR);
         }
 
+        // ==================== 服务器公告页面 ====================
+        if (selectedLeftButtonIndex == 1) {
+            // 渲染公告列表
+            renderNoticeList(guiGraphics, RIGHT_PANEL_START_X, rightPanelWidth);
+            guiGraphics.pose().popPose();
+            return;  // 跳过后续右栏内容渲染
+        }
+
         // ==================== 右侧内容滑入动画 ====================
         int rightOffsetY;
         if (!isClosing) {
@@ -582,6 +651,218 @@ public class ServerScreenUI_Screen extends Screen {
         );
 
         guiGraphics.pose().popPose();
+    }
+
+    /**
+     * 绘制左侧按钮区域 + 服务器信息区域
+     */
+    private void renderLeftDynamicIsland(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // ==================== 布局参数 ====================
+        int buttonWidth = leftPanelWidth - 10;
+        int buttonHeight = 26;
+        int buttonSpacing = 1;
+        int sideMargin = (leftPanelWidth - buttonWidth) / 2;  // 左右边距
+
+        int totalButtons = LEFT_BUTTON_ICONS.length;
+
+        // 按钮位置：顶部和左右边距一致
+        int buttonX = sideMargin;
+        int buttonStartY = sideMargin;
+
+        // 滑入动画
+        int animOffsetY = 0;
+        if (!isClosing) {
+            float animDuration = 500f;
+            float progress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / animDuration);
+            progress = 1.0f - (float) Math.pow(1.0f - progress, 3);
+            animOffsetY = (int) ((1.0f - progress) * 50);
+        }
+
+        // 更新动画时间
+        arrowAnimTime = Util.getMillis();
+
+        // 转换鼠标坐标
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+
+        // ==================== 绘制按钮列表 ====================
+        int currentButtonStartY = buttonStartY + animOffsetY;
+
+        for (int i = 0; i < totalButtons; i++) {
+            int buttonY = currentButtonStartY + i * (buttonHeight + buttonSpacing);
+
+            // 存储点击区域
+            leftButtonX1[i] = buttonX;
+            leftButtonY1[i] = buttonY;
+            leftButtonX2[i] = buttonX + buttonWidth;
+            leftButtonY2[i] = buttonY + buttonHeight;
+
+            boolean isSelected = (i == selectedLeftButtonIndex);
+            boolean isHovered = (virtualMouseX >= buttonX && virtualMouseX <= buttonX + buttonWidth &&
+                                virtualMouseY >= buttonY && virtualMouseY <= buttonY + buttonHeight);
+
+            drawCleanButton(guiGraphics, buttonX, buttonY, buttonWidth, buttonHeight,
+                isSelected, isHovered, LEFT_BUTTON_ICONS[i], LEFT_BUTTON_NAMES[i]);
+        }
+
+        // ==================== 绘制服务器信息区域（版本号上方） ====================
+        int infoHeight = 55;
+        int versionBottomMargin = 8;  // 版本号和信息区之间的间距
+        int versionHeight = mc.font.lineHeight + 10;
+        int infoY = virtualHeight - versionHeight - infoHeight - versionBottomMargin;
+
+        // 服务器信息区域滑入动画（从下往上，比按钮稍晚一点）
+        int infoAnimOffsetY = 0;
+        if (!isClosing) {
+            float infoAnimDuration = 600f;
+            float infoProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / infoAnimDuration);
+            infoProgress = 1.0f - (float) Math.pow(1.0f - infoProgress, 3);
+            infoAnimOffsetY = (int) ((1.0f - infoProgress) * 40);  // 从下往上滑入 40 像素
+        }
+
+        drawServerInfoArea(guiGraphics, buttonX, infoY, buttonWidth, infoHeight, infoAnimOffsetY);
+    }
+
+    /**
+     * 绘制极简按钮 + 动态箭头
+     */
+    private void drawCleanButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                 boolean isSelected, boolean isHovered, String icon, String name) {
+
+        // 背景
+        int bgColor;
+        if (isSelected) {
+            // 选中：淡蓝色背景
+            bgColor = 0x604FC3F7;
+        } else if (isHovered) {
+            bgColor = BTN_BG_HOVER;
+        } else {
+            bgColor = BTN_BG;
+        }
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, bgColor);
+
+        // 内容位置
+        int textX = x + 6;
+        int textY = y + (height - mc.font.lineHeight) / 2;
+
+        // 图标（emoji）
+        int iconWidth = mc.font.width(icon);
+        int iconColor = isSelected ? BTN_ACCENT : (isHovered ? 0xFFFFFFFF : BTN_TEXT);
+        guiGraphics.drawString(mc.font, icon, textX, textY, iconColor);
+
+        // 名称
+        int nameColor = isSelected ? 0xFFFFFFFF : BTN_TEXT;
+        guiGraphics.drawString(mc.font, name, textX + iconWidth + 4, textY, nameColor);
+
+        // ==================== 动态箭头动画 ====================
+        if (isHovered && !isSelected) {
+            // 悬停时：箭头左右移动
+            float animSpeed = 0.004f;
+            float animRange = 5f;
+            float offset = (float) Math.sin(arrowAnimTime * animSpeed) * animRange;
+
+            String arrow = "◀";
+            int arrowWidth = mc.font.width(arrow);
+            float arrowX = x + width - arrowWidth - 5 + offset;
+            int arrowY = y + (height - mc.font.lineHeight) / 2;
+
+            // 透明度变化
+            float alpha = 0.6f + 0.4f * (float) Math.cos(arrowAnimTime * animSpeed);
+            int arrowColor = ((int) (alpha * 255) << 24) | (BTN_ACCENT & 0x00FFFFFF);
+            guiGraphics.drawString(mc.font, arrow, (int) arrowX, arrowY, arrowColor);
+        } else if (isSelected) {
+            // 选中时：箭头静止，靠右显示
+            String arrow = "◀";
+            int arrowWidth = mc.font.width(arrow);
+            int arrowX = x + width - arrowWidth - 5;
+            int arrowY = y + (height - mc.font.lineHeight) / 2;
+            guiGraphics.drawString(mc.font, arrow, arrowX, arrowY, 0xFFFFFFFF);
+        }
+    }
+
+    /**
+     * 绘制服务器信息区域（直角矩形，无圆角）
+     * @param animOffsetY Y轴动画偏移量（虚拟像素）
+     */
+    private void drawServerInfoArea(GuiGraphics guiGraphics, int x, int y, int width, int height, int animOffsetY) {
+        // 应用动画偏移
+        int actualY = y + animOffsetY;
+
+        // 卡片背景（直角矩形）
+        int cardBg = INFO_BG;
+        int cardBorder = 0x50FFFFFF;
+        guiGraphics.fill(RenderType.gui(), x, actualY, x + width, actualY + height, cardBg);
+        guiGraphics.fill(RenderType.gui(), x, actualY, x + width, actualY + 1, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x, actualY, x + 1, actualY + height, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x + width - 1, actualY, x + width, actualY + height, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x, actualY + height - 1, x + width, actualY + height, cardBorder);
+
+        // 内边距
+        int padding = 8;
+        int contentX = x + padding;
+        int contentWidth = width - padding * 2;
+
+        // 获取服务器数据
+        int onlinePlayers = mc.player != null && mc.player.connection != null ?
+            mc.player.connection.getOnlinePlayers().size() : 0;
+        int maxPlayers = 20;
+        float tps = 20.0f;
+
+        // 格式化完整日期时间
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        String dateStr = String.format("%02d/%02d/%02d", now.getYear() % 100, now.getMonthValue(), now.getDayOfMonth());
+        String timeStr = String.format("%02d:%02d:%02d", now.getHour(), now.getMinute(), now.getSecond());
+        String dateTimeStr = dateStr + " " + timeStr;
+
+        // ==================== 顶部：日期时间 ====================
+        int dateTimeY = actualY + padding + 4;
+        int dateTimeWidth = mc.font.width(dateTimeStr);
+        int dateTimeX = x + (width - dateTimeWidth) / 2;
+
+        // 时间阴影
+        guiGraphics.drawString(mc.font, dateTimeStr, dateTimeX + 1, dateTimeY + 1, 0x40000000);
+        // 时间文字（白色）
+        guiGraphics.drawString(mc.font, dateTimeStr, dateTimeX, dateTimeY, 0xFFFFFFFF);
+
+        // ==================== 分隔线 ====================
+        int lineY = dateTimeY + mc.font.lineHeight + 6;
+        guiGraphics.fill(RenderType.gui(), contentX, lineY, contentX + contentWidth, lineY + 1, 0x30FFFFFF);
+
+        // ==================== 底部：在线人数 + TPS ====================
+        int infoY = lineY + 6;
+        int infoSpacing = (contentWidth - 20) / 2;
+
+        // 在线人数（左侧）
+        String onlineText = onlinePlayers + "/" + maxPlayers;
+        int onlineTextWidth = mc.font.width(onlineText);
+        int onlineIconX = contentX + (infoSpacing - mc.font.width("👥") - onlineTextWidth) / 2;
+        guiGraphics.drawString(mc.font, "👥", onlineIconX, infoY, 0xFF4FC3F7);
+        guiGraphics.drawString(mc.font, onlineText, onlineIconX + mc.font.width("👥") + 3, infoY, 0xD0FFFFFF);
+
+        // TPS（右侧）
+        String tpsText = String.format("%.1f", tps);
+        int tpsTextWidth = mc.font.width(tpsText);
+        int tpsIconX = contentX + contentWidth - infoSpacing + (infoSpacing - mc.font.width("⚡") - tpsTextWidth) / 2;
+        guiGraphics.drawString(mc.font, "⚡", tpsIconX, infoY, 0xFFFFA726);
+        guiGraphics.drawString(mc.font, tpsText, tpsIconX + mc.font.width("⚡") + 3, infoY, 0xD0FFFFFF);
+    }
+
+    /**
+     * 绘制信息行（图标 + 文字）
+     */
+    private void drawInfoLine(GuiGraphics guiGraphics, int x, int y, int width, String icon, String text, int textColor, int accentColor) {
+        int iconWidth = mc.font.width(icon);
+        int textWidth = mc.font.width(text);
+
+        // 图标
+        guiGraphics.drawString(mc.font, icon, x, y, accentColor);
+
+        // 文字（左对齐）
+        guiGraphics.drawString(mc.font, text, x + iconWidth + 4, y, textColor);
+
+        // 右侧装饰点
+        guiGraphics.fill(RenderType.gui(), x + width - 6, y + mc.font.lineHeight / 2 - 1,
+            x + width - 2, y + mc.font.lineHeight / 2 + 2, accentColor);
     }
 
     /**
@@ -1388,6 +1669,17 @@ public class ServerScreenUI_Screen extends Screen {
         double virtualMouseX = mouseX / uiScale;
         double virtualMouseY = mouseY / uiScale;
 
+        // ==================== 检查左侧按钮点击 ====================
+        for (int i = 0; i < LEFT_BUTTON_ICONS.length; i++) {
+            if (virtualMouseX >= leftButtonX1[i] && virtualMouseX <= leftButtonX2[i] &&
+                virtualMouseY >= leftButtonY1[i] && virtualMouseY <= leftButtonY2[i]) {
+                // 点击了左侧按钮，更新选中状态
+                selectedLeftButtonIndex = i;
+                handleLeftButtonClick(i);
+                return true;
+            }
+        }
+
         // 计算右侧面板偏移（考虑动画）
         int rightOffsetY = 0;
         if (!isClosing) {
@@ -1418,6 +1710,49 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * 处理左侧按钮点击事件
+     * @param index 按钮索引
+     */
+    private void handleLeftButtonClick(int index) {
+        switch (index) {
+            case 0: // 个人档案（主页，默认显示）
+                // 当前页面，不跳转
+                break;
+            case 1: // 服务器公告
+                // 请求公告列表
+                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NoticeListRequest());
+                break;
+            case 2: // 故事进展
+                // TODO: 打开故事界面
+                break;
+            case 3: // 玩家与排行
+                // TODO: 打开排行榜界面
+                break;
+            case 4: // 服务器成就
+                // TODO: 打开成就界面
+                break;
+            case 5: // 服务器商店
+                ServerScreenUI.setShowUI(false);
+                mc.setScreen(new com.mo.economy_system.screen.economy_system.shop.Screen_Shop());
+                break;
+            case 6: // 领地
+                ServerScreenUI.setShowUI(false);
+                mc.setScreen(new com.mo.economy_system.screen.territory_system.Screen_Territory());
+                break;
+            case 7: // 背包
+                // Minecraft 原版背包
+                this.onClose();
+                mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+                break;
+            case 8: // 设置
+                // Minecraft 原版设置
+                this.onClose();
+                mc.setScreen(new net.minecraft.client.gui.screens.OptionsScreen(mc.screen, mc.options));
+                break;
+        }
     }
 
     @Override
@@ -1487,5 +1822,137 @@ public class ServerScreenUI_Screen extends Screen {
             // 渲染提示框（使用屏幕坐标）
             guiGraphics.renderTooltip(mc.font, tooltip, mouseX, mouseY);
         }
+    }
+
+    // ==================== 公告系统方法 ====================
+
+    /**
+     * 设置公告数据（从网络包调用）
+     */
+    public static void setNoticeData(List<NoticeData> notices, Set<Integer> readNoticeIds) {
+        cachedNotices = notices != null ? new ArrayList<>(notices) : new ArrayList<>();
+        cachedReadNoticeIds = readNoticeIds != null ? readNoticeIds : new java.util.HashSet<>();
+        noticeScrollOffset = 0;
+    }
+
+    /**
+     * 格式化时间戳为可读日期时间
+     */
+    private String formatDateTime(long timestamp) {
+        java.time.LocalDateTime dateTime = java.time.LocalDateTime.ofInstant(
+            java.time.Instant.ofEpochMilli(timestamp),
+            java.time.ZoneId.systemDefault()
+        );
+        return String.format("%04d/%02d/%02d %02d:%02d",
+            dateTime.getYear(), dateTime.getMonthValue(), dateTime.getDayOfMonth(),
+            dateTime.getHour(), dateTime.getMinute());
+    }
+
+    /**
+     * 渲染公告列表
+     */
+    private void renderNoticeList(GuiGraphics guiGraphics, int rightPanelX, int rightPanelWidth) {
+        int boxMargin = 5;
+        int cardMargin = 4;
+        int innerMargin = 6;
+
+        // 标题
+        String titleText = "📢 服务器公告";
+        int titleY = boxMargin + 4;
+        guiGraphics.drawString(mc.font, titleText, rightPanelX + boxMargin, titleY, 0xFF4FC3F7);
+
+        // 公告卡片区域
+        int listStartY = titleY + mc.font.lineHeight + 8;
+        int cardWidth = rightPanelWidth - boxMargin * 2;
+        int maxCards = Math.min(VISIBLE_NOTICES, cachedNotices.size());
+
+        if (cachedNotices.isEmpty()) {
+            // 无公告提示
+            String noNoticeText = "暂无公告";
+            int textWidth = mc.font.width(noNoticeText);
+            guiGraphics.drawString(mc.font, noNoticeText,
+                rightPanelX + boxMargin + (cardWidth - textWidth) / 2, listStartY + 20, 0xFFAAAAAA);
+            return;
+        }
+
+        // 渲染可见的公告卡片
+        for (int i = 0; i < maxCards; i++) {
+            int noticeIndex = (int) (i + noticeScrollOffset);
+            if (noticeIndex >= cachedNotices.size()) break;
+
+            NoticeData notice = cachedNotices.get(noticeIndex);
+            boolean isRead = cachedReadNoticeIds.contains(notice.getNoticeId());
+
+            int cardY = listStartY + i * (NOTICE_CARD_HEIGHT + cardMargin);
+            renderNoticeCard(guiGraphics, rightPanelX + boxMargin, cardY, cardWidth, notice, isRead);
+        }
+
+        // 滚动指示器（如果有更多公告）
+        if (cachedNotices.size() > VISIBLE_NOTICES) {
+            int indicatorY = listStartY + VISIBLE_NOTICES * (NOTICE_CARD_HEIGHT + cardMargin) + 4;
+            String scrollHint = "▼ 向下滚动查看更多";
+            int hintWidth = mc.font.width(scrollHint);
+            guiGraphics.drawString(mc.font, scrollHint,
+                rightPanelX + boxMargin + (cardWidth - hintWidth) / 2, indicatorY, 0xFF666666);
+        }
+    }
+
+    /**
+     * 渲染单个公告卡片
+     */
+    private void renderNoticeCard(GuiGraphics guiGraphics, int x, int y, int width, NoticeData notice, boolean isRead) {
+        int innerMargin = 6;
+        int cardHeight = NOTICE_CARD_HEIGHT;
+
+        // 卡片背景（已读公告稍暗）
+        int cardBg = isRead ? 0x20FFFFFF : 0x30FFFFFF;
+        int cardBorder = isRead ? 0x60FFFFFF : 0xFFFFFFFF;
+
+        // 绘制卡片背景
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + cardHeight, cardBg);
+        // 绘制卡片边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x, y + cardHeight - 1, x + width, y + cardHeight, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + cardHeight, cardBorder);
+        guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + cardHeight, cardBorder);
+
+        // 内容区域
+        int contentX = x + innerMargin;
+        int contentY = y + innerMargin;
+        int contentWidth = width - innerMargin * 2;
+
+        // 第一行：日期时间（左）+ 已读/未读状态（右）
+        String dateTime = formatDateTime(notice.getPublishTime());
+        String statusText = isRead ? "已读" : "未读";
+        int statusColor = isRead ? 0xFF888888 : 0xFF4FC3F7;
+
+        guiGraphics.drawString(mc.font, dateTime, contentX, contentY, 0xFFAAAAAA);
+        int statusWidth = mc.font.width(statusText);
+        guiGraphics.drawString(mc.font, statusText, x + width - innerMargin - statusWidth, contentY, statusColor);
+
+        // 第二行：标题
+        String title = notice.getNoticeTitle();
+        guiGraphics.drawString(mc.font, title, contentX, contentY + mc.font.lineHeight + 2,
+            isRead ? 0xFFCCCCCC : 0xFFFFFFFF);
+
+        // 第三行：内容（截断）
+        String content = notice.getNoticeContent();
+        int maxWidth = contentWidth - 10;
+        if (mc.font.width(content) > maxWidth) {
+            content = truncateText(content, maxWidth) + "...";
+        }
+        guiGraphics.drawString(mc.font, content, contentX, contentY + mc.font.lineHeight * 2 + 4, 0xFF999999);
+    }
+
+    /**
+     * 截断文本以适应最大宽度
+     */
+    private String truncateText(String text, int maxWidth) {
+        for (int i = 1; i < text.length(); i++) {
+            if (mc.font.width(text.substring(0, i)) > maxWidth) {
+                return text.substring(0, i - 1);
+            }
+        }
+        return text;
     }
 }

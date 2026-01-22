@@ -19,6 +19,7 @@ public class PlayerLoginData {
     private GameType lastGameMode;
     private long lastLogoutTime;  //上次退出时间戳（毫秒）- 用于快速登录判断
     private boolean hasCompletedNewPlayerGuidence;  // 是否已完成新手教程
+    private boolean loginSessionCompleted;  // 当前会话是否已完成登录验证（用于区分登录验证状态和正常游戏状态）
 
     //无参构造
     public PlayerLoginData() {
@@ -240,5 +241,13 @@ public class PlayerLoginData {
 
     public void setHasCompletedNewPlayerGuidence(boolean hasCompletedNewPlayerGuidence) {
         this.hasCompletedNewPlayerGuidence = hasCompletedNewPlayerGuidence;
+    }
+
+    public boolean isLoginSessionCompleted() {
+        return loginSessionCompleted;
+    }
+
+    public void setLoginSessionCompleted(boolean loginSessionCompleted) {
+        this.loginSessionCompleted = loginSessionCompleted;
     }
 }

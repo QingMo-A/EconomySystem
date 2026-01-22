@@ -3,6 +3,7 @@ package com.mo.economy_system.core.playerattributes_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageClientSync;
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionClientSync;
+import com.mo.economy_system.core.playerattributes_system.death.RespawnPointSyncManager;
 import com.mo.economy_system.core.playerattributes_system.strength.StrengthSyncManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -38,6 +39,8 @@ public class LoginDeathSync {
                     player,
                     data.getCurrentInfection()
             );
+            // 同步复活点数
+            RespawnPointSyncManager.syncRespawnPointToClient(player);
         }
     }
 
@@ -58,11 +61,14 @@ public class LoginDeathSync {
                     serverPlayer,
                     attrData.getCurrentInfection()
             );
-            EconomySystem.LOGGER.info("玩家 {} 登录，同步属性：勇气值({}/{})，感染值({})",
+            // 同步复活点数
+            RespawnPointSyncManager.syncRespawnPointToClient(serverPlayer);
+            EconomySystem.LOGGER.info("玩家 {} 登录，同步属性：勇气值({}/{})，感染值({})，复活点数({})",
                     serverPlayer.getScoreboardName(),
                     attrData.getCurrentCourage(),
                     attrData.getMaxCourage(),
-                    attrData.getCurrentInfection()
+                    attrData.getCurrentInfection(),
+                    attrData.getRespawnPoint()
             );
         }
     }

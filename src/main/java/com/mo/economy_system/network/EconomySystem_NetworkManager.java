@@ -17,6 +17,7 @@ import com.mo.economy_system.network.packets.playerattribute_system.death_system
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_KeepInventoryResponse;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnResponse;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_SyncRespawnPointData;
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
@@ -29,6 +30,9 @@ import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayer
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListResponse;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
@@ -100,6 +104,7 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_SendTipToClient.class, Packet_SendTipToClient::encode, Packet_SendTipToClient::decode, Packet_SendTipToClient::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncCourageData.class, Packet_SyncCourageData::encode, Packet_SyncCourageData::decode, Packet_SyncCourageData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_SyncInfectionData.class, Packet_SyncInfectionData::encode, Packet_SyncInfectionData::decode, Packet_SyncInfectionData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_SyncRespawnPointData.class, Packet_SyncRespawnPointData::encode, Packet_SyncRespawnPointData::decode, Packet_SyncRespawnPointData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_KeepInventoryRequest.class, Packet_KeepInventoryRequest::encode, Packet_KeepInventoryRequest::decode, Packet_KeepInventoryRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_KeepInventoryResponse.class, Packet_KeepInventoryResponse::encode, Packet_KeepInventoryResponse::decode, Packet_KeepInventoryResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_NormalRespawnRequest.class, Packet_NormalRespawnRequest::encode, Packet_NormalRespawnRequest::decode, Packet_NormalRespawnRequest::handle);
@@ -112,6 +117,10 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::handle);
         INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        //公告系统
+        INSTANCE.registerMessage(packetId++, Packet_NoticeCheckResponse.class, Packet_NoticeCheckResponse::encode, Packet_NoticeCheckResponse::decode, Packet_NoticeCheckResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_NoticeListRequest.class, Packet_NoticeListRequest::encode, Packet_NoticeListRequest::decode, Packet_NoticeListRequest::handle);
+        INSTANCE.registerMessage(packetId++, Packet_NoticeListResponse.class, Packet_NoticeListResponse::encode, Packet_NoticeListResponse::decode, Packet_NoticeListResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {

@@ -121,34 +121,35 @@ public abstract class TitleScreenMixin extends Screen {
 
         // 检测悬停的按钮
         int newHoveredIndex = -1;
-        int leftWidth = panelWidth / 2;  // 左右各50%
-        int rightX = panelX + leftWidth;
-        int upperButtonWidth = leftWidth / 2;
-        int buttonGap = 6;
+        int gap = 6;
         int smallButtonHeight = 36;
+        int columnWidth = (panelWidth - gap * 3) / 2;
+        int leftX = panelX + gap;
+        int rightX = leftX + columnWidth + gap;
+        int rightSmallButtonWidth = (columnWidth - gap) / 2;
 
         // 左侧 - 多人游戏
-        if (vmx >= panelX + 6 && vmx <= rightX - 6 && vmy >= panelY + 6 && vmy <= panelY + panelHeight - 6) {
+        if (vmx >= leftX && vmx <= leftX + columnWidth && vmy >= panelY + gap && vmy <= panelY + panelHeight - gap) {
             newHoveredIndex = 0; // 多人游戏
         }
 
         // 单人游戏（右上左）
-        int singleButtonEnd = rightX + upperButtonWidth - buttonGap / 2;
-        if (vmx >= rightX + buttonGap / 2 && vmx <= singleButtonEnd && vmy >= panelY + 6 && vmy <= panelY + smallButtonHeight) {
+        int singleButtonEnd = rightX + rightSmallButtonWidth;
+        if (vmx >= rightX && vmx <= singleButtonEnd && vmy >= panelY + gap && vmy <= panelY + gap + smallButtonHeight) {
             newHoveredIndex = 1; // 单人游戏
         }
 
         // 设置（右上右）
-        int settingsButtonStart = rightX + upperButtonWidth + buttonGap / 2;
-        int settingsButtonEnd = rightX + leftWidth - buttonGap / 2;
-        if (vmx >= settingsButtonStart && vmx <= settingsButtonEnd && vmy >= panelY + 6 && vmy <= panelY + smallButtonHeight) {
+        int settingsButtonStart = rightX + rightSmallButtonWidth + gap;
+        int settingsButtonEnd = rightX + columnWidth;
+        if (vmx >= settingsButtonStart && vmx <= settingsButtonEnd && vmy >= panelY + gap && vmy <= panelY + gap + smallButtonHeight) {
             newHoveredIndex = 2; // 设置
         }
 
         // 更新日志（右中）
-        int updateLogY = panelY + 6 + smallButtonHeight + buttonGap;
-        int updateLogX = rightX + buttonGap / 2;
-        int updateLogWidth = leftWidth - buttonGap;
+        int updateLogY = panelY + gap + smallButtonHeight + gap;
+        int updateLogX = rightX;
+        int updateLogWidth = columnWidth;
         if (vmx >= updateLogX && vmx <= updateLogX + updateLogWidth && vmy >= updateLogY && vmy <= updateLogY + smallButtonHeight) {
             newHoveredIndex = 3; // 更新日志
         }
@@ -165,10 +166,7 @@ public abstract class TitleScreenMixin extends Screen {
 
         PoseStack poseStack = guiGraphics.pose();
 
-        // 渲染左上角 DreamingFish（不使用缩放）
-        guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §e§l守望梦屿 §7v0.1(private)", 10, 10, TEXT_WHITE, false);
-
-        // 应用缩放变换
+        // 应用缩放变换（主面板使用虚拟坐标）
         poseStack.pushPose();
         poseStack.translate(offsetX, offsetY, 0);
         poseStack.scale(scale, scale, 1.0f);
@@ -178,10 +176,10 @@ public abstract class TitleScreenMixin extends Screen {
 
         poseStack.popPose();
 
-        // 渲染角落文字（不使用缩放）
-        economySystem$renderCornerText(guiGraphics);
+        // 渲染角落文字（使用缩放后的坐标，但位置固定在屏幕边缘）
+        economySystem$renderCornerTextScaled(guiGraphics, scale);
 
-        // 保存面板区域供点击检测使用
+        // 保存偏移量和缩放供点击检测使用
         economySystem$panelX = panelX;
         economySystem$panelY = panelY;
         economySystem$panelWidth = panelWidth;
@@ -203,40 +201,46 @@ public abstract class TitleScreenMixin extends Screen {
     private void economySystem$renderMainPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, long time) {
         // 无主面板背景，只有按钮有背景
 
-        int leftWidth = width / 2;
-        int rightX = x + leftWidth;
-        int upperButtonWidth = leftWidth / 2;
-        int buttonGap = 6;  // 按钮间距
+        // 统一间距系统
+        int gap = 6;  // 所有间距统一为 6
         int smallButtonHeight = 36;  // 小按钮高度
+
+        // 左右分栏：[gap][左栏][gap][右栏][gap]
+        int columnWidth = (width - gap * 3) / 2;
+        int leftX = x + gap;
+        int rightX = leftX + columnWidth + gap;
+
+        // 右上单人/设置按钮：精确平分右侧宽度
+        int rightSmallButtonWidth = (columnWidth - gap) / 2;
 
         // ========== 左侧 - 多人游戏（整个区域） ==========
         boolean multiHovered = economySystem$hoveredButtonIndex == 0;
-        economySystem$renderMultiplayerButton(guiGraphics, x + 6, y + 6, leftWidth - 12, height - 12,
+        economySystem$renderMultiplayerButton(guiGraphics, leftX, y + gap, columnWidth, height - gap * 2,
             ACCENT_GREEN, multiHovered);
 
         // ========== 右上左 - 单人游戏 ==========
         boolean singleHovered = economySystem$hoveredButtonIndex == 1;
-        economySystem$renderSmallButton(guiGraphics, rightX + buttonGap / 2, y + 6, upperButtonWidth - buttonGap, smallButtonHeight,
+        economySystem$renderSmallButton(guiGraphics, rightX, y + gap, rightSmallButtonWidth, smallButtonHeight,
             "单人游戏", "⚔", ACCENT_GOLD, singleHovered);
 
         // ========== 右上右 - 设置 ==========
         boolean settingsHovered = economySystem$hoveredButtonIndex == 2;
-        economySystem$renderSmallButton(guiGraphics, rightX + upperButtonWidth + buttonGap / 2, y + 6, upperButtonWidth - buttonGap, smallButtonHeight,
+        economySystem$renderSmallButton(guiGraphics, rightX + rightSmallButtonWidth + gap, y + gap, rightSmallButtonWidth, smallButtonHeight,
             "设置", "⚙", ACCENT_BLUE, settingsHovered);
 
         // ========== 右中 - 更新日志按钮 ==========
-        int updateLogY = y + 6 + smallButtonHeight + buttonGap;
+        int updateLogY = y + gap + smallButtonHeight + gap;
         int updateLogHeight = smallButtonHeight;
-        int updateLogX = rightX + buttonGap / 2;
-        int updateLogWidth = leftWidth - buttonGap;
+        int updateLogX = rightX;
+        int updateLogWidth = columnWidth;
         boolean updateLogHovered = economySystem$hoveredButtonIndex == 3;
         economySystem$renderUpdateLogButton(guiGraphics, updateLogX, updateLogY, updateLogWidth, updateLogHeight, updateLogHovered);
 
         // ========== 右下 - 资助说明 ==========
-        int donateY = updateLogY + updateLogHeight + buttonGap;
-        int donateHeight = height - smallButtonHeight * 2 - buttonGap * 3 - 12;
-        int donateX = rightX + buttonGap / 2;
-        int donateWidth = leftWidth - buttonGap;
+        int donateY = updateLogY + updateLogHeight + gap;
+        int donateHeight = height - gap * 2 - smallButtonHeight * 2 - gap * 2;  // 总高度 - 上下边距 - 两个按钮高度 - 中间间距
+        int donateX = rightX;
+        int donateWidth = columnWidth;
         economySystem$renderDonatePanel(guiGraphics, donateX, donateY, donateWidth, donateHeight);
     }
 
@@ -411,26 +415,60 @@ public abstract class TitleScreenMixin extends Screen {
         guiGraphics.drawString(font, "§7加入开发团队，参与后续制作！", x + 10, lineY, TEXT_WHITE, false);
     }
 
+    /**
+     * 渲染角落文字（使用虚拟坐标缩放，但位置固定在屏幕边缘）
+     */
     @Unique
-    private void economySystem$renderCornerText(GuiGraphics guiGraphics) {
-        int buttonY = this.height - 15;
+    private void economySystem$renderCornerTextScaled(GuiGraphics guiGraphics, float scale) {
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose();
+
+        // 只应用缩放，不应用偏移（让文字固定在屏幕边缘）
+        poseStack.scale(scale, scale, 1.0f);
+
+        // 使用虚拟坐标位置（会随 scale 缩放，但始终从屏幕边缘开始）
+        int virtualW = economySystem$virtualSize.virtualWidth;
+        int virtualH = economySystem$virtualSize.virtualHeight;
+
+        // 左上角 - DreamingFish
+        guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)", 5, 5, TEXT_WHITE, false);
 
         // 左下角 - Minecraft 1.20.1
-        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1", 10, buttonY, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1", 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
-        guiGraphics.drawString(this.font, "§7模组[📦]", this.width - 160, buttonY, TEXT_GRAY, false);
-
-        int langButtonX = this.width - 100;
-        guiGraphics.drawString(this.font, "§7语言[🌐]", langButtonX, buttonY, TEXT_GRAY, false);
-
-        guiGraphics.drawString(this.font, "§c退出[✕]", this.width - 40, buttonY, 0xFF666666, false);
+        guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§7语言[🌐]", virtualW - 95, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§c退出[✕]", virtualW - 35, virtualH - 10, 0xFF666666, false);
 
         // 版权声明（右上角，右对齐）
-        String mojangCopyright = "Copyright Mojang AB. Do not distribute!";
-        String dreamingFishCopyright = "© 2026 DreamingFish QINGMO HANHNYU";
-        guiGraphics.drawString(this.font, "§8" + mojangCopyright, this.width - this.font.width(mojangCopyright) -5, 10, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§8" + dreamingFishCopyright, this.width - this.font.width(dreamingFishCopyright) -5, 22, TEXT_GRAY, false);
+        String dreamingFishCopyright = "© 2026 DreamingFish - EconomySystem";
+        String developerCopyright = "  Developed by QINGMO & HANHANYU";
+        guiGraphics.drawString(this.font, "§6" + dreamingFishCopyright, virtualW - this.font.width(dreamingFishCopyright) - 5, 5, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + developerCopyright, virtualW - this.font.width(developerCopyright) - 5, 17, TEXT_GRAY, false);
+
+        poseStack.popPose();
+    }
+
+    @Unique
+    private void economySystem$renderCornerText(GuiGraphics guiGraphics) {
+        // 使用虚拟坐标（640x360），相对于虚拟坐标系统边缘
+        int virtualW = economySystem$virtualSize.virtualWidth;
+        int virtualH = economySystem$virtualSize.virtualHeight;
+
+        // 左下角 - Minecraft 1.20.1
+        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1", 5, virtualH - 10, TEXT_GRAY, false);
+
+        // 右下角 - Mod、语言和退出按钮
+        guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§7语言[🌐]", virtualW - 95, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§c退出[✕]", virtualW - 35, virtualH - 10, 0xFF666666, false);
+
+        // 版权声明（右上角，右对齐）
+        String dreamingFishCopyright = "© 2026 DreamingFish - EconomySystem";
+        String developerCopyright = "  Developed by QINGMO & HANHANYU";
+        guiGraphics.drawString(this.font, "§6" + dreamingFishCopyright, virtualW - this.font.width(dreamingFishCopyright) - 5, 5, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + developerCopyright, virtualW - this.font.width(developerCopyright) - 5, 17, TEXT_GRAY, false);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
@@ -448,60 +486,69 @@ public abstract class TitleScreenMixin extends Screen {
         int panelWidth = economySystem$panelWidth;
         int panelHeight = economySystem$panelHeight;
 
-        int leftWidth = panelWidth / 2;
-        int rightX = panelX + leftWidth;
-        int upperButtonWidth = leftWidth / 2;
-        int buttonGap = 6;
+        // 统一间距系统（与渲染保持一致）
+        int gap = 6;
         int smallButtonHeight = 36;
+        int columnWidth = (panelWidth - gap * 3) / 2;
+        int leftX = panelX + gap;
+        int rightX = leftX + columnWidth + gap;
+        int rightSmallButtonWidth = (columnWidth - gap) / 2;
 
         // 左侧 - 多人游戏（整个区域）
-        if (vmx >= panelX + 6 && vmx <= rightX - 6 && vmy >= panelY + 6 && vmy <= panelY + panelHeight - 6) {
+        if (vmx >= leftX && vmx <= leftX + columnWidth && vmy >= panelY + gap && vmy <= panelY + panelHeight - gap) {
             economySystem$openMultiplayer(mc);
             cir.setReturnValue(true);
             return;
         }
 
         // 右上左 - 单人游戏
-        int singleButtonEnd = rightX + upperButtonWidth - buttonGap / 2;
-        if (vmx >= rightX + buttonGap / 2 && vmx <= singleButtonEnd && vmy >= panelY + 6 && vmy <= panelY + smallButtonHeight) {
+        int singleButtonEnd = rightX + rightSmallButtonWidth;
+        if (vmx >= rightX && vmx <= singleButtonEnd && vmy >= panelY + gap && vmy <= panelY + gap + smallButtonHeight) {
             economySystem$openSingleplayer(mc);
             cir.setReturnValue(true);
             return;
         }
 
         // 右上右 - 设置
-        int settingsButtonStart = rightX + upperButtonWidth + buttonGap / 2;
-        int settingsButtonEnd = rightX + leftWidth - buttonGap / 2;
-        if (vmx >= settingsButtonStart && vmx <= settingsButtonEnd && vmy >= panelY + 6 && vmy <= panelY + smallButtonHeight) {
+        int settingsButtonStart = rightX + rightSmallButtonWidth + gap;
+        int settingsButtonEnd = rightX + columnWidth;
+        if (vmx >= settingsButtonStart && vmx <= settingsButtonEnd && vmy >= panelY + gap && vmy <= panelY + gap + smallButtonHeight) {
             economySystem$openSettings(mc);
             cir.setReturnValue(true);
             return;
         }
 
         // 右中 - 更新日志
-        int updateLogY = panelY + 6 + smallButtonHeight + buttonGap;
-        int updateLogX = rightX + buttonGap / 2;
-        int updateLogWidth = leftWidth - buttonGap;
+        int updateLogY = panelY + gap + smallButtonHeight + gap;
+        int updateLogX = rightX;
+        int updateLogWidth = columnWidth;
         if (vmx >= updateLogX && vmx <= updateLogX + updateLogWidth && vmy >= updateLogY && vmy <= updateLogY + smallButtonHeight) {
             economySystem$openUpdateLog(mc);
             cir.setReturnValue(true);
             return;
         }
 
-        // 语言按钮（右下角）
-        int langButtonY = this.height - 15;
-        int langButtonX = this.width - 100;
+        // ========== 右下角按钮（使用虚拟坐标，但无 offset） ==========
+        // 转换：屏幕坐标 -> 只有缩放的虚拟坐标
+        int vmxNoOffset = (int) (mouseX / economySystem$scale);
+        int vmyNoOffset = (int) (mouseY / economySystem$scale);
+
+        int virtualW = economySystem$virtualSize.virtualWidth;
+        int virtualH = economySystem$virtualSize.virtualHeight;
+        int buttonY = virtualH - 10;
 
         // 模组按钮
-        int modButtonX = this.width - 160;
-        if (mouseX >= modButtonX && mouseX <= modButtonX + 50 && mouseY >= langButtonY && mouseY <= langButtonY + 12) {
+        int modButtonX = virtualW - 155;
+        if (vmxNoOffset >= modButtonX && vmxNoOffset <= modButtonX + 50 && vmyNoOffset >= buttonY && vmyNoOffset <= buttonY + 10) {
             TitleScreen self = (TitleScreen) (Object) this;
             mc.setScreen(new net.minecraftforge.client.gui.ModListScreen(self));
             cir.setReturnValue(true);
             return;
         }
 
-        if (mouseX >= langButtonX && mouseX <= langButtonX + 60 && mouseY >= langButtonY && mouseY <= langButtonY + 12) {
+        // 语言按钮
+        int langButtonX = virtualW - 95;
+        if (vmxNoOffset >= langButtonX && vmxNoOffset <= langButtonX + 50 && vmyNoOffset >= buttonY && vmyNoOffset <= buttonY + 10) {
             TitleScreen self = (TitleScreen) (Object) this;
             mc.setScreen(new net.minecraft.client.gui.screens.LanguageSelectScreen(self, mc.options, mc.getLanguageManager()));
             cir.setReturnValue(true);
@@ -509,8 +556,8 @@ public abstract class TitleScreenMixin extends Screen {
         }
 
         // 退出按钮
-        int exitButtonX = this.width - 40;
-        if (mouseX >= exitButtonX && mouseX <= exitButtonX + 30 && mouseY >= langButtonY && mouseY <= langButtonY + 12) {
+        int exitButtonX = virtualW - 35;
+        if (vmxNoOffset >= exitButtonX && vmxNoOffset <= exitButtonX + 30 && vmyNoOffset >= buttonY && vmyNoOffset <= buttonY + 10) {
             mc.stop();
             cir.setReturnValue(true);
         }

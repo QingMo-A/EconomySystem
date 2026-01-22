@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.playerattribute_system.death_system;
 
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -62,6 +63,8 @@ public class Packet_NormalRespawnResponse {
                     Component.literal("§a复活成功！剩余复活点: " + String.format("%.1f", packet.respawnPoint)),
                     true
             );
+            // 同步客户端复活点数
+            ClientCacheManager.setRespawnPoint(mc.player.getUUID(), packet.respawnPoint);
             mc.player.respawn();
             mc.setScreen(null);
         } else {

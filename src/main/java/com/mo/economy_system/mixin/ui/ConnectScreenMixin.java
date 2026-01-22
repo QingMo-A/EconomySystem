@@ -2,7 +2,9 @@ package com.mo.economy_system.mixin.ui;
 
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -31,18 +33,77 @@ public abstract class ConnectScreenMixin extends Screen {
     @Unique
     private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
 
+    @Unique
+    private Button economySystem$disconnectButton;
+
     protected ConnectScreenMixin(Component title) {
         super(title);
+    }
+
+    @Inject(method = "init", at = @At("HEAD"), cancellable = true)
+    private void economySystem$init(CallbackInfo ci) {
+        ci.cancel();
+        initCustomScreen();
+    }
+
+    @Unique
+    private void initCustomScreen() {
+        // 计算虚拟尺寸
+        VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
+
+        // 虚拟坐标下的按钮位置
+        int centerX = virtualSize.virtualWidth / 2;
+        int centerY = virtualSize.virtualHeight / 2;
+
+        int boxWidth = 400;
+        int boxHeight = 170;
+        int boxX = centerX - boxWidth / 2;
+        int boxY = centerY - boxHeight / 2;
+
+        int buttonWidth = boxWidth - 2 * PADDING;  // 与进度条同宽
+        int buttonHeight = 24;
+        // 按钮在进度条下方
+        int virtualButtonX = boxX + PADDING;
+        int virtualButtonY = boxY + 132;
+        // 转换虚拟坐标到屏幕坐标
+        int screenButtonX = (int) (virtualButtonX * virtualSize.uiScale);
+        int screenButtonY = (int) (virtualButtonY * virtualSize.uiScale);
+        int screenButtonWidth = (int) (buttonWidth * virtualSize.uiScale);
+        int screenButtonHeight = (int) (buttonHeight * virtualSize.uiScale);
+
+        economySystem$disconnectButton = new CustomButton(
+                screenButtonX, screenButtonY,
+                screenButtonWidth, screenButtonHeight,
+                Component.literal("§a取消连接"),
+                btn -> economySystem$disconnect(),
+                virtualSize.uiScale
+        );
+        this.addRenderableWidget(economySystem$disconnectButton);
+    }
+
+    @Unique
+    private void economySystem$disconnect() {
+        Minecraft mc = Minecraft.getInstance();
+
+        // 断开当前连接并返回标题界面
+        if (mc.getConnection() != null) {
+            mc.getConnection().close();
+        }
+        if (mc.level != null) {
+            mc.level.disconnect();
+        }
+        mc.clearLevel(null);
+        mc.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void economySystem$render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         ci.cancel();
-        renderCustomScreen(guiGraphics, partialTick);
+        renderCustomScreen(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Unique
-    private void renderCustomScreen(GuiGraphics guiGraphics, float partialTick) {
+    private void renderCustomScreen(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         // 计算虚拟尺寸
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
 
@@ -58,7 +119,7 @@ public abstract class ConnectScreenMixin extends Screen {
         int centerY = virtualSize.virtualHeight / 2;
 
         int boxWidth = 400;
-        int boxHeight = 140;
+        int boxHeight = 170;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
@@ -99,7 +160,7 @@ public abstract class ConnectScreenMixin extends Screen {
         guiGraphics.fill(boxX + PADDING, lineY + 3, boxX + boxWidth - PADDING, lineY + 4, 0xAA006600);
 
         // 状态文本
-        int statusY = boxY + 80;
+        int statusY = boxY + 75;
         guiGraphics.drawCenteredString(this.font, "§7正在建立连接...", centerX, statusY, 0xFFFFFFFF);
 
         // 加载动画
@@ -108,26 +169,87 @@ public abstract class ConnectScreenMixin extends Screen {
         String loadingDots = "";
         for (int i = 0; i < dots; i++) loadingDots += ".";
 
-        int loadingY = boxY + 110;
+        int loadingY = boxY + 95;
         guiGraphics.drawCenteredString(this.font, "§a请稍候" + loadingDots, centerX, loadingY, 0xFFFFFFFF);
 
-        // 进度条
-        int progressBarY = boxY + boxHeight - 20;
+        // 进度条（在按钮上方，间距较大）
+        int progressBarY = boxY + 112;
         int progressBarWidth = boxWidth - 2 * PADDING;
         int progressBarX = boxX + PADDING;
 
-        guiGraphics.fill(progressBarX, progressBarY, progressBarX + progressBarWidth, progressBarY + 8, 0xAA000000);
+        guiGraphics.fill(progressBarX, progressBarY, progressBarX + progressBarWidth, progressBarY + 6, 0xAA000000);
 
         int progressWidth = (int) ((time % 2000) / 2000.0f * progressBarWidth);
-        guiGraphics.fill(progressBarX, progressBarY, progressBarX + progressWidth, progressBarY + 8, ACCENT_GREEN);
+        guiGraphics.fill(progressBarX, progressBarY, progressBarX + progressWidth, progressBarY + 6, ACCENT_GREEN);
 
         // 恢复矩阵
         guiGraphics.pose().popPose();
+
+        // ========== 渲染按钮（使用屏幕坐标） ==========
+        if (economySystem$disconnectButton != null) {
+            economySystem$disconnectButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        }
     }
 
     @Unique
     private void renderRoundedBox(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int color) {
         guiGraphics.fill(x1 + 1, y1, x2 - 1, y2, color);
         guiGraphics.fill(x1, y1 + 1, x2, y2 - 1, color);
+    }
+
+    /**
+     * 自定义断开连接按钮（使用屏幕坐标）
+     */
+    @Unique
+    private static class CustomButton extends Button {
+        private final float virtualScale;
+
+        public CustomButton(int x, int y, int width, int height, Component message, OnPress onPress, float virtualScale) {
+            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+            this.virtualScale = virtualScale;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            boolean hovered = isHovered() || isFocused();
+
+            int topColor, bottomColor, borderColor;
+            if (hovered) {
+                topColor = 0xCC006600;
+                bottomColor = 0xCC003300;
+                borderColor = 0xFF00CC00;
+            } else {
+                topColor = 0xCC004400;
+                bottomColor = 0xCC002200;
+                borderColor = 0xCC008800;
+            }
+
+            int x = getX();
+            int y = getY();
+            int w = width;
+            int h = height;
+
+            // 渐变背景
+            guiGraphics.fill(x + 2, y, x + w - 2, y + h, topColor);
+            guiGraphics.fill(x + 2, y + h, x + w - 2, y + h + 1, bottomColor);
+
+            // 边框
+            guiGraphics.fill(x + 1, y, x + 2, y + h, borderColor);
+            guiGraphics.fill(x + w - 2, y, x + w - 1, y + h, borderColor);
+            guiGraphics.fill(x + 2, y, x + w - 2, y + 1, borderColor);
+            guiGraphics.fill(x + 2, y + h - 1, x + w - 2, y + h, borderColor);
+
+            // 角落装饰
+            guiGraphics.fill(x, y, x + 1, y + 1, borderColor);
+            guiGraphics.fill(x + w - 1, y, x + w, y + 1, borderColor);
+            guiGraphics.fill(x, y + h - 1, x + 1, y + h, borderColor);
+            guiGraphics.fill(x + w - 1, y + h - 1, x + w, y + h, borderColor);
+
+            // 文字
+            String displayText = getMessage().getString();
+            int textX = x + w / 2 - Minecraft.getInstance().font.width(displayText) / 2;
+            int textY = y + (h - 8) / 2;
+            guiGraphics.drawString(Minecraft.getInstance().font, displayText, textX, textY, 0xFFFFFF, false);
+        }
     }
 }

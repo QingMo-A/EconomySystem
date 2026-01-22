@@ -95,6 +95,8 @@ public class Packet_PlayerLoginResponse {
                 EconomySystem.LOGGER.info("密码哈希完成");
 
                 EconomySystem.LOGGER.info("保存登录数据到文件");
+                // 标记登录验证已完成
+                newPlayerLoginData.setLoginSessionCompleted(true);
                 PlayerLoginDataManager.saveLoginData(playerUUID, newPlayerLoginData);
                 EconomySystem.LOGGER.info("登录数据保存完成");
 
@@ -131,6 +133,10 @@ public class Packet_PlayerLoginResponse {
                     serverPlayer.setGameMode(lastGameMode);
                     EconomySystem.LOGGER.info("玩家 {} 登录成功，游戏模式恢复为: {}",
                             serverPlayer.getName().getString(), lastGameMode);
+
+                    // 标记登录验证已完成
+                    playerLoginData.setLoginSessionCompleted(true);
+                    PlayerLoginDataManager.saveLoginData(playerUUID, playerLoginData);
 
                     TipPushHelper.sendTipToPlayer(serverPlayer, "§a登录成功！欢迎回来！");
                     sendResult(serverPlayer, true, "登录成功！");

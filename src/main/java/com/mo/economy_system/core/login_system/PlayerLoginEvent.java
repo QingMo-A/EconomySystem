@@ -89,6 +89,9 @@ public class PlayerLoginEvent {
                 // 不符合快速登录条件，需要手动登录
                 EconomySystem.LOGGER.info("玩家 {} 已注册但不符快速登录条件，发送登录请求包 (loginOrRegister=false)", player.getName().getString());
                 player.setGameMode(GameType.SPECTATOR);
+                // 标记登录验证状态为未完成
+                loginData.setLoginSessionCompleted(false);
+                PlayerLoginDataManager.saveLoginData(playerUUID, loginData);
                 player.sendSystemMessage(Component.literal("§c您尚未登录或者注册，登录后会将您的游戏模式变成生存模式"));
                 // 发送登录请求网络包 (false = 登录)
                 EconomySystem_NetworkManager.sendToClient(new Packet_PlayerLoginRequest(false), player);
@@ -118,10 +121,15 @@ public class PlayerLoginEvent {
 
         EconomySystem.LOGGER.info("玩家 {} 退出，记录退出信息", player.getName().getString());
 
-        // 保存玩家当前的游戏模式（而不是服务器默认模式）
-        GameType currentGameMode = player.gameMode.getGameModeForPlayer();
-        playerLoginData.setGameMode(currentGameMode);
-        EconomySystem.LOGGER.info("玩家退出时游戏模式: {}", currentGameMode);
+        // 只有当玩家完成了登录验证时，才保存当前游戏模式
+        // 这样可以区分"登录验证状态的SPECTATOR"和"玩家真实的SPECTATOR模式"
+        if (playerLoginData.isLoginSessionCompleted()) {
+            GameType currentGameMode = player.gameMode.getGameModeForPlayer();
+            playerLoginData.setGameMode(currentGameMode);
+            EconomySystem.LOGGER.info("玩家退出时游戏模式: {}", currentGameMode);
+        } else {
+            EconomySystem.LOGGER.info("玩家未完成登录验证即退出，不保存游戏模式");
+        }
 
         playerLoginData.setLastLoginIP(player.getIpAddress());
         playerLoginData.setLastLoginTime(String.valueOf(System.currentTimeMillis()));

@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.playerattribute_system.death_system;
 
+import com.mo.economy_system.client.cache.ClientCacheManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -67,6 +68,8 @@ public class Packet_KeepInventoryResponse {
                     Component.literal("§a保留物品成功！剩余复活点: " + String.format("%.1f", packet.respawnPoint)),
                     true
             );
+            // 同步客户端复活点数
+            ClientCacheManager.setRespawnPoint(mc.player.getUUID(), packet.respawnPoint);
 
             // 重生并关闭屏幕
             mc.player.respawn();

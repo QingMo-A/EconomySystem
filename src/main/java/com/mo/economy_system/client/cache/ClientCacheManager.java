@@ -28,6 +28,10 @@ public class ClientCacheManager {
     private static final Map<UUID, Integer> UNLOCKED_RECIPES_COUNT_CACHE = new ConcurrentHashMap<>();
     private static final Map<UUID, List<Territory>> TERRITORIES_CACHE = new ConcurrentHashMap<>();
 
+    // 复活点数缓存 (只存储当前本地玩家，UUID为key)
+    private static final Map<UUID, Float> RESPAWN_POINT_CACHE = new ConcurrentHashMap<>();
+    private static final Map<UUID, Boolean> INFECTED_CACHE = new ConcurrentHashMap<>();
+
     // PlayerData
     public static PlayerData getPlayerData(UUID uuid) {
         return PLAYER_DATA_CACHE.get(uuid);
@@ -96,6 +100,58 @@ public class ClientCacheManager {
         }
     }
 
+    // ==================== 复活点数缓存 ====================
+    /**
+     * 获取复活点数
+     */
+    public static float getRespawnPoint(UUID uuid) {
+        return RESPAWN_POINT_CACHE.getOrDefault(uuid, 100.0f);
+    }
+
+    /**
+     * 设置复活点数
+     */
+    public static void setRespawnPoint(UUID uuid, float respawnPoint) {
+        RESPAWN_POINT_CACHE.put(uuid, respawnPoint);
+    }
+
+    /**
+     * 获取感染状态
+     */
+    public static boolean isInfected(UUID uuid) {
+        return INFECTED_CACHE.getOrDefault(uuid, false);
+    }
+
+    /**
+     * 设置感染状态
+     */
+    public static void setInfected(UUID uuid, boolean infected) {
+        INFECTED_CACHE.put(uuid, infected);
+    }
+
+    /**
+     * 获取正常复活消耗
+     */
+    public static float getNormalRespawnCost(UUID uuid) {
+        return isInfected(uuid) ? 20.0f : 5.0f;
+    }
+
+    /**
+     * 获取保留物品复活消耗
+     */
+    public static float getKeepInventoryCost(UUID uuid) {
+        return getNormalRespawnCost(uuid) + 30.0f;
+    }
+
+    /**
+     * 计算重生剩余次数
+     */
+    public static int getRespawnTimes(UUID uuid) {
+        float cost = getNormalRespawnCost(uuid);
+        float respawnPoint = getRespawnPoint(uuid);
+        return cost > 0 ? (int) (respawnPoint / cost) : 0;
+    }
+
     // 清理指定UUID的所有缓存
     public static void remove(UUID uuid) {
         PLAYER_DATA_CACHE.remove(uuid);
@@ -104,6 +160,8 @@ public class ClientCacheManager {
         EXPLORED_BIOMES_COUNT_CACHE.remove(uuid);
         UNLOCKED_RECIPES_COUNT_CACHE.remove(uuid);
         TERRITORIES_CACHE.remove(uuid);
+        RESPAWN_POINT_CACHE.remove(uuid);
+        INFECTED_CACHE.remove(uuid);
     }
 
     // 清空所有缓存
@@ -114,6 +172,8 @@ public class ClientCacheManager {
         EXPLORED_BIOMES_COUNT_CACHE.clear();
         UNLOCKED_RECIPES_COUNT_CACHE.clear();
         TERRITORIES_CACHE.clear();
+        RESPAWN_POINT_CACHE.clear();
+        INFECTED_CACHE.clear();
     }
 
     @SubscribeEvent

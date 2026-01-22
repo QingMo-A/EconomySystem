@@ -12,6 +12,8 @@ import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.server.notice.NoticeManager;
+import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
 import com.mo.economy_system.sound.EconomySystem_Sounds;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
@@ -55,6 +57,10 @@ public class EconomySystem {
         // 启动文件监听器
         new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
+
+        // 初始化公告系统
+        NoticeManager.loadFromConfig();
+        PlayerNoticeDataManager.init();
 
         // GeckoLib.initialize();
 
