@@ -31,6 +31,7 @@ import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
+import com.mo.economy_system.network.packets.notice_system.Packet_MarkNoticeReadRequest;
 import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
 import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListResponse;
 import net.minecraft.resources.ResourceLocation;
@@ -121,6 +122,7 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_NoticeCheckResponse.class, Packet_NoticeCheckResponse::encode, Packet_NoticeCheckResponse::decode, Packet_NoticeCheckResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_NoticeListRequest.class, Packet_NoticeListRequest::encode, Packet_NoticeListRequest::decode, Packet_NoticeListRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_NoticeListResponse.class, Packet_NoticeListResponse::encode, Packet_NoticeListResponse::decode, Packet_NoticeListResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_MarkNoticeReadRequest.class, Packet_MarkNoticeReadRequest::encode, Packet_MarkNoticeReadRequest::decode, Packet_MarkNoticeReadRequest::handle);
     }
 
     public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {

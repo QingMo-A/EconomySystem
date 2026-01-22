@@ -27,14 +27,14 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
+import com.mo.economy_system.network.packets.notice_system.Packet_MarkNoticeReadRequest;
 import com.mo.economy_system.server.notice.NoticeData;
+import com.mo.economy_system.server.serverui.notice.Screen_NoticeDetail;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 服务器UI - 虚拟坐标系统
@@ -66,9 +66,14 @@ public class ServerScreenUI_Screen extends Screen {
     private static final float LEFT_PANEL_PERCENT = 0.20f;  // 左侧面板占虚拟宽度的 20%
     private static final float RIGHT_PANEL_PERCENT = 0.45f;  // 右侧面板占虚拟宽度的 35%
 
-    // ==================== 颜色定义 ====================
-    private static final int PANEL_BACKGROUND_COLOR = 0x80000000;  // 半透明黑色背景（alpha=128）
-    private static final int PANEL_BORDER_COLOR = 0xFFFFFFFF;      // 白色边框
+    // ==================== 颜色定义（淡色系） ====================
+    private static final int PANEL_BACKGROUND_COLOR = 0x801A1A2A;  // 半透明深蓝背景（alpha=128）
+    private static final int PANEL_BORDER_COLOR = 0xFF4A5568;      // 淡灰边框
+
+    // 信息框配色（使用右栏背景色 + 淡淡的边框）
+    private static final int BOX_BACKGROUND = PANEL_BACKGROUND_COLOR;  // 使用右栏背景色
+    private static final int BOX_BORDER = 0x30FFFFFF;     // 淡淡的白色边框
+    private static final int BOX_ACCENT = 0xFF4FC3F7;     // 强调色
 
     private static final int BAR_HEALTH_COLOR = 0xFFFF8888;        // 血量条颜色（浅红）
     private static final int BAR_FOOD_COLOR = 0xFFFFCC00;          // 饥饿值颜色（金黄）
@@ -124,10 +129,10 @@ public class ServerScreenUI_Screen extends Screen {
         0xFFAAAAAA,  // 个人档案 - 灰色
         0xFF4FC3F7,  // 服务器公告 - 淡蓝色
         0xFFAAFFAA,  // 故事进展 - 绿色
-        0xFFFFD700,  // 玩家与排行 - 金色
+        0xFF4FC3F7,  // 玩家与排行 - 金色
         0xFFFFFFAA,  // 服务器成就 - 黄色
-        0xFFFF8C00,  // 服务器商店 - 橙色
-        0xFFDDAAFF,  // 领地 - 紫色
+        0xFF4FC3F7,  // 服务器商店 - 橙色
+        0xFF4FC3F7,  // 领地 - 紫色
         0xFFFFAAAA,  // 背包 - 粉色
         0xFF888888   // 设置 - 深灰色
     };
@@ -164,6 +169,8 @@ public class ServerScreenUI_Screen extends Screen {
     private static long noticeScrollOffset = 0;  // 滚动偏移量
     private static final int NOTICE_CARD_HEIGHT = 52;  // 每个公告卡片高度（虚拟像素）
     private static final int VISIBLE_NOTICES = 5;  // 可见公告数量
+    private static int noticeClickX1, noticeClickY1, noticeClickX2, noticeClickY2;  // 公告列表点击区域
+    private static int clickedNoticeIndex = -1;  // 被点击的公告索引
 
     private final Minecraft mc = Minecraft.getInstance();
 
@@ -608,6 +615,11 @@ public class ServerScreenUI_Screen extends Screen {
         // 蓝图框（右侧）
         int blueprintBoxX = biomesBoxX + twoBoxWidth + boxSpacing;
         renderBlueprintBox(guiGraphics, blueprintBoxX, fourthBoxY, twoBoxWidth);
+
+        // ==================== 绘制感染度/分裂次数信息框（最底部） ====================
+        int infoBoxY = fourthBoxY + (innerMargin * 2 + lineHeight) + boxSpacing;
+        int infoBoxWidth = rightPanelWidth - boxMargin * 2;
+        renderInfectionInfoBox(guiGraphics, player, RIGHT_PANEL_START_X + boxMargin, infoBoxY, infoBoxWidth);
 
         // 结束右侧面板变换
         guiGraphics.pose().popPose();
@@ -1195,8 +1207,8 @@ public class ServerScreenUI_Screen extends Screen {
         // 内容高度 = 单行高度 + 内边距 * 2
         int boxHeight = innerMargin * 2 + lineHeight;
 
-        // ==================== 绘制框（白色边框，半透明填充） ====================
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40AAAAFF, 0xFFFFFFFF);
+        // ==================== 绘制双层边框框 ====================
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         // ==================== 绘制内容 ====================
         // 左侧：Rank 名称
@@ -1206,7 +1218,7 @@ public class ServerScreenUI_Screen extends Screen {
         // 右侧：您的RANK（右对齐）
         String yourRankText = "- 您的RANK";
         int yourRankWidth = mc.font.width(yourRankText);
-        guiGraphics.drawString(mc.font, yourRankText, boxX + boxWidth - innerMargin - yourRankWidth, boxY + innerMargin, 0xFFAAAAFF);
+        guiGraphics.drawString(mc.font, yourRankText, boxX + boxWidth - innerMargin - yourRankWidth, boxY + innerMargin, BOX_ACCENT);
     }
 
     /**
@@ -1239,8 +1251,8 @@ public class ServerScreenUI_Screen extends Screen {
         // 内容高度 = 单行高度 + 内边距 * 2
         int boxHeight = innerMargin * 2 + lineHeight;
 
-        // ==================== 绘制框（白色边框，半透明填充） ====================
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FFAAFF, 0xFFFFFFFF);
+        // ==================== 绘制双层边框框 ====================
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         // ==================== 绘制内容 ====================
         // 左侧：Title 名称
@@ -1250,7 +1262,7 @@ public class ServerScreenUI_Screen extends Screen {
         // 右侧：您的称号（右对齐）
         String yourTitleText = "- 您的称号";
         int yourTitleWidth = mc.font.width(yourTitleText);
-        guiGraphics.drawString(mc.font, yourTitleText, boxX + boxWidth - innerMargin - yourTitleWidth, boxY + innerMargin, 0xFFFFAAFF);
+        guiGraphics.drawString(mc.font, yourTitleText, boxX + boxWidth - innerMargin - yourTitleWidth, boxY + innerMargin, BOX_ACCENT);
     }
 
     /**
@@ -1270,17 +1282,17 @@ public class ServerScreenUI_Screen extends Screen {
         // 获取金币余额
         int goldBalance = mc.player != null ? ClientCacheManager.getPlayerBalance(mc.player.getUUID()) : 0;
 
-        // 绘制框（白色边框，半透明填充）
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FFD700, 0xFFFFFFFF);
+        // 绘制双层边框框
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         // 左侧：金币图标和数量
         String goldText = "💰 " + formatNumber(goldBalance);
-        guiGraphics.drawString(mc.font, goldText, boxX + innerMargin, boxY + innerMargin, 0xFFFFD700);
+        guiGraphics.drawString(mc.font, goldText, boxX + innerMargin, boxY + innerMargin, BOX_ACCENT);
 
         // 右侧：梦鱼币（右对齐）
         String yourGoldText = "- 梦鱼币";
         int goldLabelWidth = mc.font.width(yourGoldText);
-        guiGraphics.drawString(mc.font, yourGoldText, boxX + boxWidth - innerMargin - goldLabelWidth, boxY + innerMargin, 0xFFFFD700);
+        guiGraphics.drawString(mc.font, yourGoldText, boxX + boxWidth - innerMargin - goldLabelWidth, boxY + innerMargin, BOX_ACCENT);
 
         // 存储整个框的可点击区域
         goldBoxClickX1 = boxX;
@@ -1306,26 +1318,26 @@ public class ServerScreenUI_Screen extends Screen {
         // 获取领地列表
         java.util.List<Territory> territories = mc.player != null ? ClientCacheManager.getTerritories(mc.player.getUUID()) : new java.util.ArrayList<>();
 
-        // 绘制框（白色边框，半透明填充）
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40FF8C00, 0xFFFFFFFF);
+        // 绘制双层边框框
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         if (territories.isEmpty()) {
             // 无领地
-            guiGraphics.drawString(mc.font, "🏰 0 个领地", boxX + innerMargin, boxY + innerMargin, 0xFFAAAAAA);
+            guiGraphics.drawString(mc.font, "🏰 0 个领地", boxX + innerMargin, boxY + innerMargin, 0xFF888888);
 
             String manageText = "- 管理您的领地";
             int manageWidth = mc.font.width(manageText);
             int manageX = boxX + boxWidth - innerMargin - manageWidth;
-            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, 0xFFFF8C00);
+            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, BOX_ACCENT);
         } else {
             // 显示领地数量
             String territoryText = "🏰 " + territories.size() + " 个领地";
-            guiGraphics.drawString(mc.font, territoryText, boxX + innerMargin, boxY + innerMargin, 0xFFFF8C00);
+            guiGraphics.drawString(mc.font, territoryText, boxX + innerMargin, boxY + innerMargin, BOX_ACCENT);
 
             String manageText = "- 管理您的领地";
             int manageWidth = mc.font.width(manageText);
             int manageX = boxX + boxWidth - innerMargin - manageWidth;
-            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, 0xFFFF8C00);
+            guiGraphics.drawString(mc.font, manageText, manageX, boxY + innerMargin, BOX_ACCENT);
         }
 
         // 存储整个框的可点击区域
@@ -1352,17 +1364,17 @@ public class ServerScreenUI_Screen extends Screen {
 
         int biomesCount = mc.player != null ? ClientCacheManager.getExploredBiomesCount(mc.player.getUUID()) : 0;
 
-        // 绘制框（白色边框，青色半透明填充）
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x4000DDFF, 0xFFFFFFFF);
+        // 绘制双层边框框
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         // 左侧：群系数量
         String biomesText = "🗺️ " + biomesCount;
-        guiGraphics.drawString(mc.font, biomesText, boxX + innerMargin, boxY + innerMargin, 0xFF00DDFF);
+        guiGraphics.drawString(mc.font, biomesText, boxX + innerMargin, boxY + innerMargin, BOX_ACCENT);
 
         // 右侧：已探索群系（右对齐）
         String biomesDesc = "- 已探索群系";
         int biomesDescWidth = mc.font.width(biomesDesc);
-        guiGraphics.drawString(mc.font, biomesDesc, boxX + boxWidth - innerMargin - biomesDescWidth, boxY + innerMargin, 0xFF00DDFF);
+        guiGraphics.drawString(mc.font, biomesDesc, boxX + boxWidth - innerMargin - biomesDescWidth, boxY + innerMargin, BOX_ACCENT);
     }
 
     /**
@@ -1375,17 +1387,17 @@ public class ServerScreenUI_Screen extends Screen {
 
         int blueprintCount = mc.player != null ? ClientCacheManager.getUnlockedRecipesCount(mc.player.getUUID()) : 0;
 
-        // 绘制框（白色边框，淡紫色半透明填充）
-        drawRoundedRectOutline(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0, 0x40DDAAFF, 0xFFFFFFFF);
+        // 绘制双层边框框
+        drawDoubleBorderBox(guiGraphics, boxX, boxY, boxWidth, boxHeight);
 
         // 左侧：蓝图数量
         String blueprintText = "📜 " + blueprintCount;
-        guiGraphics.drawString(mc.font, blueprintText, boxX + innerMargin, boxY + innerMargin, 0xFFDDAAFF);
+        guiGraphics.drawString(mc.font, blueprintText, boxX + innerMargin, boxY + innerMargin, BOX_ACCENT);
 
         // 右侧：已解锁蓝图（右对齐）
         String blueprintDesc = "- 已解锁蓝图";
         int blueprintDescWidth = mc.font.width(blueprintDesc);
-        guiGraphics.drawString(mc.font, blueprintDesc, boxX + boxWidth - innerMargin - blueprintDescWidth, boxY + innerMargin, 0xFFDDAAFF);
+        guiGraphics.drawString(mc.font, blueprintDesc, boxX + boxWidth - innerMargin - blueprintDescWidth, boxY + innerMargin, BOX_ACCENT);
     }
 
     /**
@@ -1491,6 +1503,32 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.fill(RenderType.gui(), x, y + height - borderWidth, x + width, y + height, borderColor);  // 下边
         guiGraphics.fill(RenderType.gui(), x, y, x + borderWidth, y + height, borderColor);                  // 左边
         guiGraphics.fill(RenderType.gui(), x + width - borderWidth, y, x + width, y + height, borderColor);  // 右边
+    }
+
+    /**
+     * 绘制信息框（简单的半透明边框）
+     * @param x 左上角 X 坐标
+     * @param y 左上角 Y 坐标
+     * @param width 宽度
+     * @param height 高度
+     */
+    private void drawDoubleBorderBox(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        // 绘制背景
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, BOX_BACKGROUND);
+
+        // 绘制淡淡的边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, BOX_BORDER);
+        guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, BOX_BORDER);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, BOX_BORDER);
+        guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + height, BOX_BORDER);
+    }
+
+    /**
+     * 渲染圆角盒子（参考 ConnectScreenMixin）
+     */
+    private void renderRoundedBox(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int color) {
+        guiGraphics.fill(RenderType.gui(), x1 + 1, y1, x2 - 1, y2, color);
+        guiGraphics.fill(RenderType.gui(), x1, y1 + 1, x2, y2 - 1, color);
     }
 
     /**
@@ -1602,7 +1640,7 @@ public class ServerScreenUI_Screen extends Screen {
             case 0 -> 0xFF888888;  // NO_RANK - 灰色
             case 1 -> 0xFF00AAFF;  // FISH - 蓝色
             case 2 -> 0xFF00FFFF;  // FISH+ - 青色
-            case 3 -> 0xFFFFD700;  // FISH++ - 金色
+            case 3 -> 0xFF4FC3F7;  // FISH++ - 金色
             case 4 -> 0xFFFF0000;  // OPERATOR - 红色
             default -> 0xFF888888;
         };
@@ -1689,8 +1727,9 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetY = (int) ((1.0f - rightProgress) * 100);
         }
 
-        // 检查是否点击了金币框
-        if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
+        // 检查是否点击了金币框（仅主页面可点击）
+        if (selectedLeftButtonIndex == 0 &&
+            virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
             virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
             // 打开商店界面（经济系统）
             // 先将 SHOW_UI 设置为 false，防止 onClose 调用 toggleUI() 导致重新打开
@@ -1699,14 +1738,40 @@ public class ServerScreenUI_Screen extends Screen {
             return true;
         }
 
-        // 检查是否点击了领地框
-        if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
+        // 检查是否点击了领地框（仅主页面可点击）
+        if (selectedLeftButtonIndex == 0 &&
+            virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
             virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
             // 打开领地管理界面
             // 先将 SHOW_UI 设置为 false，防止 onClose 调用 toggleUI() 导致重新打开
             ServerScreenUI.setShowUI(false);
             mc.setScreen(new com.mo.economy_system.screen.territory_system.Screen_Territory());
             return true;
+        }
+
+        // ==================== 检查公告列表点击 ====================
+        if (selectedLeftButtonIndex == 1 && !cachedNotices.isEmpty()) {  // 服务器公告页面
+            if (virtualMouseX >= noticeClickX1 && virtualMouseX <= noticeClickX2 &&
+                virtualMouseY >= noticeClickY1 + rightOffsetY && virtualMouseY <= noticeClickY2 + rightOffsetY) {
+                // 计算点击的是哪个公告卡片
+                int cardMargin = 4;
+                int cardHeight = NOTICE_CARD_HEIGHT;
+                int relativeY = (int) virtualMouseY - (noticeClickY1 + rightOffsetY);
+                int clickedCardIndex = relativeY / (cardHeight + cardMargin);
+
+                int totalNotices = cachedNotices.size();
+                int maxCards = Math.min(VISIBLE_NOTICES, totalNotices);
+
+                if (clickedCardIndex >= 0 && clickedCardIndex < maxCards) {
+                    int noticeIndex = (int) (clickedCardIndex + noticeScrollOffset);
+                    if (noticeIndex < cachedNotices.size()) {
+                        NoticeData clickedNotice = cachedNotices.get(noticeIndex);
+                        // 打开公告详情弹窗
+                        openNoticeDetail(clickedNotice);
+                        return true;
+                    }
+                }
+            }
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
@@ -1756,12 +1821,54 @@ public class ServerScreenUI_Screen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        // 只在公告列表页面处理滚动
+        if (selectedLeftButtonIndex == 1 && !cachedNotices.isEmpty()) {
+            int totalNotices = cachedNotices.size();
+            int maxScrollOffset = Math.max(0, totalNotices - VISIBLE_NOTICES);
+
+            if (maxScrollOffset > 0) {
+                // 向上滚动（delta > 0）或向下滚动（delta < 0）
+                // Minecraft: 向上滚动是正值，向下滚动是负值
+                int newOffset = (int) (noticeScrollOffset - delta);
+                noticeScrollOffset = Math.max(0, Math.min(maxScrollOffset, newOffset));
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    /**
+     * 打开公告详情子屏幕
+     */
+    private void openNoticeDetail(NoticeData notice) {
+        // 发送标记已读数据包
+        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarkNoticeReadRequest(notice.getNoticeId()));
+        // 更新本地已读状态
+        cachedReadNoticeIds.add(notice.getNoticeId());
+        // 使用 openSubScreen 打开子屏幕，传递当前页面索引以便关闭后返回
+        ServerScreenUI.openSubScreen(new Screen_NoticeDetail(notice, selectedLeftButtonIndex));
+    }
+
+    @Override
     public void onClose() {
-        // 使用 toggleUI 来正确处理关闭逻辑
+        // 如果正在打开子屏幕，不调用 toggleUI()
+        if (ServerScreenUI.isOpeningSubScreen()) {
+            super.onClose();
+            return;
+        }
+        // 正常关闭流程
         if (ServerScreenUI.isShowUI()) {
             ServerScreenUI.toggleUI();
         }
         super.onClose();
+    }
+
+    /**
+     * 设置选中的页面索引（用于从子屏幕返回时恢复页面状态）
+     */
+    public void setSelectedPageIndex(int index) {
+        this.selectedLeftButtonIndex = index;
     }
 
     @Override
@@ -1789,8 +1896,9 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetY = (int) ((1.0f - rightProgress) * 100);
         }
 
-        // 检查鼠标是否悬浮在金币框上
-        if (virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
+        // 检查鼠标是否悬浮在金币框上（仅主页面显示tooltip）
+        if (selectedLeftButtonIndex == 0 &&
+            virtualMouseX >= goldBoxClickX1 && virtualMouseX <= goldBoxClickX2 &&
             virtualMouseY >= goldBoxClickY1 + rightOffsetY && virtualMouseY <= goldBoxClickY2 + rightOffsetY) {
             // 获取金币余额并创建提示文本
             int goldBalance = mc.player != null ? ClientCacheManager.getPlayerBalance(mc.player.getUUID()) : 0;
@@ -1802,8 +1910,9 @@ public class ServerScreenUI_Screen extends Screen {
             guiGraphics.renderTooltip(mc.font, tooltip, mouseX, mouseY);
         }
 
-        // 检查鼠标是否悬浮在领地框上
-        if (virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
+        // 检查鼠标是否悬浮在领地框上（仅主页面显示tooltip）
+        if (selectedLeftButtonIndex == 0 &&
+            virtualMouseX >= territoryButtonClickX1 && virtualMouseX <= territoryButtonClickX2 &&
             virtualMouseY >= territoryButtonClickY1 + rightOffsetY && virtualMouseY <= territoryButtonClickY2 + rightOffsetY) {
             // 获取领地列表并创建提示文本
             java.util.List<Territory> territories = mc.player != null ? ClientCacheManager.getTerritories(mc.player.getUUID()) : new java.util.ArrayList<>();
@@ -1822,6 +1931,132 @@ public class ServerScreenUI_Screen extends Screen {
             // 渲染提示框（使用屏幕坐标）
             guiGraphics.renderTooltip(mc.font, tooltip, mouseX, mouseY);
         }
+    }
+
+    // ==================== 感染度/分裂次数信息框方法 ====================
+
+    /**
+     * 获取感染度信息框的高度
+     */
+    private int getInfectionInfoBoxHeight() {
+        int innerMargin = 6;
+        int lineHeight = mc.font.lineHeight;
+        // 固定高度以保持一致性
+        return innerMargin * 2 + lineHeight * 6 + 5 * 3;  // 6行文字
+    }
+
+    /**
+     * 渲染感染度/分裂次数信息框
+     * @param x 框的 X 坐标
+     * @param y 框的 Y 坐标
+     * @param width 框的宽度
+     */
+    private void renderInfectionInfoBox(GuiGraphics guiGraphics, net.minecraft.world.entity.player.Player player, int x, int y, int width) {
+        int innerMargin = 6;
+        int lineHeight = mc.font.lineHeight;
+        int boxHeight = getInfectionInfoBoxHeight();
+
+        // 获取玩家数据
+        UUID playerUUID = player.getUUID();
+        boolean isInfected = ClientCacheManager.isInfected(playerUUID);
+        float respawnPoint = ClientCacheManager.getRespawnPoint(playerUUID);
+        int respawnTimes = ClientCacheManager.getRespawnTimes(playerUUID);
+
+        // 计算每次死亡消耗
+        int deathCost = isInfected ? 20 : 5;
+        int respawnRemaining = (int) (respawnPoint / deathCost);
+
+        // 背景和边框
+        int bgColor;
+        int borderColor;
+
+        if (isInfected) {
+            // 感染者始终显示红色警告边框和背景
+            bgColor = 0xD04D0000;  // 红色背景
+            borderColor = 0xFFFF6666;  // 红色警告边框
+        } else {
+            // 幸存者根据复活次数显示不同颜色
+            if (respawnRemaining < 5 && respawnRemaining > 0) {
+                bgColor = 0xD04D4D00;  // 黄色警告背景
+                borderColor = 0xFFFFFF00;  // 黄色警告边框
+            } else if (respawnRemaining <= 0) {
+                bgColor = 0xD04D0000;  // 红色危险背景
+                borderColor = 0xFFFF0000;  // 红色危险边框
+            } else {
+                bgColor = 0xD0004D00;  // 绿色正常背景
+                borderColor = 0xFF66FF66;  // 绿色正常边框
+            }
+        }
+
+        // 绘制背景
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + boxHeight, bgColor);
+
+        // 绘制边框（发光效果）
+        int glowColor = 0x30000000 | (borderColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), x - 1, y - 1, x + width + 1, y + boxHeight + 1, glowColor);
+
+        // 主边框
+        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y + boxHeight - 1, x + width, y + boxHeight, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + boxHeight, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + boxHeight, borderColor);
+
+        // 内容区域
+        int contentX = x + innerMargin;
+        int contentY = y + innerMargin;
+        int contentWidth = width - innerMargin * 2;
+        int currentLineY = 0;
+
+        // 第一行：您是感染者/幸存者
+        String statusText = isInfected ? "§c§l您是感染者" : "§a§l您是幸存者";
+        guiGraphics.drawString(mc.font, Component.literal(statusText), contentX, contentY + currentLineY, 0xFFFFFF);
+        currentLineY += lineHeight + 3;
+
+        // 第二行及可能的第三行：不同状态的提示文字
+        if (isInfected) {
+            // 感染者的长提示，手动分行并保持颜色
+            String line2a = "§7很不幸，您被感染了，您的身体会";
+            String line2b = "§7随时间出现不同的变化，周围生物";
+            String line2c = "§7对您产生的行为可能也会发生变化...";
+            guiGraphics.drawString(mc.font, Component.literal(line2a), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+            guiGraphics.drawString(mc.font, Component.literal(line2b), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+            guiGraphics.drawString(mc.font, Component.literal(line2c), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+        } else {
+            // 幸存者的短提示 + 额外鼓励文字
+            guiGraphics.drawString(mc.font, Component.literal("§7请继续加油生存下去"), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+            guiGraphics.drawString(mc.font, Component.literal("§7保持警惕，远离被感染的生物"), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+            guiGraphics.drawString(mc.font, Component.literal("§7您的每一次生存都是胜利"), contentX, contentY + currentLineY, 0xFFFFFF);
+            currentLineY += lineHeight + 3;
+        }
+
+        // 死亡消耗行
+        String costText;
+        if (isInfected) {
+            costText = String.format("§7作为感染者您每次死亡需要扣除 §c%d §7点分裂次数", deathCost);
+        } else {
+            costText = String.format("§7作为幸存者您每次死亡需要扣除 §a%d §7点分裂次数", deathCost);
+        }
+        guiGraphics.drawString(mc.font, Component.literal(costText), contentX, contentY + currentLineY, 0xFFFFFF);
+        currentLineY += lineHeight + 3;
+
+        // 最后一行：还可以重生多少次（带警告）
+        String respawnText;
+        if (respawnRemaining <= 0) {
+            // 点数不足以复活一次
+            respawnText = String.format("§c§l警告：分裂次数不足（§b%.1f§7/100），不足以复活一次", respawnPoint);
+        } else if (respawnRemaining < 5) {
+            // 少于5次，显示警告
+            respawnText = String.format("§e§l警告：您还可以重生 §c%d §7次（剩余分裂次数：§b%.1f§7/100）", respawnRemaining, respawnPoint);
+        } else {
+            // 正常显示
+            respawnText = String.format("§7您还可以重生 §e%d §7次（剩余分裂次数：§b%.1f§7/100）", respawnRemaining, respawnPoint);
+        }
+        guiGraphics.drawString(mc.font, Component.literal(respawnText), contentX, contentY + currentLineY, 0xFFFFFF);
     }
 
     // ==================== 公告系统方法 ====================
@@ -1864,7 +2099,6 @@ public class ServerScreenUI_Screen extends Screen {
         // 公告卡片区域
         int listStartY = titleY + mc.font.lineHeight + 8;
         int cardWidth = rightPanelWidth - boxMargin * 2;
-        int maxCards = Math.min(VISIBLE_NOTICES, cachedNotices.size());
 
         if (cachedNotices.isEmpty()) {
             // 无公告提示
@@ -1872,10 +2106,20 @@ public class ServerScreenUI_Screen extends Screen {
             int textWidth = mc.font.width(noNoticeText);
             guiGraphics.drawString(mc.font, noNoticeText,
                 rightPanelX + boxMargin + (cardWidth - textWidth) / 2, listStartY + 20, 0xFFAAAAAA);
+            // 清空点击区域
+            noticeClickX1 = noticeClickY1 = noticeClickX2 = noticeClickY2 = 0;
             return;
         }
 
-        // 渲染可见的公告卡片
+        // 计算可见的卡片数量
+        int totalNotices = cachedNotices.size();
+        int maxScrollOffset = Math.max(0, totalNotices - VISIBLE_NOTICES);
+        int maxCards = Math.min(VISIBLE_NOTICES, totalNotices);
+
+        // 渲染可见的公告卡片并存储点击区域
+        int firstCardY = listStartY;
+        int lastCardY = firstCardY;
+
         for (int i = 0; i < maxCards; i++) {
             int noticeIndex = (int) (i + noticeScrollOffset);
             if (noticeIndex >= cachedNotices.size()) break;
@@ -1885,12 +2129,19 @@ public class ServerScreenUI_Screen extends Screen {
 
             int cardY = listStartY + i * (NOTICE_CARD_HEIGHT + cardMargin);
             renderNoticeCard(guiGraphics, rightPanelX + boxMargin, cardY, cardWidth, notice, isRead);
+            lastCardY = cardY + NOTICE_CARD_HEIGHT;
         }
 
-        // 滚动指示器（如果有更多公告）
-        if (cachedNotices.size() > VISIBLE_NOTICES) {
-            int indicatorY = listStartY + VISIBLE_NOTICES * (NOTICE_CARD_HEIGHT + cardMargin) + 4;
-            String scrollHint = "▼ 向下滚动查看更多";
+        // 存储公告列表点击区域（虚拟坐标）
+        noticeClickX1 = rightPanelX + boxMargin;
+        noticeClickY1 = firstCardY;
+        noticeClickX2 = rightPanelX + boxMargin + cardWidth;
+        noticeClickY2 = lastCardY;
+
+        // 滚动提示
+        if (totalNotices > VISIBLE_NOTICES) {
+            int indicatorY = lastCardY + 4;
+            String scrollHint = String.format("▼ 滚动查看 (%d/%d)", (int) noticeScrollOffset + 1, totalNotices);
             int hintWidth = mc.font.width(scrollHint);
             guiGraphics.drawString(mc.font, scrollHint,
                 rightPanelX + boxMargin + (cardWidth - hintWidth) / 2, indicatorY, 0xFF666666);

@@ -1,8 +1,7 @@
 package com.mo.economy_system.server.notice;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
+import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -35,11 +34,8 @@ public class NoticeEventHandler {
             if (!readNoticeIds.contains(maxNoticeId)) {
                 NoticeData latestNotice = NoticeManager.getLatestNotice();
                 if (latestNotice != null) {
-                    // 发送新公告提醒
-                    EconomySystem_NetworkManager.sendToClient(
-                        new Packet_NoticeCheckResponse(true, latestNotice.getNoticeId(), latestNotice.getNoticeTitle()),
-                        player
-                    );
+                    // 发送新公告提醒（左上角提示框，持续15秒）
+                    TipPushHelper.sendTipToPlayer(player, "§b§l您有新的公告需要查看", 15000);
                     EconomySystem.LOGGER.info("玩家 {} 有新公告 #{} 待阅读",
                         player.getScoreboardName(), maxNoticeId);
                 }

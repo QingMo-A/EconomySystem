@@ -33,7 +33,8 @@
       "Bash(dir:*)",
       "Bash(timeout:*)",
       "Bash(javap:*)",
-      "Bash(D:DesktopEconomySystemgradlew.bat runClient --no-daemon)"
+      "Bash(D:DesktopEconomySystemgradlew.bat runClient --no-daemon)",
+      "Bash(git clean:*)"
     ]
   }
 }

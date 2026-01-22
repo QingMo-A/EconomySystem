@@ -41,7 +41,8 @@ public class ServerScreenUI_ClientEventHandler {
         }
 
         // 如果UI应该显示但没有显示（例如重生后）
-        if (ServerScreenUI.isShowUI() && !(mc.screen instanceof ServerScreenUI_Screen)) {
+        // 但如果子屏幕正在显示，则不需要恢复
+        if (ServerScreenUI.isShowUI() && !(mc.screen instanceof ServerScreenUI_Screen) && !ServerScreenUI.isSubScreenActive()) {
             EconomySystem.LOGGER.info("检测到UI状态不一致，重新打开TaskUI");
             mc.setScreen(new ServerScreenUI_Screen());
         }
