@@ -17,11 +17,11 @@
     "ui.JoinMultiplayerScreenMixin"
   ],
   "server": [
-    "death.RespawnMixin",
     "CraftingMenuMixin",
     "RecipeManagerMixin"
   ],
   "mixins": [
+    "death.RespawnMixin",
     "BedBlockMixin",
     "ServerLevelMixin",
     "AnvilBlockMixin",

@@ -85,18 +85,10 @@ public class Command_Task {
 
     // 执行创建服务器任务
     private static int executeCreateServerTask(CommandContext<CommandSourceStack> context) {
-        String taskName = StringArgumentType.getString(context, "taskName");
-        String taskContent = StringArgumentType.getString(context, "taskContent");
-        int endTimeSec = IntegerArgumentType.getInteger(context, "endTimeSec");
-        // 转换为毫秒：当前时间 + 秒数*1000
-        long endTime = System.currentTimeMillis() + (long) endTimeSec * 1000;
-
-        TaskDataManager.createServerTask(taskName, taskContent, endTime);
-        context.getSource().sendSuccess(
-                () -> net.minecraft.network.chat.Component.literal("成功创建服务器任务：" + taskName + "，结束时间：" + endTimeSec + "秒后"),
-                true
+        context.getSource().sendFailure(
+                net.minecraft.network.chat.Component.literal("服务器任务已改为故事阶段系统，请通过配置文件 config/economy_system/story_stage_data.json 来管理任务")
         );
-        return 1;
+        return 0;
     }
 
     // 执行创建通用玩家任务
@@ -143,14 +135,14 @@ public class Command_Task {
         return 1;
     }
 
-    // 执行标记完成服务器任务
+    // 执行标记完成故事任务
     private static int executeCompleteServerTask(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         int taskId = IntegerArgumentType.getInteger(context, "taskId");
         ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
 
-        TaskDataManager.playerCompleteServerTask(taskId, targetPlayer.getName().getString(), targetPlayer.getUUID());
+        TaskDataManager.playerCompleteStoryTask(taskId, targetPlayer.getName().getString(), targetPlayer.getUUID());
         context.getSource().sendSuccess(
-                () -> net.minecraft.network.chat.Component.literal("已标记玩家 " + targetPlayer.getName().getString() + " 完成服务器任务ID：" + taskId),
+                () -> net.minecraft.network.chat.Component.literal("已标记玩家 " + targetPlayer.getName().getString() + " 完成故事任务ID：" + taskId),
                 true
         );
         return 1;

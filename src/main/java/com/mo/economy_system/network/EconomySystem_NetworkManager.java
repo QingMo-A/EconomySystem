@@ -28,6 +28,7 @@ import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestPla
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerData;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerStats;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
+import com.mo.economy_system.network.packets.task_system.Packet_SyncCompleteTask;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
@@ -98,6 +99,7 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountResponse.class, Packet_OnlinePlayerCountResponse::encode, Packet_OnlinePlayerCountResponse::decode, Packet_OnlinePlayerCountResponse::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncPlayerData.class, Packet_SyncPlayerData::encode, Packet_SyncPlayerData::decode, Packet_SyncPlayerData::handle);
         INSTANCE.registerMessage(packetId++, Packet_SyncFullTaskData.class, Packet_SyncFullTaskData::encode, Packet_SyncFullTaskData::decode, Packet_SyncFullTaskData::handle);
+        INSTANCE.registerMessage(packetId++, Packet_SyncCompleteTask.class, Packet_SyncCompleteTask::encode, Packet_SyncCompleteTask::decode, Packet_SyncCompleteTask::handle);
         INSTANCE.registerMessage(packetId++, Packet_CantRun.class, Packet_CantRun::encode, Packet_CantRun::decode, Packet_CantRun::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_LevelUpNotify.class, Packet_LevelUpNotify::encode, Packet_LevelUpNotify::decode, Packet_LevelUpNotify::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_VanillaAdvancementNotify.class, Packet_VanillaAdvancementNotify::encode, Packet_VanillaAdvancementNotify::decode, Packet_VanillaAdvancementNotify::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));

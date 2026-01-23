@@ -20,7 +20,8 @@ build
 # other
 eclipse
 MC源代码
-run
+run/*
+!run/config/economy_system
 run-data
 run2
 

@@ -1,0 +1,25 @@
+{
+  "1": {
+    "stageId": 1,
+    "stageName": "第一阶段：开端",
+    "stageDescription": "您来到了梦屿——Minecraft方块大陆中一片荒无人烟的待开发区域，尽管没有什么人类踏足过的痕迹，但是一场风波的开端不会因为人迹罕至而停止脚步...",
+    "monsterModifier": {
+      "healthMultiplier": 1.0,
+      "damageMultiplier": 1.0,
+      "speedMultiplier": 1.0,
+      "knockbackResistance": 0.0
+    },
+    "tasks": [
+      {
+        "taskId": 1,
+        "taskName": "苏醒",
+        "taskContent": "在服务器中存活1个游戏日",
+        "startTime": 1704067200000,
+        "endTime": 1735689600000,
+        "taskState": true,
+        "isCompleted": false,
+        "finishedPlayers": []
+      }
+    ]
+  }
+}

@@ -2,6 +2,8 @@ package com.mo.economy_system.client.cache;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
+import com.mo.economy_system.core.task_system.TaskPlayerData;
+import com.mo.economy_system.core.story_system.StoryStageData;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.server.playerdata.PlayerData;
 import net.minecraftforge.api.distmarker.Dist;
@@ -31,6 +33,61 @@ public class ClientCacheManager {
     // 复活点数缓存 (只存储当前本地玩家，UUID为key)
     private static final Map<UUID, Float> RESPAWN_POINT_CACHE = new ConcurrentHashMap<>();
     private static final Map<UUID, Boolean> INFECTED_CACHE = new ConcurrentHashMap<>();
+
+    // ==================== 任务系统缓存 ====================
+    private static Map<Integer, TaskPlayerData> PLAYER_TASK_CACHE = new ConcurrentHashMap<>();
+    private static Map<Integer, StoryStageData> STORY_STAGE_CACHE = new ConcurrentHashMap<>();
+
+    // 获取故事阶段列表
+    public static Map<Integer, StoryStageData> getStoryStages() {
+        return STORY_STAGE_CACHE;
+    }
+
+    // 设置故事阶段列表
+    public static void setStoryStages(Map<Integer, StoryStageData> stages) {
+        STORY_STAGE_CACHE = stages != null ? new ConcurrentHashMap<>(stages) : new ConcurrentHashMap<>();
+    }
+
+    // 获取个人任务列表
+    public static Map<Integer, TaskPlayerData> getPlayerTasks() {
+        return PLAYER_TASK_CACHE;
+    }
+
+    // 设置个人任务列表
+    public static void setPlayerTasks(Map<Integer, TaskPlayerData> tasks) {
+        PLAYER_TASK_CACHE = tasks != null ? new ConcurrentHashMap<>(tasks) : new ConcurrentHashMap<>();
+    }
+
+    // 获取单个故事阶段
+    public static StoryStageData getStoryStage(int stageId) {
+        return STORY_STAGE_CACHE.get(stageId);
+    }
+
+    // 获取单个个人任务
+    public static TaskPlayerData getPlayerTask(int taskId) {
+        return PLAYER_TASK_CACHE.get(taskId);
+    }
+
+    // 检查是否有未完成任务
+    public static boolean hasUnfinishedTasks() {
+        // 检查故事阶段中的任务
+        for (StoryStageData stage : STORY_STAGE_CACHE.values()) {
+            if (stage != null && stage.getTasks() != null) {
+                for (com.mo.economy_system.core.story_system.StoryTaskData task : stage.getTasks()) {
+                    if (task != null && !task.isClientPlayerFinished()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        // 检查个人任务
+        for (TaskPlayerData task : PLAYER_TASK_CACHE.values()) {
+            if (task != null && !task.isClientPlayerFinished()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // PlayerData
     public static PlayerData getPlayerData(UUID uuid) {
@@ -174,6 +231,8 @@ public class ClientCacheManager {
         TERRITORIES_CACHE.clear();
         RESPAWN_POINT_CACHE.clear();
         INFECTED_CACHE.clear();
+        PLAYER_TASK_CACHE.clear();
+        STORY_STAGE_CACHE.clear();
     }
 
     @SubscribeEvent

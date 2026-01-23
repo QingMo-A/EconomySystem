@@ -3,6 +3,7 @@ package com.mo.economy_system.commands.notice_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.server.notice.NoticeData;
 import com.mo.economy_system.server.notice.NoticeManager;
+import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -106,6 +107,8 @@ public class Command_Notice {
                     () -> Component.literal("§a成功添加公告 [ID:" + newId + "]: " + formattedTitle),
                     true
             );
+            // 向全服广播新公告提示
+            TipPushHelper.broadcastTipToAllPlayers("§b§l您有新的公告需要查看", 15000);
             return 1;
         } else {
             context.getSource().sendFailure(Component.literal("§c添加公告失败"));

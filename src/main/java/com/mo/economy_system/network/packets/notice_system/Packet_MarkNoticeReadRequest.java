@@ -1,9 +1,9 @@
 package com.mo.economy_system.network.packets.notice_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.function.Supplier;
 
@@ -45,8 +45,9 @@ public class Packet_MarkNoticeReadRequest {
             return;
         }
 
-        // TODO: 实现玩家已读公告的存储逻辑
-        EconomySystem.LOGGER.info("玩家 {} 标记公告 {} 为已读", serverPlayer.getName().getString(), msg.noticeId);
+        // 标记公告为已读
+        PlayerNoticeDataManager.markAsRead(serverPlayer.getUUID(), msg.noticeId);
+        EconomySystem.LOGGER.debug("玩家 {} 标记公告 {} 为已读", serverPlayer.getName().getString(), msg.noticeId);
     }
 
     public int getNoticeId() {

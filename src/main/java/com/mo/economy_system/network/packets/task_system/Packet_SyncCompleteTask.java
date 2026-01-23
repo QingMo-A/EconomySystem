@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 public class Packet_SyncCompleteTask {
     private final int taskId; //任务ID
-    private final boolean isServerTask; // true=服务器任务，false=个人任务
+    private final boolean isServerTask; // true=故事任务，false=个人任务
 
     public Packet_SyncCompleteTask(int taskId, boolean isServerTask) {
         this.taskId = taskId;
@@ -42,7 +42,7 @@ public class Packet_SyncCompleteTask {
 
             // 根据任务类型调用对应方法更新数据
             if (packet.isServerTask) {
-                TaskDataManager.playerCompleteServerTask(packet.taskId, playerName, playerUUID);
+                TaskDataManager.playerCompleteStoryTask(packet.taskId, playerName, playerUUID);
             } else {
                 TaskDataManager.playerCompleteOwnTask(packet.taskId, playerName, playerUUID);
             }

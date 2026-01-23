@@ -39,8 +39,6 @@ public class LoginDeathSync {
                     player,
                     data.getCurrentInfection()
             );
-            // 同步复活点数
-            RespawnPointSyncManager.syncRespawnPointToClient(player);
         }
     }
 

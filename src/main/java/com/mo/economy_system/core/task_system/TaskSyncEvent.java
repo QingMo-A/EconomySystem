@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.task_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.story_system.StoryStageManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,14 +17,14 @@ public class TaskSyncEvent {
         if (event.getEntity() instanceof ServerPlayer player) {
             var playerUUID = player.getUUID();
             //从缓存里面获取全量任务数据
-            var serverTasks = TaskDataManager.TASK_SERVER_DATA_CACHE;
+            var storyStages = StoryStageManager.getAllStages();
             var playerTasks = TaskDataManager.TASK_PLAYER_DATA_CACHE;
 
             //构建同步数据包
             Packet_SyncFullTaskData syncPacket = new Packet_SyncFullTaskData(
                     playerUUID,
                     playerTasks,
-                    serverTasks
+                    storyStages
             );
 
             //向当前登录玩家发送数据包
