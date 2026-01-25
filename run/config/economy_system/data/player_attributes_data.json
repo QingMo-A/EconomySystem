@@ -1,0 +1,34 @@
+{
+  "380df991-f603-344c-a090-369bad2a924a": {
+    "playerUUID": "380df991-f603-344c-a090-369bad2a924a",
+    "playerName": "Dev",
+    "level": 6,
+    "maxStrength": 1000,
+    "currentStrength": 729,
+    "maxCourage": 100.0,
+    "currentCourage": 42.800003,
+    "currentInfection": 65.54202,
+    "isInfected": false,
+    "respawnPoint": 121.0,
+    "maxHealth": 22.0,
+    "strengthWarned": false,
+    "courageWarned": false,
+    "infectionWarned": false
+  },
+  "67f79ba5-83e4-3e4c-bd13-65aae9e91ed3": {
+    "playerUUID": "67f79ba5-83e4-3e4c-bd13-65aae9e91ed3",
+    "playerName": "TestPlayer2",
+    "level": 1,
+    "maxStrength": 700,
+    "currentStrength": 700,
+    "maxCourage": 100.0,
+    "currentCourage": 37.400005,
+    "currentInfection": 1.9200001,
+    "isInfected": false,
+    "respawnPoint": 5.0,
+    "maxHealth": 20.0,
+    "strengthWarned": false,
+    "courageWarned": false,
+    "infectionWarned": false
+  }
+}

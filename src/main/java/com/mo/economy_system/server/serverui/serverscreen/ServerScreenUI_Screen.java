@@ -112,10 +112,11 @@ public class ServerScreenUI_Screen extends Screen {
     private int rankBoxClickX2, rankBoxClickY2;
 
     // ==================== 左侧灵动岛按钮 ====================
-    private static final String[] LEFT_BUTTON_ICONS = {"👤", "📢", "📖", "🏆", "⭐", "🛒", "🏰", "🎒", "⚙️"};
-    private static final String[] LEFT_BUTTON_NAMES = {"个人档案", "服务器公告", "故事进展", "玩家与排行", "服务器成就", "服务器商店", "领地", "背包", "设置"};
+    private static final String[] LEFT_BUTTON_ICONS = {"👤", "❓", "📢", "📖", "🏆", "⭐", "🛒", "🏰", "🎒", "⚙️"};
+    private static final String[] LEFT_BUTTON_NAMES = {"个人档案", "新玩家帮助", "服务器公告", "故事进展", "玩家与排行", "服务器成就", "服务器商店", "领地", "背包", "设置"};
     private static final int[] LEFT_BUTTON_COLORS = {
         0xFFAAAAAA,  // 个人档案 - 灰色
+        0xFF55FF55,  // 帮助 - 绿色
         0xFF4FC3F7,  // 服务器公告 - 淡蓝色
         0xFFAAFFAA,  // 故事进展 - 绿色
         0xFF4FC3F7,  // 玩家与排行 - 金色
@@ -158,6 +159,10 @@ public class ServerScreenUI_Screen extends Screen {
     private static long stageScrollOffset = 0;  // 阶段列表滚动偏移量
     // 注意：任务点击区域已移至 PageRenderer.taskClickArea 和 taskTabArea
 
+    // ==================== 帮助系统数据 ====================
+    private static long helpScrollOffset = 0;  // 帮助页面滚动偏移量
+    private static final int HELP_LINE_HEIGHT = 18;  // 帮助页面每行高度
+
     private final Minecraft mc = Minecraft.getInstance();
 
     // ==================== 页面渲染器 ====================
@@ -172,6 +177,7 @@ public class ServerScreenUI_Screen extends Screen {
     public int getVirtualWidth() { return virtualWidth; }
     public int getVirtualHeight() { return virtualHeight; }
     public int getPanelBackgroundColor() { return PANEL_BACKGROUND_COLOR; }
+    public long getHelpScrollOffset() { return helpScrollOffset; }
 
     @Override
     protected void init() {
@@ -434,8 +440,8 @@ public class ServerScreenUI_Screen extends Screen {
             centerOffsetY = 0;
         }
 
-        // ==================== 只在主页面(0)和公告页面(1)渲染中间栏内容 ====================
-        if (selectedLeftButtonIndex == 0 || selectedLeftButtonIndex == 1) {
+        // ==================== 只在主页面(0)和公告页面(2)渲染中间栏内容 ====================
+        if (selectedLeftButtonIndex == 0 || selectedLeftButtonIndex == 2) {
         // ==================== 绘制玩家名称 + 幸存者状态（模型头上方） ====================
         // 获取感染值并确定状态
         float infection = PlayerInfectionManager.getCurrentInfectionClient(player);
@@ -552,10 +558,10 @@ public class ServerScreenUI_Screen extends Screen {
             // 关闭时：保持完整边框
             guiGraphics.fill(RenderType.gui(), RIGHT_PANEL_START_X, 0, RIGHT_PANEL_START_X + 1, virtualHeight, PANEL_BORDER_COLOR);
         }
-        }  // 结束中间栏渲染条件 (selectedLeftButtonIndex == 0 || selectedLeftButtonIndex == 1)
+        }  // 结束中间栏渲染条件 (selectedLeftButtonIndex == 0 || selectedLeftButtonIndex == 2)
 
         // ==================== 服务器公告页面 ====================
-        if (selectedLeftButtonIndex == 1) {
+        if (selectedLeftButtonIndex == 2) {
             // 渲染公告列表
             pageRenderer.renderNoticeList(guiGraphics, RIGHT_PANEL_START_X, rightPanelWidth,
                 cachedNotices, cachedReadNoticeIds, noticeScrollOffset, NOTICE_CARD_HEIGHT, VISIBLE_NOTICES);
@@ -564,7 +570,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 故事/任务页面 ====================
-        if (selectedLeftButtonIndex == 2) {
+        if (selectedLeftButtonIndex == 3) {
             // 渲染任务列表（使用整个中间+右侧区域）
             pageRenderer.renderTaskPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale, taskShowServerTasks,
@@ -577,7 +583,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 排行榜页面 ====================
-        if (selectedLeftButtonIndex == 3) {
+        if (selectedLeftButtonIndex == 4) {
             // 渲染排行榜页面（使用整个中间+右侧区域）
             pageRenderer.renderRankPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale, mc.player);
@@ -586,9 +592,18 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 成就页面 ====================
-        if (selectedLeftButtonIndex == 4) {
+        if (selectedLeftButtonIndex == 5) {
             // 渲染成就页面（使用整个中间+右侧区域）
             pageRenderer.renderAchievementPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
+                virtualWidth, uiScale);
+            guiGraphics.pose().popPose();
+            return;  // 跳过后续右栏内容渲染
+        }
+
+        // ==================== 帮助页面 ====================
+        if (selectedLeftButtonIndex == 1) {
+            // 渲染帮助页面（使用整个中间+右侧区域）
+            pageRenderer.renderHelpPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale);
             guiGraphics.pose().popPose();
             return;  // 跳过后续右栏内容渲染
@@ -935,7 +950,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 检查公告列表点击 ====================
-        if (selectedLeftButtonIndex == 1 && !cachedNotices.isEmpty()) {  // 服务器公告页面
+        if (selectedLeftButtonIndex == 2 && !cachedNotices.isEmpty()) {  // 服务器公告页面
             int[] noticeArea = pageRenderer.getNoticeClickArea();
             if (virtualMouseX >= noticeArea[0] && virtualMouseX <= noticeArea[2] &&
                 virtualMouseY >= noticeArea[1] + rightOffsetY && virtualMouseY <= noticeArea[3] + rightOffsetY) {
@@ -961,7 +976,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // ==================== 检查任务页面点击 ====================
-        if (selectedLeftButtonIndex == 2) {  // 故事/任务页面
+        if (selectedLeftButtonIndex == 3) {  // 故事/任务页面
             // 检查任务分类按钮点击
             int[] taskTabArea = pageRenderer.getTaskTabArea();
             if (virtualMouseX >= taskTabArea[0] && virtualMouseX <= taskTabArea[2] &&
@@ -1112,33 +1127,36 @@ public class ServerScreenUI_Screen extends Screen {
             case 0: // 个人档案（主页，默认显示）
                 // 当前页面，不跳转
                 break;
-            case 1: // 服务器公告
+            case 1: // 帮助
+                // 帮助页面，不跳转
+                break;
+            case 2: // 服务器公告
                 // 请求公告列表
                 EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NoticeListRequest());
                 break;
-            case 2: // 故事进展
+            case 3: // 故事进展
                 // TODO: 打开故事界面
                 break;
-            case 3: // 玩家与排行
+            case 4: // 玩家与排行
                 // 显示排行榜页面（不打开新界面）
                 break;
-            case 4: // 服务器成就
+            case 5: // 服务器成就
                 // 显示成就页面（不打开新界面）
                 break;
-            case 5: // 服务器商店
+            case 6: // 服务器商店
                 ServerScreenUI.setShowUI(false);
                 mc.setScreen(new com.mo.economy_system.screen.economy_system.shop.Screen_Shop());
                 break;
-            case 6: // 领地
+            case 7: // 领地
                 ServerScreenUI.setShowUI(false);
                 mc.setScreen(new com.mo.economy_system.screen.territory_system.Screen_Territory());
                 break;
-            case 7: // 背包
+            case 8: // 背包
                 // Minecraft 原版背包
                 this.onClose();
                 mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
                 break;
-            case 8: // 设置
+            case 9: // 设置
                 // Minecraft 原版设置
                 this.onClose();
                 mc.setScreen(new net.minecraft.client.gui.screens.OptionsScreen(mc.screen, mc.options));
@@ -1149,7 +1167,7 @@ public class ServerScreenUI_Screen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         // 公告列表页面滚动
-        if (selectedLeftButtonIndex == 1 && !cachedNotices.isEmpty()) {
+        if (selectedLeftButtonIndex == 2 && !cachedNotices.isEmpty()) {
             int totalNotices = cachedNotices.size();
             int maxScrollOffset = Math.max(0, totalNotices - VISIBLE_NOTICES);
 
@@ -1161,7 +1179,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // 任务列表页面滚动
-        if (selectedLeftButtonIndex == 2) {
+        if (selectedLeftButtonIndex == 3) {
             if (taskShowServerTasks && selectedStageId == null) {
                 // 故事任务 - 阶段列表滚动
                 var storyStages = com.mo.economy_system.client.cache.ClientCacheManager.getStoryStages();
@@ -1207,6 +1225,22 @@ public class ServerScreenUI_Screen extends Screen {
                     taskScrollOffset = Math.max(0, Math.min(maxScrollOffset, newOffset));
                     return true;
                 }
+            }
+        }
+
+        // 帮助页面滚动
+        if (selectedLeftButtonIndex == 1) {
+            // 获取帮助内容的总行数
+            int totalHelpLines = ServerScreenUI_PageRenderer.getHelpContentLines();
+            // 计算可见行数（基于虚拟高度）
+            int virtualHeight = 360;  // 基础虚拟高度
+            int visibleLines = virtualHeight / HELP_LINE_HEIGHT - 2;  // 减去标题和边距
+            int maxScrollOffset = Math.max(0, totalHelpLines - visibleLines);
+
+            if (maxScrollOffset > 0) {
+                int newOffset = (int) (helpScrollOffset - delta);
+                helpScrollOffset = Math.max(0, Math.min(maxScrollOffset, newOffset));
+                return true;
             }
         }
 

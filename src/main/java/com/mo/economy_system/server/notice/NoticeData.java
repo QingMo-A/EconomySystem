@@ -59,4 +59,18 @@ public class NoticeData {
     public void setPublishTime(long publishTime) {
         this.publishTime = publishTime;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        NoticeData that = (NoticeData) obj;
+        // 只比较 noticeId，因为 ID 相同就是同一公告
+        return noticeId == that.noticeId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(noticeId);
+    }
 }

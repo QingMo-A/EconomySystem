@@ -1,0 +1,38 @@
+{
+  "380df991-f603-344c-a090-369bad2a924a": {
+    "uuid": "380df991-f603-344c-a090-369bad2a924a",
+    "playerName": "Dev",
+    "rank": {
+      "rankName": "OPERATOR",
+      "rankLevel": 4,
+      "rankColor": 16733525
+    },
+    "title": {
+      "TitleID": 0,
+      "TitleName": "萌新鱼友",
+      "color": 11184810
+    },
+    "level": 6,
+    "currentExperience": 759,
+    "lastLoginTime": 1769344086258,
+    "totalPlayTime": 19832601
+  },
+  "67f79ba5-83e4-3e4c-bd13-65aae9e91ed3": {
+    "uuid": "67f79ba5-83e4-3e4c-bd13-65aae9e91ed3",
+    "playerName": "TestPlayer2",
+    "rank": {
+      "rankName": "NO_RANK",
+      "rankLevel": 0,
+      "rankColor": 11184810
+    },
+    "title": {
+      "TitleID": 0,
+      "TitleName": "萌新鱼友",
+      "color": 11184810
+    },
+    "level": 1,
+    "currentExperience": 200,
+    "lastLoginTime": 1769344085673,
+    "totalPlayTime": 239360
+  }
+}

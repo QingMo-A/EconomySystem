@@ -251,4 +251,134 @@ public class StoryStageManager {
             baseKnockbackResist + modifier.getKnockbackResistance()
         };
     }
+
+    // ==================== 全服统计相关方法 ====================
+
+    /**
+     * 获取指定任务的全服完成人数
+     */
+    public static int getTaskFinishedCount(int taskId) {
+        StoryTaskData task = TASK_INDEX.get(taskId);
+        return task != null ? task.getFinishedPlayerCount() : 0;
+    }
+
+    /**
+     * 获取指定阶段的全服完成人数统计
+     * @return int[] 数组，每个元素对应该阶段每个任务的完成人数
+     */
+    public static int[] getStageTaskFinishedCounts(int stageId) {
+        StoryStageData stage = STAGE_CACHE.get(stageId);
+        if (stage == null || stage.getTasks() == null) {
+            return new int[0];
+        }
+
+        int[] counts = new int[stage.getTasks().size()];
+        for (int i = 0; i < stage.getTasks().size(); i++) {
+            counts[i] = stage.getTasks().get(i).getFinishedPlayerCount();
+        }
+        return counts;
+    }
+
+    /**
+     * 获取指定阶段中完成指定任务的所有玩家名单
+     */
+    public static java.util.List<String> getTaskFinishedPlayers(int taskId) {
+        StoryTaskData task = TASK_INDEX.get(taskId);
+        if (task == null || task.getFinishedPlayers() == null) {
+            return new java.util.ArrayList<>();
+        }
+
+        return task.getFinishedPlayers().stream()
+                .map(StoryTaskData.FinishedPlayer::getPlayerName)
+                .sorted()
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 获取指定阶段的全服总完成人数（去重，玩家完成该阶段任意任务即计数）
+     */
+    public static int getStageUniquePlayerCount(int stageId) {
+        StoryStageData stage = STAGE_CACHE.get(stageId);
+        if (stage == null || stage.getTasks() == null) {
+            return 0;
+        }
+
+        java.util.Set<UUID> uniquePlayers = new java.util.HashSet<>();
+        for (StoryTaskData task : stage.getTasks()) {
+            if (task.getFinishedPlayers() != null) {
+                for (StoryTaskData.FinishedPlayer fp : task.getFinishedPlayers()) {
+                    if (fp.getPlayerUUID() != null) {
+                        uniquePlayers.add(fp.getPlayerUUID());
+                    }
+                }
+            }
+        }
+        return uniquePlayers.size();
+    }
+
+    /**
+     * 获取全服总任务完成次数（跨所有任务，不区分玩家）
+     */
+    public static int getTotalTaskCompletions() {
+        int total = 0;
+        for (StoryTaskData task : TASK_INDEX.values()) {
+            total += task.getFinishedPlayerCount();
+        }
+        return total;
+    }
+
+    /**
+     * 获取全服总参与玩家数（至少完成一个任务的玩家）
+     */
+    public static int getTotalUniquePlayers() {
+        java.util.Set<UUID> uniquePlayers = new java.util.HashSet<>();
+        for (StoryTaskData task : TASK_INDEX.values()) {
+            if (task.getFinishedPlayers() != null) {
+                for (StoryTaskData.FinishedPlayer fp : task.getFinishedPlayers()) {
+                    if (fp.getPlayerUUID() != null) {
+                        uniquePlayers.add(fp.getPlayerUUID());
+                    }
+                }
+            }
+        }
+        return uniquePlayers.size();
+    }
+
+    /**
+     * 获取任务完成度统计信息
+     * @return 字符串格式的统计信息
+     */
+    public static String getTaskStatisticsString(int taskId) {
+        StoryTaskData task = TASK_INDEX.get(taskId);
+        if (task == null) {
+            return "任务不存在";
+        }
+
+        int finishedCount = task.getFinishedPlayerCount();
+        return String.format("任务 [%d] %s: %d 人已完成", task.getTaskId(), task.getTaskName(), finishedCount);
+    }
+
+    /**
+     * 获取阶段完成度统计信息
+     * @return 字符串格式的统计信息
+     */
+    public static String getStageStatisticsString(int stageId) {
+        StoryStageData stage = STAGE_CACHE.get(stageId);
+        if (stage == null) {
+            return "阶段不存在";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("=== 阶段 %d: %s ===\n", stage.getStageId(), stage.getStageName()));
+
+        for (StoryTaskData task : stage.getTasks()) {
+            int finishedCount = task.getFinishedPlayerCount();
+            sb.append(String.format("  [%d] %s: %d 人完成\n", task.getTaskId(), task.getTaskName(), finishedCount));
+        }
+
+        int uniquePlayers = getStageUniquePlayerCount(stageId);
+        sb.append(String.format("阶段参与人数: %d 人", uniquePlayers));
+
+        return sb.toString();
+    }
 }

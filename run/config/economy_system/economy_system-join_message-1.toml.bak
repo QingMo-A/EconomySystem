@@ -1,0 +1,25 @@
+#玩家进服自定义消息 | 占位符：%player%=玩家名 | 颜色代码：§a绿 §c红 §6金 §b蓝
+join_message = "§7[§a+§7]§b鱼友§e%player%§b来和你VAN辣！"
+#玩家离开自定义消息 | 占位符：%player%=玩家名 | 颜色代码：§a绿 §c红 §6金 §b蓝
+leave_message = "§7[§c-§7]§b鱼友§e%player%§b不想和你VAN辣！"
+#NO_RANK玩家进服消息 | 占位符：%player%=玩家名
+join_message_no_rank = "§7[§a+§7]§b鱼友§e%player%§b来和你VAN辣！"
+#FISH玩家进服消息 | 占位符：%player%=玩家名
+join_message_fish = "§a[§aFISH§a]§b鱼友§6%player%§b来和你VAN辣！"
+#FISH+玩家进服消息 | 占位符：%player%=玩家名
+join_message_fish_plus = "§b[§bFISH+§b]§b鱼友§6%player%§b来和你VAN辣！"
+#FISH++玩家进服消息 | 占位符：%player%=玩家名
+join_message_fish_plus_plus = "§6[§6FISH++§6]§b鱼友§6%player%§b来和你VAN辣！"
+#OPERATOR玩家进服消息 | 占位符：%player%=玩家名
+join_message_operator = "§c[§cOPERATOR§c]§b鱼友§6%player%§b来和你VAN辣！"
+#NO_RANK玩家离开消息 | 占位符：%player%=玩家名
+leave_message_no_rank = "§7[§c-§7]§b鱼友§e%player%§b不想和你VAN辣！"
+#FISH玩家离开消息 | 占位符：%player%=玩家名
+leave_message_fish = "§a[§aFISH§a]§b鱼友§6%player%§b不想和你VAN辣！"
+#FISH+玩家离开消息 | 占位符：%player%=玩家名
+leave_message_fish_plus = "§b[§bFISH+§b]§b鱼友§6%player%§b不想和你VAN辣！"
+#FISH++玩家离开消息 | 占位符：%player%=玩家名
+leave_message_fish_plus_plus = "§6[§6FISH++§6]§b鱼友§6%player%§b不想和你VAN辣！"
+#OPERATOR玩家离开消息 | 占位符：%player%=玩家名
+leave_message_operator = "§c[§cOPERATOR§c]§B鱼友§6%player%§b不想和你VAN辣！"
+

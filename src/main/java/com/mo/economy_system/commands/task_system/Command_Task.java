@@ -1,6 +1,7 @@
 package com.mo.economy_system.commands.task_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.story_system.StoryStageManager;
 import com.mo.economy_system.core.task_system.TaskDataManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -80,6 +81,25 @@ public class Command_Task {
                                         )
                                 )
                         )
+                        // 子指令：查询统计信息 /task stats ...
+                        .then(Commands.literal("stats")
+                                // 查询全服总统计 /task stats total
+                                .then(Commands.literal("total")
+                                        .executes(Command_Task::executeStatsTotal)
+                                )
+                                // 查询阶段统计 /task stats stage <阶段ID>
+                                .then(Commands.literal("stage")
+                                        .then(Commands.argument("stageId", IntegerArgumentType.integer(1))
+                                                .executes(Command_Task::executeStatsStage)
+                                        )
+                                )
+                                // 查询任务统计 /task stats task <任务ID>
+                                .then(Commands.literal("task")
+                                        .then(Commands.argument("taskId", IntegerArgumentType.integer(1))
+                                                .executes(Command_Task::executeStatsTask)
+                                        )
+                                )
+                        )
         );
     }
 
@@ -145,6 +165,50 @@ public class Command_Task {
                 () -> net.minecraft.network.chat.Component.literal("已标记玩家 " + targetPlayer.getName().getString() + " 完成故事任务ID：" + taskId),
                 true
         );
+        return 1;
+    }
+
+    // 执行查询全服总统计
+    private static int executeStatsTotal(CommandContext<CommandSourceStack> context) {
+        int totalCompletions = StoryStageManager.getTotalTaskCompletions();
+        int totalUniquePlayers = StoryStageManager.getTotalUniquePlayers();
+        int stageCount = StoryStageManager.getStageCount();
+
+        String stats = String.format(
+                "=== 全服任务统计 ===\n" +
+                "总阶段数: %d\n" +
+                "总任务完成次数: %d\n" +
+                "参与玩家数: %d 人",
+                stageCount, totalCompletions, totalUniquePlayers
+        );
+
+        context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(stats), true);
+        return 1;
+    }
+
+    // 执行查询阶段统计
+    private static int executeStatsStage(CommandContext<CommandSourceStack> context) {
+        int stageId = IntegerArgumentType.getInteger(context, "stageId");
+        String stats = StoryStageManager.getStageStatisticsString(stageId);
+
+        context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(stats), true);
+        return 1;
+    }
+
+    // 执行查询任务统计
+    private static int executeStatsTask(CommandContext<CommandSourceStack> context) {
+        int taskId = IntegerArgumentType.getInteger(context, "taskId");
+        String stats = StoryStageManager.getTaskStatisticsString(taskId);
+
+        context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(stats), true);
+
+        // 同时显示完成该任务的玩家列表
+        java.util.List<String> players = StoryStageManager.getTaskFinishedPlayers(taskId);
+        if (!players.isEmpty()) {
+            String playerList = "完成玩家: " + String.join(", ", players);
+            context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(playerList), true);
+        }
+
         return 1;
     }
 }

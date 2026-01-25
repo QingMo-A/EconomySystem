@@ -27,6 +27,8 @@ public class InfectionEventHandler {
 
     private static final int INFECTION_MAX = 100;
     private static final int HEALTH_CHECK_INTERVAL = 20; // 1秒检查一次生命值变化
+    private static final int PROXIMITY_CHECK_INTERVAL = 600; // 30秒检查一次附近感染者（每分钟加2点，每次检查加1点）
+    private static final double PROXIMITY_RADIUS = 32.0; // 检测范围：32格
 
     // 记录玩家上次检查时的生命值
     private static final Map<UUID, Float> LAST_HEALTH = new ConcurrentHashMap<>();
@@ -98,6 +100,76 @@ public class InfectionEventHandler {
         }
         // 更新记录的生命值
         LAST_HEALTH.put(playerUUID, currentHealth);
+
+        // 检查附近是否有感染者，如果有则增加感染值
+        // 每30秒检查一次，每次加1点，每分钟共2点
+        if (player.tickCount % PROXIMITY_CHECK_INTERVAL == 0) {
+            checkNearbyInfectedPlayers(player, attributesData);
+        }
+    }
+
+    /**
+     * 检查附近是否有感染者，如果有则增加幸存者的感染值
+     * @param player 幸存者玩家
+     * @param attributesData 玩家属性数据
+     */
+    private static void checkNearbyInfectedPlayers(ServerPlayer player, PlayerAttributesData attributesData) {
+        // 如果已经是感染者，不受影响
+        if (attributesData.isInfected()) {
+            return;
+        }
+
+        // 如果感染值已满，不再增加
+        if (attributesData.getCurrentInfection() >= INFECTION_MAX) {
+            return;
+        }
+
+        // 获取所有在线玩家
+        var serverPlayers = player.server.getPlayerList().getPlayers();
+        boolean hasNearbyInfected = false;
+
+        for (ServerPlayer otherPlayer : serverPlayers) {
+            // 跳过自己
+            if (otherPlayer.getUUID().equals(player.getUUID())) {
+                continue;
+            }
+
+            // 检查对方是否是感染者
+            PlayerAttributesData otherAttributes = PlayerAttributesDataManager.getPlayerAttributesData(otherPlayer.getUUID());
+            if (otherAttributes == null || !otherAttributes.isInfected()) {
+                continue;
+            }
+
+            // 检查距离
+            double distance = player.position().distanceTo(otherPlayer.position());
+            if (distance <= PROXIMITY_RADIUS) {
+                hasNearbyInfected = true;
+                break;
+            }
+        }
+
+        // 如果附近有感染者，增加1点感染值
+        if (hasNearbyInfected) {
+            float currentInfection = attributesData.getCurrentInfection();
+            float newInfection = Math.min(currentInfection + 1.0F, INFECTION_MAX);
+
+            if (newInfection > currentInfection) {
+                attributesData.setCurrentInfection(newInfection);
+                PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
+                PlayerInfectionClientSync.sendInfectionDataToClient(player, newInfection);
+
+                // 发送提示消息（仅在第一次或达到阈值时）
+                if (newInfection >= INFECTION_MAX) {
+                    player.displayClientMessage(
+                            Component.literal("§c你长时间暴露在感染者附近，已经完全感染！"),
+                            true
+                    );
+                    // 转换为感染者
+                    attributesData.setInfected(true);
+                    PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
+                }
+            }
+        }
     }
 
     /**

@@ -39,7 +39,8 @@
       "Bash(git -C \"D:\\\\Desktop\\\\EconomySystem\" show 378c92be:src/main/java/com/mo/economy_system/core/playerattributes_system/death/DeathItemStorage.java)",
       "Bash(git -C \"D:\\\\Desktop\\\\EconomySystem\" show 378c92be:src/main/java/com/mo/economy_system/mixin/death/RespawnMixin.java)",
       "Bash(git -C:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "WebSearch"
     ]
   }
 }

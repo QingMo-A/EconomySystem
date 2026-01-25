@@ -1,0 +1,14 @@
+{
+  "380df991-f603-344c-a090-369bad2a924a": [
+    "minecraft:overworld:minecraft:snowy_plains",
+    "minecraft:overworld:minecraft:plains",
+    "minecraft:the_end:minecraft:the_end",
+    "minecraft:overworld:minecraft:snowy_taiga",
+    "minecraft:overworld:minecraft:forest",
+    "minecraft:overworld:minecraft:savanna",
+    "minecraft:overworld:minecraft:beach"
+  ],
+  "67f79ba5-83e4-3e4c-bd13-65aae9e91ed3": [
+    "minecraft:overworld:minecraft:plains"
+  ]
+}
