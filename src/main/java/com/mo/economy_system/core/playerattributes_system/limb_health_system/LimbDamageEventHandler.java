@@ -1,6 +1,9 @@
 package com.mo.economy_system.core.playerattributes_system.limb_health_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.playerattribute_system.limb_system.Packet_SyncLimbInjury;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -99,6 +102,15 @@ public class LimbDamageEventHandler {
 
         // 更新伤害值
         event.setAmount(newDamage);
+
+        // 同步受伤部位到客户端（显示感叹号）
+        if (player instanceof ServerPlayer serverPlayer) {
+            long injuryTime = System.currentTimeMillis();
+            EconomySystem_NetworkManager.sendToClient(
+                    new Packet_SyncLimbInjury(hitPart.name(), injuryTime),
+                    serverPlayer
+            );
+        }
 
         // 清理弹射物记录
         PENDING_PROJECTILE_HITS.remove(player.getUUID());

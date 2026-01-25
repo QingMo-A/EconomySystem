@@ -3,6 +3,8 @@ package com.mo.economy_system.core.playerattributes_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
+import com.mo.economy_system.core.playerattributes_system.limb_health_system.LimbClientInjurySync;
+import com.mo.economy_system.core.playerattributes_system.limb_health_system.LimbType;
 import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,6 +15,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -21,11 +24,20 @@ import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
 public class CustomStatueGUI {
-    private static final int PLAYER_ICON_SIZE = 64;
-    private static final int PLAYER_UV_X = 0;
+    // 玩家图标尺寸和UV坐标
+    private static final int PLAYER_ICON_WIDTH = 27;
+    private static final int PLAYER_ICON_HEIGHT = 59;
+    private static final int PLAYER_UV_X_NORMAL = 0;      // 正常状态 UV X (左边)
+    private static final int PLAYER_UV_X_INJURED = 27;    // 受伤状态 UV X (右边，白色边框)
     private static final int PLAYER_UV_Y = 0;
-    private static final int PLAYER_TEXTURE_TOTAL_WIDTH = 64;
-    private static final int PLAYER_TEXTURE_TOTAL_HEIGHT = 64;
+    private static final int PLAYER_TEXTURE_TOTAL_WIDTH = 256;
+    private static final int PLAYER_TEXTURE_TOTAL_HEIGHT = 256;
+
+    // 受伤闪烁相关
+    private static long lastDamageTime = 0;              // 上次受伤时间（毫秒）
+    private static final long DAMAGE_FLASH_DURATION = 400; // 受伤闪烁持续时间（毫秒）
+    private static final int FLASH_CYCLE = 100;          // 闪烁周期（毫秒）- 每100ms切换一次
+    private static float lastHealth = 0;                 // 上次记录的血量
     //控制小人与屏幕右侧的距离
 //    private static final int RIGHT_OFFSET = 5;
     private static final int LEFT_OFFSET = 20;
@@ -39,7 +51,7 @@ public class CustomStatueGUI {
 
     private static final int BAR_WIDTH = 5; // 进度条宽度
     private static final int BAR_HEIGHT = 40;//进度条高度
-    private static final int BAR_TO_PLAYER_SPACING = 1; //进度条与小人的间距）
+    private static final int BAR_TO_PLAYER_SPACING = 8; //进度条与小人的间距（增大）
     private static final int BAR_BAR_SPACING = 3; //两进度条之间的间距
 
     // 颜色配置（深饱和鲜艳版本）
@@ -50,15 +62,26 @@ public class CustomStatueGUI {
     // 感染值进度条为深绿色
     private static final int INFECTION_BAR_COLOR = (255 << 24) | 0x00DD00;  // 深绿色
 
-    //缓存路径，优化
-    private static final Map<String, ResourceLocation> PLAYER_HEALTH_TEXTURES = new HashMap<>();
-    // 静态代码块：初始化时缓存所有纹理
-    static {
-        String[] suffixes = {"1", "0.8", "0.5", "0.4", "0.3", "0.1", "0"};
-        for (String suffix : suffixes) {
-            PLAYER_HEALTH_TEXTURES.put(suffix, new ResourceLocation(EconomySystem.MODID, "textures/gui/health/" + suffix + ".png"));
-        }
-    }
+    // 玩家健康图标纹理（单一文件，包含正常和受伤两个状态）
+    private static final ResourceLocation PLAYER_HEALTH_TEXTURE =
+            new ResourceLocation(EconomySystem.MODID, "textures/gui/health/health.png");
+
+    // 肢体受伤标记配置（脉冲圆点）
+    private static final int INJURY_DOT_COLOR = 0x80FF0000;    // 半透明红色
+    private static final int INJURY_DOT_BASE_SIZE = 3;         // 圆点基础大小（缩小）
+    private static final int INJURY_DOT_PULSE_SIZE = 2;        // 脉冲放大幅度（缩小）
+    private static final long PULSE_CYCLE = 500;               // 脉冲周期（毫秒）
+
+    // 肢体部位在小人图标上的相对位置（相对于playerIconX, playerIconY）
+    // 坐标基于小人图标尺寸 27x59
+    private static final int HEAD_OFFSET_X = 13;   // 头部中心X偏移
+    private static final int HEAD_OFFSET_Y = 5;    // 头部中心Y偏移
+    private static final int CHEST_OFFSET_X = 13;  // 胸部中心X偏移
+    private static final int CHEST_OFFSET_Y = 22;  // 胸部中心Y偏移
+    private static final int LEGS_OFFSET_X = 13;   // 腿部中心X偏移
+    private static final int LEGS_OFFSET_Y = 38;   // 腿部中心Y偏移
+    private static final int FEET_OFFSET_X = 13;   // 脚部中心X偏移
+    private static final int FEET_OFFSET_Y = 52;   // 脚部中心Y偏移
 
     //缓存坐标，优化
     // 缓存小人坐标
@@ -91,23 +114,23 @@ public class CustomStatueGUI {
         int screenHeight = mc.getWindow().getGuiScaledHeight();
         double guiScale = mc.getWindow().getGuiScale();
 
-        // 计算小人坐标
-        CACHED_PLAYER_ICON_X = screenWidth / 2 - PLAYER_ICON_SIZE - 90 - 2;
-        CACHED_PLAYER_ICON_Y = screenHeight - PLAYER_ICON_Y_OFFSET - PLAYER_ICON_SIZE;
+        // 计算小人坐标（往左移一点）
+        CACHED_PLAYER_ICON_X = screenWidth / 2 - PLAYER_ICON_WIDTH - 110 - 2;
+        CACHED_PLAYER_ICON_Y = screenHeight - PLAYER_ICON_Y_OFFSET - PLAYER_ICON_HEIGHT;
 
         //同步计算并缓存进度条坐标
 
         CACHED_FOOD_BAR_X = CACHED_PLAYER_ICON_X - BAR_TO_PLAYER_SPACING - BAR_WIDTH;
-        CACHED_FOOD_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        CACHED_FOOD_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_HEIGHT / 2) - (BAR_HEIGHT / 2);
 
         CACHED_STRENGTH_BAR_X = CACHED_FOOD_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
-        CACHED_STRENGTH_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        CACHED_STRENGTH_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_HEIGHT / 2) - (BAR_HEIGHT / 2);
         // 勇气值进度条坐标（最左侧）：体力条左侧
         CACHED_COURAGE_BAR_X = CACHED_STRENGTH_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
-        CACHED_COURAGE_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        CACHED_COURAGE_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_HEIGHT / 2) - (BAR_HEIGHT / 2);
         // 感染值进度条坐标：勇气值条左侧
         CACHED_INFECTION_BAR_X = CACHED_COURAGE_BAR_X - BAR_BAR_SPACING - BAR_WIDTH;
-        CACHED_INFECTION_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_SIZE / 2) - (BAR_HEIGHT / 2);
+        CACHED_INFECTION_BAR_Y = CACHED_PLAYER_ICON_Y + (PLAYER_ICON_HEIGHT / 2) - (BAR_HEIGHT / 2);
 
         //更新参数缓存
         CACHED_SCREEN_WIDTH = screenWidth;
@@ -164,25 +187,43 @@ public class CustomStatueGUI {
         //获取玩家当前血量和最大血量
         float currentHealth = player.getHealth();
         float maxHealth = player.getMaxHealth();
-        //计算血量百分比，避免最大血量为0时出现除以0异常
-        float healthPercentage = (maxHealth <= 0) ? 0 : (currentHealth / maxHealth) * 100;
+        float healthPercent = maxHealth > 0 ? currentHealth / maxHealth : 0;
 
-        //根据血量百分比返回对应的纹理文件名后缀
-        String textureSuffix = getTextureSuffixByHealthPercent(healthPercentage);
-        ResourceLocation playerIcon = PLAYER_HEALTH_TEXTURES.getOrDefault(textureSuffix, PLAYER_HEALTH_TEXTURES.get("0"));
+        // 检查是否在受伤闪烁时间内（闪烁两下）
+        long currentTime = System.currentTimeMillis();
+        long timeSinceDamage = currentTime - lastDamageTime;
+        boolean isFlashing = false;
+        if (timeSinceDamage < DAMAGE_FLASH_DURATION) {
+            // 闪烁两下：0-100ms 显示，100-200ms 隐藏，200-300ms 显示，300-400ms 隐藏
+            int cycle = (int) (timeSinceDamage / FLASH_CYCLE);
+            isFlashing = (cycle == 0 || cycle == 2);  // 第1和第3个周期显示白色边框
+        }
 
-        //绘制小人图标
+        int uvX = isFlashing ? PLAYER_UV_X_INJURED : PLAYER_UV_X_NORMAL;
+
+        // 绘制小人图标（带血量颜色）
+        int healthColor = getHealthColor(healthPercent);
+        guiGraphics.setColor(
+            (healthColor >> 16 & 0xFF) / 255.0f,
+            (healthColor >> 8 & 0xFF) / 255.0f,
+            (healthColor & 0xFF) / 255.0f,
+            1.0F
+        );
         guiGraphics.blit(
-                playerIcon,
+                PLAYER_HEALTH_TEXTURE,
                 playerIconX,
                 playerIconY,
-                PLAYER_UV_X,
-                PLAYER_UV_Y,
-                PLAYER_ICON_SIZE,
-                PLAYER_ICON_SIZE,
+                uvX,                       // UV X：正常=0，受伤=27
+                PLAYER_UV_Y,               // UV Y = 0
+                PLAYER_ICON_WIDTH,         // 宽度 27
+                PLAYER_ICON_HEIGHT,        // 高度 59
                 PLAYER_TEXTURE_TOTAL_WIDTH,
                 PLAYER_TEXTURE_TOTAL_HEIGHT
         );
+        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);  // 重置颜色
+
+        // 绘制肢体受伤标记
+        cleanupAndDrawLimbInjuryIcons(guiGraphics, player, playerIconX, playerIconY);
 
         //绘制饥饿竖向进度条
         int currentFood = player.getFoodData().getFoodLevel();
@@ -221,6 +262,66 @@ public class CustomStatueGUI {
         drawVerticalProgressBar(guiGraphics, infectionBarX, infectionBarY, (int) currentInfection, maxInfection, infectionColor);
         // 绘制感染图标（进度条上方，使用动态颜色）
         drawIcon(guiGraphics, "☣", infectionBarX + BAR_WIDTH / 2, infectionBarY - 8, infectionColor);
+    }
+
+    /**
+     * 根据血量百分比计算颜色（HSV平滑渐变）
+     * 使用HSV色彩模型，色相从绿色(120°)平滑过渡到红色(0°)
+     * 每个血量百分比都有对应的精确颜色
+     *
+     * 100% → 绿色 (HSV: 120°)
+     * 75% → 黄绿色 (HSV: 90°)
+     * 50% → 黄色 (HSV: 60°)
+     * 25% → 橙色 (HSV: 30°)
+     * 0% → 红色 (HSV: 0°)
+     *
+     * @param percent 血量百分比 (0.0 ~ 1.0)
+     * @return ARGB 颜色值
+     */
+    private static int getHealthColor(float percent) {
+        percent = Math.max(0.0f, Math.min(1.0f, percent));
+
+        // 50%时刚好是黄色(60°)，使用线性映射
+        float hue = percent * 120.0f;
+
+        // HSV转RGB，低血量时降低明度使其偏黑
+        float saturation = 1.0f;
+        float value;
+        if (percent < 0.25f) {
+            // 低血量时明度从100%降到60%
+            value = 0.6f + (percent / 0.25f) * 0.4f;
+        } else {
+            value = 1.0f;
+        }
+
+        float c = value * saturation;  // chroma
+        float x = c * (1.0f - Math.abs((hue / 60.0f) % 2.0f - 1.0f));
+        float m = value - c;
+
+        float r, g, b;
+        if (hue < 60.0f) {
+            // 红→黄 (0-60°)
+            r = c;
+            g = x;
+            b = 0;
+        } else if (hue < 120.0f) {
+            // 黄→绿 (60-120°)
+            r = x;
+            g = c;
+            b = 0;
+        } else {
+            // 理论上hue最大120°，不会走到这里
+            r = 0;
+            g = c;
+            b = 0;
+        }
+
+        // 转换到0-255范围
+        int ri = (int) ((r + m) * 255);
+        int gi = (int) ((g + m) * 255);
+        int bi = (int) ((b + m) * 255);
+
+        return (255 << 24) | (ri << 16) | (gi << 8) | bi;
     }
 
     /**
@@ -340,29 +441,6 @@ public class CustomStatueGUI {
         guiGraphics.pose().popPose();
     }
 
-    /**
-     * 根据血量百分比返回对应的纹理文件名后缀
-     */
-    private static String getTextureSuffixByHealthPercent(float healthPercentage) {
-        if (healthPercentage >= 100.0F) {
-            return "1";
-        } else if (healthPercentage > 50.0F) {
-            return "0.8";
-        } else if (healthPercentage > 40.0F) {
-            return "0.5";
-        } else if (healthPercentage > 30.0F) {
-            return "0.4";
-        } else if (healthPercentage > 10.0F) {
-            return "0.3";
-        }else if (healthPercentage > 5.0F) {
-            return "0.1";
-        } else if (healthPercentage <= 5.0F) {
-            return "0";
-        } else {
-            return "0";
-        }
-    }
-
     //拦截原版UI：在UI渲染前取消原版血量和饱食度的渲染事件
     @SubscribeEvent
     public static void interceptVanillaHealthAndFoodUI(RenderGuiOverlayEvent.Pre event) {
@@ -379,5 +457,93 @@ public class CustomStatueGUI {
         if (currentOverlay.id().equals(VanillaGuiOverlay.FOOD_LEVEL.id())) {
             event.setCanceled(true);
         }
+    }
+
+    /**
+     * 客户端tick事件 - 检测血量变化，触发受伤闪烁
+     */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null) {
+            return;
+        }
+
+        Player player = mc.player;
+        float currentHealth = player.getHealth();
+
+        // 检测血量下降（受伤）
+        if (currentHealth < lastHealth) {
+            lastDamageTime = System.currentTimeMillis();
+        }
+
+        lastHealth = currentHealth;
+    }
+
+    /**
+     * 清理过期的受伤记录并绘制肢体受伤标记
+     */
+    private static void cleanupAndDrawLimbInjuryIcons(GuiGraphics guiGraphics, Player player, int playerIconX, int playerIconY) {
+        // 清理过期记录
+        LimbClientInjurySync.cleanupExpiredInjuries(player);
+
+        // 检查并绘制各部位的受伤感叹号
+        for (LimbType limbType : LimbType.values()) {
+            if (LimbClientInjurySync.isInjuryVisible(player, limbType)) {
+                drawLimbInjuryIcon(guiGraphics, playerIconX, playerIconY, limbType);
+            }
+        }
+    }
+
+    /**
+     * 绘制单个部位的受伤脉冲圆点
+     */
+    private static void drawLimbInjuryIcon(GuiGraphics guiGraphics, int playerIconX, int playerIconY, LimbType limbType) {
+        // 根据部位获取偏移位置
+        int offsetX, offsetY;
+        switch (limbType) {
+            case HEAD:
+                offsetX = HEAD_OFFSET_X;
+                offsetY = HEAD_OFFSET_Y;
+                break;
+            case CHEST:
+                offsetX = CHEST_OFFSET_X;
+                offsetY = CHEST_OFFSET_Y;
+                break;
+            case LEGS:
+                offsetX = LEGS_OFFSET_X;
+                offsetY = LEGS_OFFSET_Y;
+                break;
+            case FEET:
+                offsetX = FEET_OFFSET_X;
+                offsetY = FEET_OFFSET_Y;
+                break;
+            default:
+                return;
+        }
+
+        // 计算中心位置
+        int centerX = playerIconX + offsetX;
+        int centerY = playerIconY + offsetY;
+
+        // 计算脉冲大小（呼吸效果：0~1~0 的正弦波）
+        long time = System.currentTimeMillis();
+        float pulsePhase = (time % PULSE_CYCLE) / (float) PULSE_CYCLE;  // 0 ~ 1
+        float pulseFactor = (float) Math.sin(pulsePhase * Math.PI);      // 0 → 1 → 0
+        int currentSize = INJURY_DOT_BASE_SIZE + (int) (pulseFactor * INJURY_DOT_PULSE_SIZE);
+
+        // 绘制半透明红色圆点（用小矩形模拟圆形）
+        int halfSize = currentSize / 2;
+        guiGraphics.fill(
+            centerX - halfSize,
+            centerY - halfSize,
+            centerX + halfSize,
+            centerY + halfSize,
+            INJURY_DOT_COLOR
+        );
     }
 }

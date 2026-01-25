@@ -21,6 +21,7 @@ import com.mo.economy_system.network.packets.playerattribute_system.death_system
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
+import com.mo.economy_system.network.packets.playerattribute_system.limb_system.Packet_SyncLimbInjury;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_VanillaAdvancementNotify;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestAllPlayerData;
@@ -125,6 +126,8 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_NoticeListRequest.class, Packet_NoticeListRequest::encode, Packet_NoticeListRequest::decode, Packet_NoticeListRequest::handle);
         INSTANCE.registerMessage(packetId++, Packet_NoticeListResponse.class, Packet_NoticeListResponse::encode, Packet_NoticeListResponse::decode, Packet_NoticeListResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         INSTANCE.registerMessage(packetId++, Packet_MarkNoticeReadRequest.class, Packet_MarkNoticeReadRequest::encode, Packet_MarkNoticeReadRequest::decode, Packet_MarkNoticeReadRequest::handle);
+        //肢体受伤同步
+        INSTANCE.registerMessage(packetId++, Packet_SyncLimbInjury.class, Packet_SyncLimbInjury::encode, Packet_SyncLimbInjury::decode, Packet_SyncLimbInjury::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {
