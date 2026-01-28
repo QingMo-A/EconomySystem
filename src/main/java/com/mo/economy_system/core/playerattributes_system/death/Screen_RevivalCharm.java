@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
 
 /**
- * 复活护符 GUI - 金色神圣风格
+ * 重生锦鲤 GUI - 金色神圣风格
  * 输入被封禁玩家名称进行复活
  *
  * 使用虚拟坐标系统（参考 ServerScreenUI 和 DeathScreenMixin）
@@ -75,7 +75,7 @@ public class Screen_RevivalCharm extends Screen {
     private static final Minecraft mc = Minecraft.getInstance();
 
     public Screen_RevivalCharm() {
-        super(Component.literal("复活护符"));
+        super(Component.literal("重生锦鲤"));
     }
 
     @Override
@@ -190,11 +190,11 @@ public class Screen_RevivalCharm extends Screen {
         guiGraphics.renderItem(new net.minecraft.world.item.ItemStack(Items.TOTEM_OF_UNDYING), 0, 0);
         poseStack.popPose();
 
-        // ========== 标题：复活护符 ==========
+        // ========== 标题：重生锦鲤 ==========
         poseStack.pushPose();
         float titleScale = 2.0f;
         poseStack.scale(titleScale, titleScale, 1.0f);
-        String titleText = "§e§l复活护符";
+        String titleText = "§e§l重生锦鲤";
         int titleX = (int) ((centerX + 6) / titleScale - mc.font.width(titleText) / 2.0f);
         int titleY = (int) ((panelY + Y_TITLE) / titleScale);
         guiGraphics.drawString(mc.font, titleText, titleX, titleY, 0xFFFFFFFF, false);
@@ -213,7 +213,7 @@ public class Screen_RevivalCharm extends Screen {
 
         // ========== 提示文字（左对齐）==========
         String hintLine1 = "§7输入被封禁玩家的名称";
-        String hintLine2 = "§7用复活护符拯救他们的灵魂";
+        String hintLine2 = "§7用你的能量复苏他们！";
 
         poseStack.pushPose();
         float hintScale = 1.1f;
