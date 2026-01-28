@@ -2,6 +2,7 @@ package com.mo.economy_system.core.playerattributes_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageClientSync;
+import com.mo.economy_system.core.playerattributes_system.death.DeathEventHandler;
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionClientSync;
 import com.mo.economy_system.core.playerattributes_system.death.RespawnPointSyncManager;
 import com.mo.economy_system.core.playerattributes_system.strength.StrengthSyncManager;
@@ -50,24 +51,22 @@ public class LoginDeathSync {
             PlayerAttributesData attrData = getPlayerAttributesData(serverPlayer.getUUID());
             StrengthSyncManager.syncStrengthToClient(serverPlayer);
             if (attrData == null) return;
-            PlayerCourageClientSync.sendCourageDataToClient(
-                    serverPlayer,
-                    attrData.getCurrentCourage(),
-                    attrData.getMaxCourage()
-            );
-            PlayerInfectionClientSync.sendInfectionDataToClient(
-                    serverPlayer,
-                    attrData.getCurrentInfection()
-            );
+            PlayerCourageClientSync.sendCourageDataToClient(serverPlayer, attrData.getCurrentCourage(), attrData.getMaxCourage());
+            PlayerInfectionClientSync.sendInfectionDataToClient(serverPlayer, attrData.getCurrentInfection());
             // 同步复活点数
             RespawnPointSyncManager.syncRespawnPointToClient(serverPlayer);
-            EconomySystem.LOGGER.info("玩家 {} 登录，同步属性：勇气值({}/{})，感染值({})，复活点数({})",
-                    serverPlayer.getScoreboardName(),
-                    attrData.getCurrentCourage(),
-                    attrData.getMaxCourage(),
-                    attrData.getCurrentInfection(),
-                    attrData.getRespawnPoint()
-            );
+//            EconomySystem.LOGGER.info("玩家 {} 登录，同步属性：勇气值({}/{})，感染值({})，复活点数({})",
+//                    serverPlayer.getScoreboardName(),
+//                    attrData.getCurrentCourage(),
+//                    attrData.getMaxCourage(),
+//                    attrData.getCurrentInfection(),
+//                    attrData.getRespawnPoint()
+//            );
+
+            // 检查是否有未处理的死亡状态（玩家死亡后退出重连）
+            if (DeathEventHandler.hasDeathState(serverPlayer)) {
+                DeathEventHandler.restoreDeathState(serverPlayer);
+            }
         }
     }
 }

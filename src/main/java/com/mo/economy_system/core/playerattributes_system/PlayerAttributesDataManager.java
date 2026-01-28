@@ -87,8 +87,9 @@ public class PlayerAttributesDataManager {
         if (hasPlayerAttributesData(player)) {
 //            EconomySystem.LOGGER.info("玩家 {} 已有属性数据，同步等级为{}", player.getScoreboardName(), realLevel);
             PlayerAttributesData existingData = getPlayerAttributesData(playerUUID);
-            // 同步最新等级
+            // 同步最新等级和玩家名字
             existingData.setLevel(realLevel, player);
+            existingData.setPlayerName(player.getScoreboardName());  // 更新玩家名字
             ATTRIBUTES_CACHE.put(playerUUID, existingData);
             // 保存到文件
             Map<UUID, PlayerAttributesData> allAttributes = loadAllAttributesFromFile();
@@ -199,6 +200,38 @@ public class PlayerAttributesDataManager {
             GSON.toJson(allAttributes, writer);
         } catch (Exception e) {
             EconomySystem.LOGGER.error("写入玩家属性数据文件失败", e);
+        }
+    }
+
+    /**
+     * 保存单个玩家属性数据到文件（用于外部调用，如复活护符）
+     */
+    public static void saveSinglePlayerData(UUID playerUUID, PlayerAttributesData data) {
+        try {
+            // 读取现有数据
+            Map<UUID, PlayerAttributesData> allAttributes = new HashMap<>();
+            if (PLAYER_ATTRIBUTES_FILE.exists() && PLAYER_ATTRIBUTES_FILE.length() > 0) {
+                try (FileReader reader = new FileReader(PLAYER_ATTRIBUTES_FILE)) {
+                    Type mapType = new TypeToken<Map<UUID, PlayerAttributesData>>() {}.getType();
+                    Map<UUID, PlayerAttributesData> loaded = GSON.fromJson(reader, mapType);
+                    if (loaded != null) {
+                        allAttributes = loaded;
+                    }
+                }
+            }
+
+            // 更新目标玩家数据
+            allAttributes.put(playerUUID, data);
+
+            // 保存回文件
+            try (FileWriter writer = new FileWriter(PLAYER_ATTRIBUTES_FILE)) {
+                GSON.toJson(allAttributes, writer);
+            }
+
+            // 更新缓存
+            ATTRIBUTES_CACHE.put(playerUUID, data);
+        } catch (IOException e) {
+            EconomySystem.LOGGER.error("保存玩家属性数据失败", e);
         }
     }
 

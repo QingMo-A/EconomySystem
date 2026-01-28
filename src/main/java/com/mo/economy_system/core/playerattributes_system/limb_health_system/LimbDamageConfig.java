@@ -56,12 +56,12 @@ public class LimbDamageConfig {
         multipliers.putAll(DEFAULT_MULTIPLIERS);
 
         // 尝试从文件加载
-        if (Files.exists(CONFIG_PATH)) {
-            loadFromFile();
-        } else {
-            // 文件不存在，创建默认配置文件
-            saveToFile();
-        }
+        // if (Files.exists(CONFIG_PATH)) {
+        //     loadFromFile();
+        // } else {
+        //     // 文件不存在，创建默认配置文件
+        //     saveToFile();
+        // }
 
         EconomySystem.LOGGER.info("肢体伤害系统配置已加载: 头部×{}, 胸部×{}, 腿部×{}, 脚部×{}",
                 multipliers.get("HEAD"),
@@ -134,7 +134,7 @@ public class LimbDamageConfig {
     public static void resetToDefault() {
         multipliers.clear();
         multipliers.putAll(DEFAULT_MULTIPLIERS);
-        saveToFile();
+        // saveToFile(); // 不生成配置文件
     }
 
     /**

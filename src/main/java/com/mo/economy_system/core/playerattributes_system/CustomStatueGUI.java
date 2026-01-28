@@ -213,14 +213,14 @@ public class CustomStatueGUI {
                 PLAYER_HEALTH_TEXTURE,
                 playerIconX,
                 playerIconY,
-                uvX,                       // UV X：正常=0，受伤=27
-                PLAYER_UV_Y,               // UV Y = 0
-                PLAYER_ICON_WIDTH,         // 宽度 27
-                PLAYER_ICON_HEIGHT,        // 高度 59
+                uvX,
+                PLAYER_UV_Y,
+                PLAYER_ICON_WIDTH,
+                PLAYER_ICON_HEIGHT,
                 PLAYER_TEXTURE_TOTAL_WIDTH,
                 PLAYER_TEXTURE_TOTAL_HEIGHT
         );
-        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);  // 重置颜色
+        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         // 绘制肢体受伤标记
         cleanupAndDrawLimbInjuryIcons(guiGraphics, player, playerIconX, playerIconY);
@@ -265,15 +265,14 @@ public class CustomStatueGUI {
     }
 
     /**
-     * 根据血量百分比计算颜色（HSV平滑渐变）
-     * 使用HSV色彩模型，色相从绿色(120°)平滑过渡到红色(0°)
-     * 每个血量百分比都有对应的精确颜色
+     * 根据血量百分比计算颜色（分段线性插值）
+     * 确保关键血量点的颜色准确
      *
-     * 100% → 绿色 (HSV: 120°)
-     * 75% → 黄绿色 (HSV: 90°)
-     * 50% → 黄色 (HSV: 60°)
-     * 25% → 橙色 (HSV: 30°)
-     * 0% → 红色 (HSV: 0°)
+     * 100% → 纯绿色 (0, 255, 0)
+     * 75% → 黄绿色 (128, 255, 0)
+     * 50% → 纯黄色 (255, 255, 0)
+     * 25% → 橙色 (255, 128, 0)
+     * 0% → 纯红色 (255, 0, 0)
      *
      * @param percent 血量百分比 (0.0 ~ 1.0)
      * @return ARGB 颜色值
@@ -281,47 +280,32 @@ public class CustomStatueGUI {
     private static int getHealthColor(float percent) {
         percent = Math.max(0.0f, Math.min(1.0f, percent));
 
-        // 50%时刚好是黄色(60°)，使用线性映射
-        float hue = percent * 120.0f;
+        int r, g;
+        float value = 1.0f;
 
-        // HSV转RGB，低血量时降低明度使其偏黑
-        float saturation = 1.0f;
-        float value;
+        // 低血量时降低明度使其偏黑
         if (percent < 0.25f) {
-            // 低血量时明度从100%降到60%
             value = 0.6f + (percent / 0.25f) * 0.4f;
-        } else {
-            value = 1.0f;
         }
 
-        float c = value * saturation;  // chroma
-        float x = c * (1.0f - Math.abs((hue / 60.0f) % 2.0f - 1.0f));
-        float m = value - c;
-
-        float r, g, b;
-        if (hue < 60.0f) {
-            // 红→黄 (0-60°)
-            r = c;
-            g = x;
-            b = 0;
-        } else if (hue < 120.0f) {
-            // 黄→绿 (60-120°)
-            r = x;
-            g = c;
-            b = 0;
+        if (percent > 0.5f) {
+            // 50% ~ 100%：黄色 → 绿色
+            // 黄色(255, 255, 0) → 绿色(0, 255, 0)
+            float t = (percent - 0.5f) * 2.0f;  // 0 ~ 1
+            r = (int) ((1.0f - t) * 255 * value);  // 255 → 0
+            g = (int) (255 * value);               // 始终255
         } else {
-            // 理论上hue最大120°，不会走到这里
-            r = 0;
-            g = c;
-            b = 0;
+            // 0% ~ 50%：红色 → 黄色（包含50%）
+            // 红色(255, 0, 0) → 黄色(255, 255, 0)
+            float t = percent * 2.0f;  // 0 ~ 1
+            r = (int) (255 * value);   // 始终255
+            g = (int) (t * 255 * value);  // 0 → 255
         }
 
-        // 转换到0-255范围
-        int ri = (int) ((r + m) * 255);
-        int gi = (int) ((g + m) * 255);
-        int bi = (int) ((b + m) * 255);
+        int ri = Math.max(0, Math.min(255, r));
+        int gi = Math.max(0, Math.min(255, g));
 
-        return (255 << 24) | (ri << 16) | (gi << 8) | bi;
+        return (255 << 24) | (ri << 16) | (gi << 8);
     }
 
     /**

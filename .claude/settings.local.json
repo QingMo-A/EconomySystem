@@ -42,7 +42,8 @@
       "Bash(cd:*)",
       "WebSearch",
       "Bash(python3:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(rd:*)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.item.items.*;
 import com.mo.economy_system.item.items.medicine.Easy_Aid_Kit;
+import com.mo.economy_system.item.items.Item_RevivalCharm;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
@@ -129,6 +130,13 @@ public class EconomySystem_Items {
                     "专业急救包"
             )
     );
+
+    // 复活护符
+    public static final RegistryObject<Item> REVIVAL_CHARM = ITEMS.register("revival_charm",
+            () -> new Item_RevivalCharm(new Item.Properties()
+                    .stacksTo(1)  // 只能堆叠1个
+                    .rarity(Rarity.RARE)  // 稀有品质
+            ));
 
 
     public static void register(IEventBus eventBus) {

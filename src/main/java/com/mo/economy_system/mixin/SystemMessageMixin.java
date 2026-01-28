@@ -36,23 +36,27 @@ public class SystemMessageMixin {
      * 使用宽松匹配，与事件处理器保持一致
      */
     private boolean shouldFilterFromChat(String message) {
+        String lowerMessage = message.toLowerCase();
+
         // === 进度/成就/挑战/目标消息 ===
-        if (message.contains("[") && (message.contains("进度") || message.contains("挑战") || message.contains("目标") || message.contains("任务") || message.contains("成就"))) {
+        if (message.contains("[") && (message.contains("进度") || message.contains("挑战") || message.contains("目标") || message.contains("任务") || message.contains("成就") ||
+            lowerMessage.contains("advancement") || lowerMessage.contains("challenge") || lowerMessage.contains("goal") || lowerMessage.contains("task") || lowerMessage.contains("achievement"))) {
             return true;
         }
-        if ((message.contains("获得") || message.contains("完成") || message.contains("达成")) &&
-            (message.contains("任务") || message.contains("目标") || message.contains("挑战"))) {
+        if ((message.contains("获得") || message.contains("完成") || message.contains("达成") ||
+            lowerMessage.contains("made the advancement") || lowerMessage.contains("completed") || lowerMessage.contains("reached")) &&
+            (message.contains("任务") || message.contains("目标") || message.contains("挑战") ||
+            lowerMessage.contains("advancement") || lowerMessage.contains("challenge") || lowerMessage.contains("goal"))) {
             return true;
         }
 
         // === 进服/离服消息 ===
-        if (message.contains("加入") && message.contains("游戏")) return true;
-        if (message.contains("离开") || message.contains("退出")) {
-            if (message.contains("游戏") || message.contains("服务器")) return true;
+        if ((message.contains("加入") && message.contains("游戏")) || lowerMessage.contains("joined the game")) return true;
+        if (message.contains("离开") || message.contains("退出") || lowerMessage.contains("left")) {
+            if (message.contains("游戏") || message.contains("服务器") || lowerMessage.contains("game") || lowerMessage.contains("server")) return true;
         }
 
         // === 死亡消息 ===
-        String lowerMessage = message.toLowerCase();
         String[] deathKeywords = {
                 "was slain by", "was shot by", "was fireballed by", "was killed by",
                 "fell from", "fell out of", "was doomed to fall", "was impaled on",

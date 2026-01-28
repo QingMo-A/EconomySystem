@@ -78,12 +78,6 @@ public class PlayerLoginEvent {
                     NewPlayerGuide.sendNewPlayerGuide(player);
                 }
 
-                // 检查并恢复死亡状态
-                if (DeathEventHandler.hasDeathState(player)) {
-                    EconomySystem.LOGGER.info("玩家 {} 登录时检测到未处理的死亡状态", player.getName().getString());
-                    DeathEventHandler.restoreDeathState(player);
-                }
-
                 EconomySystem.LOGGER.info("玩家 {} 快速登录成功", player.getName().getString());
             } else {
                 // 不符合快速登录条件，需要手动登录
@@ -92,7 +86,7 @@ public class PlayerLoginEvent {
                 // 标记登录验证状态为未完成
                 loginData.setLoginSessionCompleted(false);
                 PlayerLoginDataManager.saveLoginData(playerUUID, loginData);
-                player.sendSystemMessage(Component.literal("§c您尚未登录或者注册，登录后会将您的游戏模式变成生存模式"));
+                player.sendSystemMessage(Component.literal("§c请在弹出的窗口中完成登录/注册操作"));
                 // 发送登录请求网络包 (false = 登录)
                 EconomySystem_NetworkManager.sendToClient(new Packet_PlayerLoginRequest(false), player);
             }

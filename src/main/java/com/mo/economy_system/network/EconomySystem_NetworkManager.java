@@ -18,6 +18,8 @@ import com.mo.economy_system.network.packets.playerattribute_system.death_system
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnResponse;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_SyncRespawnPointData;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_OpenRevivalCharmGUI;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_RevivalRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
@@ -128,6 +130,9 @@ public class EconomySystem_NetworkManager {
         INSTANCE.registerMessage(packetId++, Packet_MarkNoticeReadRequest.class, Packet_MarkNoticeReadRequest::encode, Packet_MarkNoticeReadRequest::decode, Packet_MarkNoticeReadRequest::handle);
         //肢体受伤同步
         INSTANCE.registerMessage(packetId++, Packet_SyncLimbInjury.class, Packet_SyncLimbInjury::encode, Packet_SyncLimbInjury::decode, Packet_SyncLimbInjury::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        //复活护符
+        INSTANCE.registerMessage(packetId++, Packet_OpenRevivalCharmGUI.class, Packet_OpenRevivalCharmGUI::encode, Packet_OpenRevivalCharmGUI::decode, Packet_OpenRevivalCharmGUI::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        INSTANCE.registerMessage(packetId++, Packet_RevivalRequest.class, Packet_RevivalRequest::encode, Packet_RevivalRequest::decode, Packet_RevivalRequest::handle);
     }
 
     public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {

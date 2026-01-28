@@ -3,6 +3,7 @@ package com.mo.economy_system.core.playerattributes_system.death;
 import com.mo.economy_system.EconomySystem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -134,13 +135,6 @@ public class DeathItemStorage {
     }
 
     /**
-     * 清除存储的物品
-     */
-    public static void clearStoredItems(UUID uuid) {
-        STORED_DROPS.remove(uuid);
-    }
-
-    /**
      * 在死亡位置掉落物品
      */
     private static void dropItemsAtDeathLocation(Player player, StoredItems stored) {
@@ -181,23 +175,29 @@ public class DeathItemStorage {
     }
 
     /**
-     * 在指定位置生成物品实体
+     * 在指定位置生成物品实体（使用原版掉落逻辑）
+     * 参考 Player.drop(ItemStack, boolean, boolean) 源码
      */
     private static void spawnItemEntity(Level level, double x, double y, double z, ItemStack stack) {
         if (level instanceof ServerLevel serverLevel) {
-            // 添加一点随机偏移，防止物品堆叠在一起
-            double offsetX = (level.random.nextDouble() - 0.5) * 0.5;
-            double offsetZ = (level.random.nextDouble() - 0.5) * 0.5;
-
+            // 参考原版：从玩家眼睛高度掉落（y - 0.3）
+            double dropY = y - 0.3D;
             ItemEntity itemEntity = new ItemEntity(EntityType.ITEM, level);
             itemEntity.setItem(stack.copy());
-            itemEntity.setPos(x + offsetX, y, z + offsetZ);
+            itemEntity.setPos(x, dropY, z);
+            itemEntity.setPickUpDelay(40); // 原版是 40 tick
+
+            // 原版随机掉落速度（throwRandomly = true 时的逻辑）
+            // float f = this.random.nextFloat() * 0.5F;
+            // float f1 = this.random.nextFloat() * ((float)Math.PI * 2F);
+            // itementity.setDeltaMovement((double)(-Mth.sin(f1) * f), (double)0.2F, (double)(Mth.cos(f1) * f));
+            float f = level.random.nextFloat() * 0.5F;
+            float f1 = level.random.nextFloat() * ((float)Math.PI * 2F);
             itemEntity.setDeltaMovement(
-                    (level.random.nextDouble() - 0.5) * 0.1,
-                    0.2,
-                    (level.random.nextDouble() - 0.5) * 0.1
+                    (double)(-Mth.sin(f1) * f),  // 水平X方向：随机角度
+                    (double)0.2F,                  // 向上抛起速度 0.2
+                    (double)(Mth.cos(f1) * f)     // 水平Z方向：随机角度
             );
-            itemEntity.setPickUpDelay(10); // 10 tick 后才能捡起
 
             serverLevel.addFreshEntity(itemEntity);
         }
