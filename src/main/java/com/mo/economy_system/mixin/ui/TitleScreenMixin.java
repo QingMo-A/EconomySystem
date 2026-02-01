@@ -433,8 +433,8 @@ public abstract class TitleScreenMixin extends Screen {
         // 左上角 - DreamingFish
         guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)", 5, 5, TEXT_WHITE, false);
 
-        // 左下角 - Minecraft 1.20.1
-        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1", 5, virtualH - 10, TEXT_GRAY, false);
+        // 左下角 - Minecraft 1.20.1 + Mojang 版权
+        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!", 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
         guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);
@@ -456,8 +456,8 @@ public abstract class TitleScreenMixin extends Screen {
         int virtualW = economySystem$virtualSize.virtualWidth;
         int virtualH = economySystem$virtualSize.virtualHeight;
 
-        // 左下角 - Minecraft 1.20.1
-        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1", 5, virtualH - 10, TEXT_GRAY, false);
+        // 左下角 - Minecraft 1.20.1 + Mojang 版权
+        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!", 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
         guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);

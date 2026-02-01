@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
+import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.UserBanList;
@@ -148,6 +149,9 @@ public class Packet_RevivalRequest {
                         PlayerAttributesDataManager.saveSinglePlayerData(sender.getUUID(), senderData);
                         EconomySystem.LOGGER.info("玩家 {} 的感染状态已设置为: {}（由 {} 传递）",
                                 targetName, senderIsInfected ? "感染者" : "幸存者", sender.getScoreboardName());
+
+                        // 记录复活信息（用于登录后发送提示）
+                        RevivalInfoManager.setRevivalInfo(targetUuid, sender.getScoreboardName(), senderIsInfected);
                     }
                 }
 

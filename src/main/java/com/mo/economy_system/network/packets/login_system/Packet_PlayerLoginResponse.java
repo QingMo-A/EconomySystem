@@ -3,6 +3,7 @@ package com.mo.economy_system.network.packets.login_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.login_system.PlayerLoginData;
 import com.mo.economy_system.core.login_system.PlayerLoginDataManager;
+import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
 import com.mo.economy_system.server.notice.NewPlayerGuide;
 import com.mo.economy_system.server.serverui.tips.TipPushHelper;
 import net.minecraft.network.FriendlyByteBuf;
@@ -107,6 +108,10 @@ public class Packet_PlayerLoginResponse {
 
                 EconomySystem.LOGGER.info("发送提示消息");
                 TipPushHelper.sendTipToPlayer(serverPlayer, "§a注册成功！享受服务器吧！");
+
+                // 检查并发送复活提示
+                RevivalInfoManager.checkAndSendRevivalTip(serverPlayer);
+
                 // 发送新手教程（仅未完成过教程的玩家）
                 if (!newPlayerLoginData.gethasCompletedNewPlayerGuidence()) {
                     NewPlayerGuide.sendNewPlayerGuide(serverPlayer);
@@ -139,6 +144,9 @@ public class Packet_PlayerLoginResponse {
                     PlayerLoginDataManager.saveLoginData(playerUUID, playerLoginData);
 
                     TipPushHelper.sendTipToPlayer(serverPlayer, "§a登录成功！欢迎回来！");
+
+                    // 检查并发送复活提示
+                    RevivalInfoManager.checkAndSendRevivalTip(serverPlayer);
                     sendResult(serverPlayer, true, "登录成功！");
 
                     if (!playerLoginData.gethasCompletedNewPlayerGuidence()) {

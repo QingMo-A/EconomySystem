@@ -2,6 +2,7 @@ package com.mo.economy_system.core.login_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.death.DeathEventHandler;
+import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest;
 import com.mo.economy_system.server.notice.NewPlayerGuide;
@@ -72,6 +73,9 @@ public class PlayerLoginEvent {
                 // 发送提示消息
                 TipPushHelper.sendTipToPlayer(player, "§a欢迎回来！已自动登录（5分钟内重连）");
                 player.sendSystemMessage(Component.literal("§a欢迎回来！已自动登录（5分钟内同IP重连）"));
+
+                // 检查并发送复活提示
+                RevivalInfoManager.checkAndSendRevivalTip(player);
 
                 //如果没有完成新手教程，继续新手教程
                 if (!loginData.gethasCompletedNewPlayerGuidence()) {
