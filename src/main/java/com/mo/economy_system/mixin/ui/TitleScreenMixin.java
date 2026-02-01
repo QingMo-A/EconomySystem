@@ -33,6 +33,9 @@ public abstract class TitleScreenMixin extends Screen {
     private static final int ACCENT_GOLD = 0xFFFFAA44;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
     private static final int TEXT_GRAY = 0xFFAAAAAA;
+    private static final int GLASS_BG = 0x66000000;
+    private static final int GLASS_BORDER = 0x33FFFFFF;
+    private static final int GLASS_GLOW = 0x2200AAFF;
 
     @Unique
     private static final ResourceLocation BACKGROUND_TEXTURE =
@@ -159,10 +162,8 @@ public abstract class TitleScreenMixin extends Screen {
             this.economySystem$hoverTime = time;
         }
 
-        // 渲染背景图片（填满整个屏幕）
-        guiGraphics.blit(BACKGROUND_TEXTURE,
-            0, 0, this.width, this.height,
-            0, 0, 256, 144, 256, 144);
+        // 渲染背景渐变（更现代的暗色基底）
+        guiGraphics.fillGradient(0, 0, this.width, this.height, 0xFF0A0F1E, 0xFF04060D);
 
         PoseStack poseStack = guiGraphics.pose();
 
@@ -199,7 +200,8 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderMainPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, long time) {
-        // 无主面板背景，只有按钮有背景
+        // 玻璃拟态主面板（含柔和边缘和外层光晕）
+        economySystem$renderGlassPanel(guiGraphics, x, y, width, height);
 
         // 统一间距系统
         int gap = 6;  // 所有间距统一为 6
@@ -247,6 +249,9 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderMultiplayerButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                        int color, boolean hovered) {
+        if (hovered) {
+            economySystem$renderGlow(guiGraphics, x, y, width, height, 0x55FFFFFF);
+        }
         // 深色半透明背景（只有按钮有背景）
         int bgColor = hovered ? 0xDD000000 : 0xBB000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
@@ -307,6 +312,9 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderSmallButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                  String title, String icon, int color, boolean hovered) {
+        if (hovered) {
+            economySystem$renderGlow(guiGraphics, x, y, width, height, 0x55FFFFFF);
+        }
         // 深色半透明背景（只有按钮有背景）
         int bgColor = hovered ? 0xDD000000 : 0xBB000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
@@ -336,6 +344,9 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderUpdateLogButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                      boolean hovered) {
+        if (hovered) {
+            economySystem$renderGlow(guiGraphics, x, y, width, height, 0x55FFFFFF);
+        }
         // 深色半透明背景
         int bgColor = hovered ? 0xDD000000 : 0xBB000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
@@ -385,8 +396,10 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderDonatePanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        // 半透明黑色背景
+        // 半透明黑色背景 + 玻璃描边
         guiGraphics.fill(x, y, x + width, y + height, 0xBB000000);
+        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
+        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
 
         // 标题（左对齐）
         guiGraphics.drawString(font, "§7本服为§e非营利公益服§7，", x + 10, y + 8, TEXT_WHITE, false);
@@ -430,7 +443,8 @@ public abstract class TitleScreenMixin extends Screen {
         int virtualW = economySystem$virtualSize.virtualWidth;
         int virtualH = economySystem$virtualSize.virtualHeight;
 
-        // 左上角 - DreamingFish
+        // 左上角 - DreamingFish（轻微阴影）
+        guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)", 6, 6, 0x66000000, false);
         guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)", 5, 5, TEXT_WHITE, false);
 
         // 左下角 - Minecraft 1.20.1
@@ -469,6 +483,19 @@ public abstract class TitleScreenMixin extends Screen {
         String developerCopyright = "  Developed by QINGMO & HANHANYU";
         guiGraphics.drawString(this.font, "§6" + dreamingFishCopyright, virtualW - this.font.width(dreamingFishCopyright) - 5, 5, TEXT_GRAY, false);
         guiGraphics.drawString(this.font, "§6" + developerCopyright, virtualW - this.font.width(developerCopyright) - 5, 17, TEXT_GRAY, false);
+    }
+
+    @Unique
+    private void economySystem$renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        guiGraphics.fill(x, y, x + width, y + height, GLASS_BG);
+        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
+        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
+        guiGraphics.fill(x - 2, y - 2, x + width + 2, y + height + 2, GLASS_GLOW);
+    }
+
+    @Unique
+    private void economySystem$renderGlow(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
+        guiGraphics.fill(x - 2, y - 2, x + width + 2, y + height + 2, color);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
