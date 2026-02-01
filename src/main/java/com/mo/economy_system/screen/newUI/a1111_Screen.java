@@ -15,6 +15,7 @@ import com.mo.economy_system.screen.EconomySystem_Screen;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -28,7 +29,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 
-import javax.print.DocFlavor;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -65,12 +65,12 @@ public class a1111_Screen extends EconomySystem_Screen {
     private int lastSidebarX = -1;
     private int lastSidebarY = -1;
 
-    private final String PAGE_ID_HOME = "HOME";
-    private final String PAGE_ID_STORE = "STORE";
-    private final String PAGE_ID_MARKET = "MARKET";
-    private final String PAGE_ID_DELIVERY_BOX = "DELIVERY_BOX";
-    private final String PAGE_ID_TERRITORIES = "TERRITORIES";
-    private final String PAGE_ID_ABOUT = "ABOUT";
+    public static final String PAGE_ID_HOME = "HOME";
+    public static final String PAGE_ID_STORE = "STORE";
+    public static final String PAGE_ID_MARKET = "MARKET";
+    public static final String PAGE_ID_DELIVERY_BOX = "DELIVERY_BOX";
+    public static final String PAGE_ID_TERRITORIES = "TERRITORIES";
+    public static final String PAGE_ID_ABOUT = "ABOUT";
 
     private final String PAGE_NAME_HOME = "title.home";
     private final String PAGE_NAME_STORE = "title.store";
@@ -89,6 +89,17 @@ public class a1111_Screen extends EconomySystem_Screen {
         super(Component.literal("Test UI Screen"));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
         // EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+    }
+
+    public a1111_Screen(String startPage) {
+        super(Component.literal("Test UI Screen"));
+        setStartPage(startPage);
+        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+        if (PAGE_ID_STORE.equals(startPage)) {
+            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopDataRequest());
+        } else if (PAGE_ID_MARKET.equals(startPage)) {
+            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        }
     }
 
     @Override
@@ -190,6 +201,7 @@ public class a1111_Screen extends EconomySystem_Screen {
     @Override
     protected void initializeRenderCache() {
         renderCache.clear();
+        itemWidgets.clear();
 
         titleBar = new HBoxWidget(0, 0, 20)
                 .setSpacing(10)
@@ -335,100 +347,10 @@ public class a1111_Screen extends EconomySystem_Screen {
         if (this.currentPage.equals(PAGE_ID_HOME)) {
 
         } else if (this.currentPage.equals(PAGE_ID_STORE)) {
-
-            if (!shopItems.isEmpty()) {
-                LocalPlayer player = Minecraft.getInstance().player;
-                if (player == null) return;
-
-                for (ShopItem item : shopItems) {
-                    ItemStack stack = item.getItemStack();
-
-                    int rowHeight = 30;
-                    int rowWidth = mainPane.getFixedWidth(); // 获取 mainPane 当前宽度
-
-                    HBoxWidget itemRow = new HBoxWidget(0, 0, 0)
-                            .setSpacing(7)
-                            .setPadding(5, 10, 5, 10)
-                            .setBorderColor(0x22FFFFFF)
-                            .setBoxWidth(rowWidth)
-                            .setBoxHeight(rowHeight)
-                            .showBorder(true, false, true, false)
-                            .setBorderThickness(1);
-
-                    // 图标
-                    ItemIconWidget icon = new ItemIconWidget(stack, font, 0, 0)
-                            .setScale(1.3f)
-                            .setShowDecorations(true);
-                    // 构建工具提示
-                    Tooltip tooltip = Tooltip.create(buildItemTooltip(player, item));
-                    icon.setTooltip(tooltip);
-                    // icon.setTooltip(tooltip);
-
-                    // 名称 + 价格 VBox
-                    VBoxWidget infoBox = new VBoxWidget(0, 0, 200) // 宽 200，高和 row 高一致
-                            .setSpacing(2)
-                            .setBoxHeight(rowHeight)
-                            .setPadding(2, 2, 2, 2);
-
-                    LabelWidget nameLabel = new LabelWidget(font, stack.getHoverName(), 0, 0, 0xFFFFFF, true)
-                            .setScale(1.0f);
-                    LabelWidget priceLabel = new LabelWidget(font, Component.literal("价格: " + item.getCurrentPrice()), 0, 0, 0xAAAAAA, true)
-                            .setScale(0.9f);
-
-                    infoBox.addAllChildren(nameLabel, priceLabel);
-                    itemRow.addAllChildren(icon, infoBox);
-                    mainPane.addChild(itemRow);
-                }
-            }
+            buildShopLayout();
 
         } else if (this.currentPage.equals(PAGE_ID_MARKET)) {
-
-            if (!marketItems.isEmpty()) {
-                LocalPlayer player = Minecraft.getInstance().player;
-                if (player == null) return;
-
-                for (MarketItem item : marketItems) {
-                    ItemStack stack = item.getItemStack();
-
-                    int rowHeight = 30;
-                    int rowWidth = mainPane.getFixedWidth(); // 获取 mainPane 当前宽度
-
-                    HBoxWidget itemRow = new HBoxWidget(0, 0, 0)
-                            .setSpacing(7)
-                            .setPadding(5, 10, 5, 10)
-                            .setBorderColor(0x22FFFFFF)
-                            .setBoxWidth(rowWidth)
-                            .setBoxHeight(rowHeight)
-                            .showBorder(true, false, true, false)
-                            .setBorderThickness(1);
-
-                    // 图标
-                    ItemIconWidget icon = new ItemIconWidget(stack, font, 0, 0)
-                            .setScale(1.3f)
-                            .setShowDecorations(true);
-                    // 构建工具提示
-                    List<Component> tooltipLines = buildItemTooltip(player, item);
-                    // Tooltip tooltip = Tooltip.create(buildItemTooltip(player, item));
-                    icon.setTooltipLines(tooltipLines);
-                    itemWidgets.add(icon);
-                    // icon.setCustomTooltipLines(tooltipLines);
-
-                    // 名称 + 价格 VBox
-                    VBoxWidget infoBox = new VBoxWidget(0, 0, 200) // 宽 200，高和 row 高一致
-                            .setSpacing(2)
-                            .setBoxHeight(rowHeight)
-                            .setPadding(2, 2, 2, 2);
-
-                    LabelWidget nameLabel = new LabelWidget(font, stack.getHoverName(), 0, 0, 0xFFFFFF, true)
-                            .setScale(1.0f);
-                    LabelWidget priceLabel = new LabelWidget(font, Component.literal("价格: " + item.getBasePrice()), 0, 0, 0xAAAAAA, true)
-                            .setScale(0.9f);
-
-                    infoBox.addAllChildren(nameLabel, priceLabel);
-                    itemRow.addAllChildren(icon, infoBox);
-                    mainPane.addChild(itemRow);
-                }
-            }
+            buildMarketLayout();
 
         } else if (this.currentPage.equals(PAGE_ID_DELIVERY_BOX)) {
 
@@ -596,6 +518,284 @@ public class a1111_Screen extends EconomySystem_Screen {
         infoBox.addChild(nameLabel);
 
         return itemRow;
+    }
+
+    private void buildMarketLayout() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) return;
+
+        HBoxWidget toolbar = buildToolbar(Component.literal("玩家市场"), marketItems.size(), 0xFF66CCFF);
+        EditBox searchBox = buildSearchBox(Component.literal("搜索市场物品"));
+        toolbar.addChild(searchBox);
+        toolbar.setHGrow(searchBox, true);
+        toolbar.addChild(new Button.Builder(Component.literal("最新"), b -> {})
+                .size(50, 18)
+                .tooltip(Tooltip.create(Component.literal("按上架时间排序")))
+                .build());
+        toolbar.addChild(new Button.Builder(Component.literal("价格↑"), b -> {})
+                .size(50, 18)
+                .tooltip(Tooltip.create(Component.literal("按价格升序")))
+                .build());
+        toolbar.addChild(new Button.Builder(Component.literal("价格↓"), b -> {})
+                .size(50, 18)
+                .tooltip(Tooltip.create(Component.literal("按价格降序")))
+                .build());
+        mainPane.addChild(toolbar);
+
+        HBoxWidget contentRow = new HBoxWidget(0, 0, 0)
+                .setSpacing(10)
+                .setBoxWidth(mainPane.getWidth() - mainPane.getPaddingLeft() - mainPane.getPaddingRight());
+
+        VBoxWidget filterPanel = buildFilterPanel("市场筛选", List.of(
+                Component.literal("全部"),
+                Component.literal("材料"),
+                Component.literal("装备"),
+                Component.literal("方块"),
+                Component.literal("消耗品")
+        ));
+
+        VBoxWidget listPanel = new VBoxWidget(0, 0, 0)
+                .setSpacing(8)
+                .setPadding(6, 6, 6, 6)
+                .setBorderColor(0x33FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x12000000);
+
+        if (marketItems.isEmpty()) {
+            listPanel.addChild(new LabelWidget(font, Component.literal("当前市场暂无物品"), 0, 0, 0xAAAAAA, true));
+        } else {
+            for (MarketItem item : marketItems) {
+                ItemStack stack = item.getItemStack();
+                HBoxWidget card = buildMarketCard(player, item, stack);
+                listPanel.addChild(card);
+            }
+        }
+
+        contentRow.addChild(filterPanel);
+        contentRow.addChild(listPanel);
+        contentRow.setHGrow(listPanel, true);
+        mainPane.addChild(contentRow);
+    }
+
+    private void buildShopLayout() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) return;
+
+        HBoxWidget toolbar = buildToolbar(Component.literal("系统商店"), shopItems.size(), 0xFFFFD27D);
+        EditBox searchBox = buildSearchBox(Component.literal("搜索商店物品"));
+        toolbar.addChild(searchBox);
+        toolbar.setHGrow(searchBox, true);
+        toolbar.addChild(new Button.Builder(Component.literal("热销"), b -> {})
+                .size(50, 18)
+                .tooltip(Tooltip.create(Component.literal("按热度排序")))
+                .build());
+        toolbar.addChild(new Button.Builder(Component.literal("折扣"), b -> {})
+                .size(50, 18)
+                .tooltip(Tooltip.create(Component.literal("查看折扣商品")))
+                .build());
+        mainPane.addChild(toolbar);
+
+        HBoxWidget contentRow = new HBoxWidget(0, 0, 0)
+                .setSpacing(10)
+                .setBoxWidth(mainPane.getWidth() - mainPane.getPaddingLeft() - mainPane.getPaddingRight());
+
+        VBoxWidget filterPanel = buildFilterPanel("商店分类", List.of(
+                Component.literal("全部"),
+                Component.literal("方块"),
+                Component.literal("工具"),
+                Component.literal("附魔"),
+                Component.literal("特殊")
+        ));
+
+        VBoxWidget listPanel = new VBoxWidget(0, 0, 0)
+                .setSpacing(8)
+                .setPadding(6, 6, 6, 6)
+                .setBorderColor(0x33FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x12000000);
+
+        if (shopItems.isEmpty()) {
+            listPanel.addChild(new LabelWidget(font, Component.literal("当前商店暂无商品"), 0, 0, 0xAAAAAA, true));
+        } else {
+            for (ShopItem item : shopItems) {
+                ItemStack stack = item.getItemStack();
+                HBoxWidget card = buildShopCard(player, item, stack);
+                listPanel.addChild(card);
+            }
+        }
+
+        contentRow.addChild(filterPanel);
+        contentRow.addChild(listPanel);
+        contentRow.setHGrow(listPanel, true);
+        mainPane.addChild(contentRow);
+    }
+
+    private HBoxWidget buildToolbar(Component title, int totalCount, int accentColor) {
+        HBoxWidget toolbar = new HBoxWidget(0, 0, 24)
+                .setSpacing(8)
+                .setPadding(6, 10, 6, 10)
+                .setBorderColor(0x55FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x20FFFFFF)
+                .setBoxWidth(mainPane.getWidth() - mainPane.getPaddingLeft() - mainPane.getPaddingRight())
+                .setBoxHeight(26);
+
+        LabelWidget titleLabel = new LabelWidget(font, title, 0, 0, accentColor, true)
+                .setScale(1.1f);
+        LabelWidget countLabel = new LabelWidget(font,
+                Component.literal("共 " + totalCount + " 项"),
+                0,
+                0,
+                0xAAAAAA,
+                true
+        ).setScale(0.9f);
+
+        toolbar.addAllChildren(titleLabel, countLabel);
+        return toolbar;
+    }
+
+    private VBoxWidget buildFilterPanel(String title, List<Component> entries) {
+        VBoxWidget filterPanel = new VBoxWidget(0, 0, 180)
+                .setSpacing(6)
+                .setPadding(8, 8, 8, 8)
+                .setBorderColor(0x44FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x1A000000);
+
+        LabelWidget titleLabel = new LabelWidget(font, Component.literal(title), 0, 0, 0xFFFFFF, true)
+                .setScale(1.0f);
+        filterPanel.addChild(titleLabel);
+
+        for (Component entry : entries) {
+            filterPanel.addChild(new Button.Builder(entry, b -> {})
+                    .size(150, 18)
+                    .tooltip(Tooltip.create(entry))
+                    .build());
+        }
+
+        return filterPanel;
+    }
+
+    private EditBox buildSearchBox(Component hint) {
+        EditBox searchBox = new EditBox(this.font, 0, 0, 140, 18, hint);
+        searchBox.setHint(hint);
+        searchBox.setMaxLength(50);
+        return searchBox;
+    }
+
+    private HBoxWidget buildMarketCard(LocalPlayer player, MarketItem item, ItemStack stack) {
+        HBoxWidget card = new HBoxWidget(0, 0, 0)
+                .setSpacing(8)
+                .setPadding(6, 10, 6, 10)
+                .setBorderColor(0x22FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x11000000)
+                .setBoxHeight(40);
+
+        ItemIconWidget icon = new ItemIconWidget(stack, font, 0, 0)
+                .setScale(1.3f)
+                .setShowDecorations(true)
+                .setTooltipLines(buildItemTooltip(player, item));
+        itemWidgets.add(icon);
+
+        VBoxWidget infoBox = new VBoxWidget(0, 0, 200)
+                .setSpacing(2)
+                .setPadding(2, 2, 2, 2);
+        infoBox.addChild(new LabelWidget(font, stack.getHoverName(), 0, 0, 0xFFFFFF, true));
+        infoBox.addChild(new LabelWidget(
+                font,
+                Component.literal("卖家: " + item.getSellerName()),
+                0,
+                0,
+                0xAAAAAA,
+                true
+        ).setScale(0.85f));
+
+        LabelWidget priceLabel = new LabelWidget(
+                font,
+                Component.literal("￥" + item.getBasePrice()),
+                0,
+                0,
+                0xFFB5F0FF,
+                true
+        ).setScale(1.0f);
+
+        Button actionButton = new Button.Builder(Component.literal("查看"), b -> {})
+                .size(40, 18)
+                .tooltip(Tooltip.create(Component.literal("查看交易详情")))
+                .build();
+
+        card.addAllChildren(icon, infoBox, priceLabel, actionButton);
+        card.setHGrow(infoBox, true);
+        return card;
+    }
+
+    private HBoxWidget buildShopCard(LocalPlayer player, ShopItem item, ItemStack stack) {
+        HBoxWidget card = new HBoxWidget(0, 0, 0)
+                .setSpacing(8)
+                .setPadding(6, 10, 6, 10)
+                .setBorderColor(0x22FFFFFF)
+                .showBorder(true, true, true, true)
+                .setBorderThickness(1)
+                .setBackgroundColor(0x11000000)
+                .setBoxHeight(40);
+
+        ItemIconWidget icon = new ItemIconWidget(stack, font, 0, 0)
+                .setScale(1.3f)
+                .setShowDecorations(true)
+                .setTooltipLines(List.of(buildItemTooltip(player, item)));
+        itemWidgets.add(icon);
+
+        VBoxWidget infoBox = new VBoxWidget(0, 0, 200)
+                .setSpacing(2)
+                .setPadding(2, 2, 2, 2);
+        infoBox.addChild(new LabelWidget(font, stack.getHoverName(), 0, 0, 0xFFFFFF, true));
+        infoBox.addChild(new LabelWidget(
+                font,
+                Component.literal("浮动: " + item.getFluctuationFactor()),
+                0,
+                0,
+                0xAAAAAA,
+                true
+        ).setScale(0.85f));
+
+        LabelWidget priceLabel = new LabelWidget(
+                font,
+                Component.literal("￥" + item.getCurrentPrice()),
+                0,
+                0,
+                0xFFFFD27D,
+                true
+        ).setScale(1.0f);
+
+        Button actionButton = new Button.Builder(Component.literal("购买"), b -> {})
+                .size(40, 18)
+                .tooltip(Tooltip.create(Component.literal("购买商品")))
+                .build();
+
+        card.addAllChildren(icon, infoBox, priceLabel, actionButton);
+        card.setHGrow(infoBox, true);
+        return card;
+    }
+
+    private void setStartPage(String pageId) {
+        if (pageId == null || pageId.isBlank()) {
+            return;
+        }
+        this.currentPage = pageId;
+        this.currentTitle = switch (pageId) {
+            case PAGE_ID_STORE -> PAGE_NAME_STORE;
+            case PAGE_ID_MARKET -> PAGE_NAME_MARKET;
+            case PAGE_ID_DELIVERY_BOX -> PAGE_NAME_DELIVERY_BOX;
+            case PAGE_ID_TERRITORIES -> PAGE_NAME_TERRITORIES;
+            case PAGE_ID_ABOUT -> PAGE_NAME_ABOUT;
+            default -> PAGE_NAME_HOME;
+        };
     }
 
     // 工具提示构建方法
