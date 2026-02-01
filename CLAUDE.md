@@ -258,6 +258,35 @@ Edit(file_path: "D:\repos\project\file.tsx", ...)
 MultiEdit(file_path: "D:\repos\project\file.tsx", ...)
 ```
 
+## 编码规范
+
+### ⚠️ MANDATORY: 字符串必须使用常量
+
+**所有字符串（尤其是 UI 文本、按钮文本、版权信息等）必须定义为常量，禁止在代码中硬编码字符串。**
+
+#### ❌ WRONG - 硬编码字符串：
+```java
+guiGraphics.drawString(font, "单人游戏", x, y, color, false);
+guiGraphics.drawString(font, "§7Minecraft §f1.20.1", 5, virtualH - 10, TEXT_GRAY, false);
+```
+
+#### ✅ CORRECT - 使用常量：
+```java
+// 在类顶部定义常量
+private static final String BUTTON_SINGLEPLAYER = "单人游戏";
+private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!";
+
+// 使用常量
+guiGraphics.drawString(font, BUTTON_SINGLEPLAYER, x, y, color, false);
+guiGraphics.drawString(font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, false);
+```
+
+#### 原因：
+1. **易于维护**：修改文本时只需改一处
+2. **避免拼写错误**：常量名拼写错误会在编译时报错
+3. **代码可读性**：常量名更清晰地表达字符串用途
+4. **国际化准备**：未来如需多语言支持，常量更易于提取到资源文件
+
 ## 配置文件结构
 
 配置文件位于 `config/economy_system/`，由 `Init` 类在模组初始化时自动创建：

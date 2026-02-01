@@ -27,6 +27,53 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(TitleScreen.class)
 public abstract class TitleScreenMixin extends Screen {
 
+    // ==================== 字符串常量 ====================
+    // 按钮文本
+    private static final String BUTTON_SINGLEPLAYER = "单人游戏";
+    private static final String BUTTON_SETTINGS = "设置";
+    private static final String BUTTON_MULTIPLAYER = "多人游戏";
+    private static final String BUTTON_UPDATE_LOG = "更新日志";
+    private static final String BUTTON_MODS = "模组[📦]";
+    private static final String BUTTON_LANGUAGE = "语言[🌐]";
+    private static final String BUTTON_EXIT = "退出[✕]";
+    private static final String UPDATE_LOG_PREVIEW = "§7暂无更新";
+
+    // 版权和版本信息
+    private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!";
+    private static final String DREAMINGFISH_TITLE = "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)";
+    private static final String DREAMINGFISH_COPYRIGHT = "© 2026 DreamingFish - EconomySystem";
+    private static final String DEVELOPER_COPYRIGHT = "  Developed by QINGMO & HANHANYU";
+    private static final String DEVELOPER_INFO = "§8开发者：QINGMO、HANHANYU";
+
+    // 服务器背景文案
+    private static final String STORY_LINE_1 = "§f§l2066年§r§f，随着基因工程的研究，";
+    private static final String STORY_LINE_2 = "§f人类可以通过自身的细胞分裂实现重生，";
+    private static final String STORY_LINE_3 = "§7然而一场危机随着这次基因工程悄然降临...";
+    private static final String STORY_LINE_4 = "§7您需要与其他玩家展开一场冒险，";
+    private static final String STORY_LINE_5 = "§7在§e梦屿§7找到阻止这场危机的办法——";
+    private static final String STORY_LINE_6 = "§d故事由您和伙伴书写。";
+    private static final String STORY_LINE_7 = "§d没有剧本，没有结局。";
+    private static final String STORY_LINE_8 = "§d您可以成为拯救服务器的§e英雄§d，";
+    private static final String STORY_LINE_9 = "§d也可以成为服务器被毁灭的§c帮凶§d...";
+    private static final String STORY_LINE_10 = "§d无论如何，此时此刻您比任何时刻都需要§6共同合作§d。";
+
+    // 资助面板文案
+    private static final String DONATE_TITLE = "§7本服为§e非营利公益服§7，";
+    private static final String DONATE_LINE_1 = "§e公益服维持不易，感谢所有资助者§7。";
+    private static final String DONATE_LINE_2 = "§7无偿资助§c无法获得§7游戏内权益和物资，";
+    private static final String DONATE_LINE_3 = "§7请您资助前三思。";
+    private static final String DONATE_LINE_4 = "§7资助者可按照您的要求自定义设计武器/装备/物品等，";
+    private static final String DONATE_LINE_5 = "§7且可以自定义属性、外观（数值保证合理），";
+    private static final String DONATE_LINE_6 = "§7您的自定义物品开发完成后可以让所有人§a获取§7。";
+    private static final String DONATE_LINE_7 = "§7如果您有特长（建筑/编程/策划等）欢迎";
+    private static final String DONATE_LINE_8 = "§7加入开发团队，参与后续制作！";
+
+    // 图标
+    private static final String ICON_MULTIPLAYER = "⚁";
+    private static final String ICON_SINGLEPLAYER = "⚔";
+    private static final String ICON_SETTINGS = "⚙";
+    private static final String ICON_UPDATE_LOG = "📋";
+
     // 颜色定义
     private static final int ACCENT_BLUE = 0xFF0088FF;
     private static final int ACCENT_GREEN = 0xFF44FF88;
@@ -221,12 +268,12 @@ public abstract class TitleScreenMixin extends Screen {
         // ========== 右上左 - 单人游戏 ==========
         boolean singleHovered = economySystem$hoveredButtonIndex == 1;
         economySystem$renderSmallButton(guiGraphics, rightX, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            "单人游戏", "⚔", ACCENT_GOLD, singleHovered);
+            BUTTON_SINGLEPLAYER, ICON_SINGLEPLAYER, ACCENT_GOLD, singleHovered);
 
         // ========== 右上右 - 设置 ==========
         boolean settingsHovered = economySystem$hoveredButtonIndex == 2;
         economySystem$renderSmallButton(guiGraphics, rightX + rightSmallButtonWidth + gap, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            "设置", "⚙", ACCENT_BLUE, settingsHovered);
+            BUTTON_SETTINGS, ICON_SETTINGS, ACCENT_BLUE, settingsHovered);
 
         // ========== 右中 - 更新日志按钮 ==========
         int updateLogY = y + gap + smallButtonHeight + gap;
@@ -262,12 +309,12 @@ public abstract class TitleScreenMixin extends Screen {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.scale(2.0f, 2.0f, 1.0f);
-        guiGraphics.drawString(font, "⚁", x / 2.0f + 8, (y + 18) / 2.0f, color, false);
+        guiGraphics.drawString(font, ICON_MULTIPLAYER, x / 2.0f + 8, (y + 18) / 2.0f, color, false);
         poseStack.popPose();
 
         poseStack.pushPose();
         poseStack.scale(2.0f, 2.0f, 1.0f);
-        guiGraphics.drawString(font, "§l多人游戏", x / 2.0f + 30, (y + 18) / 2.0f, TEXT_WHITE, false);
+        guiGraphics.drawString(font, "§l" + BUTTON_MULTIPLAYER, x / 2.0f + 30, (y + 18) / 2.0f, TEXT_WHITE, false);
         poseStack.popPose();
 
         // 装饰线
@@ -277,28 +324,28 @@ public abstract class TitleScreenMixin extends Screen {
         int contentX = x + 10;
         int lineY = y + 50;
 
-        guiGraphics.drawString(font, "§f§l2066年§r§f，随着基因工程的研究，", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_1, contentX, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§f人类可以通过自身的细胞分裂实现重生，", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_2, contentX, lineY, TEXT_WHITE, false);
         lineY += 12;
 
-        guiGraphics.drawString(font, "§7然而一场危机随着这次基因工程悄然降临...", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_3, contentX, lineY, TEXT_WHITE, false);
         lineY += 13;
 
-        guiGraphics.drawString(font, "§7您需要与其他玩家展开一场冒险，", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_4, contentX, lineY, TEXT_WHITE, false);
         lineY += 11;
-        guiGraphics.drawString(font, "§7在§e梦屿§7找到阻止这场危机的办法——", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_5, contentX, lineY, TEXT_WHITE, false);
         lineY += 13;
 
-        guiGraphics.drawString(font, "§d故事由您和伙伴书写。", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_6, contentX, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§d没有剧本，没有结局。", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_7, contentX, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§d您可以成为拯救服务器的§e英雄§d，", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_8, contentX, lineY, TEXT_WHITE, false);
         lineY += 11;
-        guiGraphics.drawString(font, "§d也可以成为服务器被毁灭的§c帮凶§d...", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_9, contentX, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§d无论如何，此时此刻您比任何时刻都需要§6共同合作§d。", contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_10, contentX, lineY, TEXT_WHITE, false);
 
         // 底部装饰线
         guiGraphics.fill(x + 10, y + height - 8, x + 50, y + height - 7, color);
@@ -351,16 +398,15 @@ public abstract class TitleScreenMixin extends Screen {
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.scale(1.8f, 1.8f, 1.0f);
-        guiGraphics.drawString(font, "📋", (int) ((x + 10) / 1.8f), (int) ((y + height / 2 - 4) / 1.8f), 0xFF00AA44, false);
+        guiGraphics.drawString(font, ICON_UPDATE_LOG, (int) ((x + 10) / 1.8f), (int) ((y + height / 2 - 4) / 1.8f), 0xFF00AA44, false);
         poseStack.popPose();
 
         // 标题（图标右侧）
-        guiGraphics.drawString(font, "§l更新日志", x + 28, y + height / 2 - 5, TEXT_WHITE, false);
+        guiGraphics.drawString(font, "§l" + BUTTON_UPDATE_LOG, x + 28, y + height / 2 - 5, TEXT_WHITE, false);
 
         // 最新内容预览（右侧）
-        String latestUpdate = "§7暂无更新";
-        int previewX = x + width - this.font.width(latestUpdate) - 10;
-        guiGraphics.drawString(font, latestUpdate, previewX, y + height / 2 - 5, TEXT_GRAY, false);
+        int previewX = x + width - this.font.width(UPDATE_LOG_PREVIEW) - 10;
+        guiGraphics.drawString(font, UPDATE_LOG_PREVIEW, previewX, y + height / 2 - 5, TEXT_GRAY, false);
     }
 
     @Unique
@@ -389,30 +435,30 @@ public abstract class TitleScreenMixin extends Screen {
         guiGraphics.fill(x, y, x + width, y + height, 0xBB000000);
 
         // 标题（左对齐）
-        guiGraphics.drawString(font, "§7本服为§e非营利公益服§7，", x + 10, y + 8, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_TITLE, x + 10, y + 8, TEXT_WHITE, false);
 
         // 标题下划线
         guiGraphics.fill(x + 6, y + 22, x + width - 6, y + 23, 0xFFAA4444);
 
         // 内容（左对齐）
         int lineY = y + 36;
-        guiGraphics.drawString(font, "§e公益服维持不易，感谢所有资助者§7。", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_1, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§7无偿资助§c无法获得§7游戏内权益和物资，", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_2, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§7请您资助前三思。", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_3, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§7资助者可按照您的要求自定义设计武器/装备/物品等，", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_4, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§7且可以自定义属性、外观（数值保证合理），", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_5, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
-        guiGraphics.drawString(font, "§7您的自定义物品开发完成后可以让所有人§a获取§7。", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_6, x + 10, lineY, TEXT_WHITE, false);
         lineY += 14;
-        guiGraphics.drawString(font, "§8开发者：QINGMO、HANHANYU", x + 10, lineY, TEXT_GRAY, false);
+        guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
         lineY += 11;
-        guiGraphics.drawString(font, "§7如果您有特长（建筑/编程/策划等）欢迎", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_7, x + 10, lineY, TEXT_WHITE, false);
         lineY += 11;
-        guiGraphics.drawString(font, "§7加入开发团队，参与后续制作！", x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_8, x + 10, lineY, TEXT_WHITE, false);
     }
 
     /**
@@ -431,21 +477,19 @@ public abstract class TitleScreenMixin extends Screen {
         int virtualH = economySystem$virtualSize.virtualHeight;
 
         // 左上角 - DreamingFish
-        guiGraphics.drawString(this.font, "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)", 5, 5, TEXT_WHITE, false);
+        guiGraphics.drawString(this.font, DREAMINGFISH_TITLE, 5, 5, TEXT_WHITE, false);
 
         // 左下角 - Minecraft 1.20.1 + Mojang 版权
-        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!", 5, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
-        guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§7语言[🌐]", virtualW - 95, virtualH - 10, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§c退出[✕]", virtualW - 35, virtualH - 10, 0xFF666666, false);
+        guiGraphics.drawString(this.font, BUTTON_MODS, virtualW - 155, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, BUTTON_LANGUAGE, virtualW - 95, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, BUTTON_EXIT, virtualW - 35, virtualH - 10, 0xFF666666, false);
 
         // 版权声明（右上角，右对齐）
-        String dreamingFishCopyright = "© 2026 DreamingFish - EconomySystem";
-        String developerCopyright = "  Developed by QINGMO & HANHANYU";
-        guiGraphics.drawString(this.font, "§6" + dreamingFishCopyright, virtualW - this.font.width(dreamingFishCopyright) - 5, 5, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§6" + developerCopyright, virtualW - this.font.width(developerCopyright) - 5, 17, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + DREAMINGFISH_COPYRIGHT, virtualW - this.font.width(DREAMINGFISH_COPYRIGHT) - 5, 5, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + DEVELOPER_COPYRIGHT, virtualW - this.font.width(DEVELOPER_COPYRIGHT) - 5, 17, TEXT_GRAY, false);
 
         poseStack.popPose();
     }
@@ -457,18 +501,16 @@ public abstract class TitleScreenMixin extends Screen {
         int virtualH = economySystem$virtualSize.virtualHeight;
 
         // 左下角 - Minecraft 1.20.1 + Mojang 版权
-        guiGraphics.drawString(this.font, "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!", 5, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
-        guiGraphics.drawString(this.font, "§7模组[📦]", virtualW - 155, virtualH - 10, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§7语言[🌐]", virtualW - 95, virtualH - 10, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§c退出[✕]", virtualW - 35, virtualH - 10, 0xFF666666, false);
+        guiGraphics.drawString(this.font, BUTTON_MODS, virtualW - 155, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, BUTTON_LANGUAGE, virtualW - 95, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, BUTTON_EXIT, virtualW - 35, virtualH - 10, 0xFF666666, false);
 
         // 版权声明（右上角，右对齐）
-        String dreamingFishCopyright = "© 2026 DreamingFish - EconomySystem";
-        String developerCopyright = "  Developed by QINGMO & HANHANYU";
-        guiGraphics.drawString(this.font, "§6" + dreamingFishCopyright, virtualW - this.font.width(dreamingFishCopyright) - 5, 5, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, "§6" + developerCopyright, virtualW - this.font.width(developerCopyright) - 5, 17, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + DREAMINGFISH_COPYRIGHT, virtualW - this.font.width(DREAMINGFISH_COPYRIGHT) - 5, 5, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, "§6" + DEVELOPER_COPYRIGHT, virtualW - this.font.width(DEVELOPER_COPYRIGHT) - 5, 17, TEXT_GRAY, false);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
