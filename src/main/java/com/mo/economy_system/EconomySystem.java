@@ -28,6 +28,7 @@ import software.bernie.geckolib.GeckoLib;
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(EconomySystem.MODID)
 public class EconomySystem {
+    public static final boolean isDev = true;
     public static final String MODID = "economy_system";
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final ShopManager SHOP_MANAGER = new ShopManager();

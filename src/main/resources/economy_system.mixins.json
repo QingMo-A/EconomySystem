@@ -17,16 +17,15 @@
     "ui.JoinMultiplayerScreenMixin"
   ],
   "server": [
-
+    "CraftingMenuMixin",
+    "RecipeManagerMixin"
   ],
   "mixins": [
     "death.RespawnMixin",
     "BedBlockMixin",
     "ServerLevelMixin",
     "AnvilBlockMixin",
-    "SystemMessageMixin",
-    "CraftingMenuMixin",
-    "RecipeManagerMixin"
+    "SystemMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

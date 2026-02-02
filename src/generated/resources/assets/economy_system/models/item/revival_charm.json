@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "economy_system:item/revival_charm"
+    "layer0": "minecraft:item/totem_of_undying"
   }
 }

@@ -23,6 +23,7 @@ MC源代码
 run/*
 !run/config/economy_system
 run-data
+log
 run2
 
 # Files from Forge MDK
