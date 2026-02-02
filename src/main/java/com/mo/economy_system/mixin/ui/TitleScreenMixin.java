@@ -62,9 +62,9 @@ public abstract class TitleScreenMixin extends Screen {
     // 服务器背景文案
     private static final String STORY_LINE_1 = "§f§l2066年§r§f，随着基因工程的研究，";
     private static final String STORY_LINE_2 = "§f人类可以通过自身的细胞分裂实现重生，";
-    private static final String STORY_LINE_3 = "§7然而一场危机随着这次基因工程悄然降临...";
-    private static final String STORY_LINE_4 = "§7您需要与其他玩家展开一场冒险，";
-    private static final String STORY_LINE_5 = "§7在§e梦屿§7找到阻止这场危机的办法——";
+    private static final String STORY_LINE_3 = "然而一场危机随着这次基因工程悄然降临...";
+    private static final String STORY_LINE_4 = "您需要与其他玩家展开一场冒险，";
+    private static final String STORY_LINE_5 = "在§e梦屿找到阻止这场危机的办法——";
     private static final String STORY_LINE_6 = "§d故事由您和伙伴书写。";
     private static final String STORY_LINE_7 = "§d没有剧本，没有结局。";
     private static final String STORY_LINE_8 = "§d您可以成为拯救服务器的§e英雄§d，";
@@ -72,15 +72,15 @@ public abstract class TitleScreenMixin extends Screen {
     private static final String STORY_LINE_10 = "§d无论如何，此时此刻您比任何时刻都需要§6共同合作§d。";
 
     // 资助面板文案
-    private static final String DONATE_TITLE = "§7本服为§e非营利公益服§7，";
+    private static final String DONATE_TITLE = "本服为§e非营利公益服§7，";
     private static final String DONATE_LINE_1 = "§e公益服维持不易，感谢所有资助者§7。";
-    private static final String DONATE_LINE_2 = "§7无偿资助§c无法获得§7游戏内权益和物资，";
-    private static final String DONATE_LINE_3 = "§7请您资助前三思。";
-    private static final String DONATE_LINE_4 = "§7资助者可按照您的要求自定义设计武器/装备/物品等，";
-    private static final String DONATE_LINE_5 = "§7且可以自定义属性、外观（数值保证合理），";
-    private static final String DONATE_LINE_6 = "§7您的自定义物品开发完成后可以让所有人§a获取§7。";
-    private static final String DONATE_LINE_7 = "§7如果您有特长（建筑/编程/策划等）欢迎";
-    private static final String DONATE_LINE_8 = "§7加入开发团队，参与后续制作！";
+    private static final String DONATE_LINE_2 = "无偿资助§c无法获得游戏内权益和物资，";
+    private static final String DONATE_LINE_3 = "请您资助前三思。";
+    private static final String DONATE_LINE_4 = "资助者可按照您的要求自定义设计武器/装备/物品等，";
+    private static final String DONATE_LINE_5 = "且可以自定义属性、外观（数值保证合理），";
+    private static final String DONATE_LINE_6 = "您的自定义物品开发完成后可以让所有人§a获取§7。";
+    private static final String DONATE_LINE_7 = "如果您有特长（建筑/编程/策划等）欢迎";
+    private static final String DONATE_LINE_8 = "加入开发团队，参与后续制作！";
 
     // 图标
     private static final String ICON_MULTIPLAYER = "⚁";
@@ -93,7 +93,7 @@ public abstract class TitleScreenMixin extends Screen {
     private static final int ACCENT_GREEN = 0xFF44FF88;
     private static final int ACCENT_GOLD = 0xFFFFAA44;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
-    private static final int TEXT_GRAY = 0xFFAAAAAA;
+    private static final int TEXT_GRAY = 0xFF666666;
     private static final int GLASS_TOP = 0x66FFFFFF;
     private static final int GLASS_BOTTOM = 0x33000000;
     private static final int GLASS_BORDER = 0x55FFFFFF;
@@ -565,11 +565,11 @@ public abstract class TitleScreenMixin extends Screen {
         guiGraphics.drawString(font, DONATE_LINE_5, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
         guiGraphics.drawString(font, DONATE_LINE_6, x + 10, lineY, TEXT_WHITE, false);
-        lineY += 14;
-        guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
-        lineY += 11;
+        lineY += 12;
+        // guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
+        // lineY += 11;
         guiGraphics.drawString(font, DONATE_LINE_7, x + 10, lineY, TEXT_WHITE, false);
-        lineY += 11;
+        lineY += 12;
         guiGraphics.drawString(font, DONATE_LINE_8, x + 10, lineY, TEXT_WHITE, false);
     }
 

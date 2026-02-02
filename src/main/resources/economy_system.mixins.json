@@ -6,6 +6,7 @@
   "refmap": "economy_system.refmap.json",
   "client": [
     "death.DeathScreenMixin",
+    "ui.SelectWorldScreenMixin",
     "ui.DisconnectedScreenMixin",
     "ui.ConnectScreenMixin",
     "ui.ReceivingLevelScreenMixin",
@@ -13,7 +14,6 @@
     "ui.GenericDirtMessageScreenMixin",
     "ui.GenericWaitingScreenMixin",
     "ui.TitleScreenMixin",
-    "ui.SelectWorldScreenMixin",
     "ui.JoinMultiplayerScreenMixin"
   ],
   "server": [

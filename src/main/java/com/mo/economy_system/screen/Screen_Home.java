@@ -5,6 +5,8 @@ import com.mo.economy_system.network.packets.economy_system.Packet_BalanceReques
 import com.mo.economy_system.screen.components.AnimatedButton;
 import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
+import com.mo.economy_system.screen.economy_system.market.Screen_Market;
+import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.screen.newUI.a1111_Screen;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.utils.Util_MessageKeys;
@@ -60,7 +62,7 @@ public class Screen_Home extends EconomySystem_Screen {
                         1000,
                         button -> {
                             // 请求服务器的商店数据并打开 ShopScreen
-                            this.minecraft.setScreen(new a1111_Screen(a1111_Screen.PAGE_ID_STORE));
+                            this.minecraft.setScreen(new Screen_Shop());
                         })
         );
 
@@ -76,7 +78,7 @@ public class Screen_Home extends EconomySystem_Screen {
                         1000,
                         button -> {
                             // 请求服务器的市场数据并打开 MarketScreen
-                            this.minecraft.setScreen(new a1111_Screen(a1111_Screen.PAGE_ID_MARKET));
+                            this.minecraft.setScreen(new Screen_Market());
                         })
         );
 

@@ -280,21 +280,6 @@ public class Screen_Market extends EconomySystem_Screen {
                 icon.setTooltipLines(tooltipLines);
                 itemWidgets.add(icon);
                 // icon.setCustomTooltipLines(tooltipLines);
-
-                // 名称 + 价格 VBox
-                VBoxWidget infoBox = new VBoxWidget(0, 0, 200) // 宽 200，高和 row 高一致
-                        .setSpacing(2)
-                        .setBoxHeight(rowHeight)
-                        .setPadding(2, 2, 2, 2);
-
-                LabelWidget nameLabel = new LabelWidget(font, itemStack.getHoverName(), 0, 0, 0xFFFFFF, true)
-                        .setScale(1.0f);
-                LabelWidget priceLabel = new LabelWidget(font, Component.literal("价格: " + item.getBasePrice()), 0, 0, 0xAAAAAA, true)
-                        .setScale(0.9f);
-
-                infoBox.addAllChildren(nameLabel, priceLabel);
-                itemRow.addAllChildren(icon, infoBox);
-                this.addRenderableWidget(itemRow);
             }
 
             ItemIconAnimation icon;
