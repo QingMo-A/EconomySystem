@@ -49,8 +49,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.PROFESSIONAL_AID_KIT);
         simpleItem(EconomySystem_Items.DREAMINGFISH);
         // 重生锦鲤使用原版不死图腾纹理
-        withExistingParent(EconomySystem_Items.REVIVAL_CHARM.getId().getPath(), mcLoc("item/generated"))
-                .texture("layer0", mcLoc("item/totem_of_undying"));
+        simpleItem(EconomySystem_Items.REVIVAL_CHARM);
 
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
