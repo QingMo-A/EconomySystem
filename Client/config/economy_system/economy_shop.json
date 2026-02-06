@@ -3,107 +3,107 @@
     "itemId": "economy_system:recall_potion",
     "description": "回忆药水",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": -0.01
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "economy_system:wormhole_potion",
     "description": "虫洞药水",
     "basePrice": 10,
-    "currentPrice": 13,
+    "currentPrice": 10,
     "lastPrice": 10,
-    "fluctuationFactor": 0.28
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:enchanted_book",
     "description": "细心 I",
     "basePrice": 100,
-    "currentPrice": 104,
-    "lastPrice": 117,
-    "fluctuationFactor": -0.08,
+    "currentPrice": 100,
+    "lastPrice": 100,
+    "fluctuationFactor": 1.0,
     "nbt": "{StoredEnchantments:[{id:\"economy_system:carefully\", lvl:1}]}"
   },
   {
     "itemId": "minecraft:enchanted_book",
     "description": "赏金猎人 I",
     "basePrice": 200,
-    "currentPrice": 249,
-    "lastPrice": 277,
-    "fluctuationFactor": -0.1,
+    "currentPrice": 200,
+    "lastPrice": 200,
+    "fluctuationFactor": 1.0,
     "nbt": "{StoredEnchantments:[{id:\"economy_system:bounty_hunter\", lvl:1}]}"
   },
   {
     "itemId": "minecraft:dirt",
     "description": "泥土",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.19
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:grass_block",
     "description": "草方块",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.22
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:sand",
     "description": "沙子",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.15
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:stone",
     "description": "石头",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.08
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:oak_log",
     "description": "橡木原木",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.07
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:spruce_log",
     "description": "云杉原木",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.1
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:birch_log",
     "description": "白桦原木",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:jungle_log",
     "description": "丛林原木",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:acacia_log",
     "description": "金合欢原木",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.25
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:dark_oak_log",
@@ -111,39 +111,39 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": -0.1
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:mangrove_log",
     "description": "红树林原木",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.0
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cherry_log",
     "description": "樱花原木",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.19
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:crimson_stem",
     "description": "绯红菌柄",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.17
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:warped_stem",
     "description": "诡异菌柄",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.09
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:oak_sapling",
@@ -151,47 +151,47 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.0
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:spruce_sapling",
     "description": "云杉树苗",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.11
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:birch_sapling",
     "description": "白桦树苗",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.12
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:jungle_sapling",
     "description": "丛林树苗",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.01
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:acacia_sapling",
     "description": "金合欢树苗",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.14
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:dark_oak_sapling",
     "description": "深色橡树树苗",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.0
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:mangrove_propagule",
@@ -199,151 +199,151 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": -0.06
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cherry_sapling",
     "description": "樱花树苗",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.21
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:oak_leaves",
     "description": "橡树树叶",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.09
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:spruce_leaves",
     "description": "云杉树叶",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": -0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:birch_leaves",
     "description": "白桦树叶",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.13
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:jungle_leaves",
     "description": "丛林树叶",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.02
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:acacia_leaves",
     "description": "金合欢树叶",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.2
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:dark_oak_leaves",
     "description": "深色橡树树叶",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.13
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:mangrove_leaves",
     "description": "红树林树叶",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.16
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cherry_leaves",
     "description": "樱花树叶",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.09
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:azalea_leaves",
     "description": "杜鹃树叶",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.25
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:flowering_azalea_leaves",
     "description": "开花杜鹃树叶",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.19
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:quartz",
     "description": "下界石英",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.16
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:glowstone",
     "description": "萤石",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.17
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:redstone",
     "description": "红石",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.1
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:sea_lantern",
     "description": "海晶灯",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.12
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:stone_bricks",
     "description": "石砖",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.24
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:mossy_stone_bricks",
     "description": "苔石砖",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.19
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cracked_stone_bricks",
     "description": "裂纹石砖",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.08
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:chiseled_stone_bricks",
@@ -351,7 +351,7 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.07
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:smooth_stone",
@@ -359,31 +359,31 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": -0.06
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:white_concrete",
     "description": "白色混凝土",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.15
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:orange_concrete",
     "description": "橙色混凝土",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.12
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:magenta_concrete",
     "description": "品红色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.3
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:light_blue_concrete",
@@ -391,47 +391,47 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.08
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:yellow_concrete",
     "description": "黄色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.17
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:lime_concrete",
     "description": "黄绿色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": -0.06
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:pink_concrete",
     "description": "粉红色混凝土",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:gray_concrete",
     "description": "灰色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.19
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:light_gray_concrete",
     "description": "淡灰色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.06
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cyan_concrete",
@@ -439,63 +439,63 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.08
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:purple_concrete",
     "description": "紫色混凝土",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.13
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:blue_concrete",
     "description": "蓝色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.27
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:brown_concrete",
     "description": "棕色混凝土",
     "basePrice": 5,
-    "currentPrice": 8,
-    "lastPrice": 7,
-    "fluctuationFactor": 0.13
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:green_concrete",
     "description": "绿色混凝土",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.16
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:red_concrete",
     "description": "红色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:black_concrete",
     "description": "黑色混凝土",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.15
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:white_wool",
     "description": "白色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.06
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:orange_wool",
@@ -503,39 +503,39 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": -0.01
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:magenta_wool",
     "description": "品红色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.23
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:light_blue_wool",
     "description": "淡蓝色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.12
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:yellow_wool",
     "description": "黄色羊毛",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.18
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:lime_wool",
     "description": "黄绿色羊毛",
     "basePrice": 5,
-    "currentPrice": 7,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.14
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:pink_wool",
@@ -543,7 +543,7 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.02
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:gray_wool",
@@ -551,7 +551,7 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.03
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:light_gray_wool",
@@ -559,7 +559,7 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.06
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:cyan_wool",
@@ -567,15 +567,15 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.04
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:purple_wool",
     "description": "紫色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.04
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:blue_wool",
@@ -583,38 +583,38 @@
     "basePrice": 5,
     "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": -0.07
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:brown_wool",
     "description": "棕色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": -0.06
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:green_wool",
     "description": "绿色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
+    "currentPrice": 5,
     "lastPrice": 5,
-    "fluctuationFactor": 0.21
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:red_wool",
     "description": "红色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 7,
-    "fluctuationFactor": -0.15
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   },
   {
     "itemId": "minecraft:black_wool",
     "description": "黑色羊毛",
     "basePrice": 5,
-    "currentPrice": 6,
-    "lastPrice": 6,
-    "fluctuationFactor": 0.0
+    "currentPrice": 5,
+    "lastPrice": 5,
+    "fluctuationFactor": 1.0
   }
 ]

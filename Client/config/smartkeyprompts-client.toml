@@ -1,9 +1,9 @@
 #缩放
 #Range: 0.0 ~ 10.0
-scale = 0.8
+scale = 0.7000000000000001
 #显示位置
 #Range: 1 ~ 8
-position = 1
+position = 4
 #标识ID黑名单
 blacklist = ["jei_skp", "emi_skp"]
 

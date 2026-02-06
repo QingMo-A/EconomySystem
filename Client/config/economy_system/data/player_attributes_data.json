@@ -1,0 +1,34 @@
+{
+  "00000000-0000-300c-9dbe-991166fa1966": {
+    "playerUUID": "00000000-0000-300c-9dbe-991166fa1966",
+    "playerName": "hanhanyu5014",
+    "level": 100,
+    "maxStrength": 6640,
+    "currentStrength": 6640,
+    "maxCourage": 100.0,
+    "currentCourage": 50.0,
+    "currentInfection": 5.060001,
+    "isInfected": false,
+    "respawnPoint": 20.0,
+    "maxHealth": 40.0,
+    "strengthWarned": false,
+    "courageWarned": false,
+    "infectionWarned": false
+  },
+  "5c728c19-aed5-4143-af08-bc40f5069f98": {
+    "playerUUID": "5c728c19-aed5-4143-af08-bc40f5069f98",
+    "playerName": "__HanHanYu__",
+    "level": 3,
+    "maxStrength": 820,
+    "currentStrength": 820,
+    "maxCourage": 100.0,
+    "currentCourage": 50.0,
+    "currentInfection": 0.0,
+    "isInfected": false,
+    "respawnPoint": 100.0,
+    "maxHealth": 20.0,
+    "strengthWarned": false,
+    "courageWarned": false,
+    "infectionWarned": false
+  }
+}

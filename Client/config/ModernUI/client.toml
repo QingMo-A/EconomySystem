@@ -41,7 +41,7 @@
 #Tooltip Config
 [tooltip]
 	#Whether to enable Modern UI enhanced tooltip, or back to vanilla default.
-	enable = false
+	enable = true
 	#Whether to use rounded tooltip shapes, or to use vanilla style.
 	roundedShape = true
 	#True to center the tooltip title if rendering an item's tooltip.
@@ -157,7 +157,7 @@
 #Font Config
 [font]
 	#The first font family to use. See fallbackFontFamilyList
-	firstFontFamily = "Inter Frozen Medium"
+	firstFontFamily = "HarmonyOS Sans SC Medium"
 	#A set of fallback font families to determine the typeface to use.
 	#The order is first > fallbacks. TrueType & OpenType are supported.
 	#Each element can be one of the following two cases:

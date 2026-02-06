@@ -17,7 +17,7 @@
 	iconMode = "SCROLLING"
 	#图标显示风格
 	#Allowed Values: VANILLA, MODERN
-	iconStyle = "MODERN"
+	iconStyle = "VANILLA"
 	#卡牌图标显示风格
 	#Allowed Values: VANILLA, MODERN
 	cardIconStyle = "MODERN"
@@ -41,25 +41,25 @@
 	scrollIconX = 0
 	#滚动模式-击杀图标Y轴
 	#Range: -1000 ~ 1000
-	scrollIconY = -140
+	scrollIconY = -121
 	#滚动模式-击败信息字幕X轴
 	#Range: -1000 ~ 1000
 	scrollSubtitleX = 0
 	#滚动模式-击败信息字幕Y轴
 	#Range: -1000 ~ 1000
-	scrollSubtitleY = -100
+	scrollSubtitleY = -101
 	#滚动模式-分数字幕X轴
 	#Range: -1000 ~ 1000
 	scrollScoreX = 0
 	#滚动模式-分数字幕Y轴
 	#Range: -1000 ~ 1000
-	scrollScoreY = -80
+	scrollScoreY = -87
 	#滚动模式-加分项字幕X轴
 	#Range: -1000 ~ 1000
 	scrollBonusX = 0
 	#滚动模式-加分项字幕Y轴
 	#Range: -1000 ~ 1000
-	scrollBonusY = -60
+	scrollBonusY = -74
 
 #连杀模式位置设置
 [combo_mode_positions]
@@ -119,22 +119,22 @@
 [scroll_mode_elements]
 	#滚动模式-击杀图标大小
 	#Range: 16 ~ 64
-	scrollIconSize = 32
+	scrollIconSize = 18
 	#滚动模式-是否显示击杀图标
 	scrollIconVisible = true
 	#滚动模式-击败信息字幕大小
 	#Range: 50 ~ 200
-	scrollSubtitleSize = 100
+	scrollSubtitleSize = 66
 	#滚动模式-是否显示击败信息字幕
 	scrollSubtitleVisible = true
 	#滚动模式-分数字幕大小
 	#Range: 100 ~ 500
-	scrollScoreSize = 250
+	scrollScoreSize = 185
 	#滚动模式-是否显示分数字幕
 	scrollScoreVisible = true
 	#滚动模式-加分项字幕大小
 	#Range: 50 ~ 200
-	scrollBonusSize = 100
+	scrollBonusSize = 70
 	#滚动模式-是否显示加分项字幕
 	scrollBonusVisible = true
 

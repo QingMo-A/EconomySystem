@@ -1,0 +1,38 @@
+{
+  "00000000-0000-300c-9dbe-991166fa1966": {
+    "uuid": "00000000-0000-300c-9dbe-991166fa1966",
+    "playerName": "hanhanyu5014",
+    "rank": {
+      "rankName": "NO_RANK",
+      "rankLevel": 0,
+      "rankColor": 11184810
+    },
+    "title": {
+      "TitleID": 0,
+      "TitleName": "√»–¬”„”—",
+      "color": 16777215
+    },
+    "level": 100,
+    "currentExperience": 1200,
+    "lastLoginTime": 1769156474000,
+    "totalPlayTime": 1825336
+  },
+  "5c728c19-aed5-4143-af08-bc40f5069f98": {
+    "uuid": "5c728c19-aed5-4143-af08-bc40f5069f98",
+    "playerName": "__HanHanYu__",
+    "rank": {
+      "rankName": "NO_RANK",
+      "rankLevel": 0,
+      "rankColor": 11184810
+    },
+    "title": {
+      "TitleID": 0,
+      "TitleName": "√»–¬”„”—",
+      "color": 16777215
+    },
+    "level": 3,
+    "currentExperience": 46,
+    "lastLoginTime": 1769295574501,
+    "totalPlayTime": 952334
+  }
+}

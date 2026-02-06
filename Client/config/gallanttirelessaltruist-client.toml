@@ -1,0 +1,15 @@
+
+["Global Setting"]
+	#Just enable KillEffect.
+	enableKillEffect = true
+	#Just enable HurtEffect.
+	enableHurtEffect = false
+	#Just disable vanilla HurtShake.
+	disableHurtEffect = false
+
+["Effect Setting"]
+	#Intensity of KillEffect.
+	KillEffectIntensity = 1.0
+	#Intensity of HurtEffect.
+	EffectIntensity = 1.0
+
