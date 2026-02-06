@@ -1,0 +1,20 @@
+{
+  "5c728c19-aed5-4143-af08-bc40f5069f98": {
+    "uuid": "5c728c19-aed5-4143-af08-bc40f5069f98",
+    "playerName": "__HanHanYu__",
+    "rank": {
+      "rankName": "NO_RANK",
+      "rankLevel": 0,
+      "rankColor": 11184810
+    },
+    "title": {
+      "TitleID": 0,
+      "TitleName": "��������",
+      "color": -1
+    },
+    "level": 2,
+    "currentExperience": 40,
+    "lastLoginTime": 1770346778506,
+    "totalPlayTime": 71263
+  }
+}

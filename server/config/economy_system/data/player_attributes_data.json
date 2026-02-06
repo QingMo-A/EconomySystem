@@ -1,0 +1,18 @@
+{
+  "5c728c19-aed5-4143-af08-bc40f5069f98": {
+    "playerUUID": "5c728c19-aed5-4143-af08-bc40f5069f98",
+    "playerName": "__HanHanYu__",
+    "level": 2,
+    "maxStrength": 760,
+    "currentStrength": 585,
+    "maxCourage": 100.0,
+    "currentCourage": 58.400005,
+    "currentInfection": 0.0,
+    "isInfected": false,
+    "respawnPoint": 100.0,
+    "maxHealth": 20.0,
+    "strengthWarned": false,
+    "courageWarned": false,
+    "infectionWarned": false
+  }
+}

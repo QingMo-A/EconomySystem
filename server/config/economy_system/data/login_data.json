@@ -1,0 +1,13 @@
+{
+  "5c728c19-aed5-4143-af08-bc40f5069f98": {
+    "playerUUID": "5c728c19-aed5-4143-af08-bc40f5069f98",
+    "passwordAfterHash": "720f1ab46ac1d5b2905a732f4a5ac99ed1606673bf0083a9eb49f7e419407eb8",
+    "registerIP": "::1",
+    "lastLoginIP": "::1",
+    "lastLoginTime": "1770346849770",
+    "lastGameMode": "SURVIVAL",
+    "lastLogoutTime": 1770346849770,
+    "hasCompletedNewPlayerGuidence": true,
+    "loginSessionCompleted": true
+  }
+}

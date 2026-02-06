@@ -1,0 +1,43 @@
+{
+  "default_unlocked_items": [
+    "minecraft:stick",
+    "minecraft:oak_planks",
+    "minecraft:torch",
+    "minecraft:crafting_table",
+    "minecraft:wooden_axe",
+    "minecraft:wooden_shovel",
+    "minecraft:wooden_pickaxe",
+    "minecraft:wooden_sword",
+    "minecraft:wooden_hoe"
+  ],
+  "excluded_keywords": [
+    "*_wood",
+    "*_planks",
+    "*_log",
+    "*_terracotta",
+    "*_bed",
+    "*_candle",
+    "*_glass_pane",
+    "*_glass",
+    "*_sign",
+    "*_carpet",
+    "*_stairs",
+    "*_slab",
+    "raw_*",
+    "*_wool",
+    "*_copper",
+    "*_block",
+    "*_button",
+    "*_fence_gate",
+    "*_door",
+    "*_boat",
+    "*_banner",
+    "*_fence",
+    "*_ingot",
+    "*_dye",
+    "*_plate",
+    "*_concrete_powder",
+    "minecraft:snow",
+    "*_trapdoor"
+  ]
+}

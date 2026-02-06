@@ -1,0 +1,191 @@
+---- Minecraft Crash Report ----
+// Who set us up the TNT?
+
+Time: 2026-02-06 10:52:35
+Description: Mod loading error has occurred
+
+java.lang.Exception: Mod Loading has failed
+	at net.minecraftforge.logging.CrashReportExtender.dumpModLoadingCrashReport(CrashReportExtender.java:60) ~[forge-1.20.1-47.4.10-universal.jar%23220!/:?] {re:classloading}
+	at net.minecraftforge.server.loading.ServerModLoader.load(ServerModLoader.java:37) ~[forge-1.20.1-47.4.10-universal.jar%23220!/:?] {re:classloading}
+	at net.minecraft.server.Main.main(Main.java:125) ~[server-1.20.1-20230612.114412-srg.jar%23215!/:?] {re:mixin,re:classloading,pl:mixin:A}
+	at jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[?:?] {}
+	at java.lang.reflect.Method.invoke(Method.java:580) ~[?:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:111) ~[fmlloader-1.20.1-47.4.10.jar%2369!/:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.serverService(CommonLaunchHandler.java:103) ~[fmlloader-1.20.1-47.4.10.jar%2369!/:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonServerLaunchHandler.lambda$makeService$0(CommonServerLaunchHandler.java:27) ~[fmlloader-1.20.1-47.4.10.jar%2369!/:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.Launcher.run(Launcher.java:108) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.Launcher.main(Launcher.java:78) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:141) ~[bootstraplauncher-1.1.2.jar:?] {}
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: main
+Suspected Mods: NONE
+Stacktrace:
+	at net.minecraftforge.fml.loading.RuntimeDistCleaner.processClassWithFlags(RuntimeDistCleaner.java:57) ~[fmlloader-1.20.1-47.4.10.jar%2369!/:1.0] {}
+-- MOD mafglib --
+Details:
+	Mod File: /D:/Desktop/Dreamingfish_Server_github/EconomySystem/server/mods/[前置]MaFgLib-0.1.14-mc1.20.1.jar
+	Failure message: MaFgLib (mafglib) has failed to load correctly
+		java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/Screen for invalid dist DEDICATED_SERVER
+	Mod Version: 0.1.14-mc1.20.1
+	Mod Issue URL: NOT PROVIDED
+	Exception message: java.lang.RuntimeException: Attempted to load class net/minecraft/client/gui/screens/Screen for invalid dist DEDICATED_SERVER
+Stacktrace:
+	at net.minecraftforge.fml.loading.RuntimeDistCleaner.processClassWithFlags(RuntimeDistCleaner.java:57) ~[fmlloader-1.20.1-47.4.10.jar%2369!/:1.0] {}
+	at cpw.mods.modlauncher.LaunchPluginHandler.offerClassNodeToPlugins(LaunchPluginHandler.java:88) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.ClassTransformer.transform(ClassTransformer.java:120) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.modlauncher.TransformingClassLoader.maybeTransformClassBytes(TransformingClassLoader.java:50) ~[modlauncher-10.0.9.jar%2355!/:?] {}
+	at cpw.mods.cl.ModuleClassLoader.readerToClass(ModuleClassLoader.java:113) ~[securejarhandler-2.1.10.jar:?] {}
+	at cpw.mods.cl.ModuleClassLoader.lambda$findClass$15(ModuleClassLoader.java:219) ~[securejarhandler-2.1.10.jar:?] {}
+	at cpw.mods.cl.ModuleClassLoader.loadFromModule(ModuleClassLoader.java:229) ~[securejarhandler-2.1.10.jar:?] {}
+	at cpw.mods.cl.ModuleClassLoader.findClass(ModuleClassLoader.java:219) ~[securejarhandler-2.1.10.jar:?] {}
+	at cpw.mods.cl.ModuleClassLoader.loadClass(ModuleClassLoader.java:135) ~[securejarhandler-2.1.10.jar:?] {}
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:526) ~[?:?] {}
+	at java.lang.Class.getDeclaredConstructors0(Native Method) ~[?:?] {re:mixin}
+	at java.lang.Class.privateGetDeclaredConstructors(Class.java:3551) ~[?:?] {re:mixin}
+	at java.lang.Class.getConstructor0(Class.java:3756) ~[?:?] {re:mixin}
+	at java.lang.Class.getDeclaredConstructor(Class.java:2932) ~[?:?] {re:mixin}
+	at net.minecraftforge.fml.javafmlmod.FMLModContainer.constructMod(FMLModContainer.java:73) ~[javafmllanguage-1.20.1-47.4.10.jar%23217!/:?] {}
+	at net.minecraftforge.fml.ModContainer.lambda$buildTransitionHandler$5(ModContainer.java:126) ~[fmlcore-1.20.1-47.4.10.jar%23216!/:?] {}
+	at java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1804) ~[?:?] {}
+	at java.util.concurrent.CompletableFuture$AsyncRun.exec(CompletableFuture.java:1796) ~[?:?] {}
+	at java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387) ~[?:?] {}
+	at java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1310) ~[?:?] {}
+	at java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1841) ~[?:?] {re:mixin,re:computing_frames}
+	at java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1806) ~[?:?] {re:mixin,re:computing_frames}
+	at java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188) ~[?:?] {re:mixin}
+
+
+-- System Details --
+Details:
+	Minecraft Version: 1.20.1
+	Minecraft Version ID: 1.20.1
+	Operating System: Windows 11 (amd64) version 10.0
+	Java Version: 21.0.9, Oracle Corporation
+	Java VM Version: Java HotSpot(TM) 64-Bit Server VM (mixed mode, sharing), Oracle Corporation
+	Memory: 85280384 bytes (81 MiB) / 671088640 bytes (640 MiB) up to 8539602944 bytes (8144 MiB)
+	CPUs: 32
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 9 8945HX with Radeon Graphics        
+	Identifier: AuthenticAMD Family 25 Model 97 Stepping 2
+	Microarchitecture: Zen 3
+	Frequency (GHz): 2.50
+	Number of physical packages: 1
+	Number of physical CPUs: 16
+	Number of logical CPUs: 32
+	Graphics card #0 name: GameViewer Virtual Display Adapter
+	Graphics card #0 vendor: GameViewer
+	Graphics card #0 VRAM (MB): 0.00
+	Graphics card #0 deviceId: unknown
+	Graphics card #0 versionInfo: DriverVersion=17.13.25.697
+	Graphics card #1 name: NVIDIA GeForce RTX 5060 Laptop GPU
+	Graphics card #1 vendor: NVIDIA (0x10de)
+	Graphics card #1 VRAM (MB): 4095.00
+	Graphics card #1 deviceId: 0x2d59
+	Graphics card #1 versionInfo: DriverVersion=32.0.15.7705
+	Memory slot #0 capacity (MB): 16384.00
+	Memory slot #0 clockSpeed (GHz): 5.60
+	Memory slot #0 type: Unknown
+	Memory slot #1 capacity (MB): 16384.00
+	Memory slot #1 clockSpeed (GHz): 5.60
+	Memory slot #1 type: Unknown
+	Virtual memory max (MB): 41264.53
+	Virtual memory used (MB): 25941.42
+	Swap memory total (MB): 8704.00
+	Swap memory used (MB): 50.68
+	JVM Flags: 0 total; 
+	ModLauncher: 10.0.9+10.0.9+main.dcd20f30
+	ModLauncher launch target: forgeserver
+	ModLauncher naming: srg
+	ModLauncher services: 
+		mixin-0.8.5.jar mixin PLUGINSERVICE 
+		eventbus-6.0.5.jar eventbus PLUGINSERVICE 
+		fmlloader-1.20.1-47.4.10.jar slf4jfixer PLUGINSERVICE 
+		fmlloader-1.20.1-47.4.10.jar object_holder_definalize PLUGINSERVICE 
+		fmlloader-1.20.1-47.4.10.jar runtime_enum_extender PLUGINSERVICE 
+		fmlloader-1.20.1-47.4.10.jar capability_token_subclass PLUGINSERVICE 
+		accesstransformers-8.0.4.jar accesstransformer PLUGINSERVICE 
+		fmlloader-1.20.1-47.4.10.jar runtimedistcleaner PLUGINSERVICE 
+		modlauncher-10.0.9.jar mixin TRANSFORMATIONSERVICE 
+		modlauncher-10.0.9.jar fml TRANSFORMATIONSERVICE 
+	FML Language Providers: 
+		minecraft@1.0
+		kotlinforforge@4.12.0
+		lowcodefml@null
+		javafml@null
+	Mod List: 
+		[优化-镭] radium-mc1.20.1-0.12.4+git.26c9d8e.jar     |Radium                        |radium                        |0.12.4+git.26c9d8e  |COMMON_SET|Manifest: NOSIGNATURE
+		[机械动力：火炮] createbigcannons-5.10.2+mc.1.20.1-forge.|Create Big Cannons            |createbigcannons              |5.10.2              |COMMON_SET|Manifest: NOSIGNATURE
+		[优化-动态tps]tt20-0.7.1+mc1.20.1.jar                 |TT20                          |tt20                          |0.7.1               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]geckolib-forge-1.20.1-4.8.2.jar               |GeckoLib 4                    |geckolib                      |4.8.2               |COMMON_SET|Manifest: NOSIGNATURE
+		[JEI物品管理器] jei-1.20.1-forge-15.20.0.112.jar       |Just Enough Items             |jei                           |15.20.0.112         |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]lithostitched-forge-1.20.1-1.4.11.jar         |Lithostitched                 |lithostitched                 |1.4.11              |COMMON_SET|Manifest: NOSIGNATURE
+		[永恒枪械工坊：零] tacz-1.20.1-1.1.7-release.jar          |Timeless & Classics Guns: Zero|tacz                          |1.1.7               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]libraryferret-forge-1.20.1-4.0.0.jar          |Library ferret                |libraryferret                 |4.0.0               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置精妙核心] sophisticatedcore-1.20.1-1.2.108.1253.jar|Sophisticated Core            |sophisticatedcore             |1.2.108.1253        |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]structureessentials-1.20.1-4.8.jar            |Structure Essentials mod      |structureessentials           |1.20.1-4.8          |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]ritchiesprojectilelib-2.1.1+mc.1.20.1-forge.ja|Ritchie's Projectile Library  |ritchiesprojectilelib         |2.1.1               |COMMON_SET|Manifest: NOSIGNATURE
+		[Xaero的世界地图] XaerosWorldMap_1.39.12_Forge_1.20.jar|Xaero's World Map             |xaeroworldmap                 |1.39.12             |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]Prism-1.20.1-forge-1.0.5.jar                  |Prism                         |prism                         |1.0.5               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]Placebo-1.20.1-8.6.3.jar                      |Placebo                       |placebo                       |8.6.3               |COMMON_SET|Manifest: NOSIGNATURE
+		[优化-现代化修复] modernfix-forge-5.25.2+mc1.20.1.jar    |ModernFix                     |modernfix                     |5.25.2+mc1.20.1     |COMMON_SET|Manifest: NOSIGNATURE
+		[自然罗盘／生物群系指南针] NaturesCompass-1.20.1-1.11.2-forge.|Nature's Compass              |naturescompass                |1.20.1-1.11.2-forge |COMMON_SET|Manifest: NOSIGNATURE
+		[优化网络]Krypton FNP-forge-1.20.1-0.2.25-1.20.1.jar  |Krypton FNP                   |krypton_fnp                   |0.2.25-1.20.1       |COMMON_SET|Manifest: NOSIGNATURE
+		[优化]tritium-forge-1.20.1-1.3.2.jar                |Tritium                       |tritium                       |1.3.2               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]OELib-forge-1.20.1-0.0.6.jar                  |OELib                         |oelib                         |0.0.6               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]Bookshelf-Forge-1.20.1-20.2.13.jar            |Bookshelf                     |bookshelf                     |20.2.13             |COMMON_SET|Manifest: eb:c4:b1:67:8b:f9:0c:db:dc:4f:01:b1:8e:61:64:39:4c:10:85:0b:a6:c4:c7:48:f0:fa:95:f2:cb:08:3a:e5
+		[气动工艺] pneumaticcraft-repressurized-6.0.22+mc1.20.|PneumaticCraft: Repressurized |pneumaticcraft                |6.0.22+mc1.20.1     |COMMON_SET|Manifest: NOSIGNATURE
+		[精妙背包] sophisticatedbackpacks-1.20.1-3.24.12.1411.|Sophisticated Backpacks       |sophisticatedbackpacks        |3.24.12.1411        |COMMON_SET|Manifest: NOSIGNATURE
+		[优化星光] starlight-1.1.2+forge.1cda73c.jar          |Starlight                     |starlight                     |1.1.2+forge.1cda73c |COMMON_SET|Manifest: NOSIGNATURE
+		[拾取提示] PickUpNotifier-v8.0.0-1.20.1-Forge.jar     |Pick Up Notifier              |pickupnotifier                |8.0.0               |COMMON_SET|Manifest: 9a:09:85:98:65:c4:8c:11:c5:49:f6:d6:33:23:39:df:8d:b4:ff:92:84:b8:bd:a5:83:9f:ac:7f:2a:d1:4b:6a
+		[前置]melody_forge_1.0.3_MC_1.20.1-1.20.4.jar       |Melody                        |melody                        |1.0.2               |COMMON_SET|Manifest: NOSIGNATURE
+		puzzlesaccessapi-forge-20.1.1.jar                 |Puzzles Access Api            |puzzlesaccessapi              |20.1.1              |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]cloth-config-11.1.136-forge.jar               |Cloth Config v10 API          |cloth_config                  |11.1.136            |COMMON_SET|Manifest: NOSIGNATURE
+		forge-1.20.1-47.4.10-universal.jar                |Forge                         |forge                         |47.4.10             |COMMON_SET|Manifest: 84:ce:76:e8:45:35:e4:0e:63:86:df:47:59:80:0f:67:6c:c1:5f:6e:5f:4d:b3:54:47:1a:9f:7f:ed:5e:f2:90
+		[前置]konkrete_forge_1.8.0_MC_1.20-1.20.1.jar       |Konkrete                      |konkrete                      |1.8.0               |COMMON_SET|Manifest: NOSIGNATURE
+		economy_system-1.2.03 #mandatory.jar              |Economy System                |economy_system                |1.2.03              |COMMON_SET|Manifest: NOSIGNATURE
+		[地形]tectonic-3.0.17-forge-1.20.1.jar              |Tectonic                      |tectonic                      |3.0.17              |COMMON_SET|Manifest: NOSIGNATURE
+		server-1.20.1-20230612.114412-srg.jar             |Minecraft                     |minecraft                     |1.20.1              |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]libIPN-forge-1.20-4.0.2.jar                   |libIPN                        |libipn                        |4.0.2               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]TerraBlender-forge-1.20.1-3.0.1.10.jar        |TerraBlender                  |terrablender                  |3.0.1.10            |COMMON_SET|Manifest: NOSIGNATURE
+		[未至之地] RegionsUnexploredForge-0.5.6+1.20.1.jar    |Regions Unexplored            |regions_unexplored            |0.5.6               |COMMON_SET|Manifest: NOSIGNATURE
+		[沉浸工程] ImmersiveEngineering-1.20.1-10.2.0-183.jar |Immersive Engineering         |immersiveengineering          |1.20.1-10.2.0-183   |COMMON_SET|Manifest: 44:39:94:cf:1d:8c:be:3c:7f:a9:ee:f4:1e:63:a5:ac:61:f9:c2:87:d5:5b:d9:d6:8c:b5:3e:96:5d:8e:3f:b7
+		mixinsquared-forge-0.3.6-beta.1.jar               |MixinSquared                  |mixinsquared                  |0.3.6-beta.1        |COMMON_SET|Manifest: NOSIGNATURE
+		[GD656击杀图标] gd656killicon-1.0.0RC5-1.20.1-forge.ja|GD656Killicon                 |gd656killicon                 |1.0.0RC5-1.20.1-forg|COMMON_SET|Manifest: NOSIGNATURE
+		[前置]MaFgLib-0.1.14-mc1.20.1.jar                   |MaFgLib                       |mafglib                       |0.1.14-mc1.20.1     |ERROR     |Manifest: NOSIGNATURE
+		[前置]CreativeCore_FORGE_v2.12.32_mc1.20.1.jar      |CreativeCore                  |creativecore                  |2.12.32             |COMMON_SET|Manifest: NOSIGNATURE
+		[内存泄漏优化]alltheleaks-1.1.1+1.20.1-forge.jar        |All The Leaks                 |alltheleaks                   |1.1.1+1.20.1-forge  |COMMON_SET|Manifest: NOSIGNATURE
+		[节气] EclipticSeasons-1.20.1-forge-0.12.5.4-all.jar|Ecliptic Seasons              |eclipticseasons               |0.12.5.4            |COMMON_SET|Manifest: NOSIGNATURE
+		[gta击杀变色] gallanttirelessaltruist-1.0.4.jar       |GallantTirelessAltruist       |gallanttirelessaltruist       |1.0.4               |COMMON_SET|Manifest: NOSIGNATURE
+		[优化]servercore-forge-1.5.2+1.20.1.jar             |ServerCore                    |servercore                    |1.5.2+1.20.1        |COMMON_SET|Manifest: NOSIGNATURE
+		kffmod-4.12.0.jar                                 |Kotlin For Forge              |kotlinforforge                |4.12.0              |COMMON_SET|Manifest: NOSIGNATURE
+		[前置-冰山] Iceberg-1.20.1-forge-1.1.25.jar           |Iceberg                       |iceberg                       |1.1.25              |COMMON_SET|Manifest: NOSIGNATURE
+		flywheel-forge-1.20.1-1.0.5.jar                   |Flywheel                      |flywheel                      |1.0.5               |COMMON_SET|Manifest: NOSIGNATURE
+		Ponder-Forge-1.20.1-1.0.91.jar                    |Ponder                        |ponder                        |1.0.91              |COMMON_SET|Manifest: NOSIGNATURE
+		[机械动力] create-1.20.1-6.0.8.jar                    |Create                        |create                        |6.0.8               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置帕秋莉手册] Patchouli-1.20.1-84.1-FORGE.jar         |Patchouli                     |patchouli                     |1.20.1-84.1-FORGE   |COMMON_SET|Manifest: NOSIGNATURE
+		[Xaero的小地图] Xaeros_Minimap_25.2.10_Forge_1.20.jar |Xaero's Minimap               |xaerominimap                  |25.2.10             |COMMON_SET|Manifest: NOSIGNATURE
+		[工作台性能优化] FastWorkbench-1.20.1-8.0.4.jar          |Fast Workbench                |fastbench                     |8.0.4               |COMMON_SET|Manifest: NOSIGNATURE
+		[地下城与酒馆]dungeons-and-taverns-3.0.3.f[Forge].jar   |Dungeons and Taverns          |mr_dungeons_andtaverns        |3.0.3.f             |COMMON_SET|Manifest: NOSIGNATURE
+		[更好的村庄] bettervillage-forge-1.20.1-3.3.1-all.jar  |Better village                |bettervillage                 |3.3.1               |COMMON_SET|Manifest: NOSIGNATURE
+		[区块优化]noisium-forge-2.3.0+mc1.20-1.20.1.jar       |Noisium                       |noisium                       |2.3.0+mc1.20-1.20.1 |COMMON_SET|Manifest: NOSIGNATURE
+		[熔炉性能优化] FastFurnace-1.20.1-8.0.2.jar             |FastFurnace                   |fastfurnace                   |8.0.2               |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]architectury-9.2.14-forge.jar                 |Architectury                  |architectury                  |9.2.14              |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]OctoLib-FORGE-0.5.0.1+1.20.1.jar              |OctoLib                       |octolib                       |0.5.0.1             |COMMON_SET|Manifest: NOSIGNATURE
+		[优化-铁氧体磁芯] ferritecore-6.0.1-forge.jar            |Ferrite Core                  |ferritecore                   |6.0.1               |COMMON_SET|Manifest: 41:ce:50:66:d1:a0:05:ce:a1:0e:02:85:9b:46:64:e0:bf:2e:cf:60:30:9a:fe:0c:27:e0:63:66:9a:84:ce:8a
+		[前置]cupboard-1.20.1-2.7.jar                       |Cupboard utilities            |cupboard                      |1.20.1-2.7          |COMMON_SET|Manifest: NOSIGNATURE
+		[前置]PuzzlesLib-v8.1.33-1.20.1-Forge.jar           |Puzzles Lib                   |puzzleslib                    |8.1.33              |COMMON_SET|Manifest: 9a:09:85:98:65:c4:8c:11:c5:49:f6:d6:33:23:39:df:8d:b4:ff:92:84:b8:bd:a5:83:9f:ac:7f:2a:d1:4b:6a
+		[汤姆的简易存储] toms_storage-1.20-1.7.1.jar             |Tom's Simple Storage Mod      |toms_storage                  |1.7.1               |COMMON_SET|Manifest: NOSIGNATURE
+		[玩家救援] PlayerRevive_FORGE_v2.0.31_mc1.20.1.jar    |PlayerRevive                  |playerrevive                  |2.0.31              |COMMON_SET|Manifest: NOSIGNATURE
+	Crash Report UUID: 4eebabec-d5b2-4f13-81c1-665227836483
+	FML: 47.4
+	Forge: net.minecraftforge:47.4.10
