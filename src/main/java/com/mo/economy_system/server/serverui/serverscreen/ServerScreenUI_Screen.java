@@ -725,10 +725,10 @@ public class ServerScreenUI_Screen extends Screen {
 
             // 检查是否有未读/未完成内容
             boolean hasUnread = false;
-            if (i == 1 && hasUnreadNoticesGlobal) {
+            if (i == 2 && hasUnreadNoticesGlobal) {
                 // 公告按钮：未读公告（使用全局标记）
                 hasUnread = true;
-            } else if (i == 2) {
+            } else if (i == 3) {
                 // 故事按钮：未完成任务
                 hasUnread = com.mo.economy_system.client.cache.ClientCacheManager.hasUnfinishedTasks();
             }

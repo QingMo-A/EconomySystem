@@ -12,7 +12,6 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.Util;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -43,7 +43,7 @@ public abstract class TitleScreenMixin extends Screen {
     private static final String BUTTON_UPDATE_LOG = "更新日志";
     private static final String BUTTON_MODS = "模组[📦]";
     private static final String BUTTON_LANGUAGE = "语言[🌐]";
-    private static final String BUTTON_EXIT = "退出[✕]";
+    private static final String BUTTON_EXIT = "§c退出[✕]";
     @Unique
     private static volatile String economySystem$updateLogPreview = "§7暂无更新";
     @Unique
@@ -52,9 +52,8 @@ public abstract class TitleScreenMixin extends Screen {
     private static final String UPDATE_LOG_API_URL = "https://api.github.com/repos/QingMo-A/EconomySystem/releases/latest";
 
     // 版权和版本信息
-    private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1";
-    private static final String MOJANG_COPYRIGHT = "§8Copyright Mojang AB. Do not distribute!";
-    private static final String DREAMINGFISH_TITLE = "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(Private)";
+    private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!";
+    private static final String DREAMINGFISH_TITLE = "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)";
     private static final String DREAMINGFISH_COPYRIGHT = "© 2026 DreamingFish - EconomySystem";
     private static final String DEVELOPER_COPYRIGHT = "  Developed by QINGMO & HANHANYU";
     private static final String DEVELOPER_INFO = "§8开发者：QINGMO、HANHANYU";
@@ -62,9 +61,9 @@ public abstract class TitleScreenMixin extends Screen {
     // 服务器背景文案
     private static final String STORY_LINE_1 = "§f§l2066年§r§f，随着基因工程的研究，";
     private static final String STORY_LINE_2 = "§f人类可以通过自身的细胞分裂实现重生，";
-    private static final String STORY_LINE_3 = "然而一场危机随着这次基因工程悄然降临...";
-    private static final String STORY_LINE_4 = "您需要与其他玩家展开一场冒险，";
-    private static final String STORY_LINE_5 = "在§e梦屿找到阻止这场危机的办法——";
+    private static final String STORY_LINE_3 = "§7然而一场危机随着这次基因工程悄然降临...";
+    private static final String STORY_LINE_4 = "§7您需要与其他玩家展开一场冒险，";
+    private static final String STORY_LINE_5 = "§7在§e梦屿§7找到阻止这场危机的办法——";
     private static final String STORY_LINE_6 = "§d故事由您和伙伴书写。";
     private static final String STORY_LINE_7 = "§d没有剧本，没有结局。";
     private static final String STORY_LINE_8 = "§d您可以成为拯救服务器的§e英雄§d，";
@@ -72,15 +71,15 @@ public abstract class TitleScreenMixin extends Screen {
     private static final String STORY_LINE_10 = "§d无论如何，此时此刻您比任何时刻都需要§6共同合作§d。";
 
     // 资助面板文案
-    private static final String DONATE_TITLE = "本服为§e非营利公益服§7，";
+    private static final String DONATE_TITLE = "§7本服为§e非营利公益服§7，";
     private static final String DONATE_LINE_1 = "§e公益服维持不易，感谢所有资助者§7。";
-    private static final String DONATE_LINE_2 = "无偿资助§c无法获得游戏内权益和物资，";
-    private static final String DONATE_LINE_3 = "请您资助前三思。";
-    private static final String DONATE_LINE_4 = "资助者可按照您的要求自定义设计武器/装备/物品等，";
-    private static final String DONATE_LINE_5 = "且可以自定义属性、外观（数值保证合理），";
-    private static final String DONATE_LINE_6 = "您的自定义物品开发完成后可以让所有人§a获取§7。";
-    private static final String DONATE_LINE_7 = "如果您有特长（建筑/编程/策划等）欢迎";
-    private static final String DONATE_LINE_8 = "加入开发团队，参与后续制作！";
+    private static final String DONATE_LINE_2 = "§7无偿资助§c无法获得§7游戏内权益和物资，";
+    private static final String DONATE_LINE_3 = "§7请您资助前三思。";
+    private static final String DONATE_LINE_4 = "§7资助者可按照您的要求自定义设计武器/装备/物品等，";
+    private static final String DONATE_LINE_5 = "§7且可以自定义属性、外观（数值保证合理），";
+    private static final String DONATE_LINE_6 = "§7您的自定义物品开发完成后可以让所有人§a获取§7。";
+    private static final String DONATE_LINE_7 = "§7如果您有特长（建筑/编程/策划等）欢迎";
+    private static final String DONATE_LINE_8 = "§7加入开发团队，参与后续制作！";
 
     // 图标
     private static final String ICON_MULTIPLAYER = "⚁";
@@ -93,13 +92,7 @@ public abstract class TitleScreenMixin extends Screen {
     private static final int ACCENT_GREEN = 0xFF44FF88;
     private static final int ACCENT_GOLD = 0xFFFFAA44;
     private static final int TEXT_WHITE = 0xFFFFFFFF;
-    private static final int TEXT_GRAY = 0xFF666666;
-    private static final int GLASS_TOP = 0x66FFFFFF;
-    private static final int GLASS_BOTTOM = 0x33000000;
-    private static final int GLASS_BORDER = 0x55FFFFFF;
-    private static final int GLASS_SHADOW = 0x33000000;
-    private static final int GLASS_HIGHLIGHT = 0x66FFFFFF;
-    private static final int GLASS_INNER = 0x22FFFFFF;
+    private static final int TEXT_GRAY = 0xFFAAAAAA;
 
     @Unique
     private static final ResourceLocation BACKGROUND_TEXTURE =
@@ -267,8 +260,6 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderMainPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, long time) {
-        // Glass main panel
-        economySystem$renderGlassPanel(guiGraphics, x, y, width, height, 0xAAFFFFFF);
         // 无主面板背景，只有按钮有背景
 
         // 统一间距系统
@@ -285,21 +276,18 @@ public abstract class TitleScreenMixin extends Screen {
 
         // ========== 左侧 - 多人游戏（整个区域） ==========
         boolean multiHovered = economySystem$hoveredButtonIndex == 0;
-        float multiHoverT = economySystem$getHoverT(0, time);
         economySystem$renderMultiplayerButton(guiGraphics, leftX, y + gap, columnWidth, height - gap * 2,
-            ACCENT_GREEN, multiHovered, multiHoverT);
+            ACCENT_GREEN, multiHovered);
 
         // ========== 右上左 - 单人游戏 ==========
         boolean singleHovered = economySystem$hoveredButtonIndex == 1;
-        float singleHoverT = economySystem$getHoverT(1, time);
         economySystem$renderSmallButton(guiGraphics, rightX, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            BUTTON_SINGLEPLAYER, ICON_SINGLEPLAYER, ACCENT_GOLD, singleHovered, singleHoverT);
+            BUTTON_SINGLEPLAYER, ICON_SINGLEPLAYER, ACCENT_GOLD, singleHovered);
 
         // ========== 右上右 - 设置 ==========
         boolean settingsHovered = economySystem$hoveredButtonIndex == 2;
-        float settingsHoverT = economySystem$getHoverT(2, time);
         economySystem$renderSmallButton(guiGraphics, rightX + rightSmallButtonWidth + gap, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            BUTTON_SETTINGS, ICON_SETTINGS, ACCENT_BLUE, settingsHovered, settingsHoverT);
+            BUTTON_SETTINGS, ICON_SETTINGS, ACCENT_BLUE, settingsHovered);
 
         // ========== 右中 - 更新日志按钮 ==========
         int updateLogY = y + gap + smallButtonHeight + gap;
@@ -307,8 +295,7 @@ public abstract class TitleScreenMixin extends Screen {
         int updateLogX = rightX;
         int updateLogWidth = columnWidth;
         boolean updateLogHovered = economySystem$hoveredButtonIndex == 3;
-        float updateHoverT = economySystem$getHoverT(3, time);
-        economySystem$renderUpdateLogButton(guiGraphics, updateLogX, updateLogY, updateLogWidth, updateLogHeight, updateLogHovered, updateHoverT);
+        economySystem$renderUpdateLogButton(guiGraphics, updateLogX, updateLogY, updateLogWidth, updateLogHeight, updateLogHovered);
 
         // ========== 右下 - 资助说明 ==========
         int donateY = updateLogY + updateLogHeight + gap;
@@ -320,11 +307,17 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderMultiplayerButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                       int color, boolean hovered, float hoverT) {
-        economySystem$renderGlassButton(guiGraphics, x, y, width, height, color, hoverT);
+                                                       int color, boolean hovered) {
         // 深色半透明背景（只有按钮有背景）
+        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 边框（悬停时变色）
+        int borderColor = hovered ? color : 0xFF666666;
+        guiGraphics.fill(x, y, x + width, y + 2, borderColor);
+        guiGraphics.fill(x, y + height - 2, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 2, y + height, borderColor);
+        guiGraphics.fill(x + width - 2, y, x + width, y + height, borderColor);
 
         // 图标和标题（左对齐）
         PoseStack poseStack = guiGraphics.pose();
@@ -374,11 +367,17 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderSmallButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                 String title, String icon, int color, boolean hovered, float hoverT) {
-        economySystem$renderGlassButton(guiGraphics, x, y, width, height, color, hoverT);
+                                                 String title, String icon, int color, boolean hovered) {
         // 深色半透明背景（只有按钮有背景）
+        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 边框（悬停时变色）
+        int borderColor = hovered ? color : 0xFF666666;
+        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
 
         // 图标（左侧，垂直居中）
         PoseStack poseStack = guiGraphics.pose();
@@ -397,11 +396,17 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderUpdateLogButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                     boolean hovered, float hoverT) {
-        economySystem$renderGlassButton(guiGraphics, x, y, width, height, 0xFF00AA44, hoverT);
+                                                     boolean hovered) {
         // 深色半透明背景
+        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 边框（悬停时变色）
+        int borderColor = hovered ? 0xFF00AA44 : 0xFF666666;
+        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
 
         // 图标（左侧）
         PoseStack poseStack = guiGraphics.pose();
@@ -413,119 +418,17 @@ public abstract class TitleScreenMixin extends Screen {
         // 标题（图标右侧）
         guiGraphics.drawString(font, "§l" + BUTTON_UPDATE_LOG, x + 28, y + height / 2 - 5, TEXT_WHITE, false);
 
-        // 最新内容预览（右侧）
+        // 最新内容预览（右侧）- 使用动态获取的内容
         String previewText = economySystem$updateLogPreview;
         int previewX = x + width - this.font.width(previewText) - 10;
         guiGraphics.drawString(font, previewText, previewX, y + height / 2 - 5, TEXT_GRAY, false);
     }
 
     @Unique
-    private void economySystem$renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, int tint) {
-        // Base glass
-        guiGraphics.fillGradient(x, y, x + width, y + height, GLASS_TOP, GLASS_BOTTOM);
-        // Subtle tint
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, economySystem$withAlpha(tint, 0x12));
-        // Border + inner line
-        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, GLASS_HIGHLIGHT);
-        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, GLASS_SHADOW);
-        // Fine noise
-        economySystem$renderGlassNoise(guiGraphics, x, y, width, height);
-    }
-
-    @Unique
-    private void economySystem$renderGlassButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                 int accent, float hoverT) {
-        int hoverAlpha = (int) (64 + 128 * hoverT);
-        int accentGlow = economySystem$withAlpha(accent, hoverAlpha);
-        int baseTop = 0x7AFFFFFF;
-        int baseBottom = 0x3A000000;
-
-        // Base glass
-        guiGraphics.fillGradient(x, y, x + width, y + height, baseTop, baseBottom);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, GLASS_INNER);
-
-        // Accent border on hover
-        guiGraphics.fill(x, y, x + width, y + 1, accentGlow);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x, y, x + 1, y + height, accentGlow);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, GLASS_SHADOW);
-
-        // Top highlight
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, GLASS_HIGHLIGHT);
-        // Fine noise
-        economySystem$renderGlassNoise(guiGraphics, x, y, width, height);
-    }
-
-    @Unique
-    private void economySystem$renderGlassNoise(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        if (width < 20 || height < 20) {
-            return;
-        }
-        int maxX = x + width - 6;
-        int maxY = y + height - 6;
-        for (int i = 0; i < 6; i++) {
-            int nx = x + 6 + (i * 23 + x) % (maxX - x);
-            int ny = y + 6 + (i * 17 + y) % (maxY - y);
-            guiGraphics.fill(nx, ny, nx + 1, ny + 1, 0x22FFFFFF);
-        }
-    }
-
-    @Unique
-    private float economySystem$getHoverT(int index, long time) {
-        if (this.economySystem$hoveredButtonIndex != index) {
-            return 0.0f;
-        }
-        float t = (time - this.economySystem$hoverTime) / 180.0f;
-        return Mth.clamp(t, 0.0f, 1.0f);
-    }
-
-    @Unique
-    private int economySystem$withAlpha(int color, int alpha) {
-        return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24);
-    }
-
-    @Unique
-    private void economySystem$startUpdateLogFetch() {
-        if (economySystem$updateLogFetchStarted) {
-            return;
-        }
-        economySystem$updateLogFetchStarted = true;
-        new Thread(() -> {
-            try {
-                HttpURLConnection connection = (HttpURLConnection) new URL(UPDATE_LOG_API_URL).openConnection();
-                connection.setRequestMethod("GET");
-                connection.setRequestProperty("User-Agent", "Minecraft-Mod");
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(5000);
-
-                if (connection.getResponseCode() != 200) {
-                    return;
-                }
-
-                try (InputStreamReader reader = new InputStreamReader(connection.getInputStream())) {
-                    JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-                    String name = json.has("name") ? json.get("name").getAsString() : "";
-                    String tag = json.has("tag_name") ? json.get("tag_name").getAsString() : "";
-                    String latest = !name.isBlank() ? name : tag;
-                    if (!latest.isBlank()) {
-                        economySystem$updateLogPreview = "§a" + latest;
-                    }
-                }
-            } catch (Exception ignored) {
-                // Ignore network/parse errors to avoid blocking the title screen.
-            }
-        }, "economySystem-update-log-fetch").start();
-    }
-
-    @Unique
     private void economySystem$renderInfoPanel(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                 String title, String[] lines) {
         // 半透明黑色背景
-        economySystem$renderGlassPanel(guiGraphics, x, y, width, height, 0xFF66AAFF);
+        guiGraphics.fill(x, y, x + width, y + height, 0xBB000000);
 
         // 标题（左对齐）
         guiGraphics.drawString(font, title, x + 10, y + 8, TEXT_WHITE, false);
@@ -544,7 +447,7 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderDonatePanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
         // 半透明黑色背景
-        economySystem$renderGlassPanel(guiGraphics, x, y, width, height, 0xFFFF6666);
+        guiGraphics.fill(x, y, x + width, y + height, 0xBB000000);
 
         // 标题（左对齐）
         guiGraphics.drawString(font, DONATE_TITLE, x + 10, y + 8, TEXT_WHITE, false);
@@ -565,11 +468,11 @@ public abstract class TitleScreenMixin extends Screen {
         guiGraphics.drawString(font, DONATE_LINE_5, x + 10, lineY, TEXT_WHITE, false);
         lineY += 12;
         guiGraphics.drawString(font, DONATE_LINE_6, x + 10, lineY, TEXT_WHITE, false);
-        lineY += 12;
-        // guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
-        // lineY += 11;
+        lineY += 14;
+        guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
+        lineY += 11;
         guiGraphics.drawString(font, DONATE_LINE_7, x + 10, lineY, TEXT_WHITE, false);
-        lineY += 12;
+        lineY += 11;
         guiGraphics.drawString(font, DONATE_LINE_8, x + 10, lineY, TEXT_WHITE, false);
     }
 
@@ -592,8 +495,7 @@ public abstract class TitleScreenMixin extends Screen {
         guiGraphics.drawString(this.font, DREAMINGFISH_TITLE, 5, 5, TEXT_WHITE, false);
 
         // 左下角 - Minecraft 1.20.1 + Mojang 版权
-        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 22, TEXT_GRAY, false);
-        guiGraphics.drawString(this.font, MOJANG_COPYRIGHT, 5, virtualH - 10, TEXT_GRAY, false);
+        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
         guiGraphics.drawString(this.font, BUTTON_MODS, virtualW - 155, virtualH - 10, TEXT_GRAY, false);
@@ -738,6 +640,39 @@ public abstract class TitleScreenMixin extends Screen {
     private void economySystem$openSingleplayer(Minecraft mc) {
         TitleScreen self = (TitleScreen) (Object) this;
         mc.setScreen(new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(self));
+    }
+
+    @Unique
+    private void economySystem$startUpdateLogFetch() {
+        if (economySystem$updateLogFetchStarted) {
+            return;
+        }
+        economySystem$updateLogFetchStarted = true;
+        new Thread(() -> {
+            try {
+                HttpURLConnection connection = (HttpURLConnection) new URL(UPDATE_LOG_API_URL).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", "Minecraft-Mod");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+
+                if (connection.getResponseCode() != 200) {
+                    return;
+                }
+
+                try (InputStreamReader reader = new InputStreamReader(connection.getInputStream())) {
+                    JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                    String name = json.has("name") ? json.get("name").getAsString() : "";
+                    String tag = json.has("tag_name") ? json.get("tag_name").getAsString() : "";
+                    String latest = !name.isBlank() ? name : tag;
+                    if (!latest.isBlank()) {
+                        economySystem$updateLogPreview = "§a" + latest;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Ignore network/parse errors to avoid blocking the title screen.
+            }
+        }, "economySystem-update-log-fetch").start();
     }
 
     @Unique

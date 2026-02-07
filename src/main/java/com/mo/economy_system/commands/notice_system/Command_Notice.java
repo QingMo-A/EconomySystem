@@ -212,6 +212,12 @@ public class Command_Notice {
                 () -> Component.literal("§a已重新加载公告配置，当前共 " + count + " 条公告"),
                 true
         );
+
+        // 向全服广播新公告提示
+        if (count > 0) {
+            TipPushHelper.broadcastTipToAllPlayers("§b§l您有新的公告需要查看", 15000);
+        }
+
         return 1;
     }
 }
