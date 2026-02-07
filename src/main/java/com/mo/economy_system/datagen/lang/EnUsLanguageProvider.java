@@ -14,5 +14,8 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("item.modid.example_item", "Example Item");
         add("block.modid.example_block", "Example Block");
         add("itemGroup.modid.creative_tab", "My Creative Tab");
+
+        // 基因复苏药剂
+        add("item.economy_system.restore_uninfected_potion", "Gene Resurgence Potion");
     }
 }

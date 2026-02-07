@@ -81,11 +81,11 @@ public abstract class TitleScreenMixin extends Screen {
     private static final String DONATE_LINE_7 = "§7如果您有特长（建筑/编程/策划等）欢迎";
     private static final String DONATE_LINE_8 = "§7加入开发团队，参与后续制作！";
 
-    // 图标
-    private static final String ICON_MULTIPLAYER = "⚁";
-    private static final String ICON_SINGLEPLAYER = "⚔";
-    private static final String ICON_SETTINGS = "⚙";
-    private static final String ICON_UPDATE_LOG = "📋";
+    // 图标（已移除emoji，使用纯文本）
+    private static final String ICON_MULTIPLAYER = "";
+    private static final String ICON_SINGLEPLAYER = "";
+    private static final String ICON_SETTINGS = "";
+    private static final String ICON_UPDATE_LOG = "";
 
     // 颜色定义
     private static final int ACCENT_BLUE = 0xFF0088FF;
@@ -308,58 +308,66 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderMultiplayerButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                        int color, boolean hovered) {
-        // 深色半透明背景（只有按钮有背景）
-        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        // 深色半透明背景（稍微降低不透明度）
+        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
-        // 边框（悬停时变色）
-        int borderColor = hovered ? color : 0xFF666666;
-        guiGraphics.fill(x, y, x + width, y + 2, borderColor);
-        guiGraphics.fill(x, y + height - 2, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 2, y + height, borderColor);
-        guiGraphics.fill(x + width - 2, y, x + width, y + height, borderColor);
+        // 左侧颜色条纹（4像素宽）
+        int stripeAlpha = hovered ? 0xFF : 0xCC;
+        int stripeColor = (stripeAlpha << 24) | (color & 0x00FFFFFF);
+        guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
 
-        // 图标和标题（左对齐）
+        // 顶部渐变光效（悬停时，颜色更深 - alpha值越小越深）
+        if (hovered) {
+            for (int i = 0; i < 8; i++) {
+                int alpha = 48 - i * 4;
+                int glowColor = (alpha << 24) | (color & 0x00FFFFFF);
+                guiGraphics.fill(x + 4, y + i, x + width, y + i + 1, glowColor);
+            }
+        }
+
+        // 细边框（只有右侧和底部）
+        int borderColor = hovered ? 0x40FFFFFF : 0x20FFFFFF;
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+        guiGraphics.fill(x + 4, y + height - 1, x + width, y + height, borderColor);
+
+        // 标题（更靠上 - y坐标更小，带阴影）
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
         poseStack.scale(2.0f, 2.0f, 1.0f);
-        guiGraphics.drawString(font, ICON_MULTIPLAYER, x / 2.0f + 8, (y + 18) / 2.0f, color, false);
-        poseStack.popPose();
-
-        poseStack.pushPose();
-        poseStack.scale(2.0f, 2.0f, 1.0f);
-        guiGraphics.drawString(font, "§l" + BUTTON_MULTIPLAYER, x / 2.0f + 30, (y + 18) / 2.0f, TEXT_WHITE, false);
+        guiGraphics.drawString(font, "§l" + BUTTON_MULTIPLAYER, x / 2.0f + 10, (y + 12) / 2.0f, TEXT_WHITE, true);
         poseStack.popPose();
 
         // 装饰线
-        guiGraphics.fill(x + 10, y + 40, x + 55, y + 41, color);
+        guiGraphics.fill(x + 10, y + 38, x + 55, y + 39, color);
 
-        // 服务器背景文案（完整版）
+        // 服务器背景文案（完整版，带阴影）
         int contentX = x + 10;
-        int lineY = y + 50;
+        int lineY = y + 48;
 
-        guiGraphics.drawString(font, STORY_LINE_1, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_1, contentX, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, STORY_LINE_2, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_2, contentX, lineY, TEXT_WHITE, true);
         lineY += 12;
 
-        guiGraphics.drawString(font, STORY_LINE_3, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_3, contentX, lineY, TEXT_WHITE, true);
         lineY += 13;
 
-        guiGraphics.drawString(font, STORY_LINE_4, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_4, contentX, lineY, TEXT_WHITE, true);
         lineY += 11;
-        guiGraphics.drawString(font, STORY_LINE_5, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_5, contentX, lineY, TEXT_WHITE, true);
         lineY += 13;
 
-        guiGraphics.drawString(font, STORY_LINE_6, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_6, contentX, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, STORY_LINE_7, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_7, contentX, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, STORY_LINE_8, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_8, contentX, lineY, TEXT_WHITE, true);
         lineY += 11;
-        guiGraphics.drawString(font, STORY_LINE_9, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_9, contentX, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, STORY_LINE_10, contentX, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, STORY_LINE_10, contentX, lineY, TEXT_WHITE, true);
 
         // 底部装饰线
         guiGraphics.fill(x + 10, y + height - 8, x + 50, y + height - 7, color);
@@ -368,60 +376,69 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private void economySystem$renderSmallButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                  String title, String icon, int color, boolean hovered) {
-        // 深色半透明背景（只有按钮有背景）
-        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        // 深色半透明背景（稍微降低不透明度）
+        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
-        // 边框（悬停时变色）
-        int borderColor = hovered ? color : 0xFF666666;
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        // 左侧颜色条纹（4像素宽）
+        int stripeAlpha = hovered ? 0xFF : 0xCC;
+        int stripeColor = (stripeAlpha << 24) | (color & 0x00FFFFFF);
+        guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
+
+        // 顶部渐变光效（悬停时，颜色更深）
+        if (hovered) {
+            for (int i = 0; i < 6; i++) {
+                int alpha = 36 - i * 4;
+                int glowColor = (alpha << 24) | (color & 0x00FFFFFF);
+                guiGraphics.fill(x + 4, y + i, x + width, y + i + 1, glowColor);
+            }
+        }
+
+        // 细边框（只有右侧和底部）
+        int borderColor = hovered ? 0x40FFFFFF : 0x20FFFFFF;
         guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+        guiGraphics.fill(x + 4, y + height - 1, x + width, y + height, borderColor);
 
-        // 图标（左侧，垂直居中）
-        PoseStack poseStack = guiGraphics.pose();
-        poseStack.pushPose();
-        poseStack.scale(1.8f, 1.8f, 1.0f);
-        int iconX = (int) ((x + 10) / 1.8f);
-        int iconY = (int) ((y + height / 2 - 4) / 1.8f);
-        guiGraphics.drawString(font, icon, iconX, iconY, color, false);
-        poseStack.popPose();
-
-        // 标题（图标右侧，与图标垂直对齐）
-        int titleX = x + 28;
+        // 标题（垂直居中，留出条纹空间，带阴影）
+        int titleX = x + 10;
         int titleY = y + height / 2 - 5;
-        guiGraphics.drawString(font, "§l" + title, titleX, titleY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, "§l" + title, titleX, titleY, TEXT_WHITE, true);
     }
 
     @Unique
     private void economySystem$renderUpdateLogButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
                                                      boolean hovered) {
-        // 深色半透明背景
-        int bgColor = hovered ? 0xDD000000 : 0xBB000000;
+        // 深色半透明背景（稍微降低不透明度）
+        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
-        // 边框（悬停时变色）
-        int borderColor = hovered ? 0xFF00AA44 : 0xFF666666;
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        // 左侧颜色条纹（4像素宽，使用更新日志的绿色）
+        int stripeColor = 0xFF00AA44;
+        guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
+
+        // 顶部渐变光效（悬停时，颜色更深）
+        if (hovered) {
+            for (int i = 0; i < 6; i++) {
+                int alpha = 36 - i * 4;
+                int glowColor = (alpha << 24) | 0x00AA44;
+                guiGraphics.fill(x + 4, y + i, x + width, y + i + 1, glowColor);
+            }
+        }
+
+        // 细边框（只有右侧和底部）
+        int borderColor = hovered ? 0x40FFFFFF : 0x20FFFFFF;
         guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+        guiGraphics.fill(x + 4, y + height - 1, x + width, y + height, borderColor);
 
-        // 图标（左侧）
-        PoseStack poseStack = guiGraphics.pose();
-        poseStack.pushPose();
-        poseStack.scale(1.8f, 1.8f, 1.0f);
-        guiGraphics.drawString(font, ICON_UPDATE_LOG, (int) ((x + 10) / 1.8f), (int) ((y + height / 2 - 4) / 1.8f), 0xFF00AA44, false);
-        poseStack.popPose();
+        // 标题（左侧，留出条纹空间，带阴影）
+        guiGraphics.drawString(font, "§l" + BUTTON_UPDATE_LOG, x + 10, y + height / 2 - 5, TEXT_WHITE, true);
 
-        // 标题（图标右侧）
-        guiGraphics.drawString(font, "§l" + BUTTON_UPDATE_LOG, x + 28, y + height / 2 - 5, TEXT_WHITE, false);
-
-        // 最新内容预览（右侧）- 使用动态获取的内容
+        // 最新内容预览（右侧）- 使用动态获取的内容，带阴影
         String previewText = economySystem$updateLogPreview;
         int previewX = x + width - this.font.width(previewText) - 10;
-        guiGraphics.drawString(font, previewText, previewX, y + height / 2 - 5, TEXT_GRAY, false);
+        guiGraphics.drawString(font, previewText, previewX, y + height / 2 - 5, TEXT_GRAY, true);
     }
 
     @Unique
@@ -446,34 +463,45 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderDonatePanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        // 半透明黑色背景
-        guiGraphics.fill(x, y, x + width, y + height, 0xBB000000);
+        // 深色半透明背景（稍微降低不透明度）
+        int bgAlpha = 0x99;
+        int bgColor = (bgAlpha << 24) | 0x000000;
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
-        // 标题（左对齐）
-        guiGraphics.drawString(font, DONATE_TITLE, x + 10, y + 8, TEXT_WHITE, false);
+        // 左侧颜色条纹（4像素宽，使用橙红色）
+        int stripeColor = 0xFFAA4444;
+        guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
+
+        // 细边框（只有右侧和底部）
+        int borderColor = 0x20FFFFFF;
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+        guiGraphics.fill(x + 4, y + height - 1, x + width, y + height, borderColor);
+
+        // 标题（左对齐，留出条纹空间，带阴影）
+        guiGraphics.drawString(font, DONATE_TITLE, x + 10, y + 8, TEXT_WHITE, true);
 
         // 标题下划线
-        guiGraphics.fill(x + 6, y + 22, x + width - 6, y + 23, 0xFFAA4444);
+        guiGraphics.fill(x + 6, y + 22, x + width - 6, y + 23, 0x80AA4444);
 
-        // 内容（左对齐）
+        // 内容（左对齐，留出条纹空间，带阴影）
         int lineY = y + 36;
-        guiGraphics.drawString(font, DONATE_LINE_1, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_1, x + 10, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, DONATE_LINE_2, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_2, x + 10, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, DONATE_LINE_3, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_3, x + 10, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, DONATE_LINE_4, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_4, x + 10, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, DONATE_LINE_5, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_5, x + 10, lineY, TEXT_WHITE, true);
         lineY += 12;
-        guiGraphics.drawString(font, DONATE_LINE_6, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_6, x + 10, lineY, TEXT_WHITE, true);
         lineY += 14;
-        guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, false);
+        guiGraphics.drawString(font, DEVELOPER_INFO, x + 10, lineY, TEXT_GRAY, true);
         lineY += 11;
-        guiGraphics.drawString(font, DONATE_LINE_7, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_7, x + 10, lineY, TEXT_WHITE, true);
         lineY += 11;
-        guiGraphics.drawString(font, DONATE_LINE_8, x + 10, lineY, TEXT_WHITE, false);
+        guiGraphics.drawString(font, DONATE_LINE_8, x + 10, lineY, TEXT_WHITE, true);
     }
 
     /**

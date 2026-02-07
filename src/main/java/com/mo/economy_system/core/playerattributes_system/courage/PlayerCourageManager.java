@@ -39,6 +39,10 @@ public class PlayerCourageManager {
     private static final int KILL_THRESHOLD = 5; //时间窗口内需要击杀的敌对生物数量
     private static final int COURAGE_ADD_AMOUNT = 10; //满足条件后增加的勇气值
 
+    // 玩家死亡扣除勇气值配置
+    private static final int NEARBY_PLAYER_DEATH_DISTANCE = 10; // 玩家死亡影响范围（格）
+    private static final int NEARBY_PLAYER_DEATH_COURAGE_PENALTY = 10; // 附近玩家死亡扣除的勇气值
+
     //存储击杀记录
     private static final Map<UUID, List<Long>> PLAYER_KILL_RECORDS = new ConcurrentHashMap<>();
 
@@ -258,12 +262,23 @@ public class PlayerCourageManager {
 
     @SubscribeEvent
     //监听玩家短时间内是否击杀多只生物，是，增加勇气值
+    //同时监听玩家死亡，扣除附近玩家的勇气值
     public static void onLivingDeath(LivingDeathEvent event) {
-        //过滤条件：服务端 + 有击杀者 + 击杀者是LivingEntity
-        if (event.getEntity().level().isClientSide() || event.getSource().getEntity() == null) {
+        //过滤条件：服务端
+        if (event.getEntity().level().isClientSide()) {
             return;
         }
         LivingEntity targetEntity = event.getEntity(); // 被击杀的生物
+
+        // 1. 处理玩家死亡事件：附近玩家扣除勇气值
+        if (targetEntity instanceof ServerPlayer deadPlayer) {
+            handleNearbyPlayerDeathCouragePenalty(deadPlayer);
+        }
+
+        // 2. 处理击杀怪物事件：击杀者增加勇气值
+        if (event.getSource().getEntity() == null) {
+            return;
+        }
         LivingEntity killerEntity = (LivingEntity) event.getSource().getEntity(); // 击杀者
 
         //过滤条件：击杀者是存活的ServerPlayer + 非创造模式
@@ -392,6 +407,59 @@ public class PlayerCourageManager {
         return level.canSeeSky(playerBlockPos.above());
     }
 
+
+    /**
+     * 处理玩家死亡时附近玩家的勇气值扣除
+     * @param deadPlayer 死亡的玩家
+     */
+    private static void handleNearbyPlayerDeathCouragePenalty(ServerPlayer deadPlayer) {
+        if (deadPlayer == null || deadPlayer.level() == null) {
+            return;
+        }
+
+        // 过滤创造模式玩家
+        if (deadPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
+            return;
+        }
+
+        Level level = deadPlayer.level();
+        double detectionRangeSqr = NEARBY_PLAYER_DEATH_DISTANCE * NEARBY_PLAYER_DEATH_DISTANCE;
+        UUID deadPlayerUUID = deadPlayer.getUUID();
+
+        // 遍历所有在线玩家，找出附近10格内的玩家
+        for (Player nearbyPlayer : level.players()) {
+            // 过滤：死亡玩家自身、非存活、非服务端玩家
+            if (nearbyPlayer.getUUID().equals(deadPlayerUUID)
+                    || !nearbyPlayer.isAlive()
+                    || !(nearbyPlayer instanceof ServerPlayer nearbyServerPlayer)) {
+                continue;
+            }
+
+            // 距离判断：10格内
+            if (deadPlayer.distanceToSqr(nearbyPlayer) <= detectionRangeSqr) {
+                // 排除创造模式玩家
+                if (nearbyServerPlayer.gameMode.getGameModeForPlayer() == GameType.CREATIVE) {
+                    continue;
+                }
+
+                UUID nearbyPlayerUUID = nearbyServerPlayer.getUUID();
+                PlayerAttributesData attributesData = PlayerAttributesDataManager.getPlayerAttributesData(nearbyPlayerUUID);
+                if (attributesData == null) {
+                    continue;
+                }
+
+                float maxCourage = attributesData.getMaxCourage();
+                // 扣除10点勇气值
+                changeCourageValue(nearbyServerPlayer, attributesData, -NEARBY_PLAYER_DEATH_COURAGE_PENALTY, maxCourage);
+
+                // 发送提示消息
+                nearbyServerPlayer.displayClientMessage(
+                        Component.literal("§c您目睹了玩家的死亡，恐惧席卷了您..."),
+                        true
+                );
+            }
+        }
+    }
 
     private static void handleKillCourageGain(ServerPlayer player) {
         UUID playerUUID = player.getUUID();

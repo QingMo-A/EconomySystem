@@ -8,9 +8,11 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
+import com.mo.economy_system.item.EconomySystem_Items;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.UserBanList;
+import net.minecraft.world.InteractionHand;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.io.FileReader;
@@ -169,11 +171,38 @@ public class Packet_RevivalRequest {
 
                 EconomySystem.LOGGER.info("玩家 {} 使用复活护符复活了玩家 {}",
                         sender.getScoreboardName(), targetName);
+
+                // 消耗重生锦鲤
+                consumeRevivalCharm(sender);
             } catch (Exception e) {
                 EconomySystem.LOGGER.error("解封玩家失败", e);
                 sender.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c解封失败！"));
             }
         });
         context.setPacketHandled(true);
+    }
+
+    /**
+     * 消耗玩家手中的重生锦鲤
+     */
+    private static void consumeRevivalCharm(ServerPlayer player) {
+        // 检查主手
+        net.minecraft.world.item.ItemStack mainHandItem = player.getMainHandItem();
+        if (mainHandItem.is(EconomySystem_Items.REVIVAL_CHARM.get())) {
+            if (!player.getAbilities().instabuild) {
+                mainHandItem.shrink(1);
+                player.setItemInHand(InteractionHand.MAIN_HAND, mainHandItem);
+            }
+            return;
+        }
+
+        // 检查副手
+        net.minecraft.world.item.ItemStack offHandItem = player.getOffhandItem();
+        if (offHandItem.is(EconomySystem_Items.REVIVAL_CHARM.get())) {
+            if (!player.getAbilities().instabuild) {
+                offHandItem.shrink(1);
+                player.setItemInHand(InteractionHand.OFF_HAND, offHandItem);
+            }
+        }
     }
 }

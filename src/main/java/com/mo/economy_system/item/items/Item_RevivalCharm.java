@@ -39,7 +39,7 @@ public class Item_RevivalCharm extends Item {
                                 java.util.List<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
 
-        tooltip.add(Component.literal("§7§o一个神秘的道具，将您的能量传递给其他人"));
+        tooltip.add(Component.literal("§6§o一个神秘的道具，将您的能量传递给其他人"));
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§e右键点击使用"));
         tooltip.add(Component.literal("§7输入玩家的名称来复活那些因为分裂次数不足而被迫终止冒险的鱼友们"));

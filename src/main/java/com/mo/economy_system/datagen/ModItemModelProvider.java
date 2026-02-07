@@ -50,6 +50,8 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.DREAMINGFISH);
         // 重生锦鲤使用原版不死图腾纹理
         simpleItem(EconomySystem_Items.REVIVAL_CHARM);
+        // 基因复苏药剂
+        simpleItem(EconomySystem_Items.GENE_RESURGENCE_POTION);
 
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }

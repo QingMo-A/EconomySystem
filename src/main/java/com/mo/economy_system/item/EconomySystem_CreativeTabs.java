@@ -29,6 +29,7 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.ADVANCED_AID_KIT.get());
                         output.accept(EconomySystem_Items.PROFESSIONAL_AID_KIT.get());
                         output.accept(EconomySystem_Items.REVIVAL_CHARM.get());
+                        output.accept(EconomySystem_Items.GENE_RESURGENCE_POTION.get());
                     })
                     .build()
     );

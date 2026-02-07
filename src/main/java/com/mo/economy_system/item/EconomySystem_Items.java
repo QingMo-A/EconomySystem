@@ -6,6 +6,7 @@ import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.item.items.*;
 import com.mo.economy_system.item.items.medicine.Easy_Aid_Kit;
+import com.mo.economy_system.item.items.Potion_RestoreUnInfected;
 import com.mo.economy_system.item.items.Item_RevivalCharm;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
@@ -136,6 +137,13 @@ public class EconomySystem_Items {
             () -> new Item_RevivalCharm(new Item.Properties()
                     .stacksTo(1)  // 只能堆叠1个
                     .rarity(Rarity.RARE)  // 稀有品质
+            ));
+
+    // 基因复苏药剂
+    public static final RegistryObject<Item> GENE_RESURGENCE_POTION = ITEMS.register("restore_uninfected_potion",
+            () -> new Potion_RestoreUnInfected(new Item.Properties()
+                    .stacksTo(1)  // 只能堆叠1个
+                    .rarity(Rarity.EPIC)  // 史诗品质
             ));
 
 
