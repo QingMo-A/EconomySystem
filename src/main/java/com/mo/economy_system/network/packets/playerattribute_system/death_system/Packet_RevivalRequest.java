@@ -158,15 +158,11 @@ public class Packet_RevivalRequest {
                 }
 
                 // 发送消息
-                String infectionStatus;
-                if (senderIsInfected) {
-                    infectionStatus = " §c(由于您是感染者，因此这名被复活的玩家也是感染者)";
-                } else {
-                    infectionStatus = " §a(由于您是幸存者，因此这名被复活的玩家的身份也为幸存者)";
-                }
-
                 sender.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                        "§a您复活了玩家 " + targetName + "！" + infectionStatus + "。§c您丢失了一半的复活点数"
+                        "§d§l✦ 复活成功 ✦\n§f您已复活玩家 §e" + targetName +
+                        (senderIsInfected ? "\n§7由于您是感染者，该玩家以感染者身份复活" :
+                           "\n§7由于您是幸存者，该玩家以幸存者身份复活") +
+                        "\n§c您失去了一半的复活点数"
                 ));
 
                 EconomySystem.LOGGER.info("玩家 {} 使用复活护符复活了玩家 {}",

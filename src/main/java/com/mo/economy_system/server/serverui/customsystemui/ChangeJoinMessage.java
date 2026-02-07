@@ -169,9 +169,10 @@ public class ChangeJoinMessage {
 
         // 服务端发网络包给所有在线玩家的客户端（使用 Packet_SystemMessage）
         Component content = Component.literal(formattedMsg);
+        int borderColor = getRankBorderColor(playerRank);  // 获取该玩家Rank的边框颜色
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
             EconomySystem_NetworkManager.INSTANCE.sendTo(
-                    new Packet_SystemMessage(content, -1),  // -1 使用默认边框颜色
+                    new Packet_SystemMessage(content, borderColor),
                     onlinePlayer.connection.connection,
                     NetworkDirection.PLAY_TO_CLIENT
             );
@@ -198,12 +199,28 @@ public class ChangeJoinMessage {
 
         // 服务端发网络包给所有在线玩家的客户端（使用 Packet_SystemMessage）
         Component content = Component.literal(formattedMsg);
+        int borderColor = getRankBorderColor(playerRank);  // 获取该玩家Rank的边框颜色
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
             EconomySystem_NetworkManager.INSTANCE.sendTo(
-                    new Packet_SystemMessage(content, -1),  // -1 使用默认边框颜色
+                    new Packet_SystemMessage(content, borderColor),
                     onlinePlayer.connection.connection,
                     NetworkDirection.PLAY_TO_CLIENT
             );
         }
+    }
+
+    /**
+     * 获取Rank对应的边框颜色
+     */
+    private static int getRankBorderColor(Rank rank) {
+        if (rank == null) return 0xAAAAAA;  // 默认灰色
+        return switch (rank.getRankName()) {
+            case "NO_RANK" -> 0xAAAAAA;     // 灰色
+            case "FISH" -> 0x55FF55;        // 绿色
+            case "FISH+" -> 0x55FFFF;       // 蓝色
+            case "FISH++" -> 0xFFAA00;      // 金色
+            case "OPERATOR" -> 0xFF5555;    // 红色
+            default -> 0xAAAAAA;
+        };
     }
 }

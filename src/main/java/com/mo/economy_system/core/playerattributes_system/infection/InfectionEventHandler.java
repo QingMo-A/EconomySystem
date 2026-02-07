@@ -33,6 +33,9 @@ public class InfectionEventHandler {
     // 记录玩家上次检查时的生命值
     private static final Map<UUID, Float> LAST_HEALTH = new ConcurrentHashMap<>();
 
+    // 记录玩家在感染者附近的检查次数（用于每分钟提示一次）
+    private static final Map<UUID, Integer> NEARBY_INFECTED_CHECK_COUNT = new ConcurrentHashMap<>();
+
     /**
      * 玩家tick事件 - 每秒检查生命值变化，净损失时增加感染值
      */
@@ -158,17 +161,35 @@ public class InfectionEventHandler {
                 PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
                 PlayerInfectionClientSync.sendInfectionDataToClient(player, newInfection);
 
+                // 增加检查计数
+                UUID playerUUID = player.getUUID();
+                int checkCount = NEARBY_INFECTED_CHECK_COUNT.getOrDefault(playerUUID, 0) + 1;
+                NEARBY_INFECTED_CHECK_COUNT.put(playerUUID, checkCount);
+
+                // 每2次检查（1分钟）发送一次提示
+                if (checkCount % 2 == 0) {
+                    player.displayClientMessage(
+                            Component.literal("§c您附近有感染者，感染值在逐渐增加..."),
+                            true
+                    );
+                }
+
                 // 发送提示消息（仅在第一次或达到阈值时）
                 if (newInfection >= INFECTION_MAX) {
                     player.displayClientMessage(
-                            Component.literal("§c你长时间暴露在感染者附近，已经完全感染！"),
+                            Component.literal("§c你已经完全感染，变成了感染者！"),
                             true
                     );
                     // 转换为感染者
                     attributesData.setInfected(true);
                     PlayerAttributesDataManager.updatePlayerAttributesData(player, attributesData);
+                    // 清除计数
+                    NEARBY_INFECTED_CHECK_COUNT.remove(playerUUID);
                 }
             }
+        } else {
+            // 附近没有感染者，清除计数
+            NEARBY_INFECTED_CHECK_COUNT.remove(player.getUUID());
         }
     }
 
@@ -259,6 +280,10 @@ public class InfectionEventHandler {
         }
         // 检查是否是尸壳
         if (entity.getType() == EntityType.HUSK) {
+            return true;
+        }
+        // 检查是否是僵尸村民
+        if (entity.getType() == EntityType.ZOMBIE_VILLAGER) {
             return true;
         }
         // 检查是否是模组的 HiveZombie

@@ -29,7 +29,6 @@ public class SystemMessageEventHandler {
     private static final int COLOR_TASK = 0x55FF55;         // 普通进度 - 绿色
     private static final int COLOR_GOAL = 0x55FFFF;         // 目标 - 蓝色
     private static final int COLOR_CHALLENGE = 0xAA00AA;    // 挑战 - 紫色
-    private static final int COLOR_DEATH = -1;              // 死亡消息使用 Rank 颜色
 
     // ==================== 进度/成就消息 ====================
     @SubscribeEvent
@@ -123,9 +122,28 @@ public class SystemMessageEventHandler {
 
         deathMessage = deathMessage.append(damageSource.getLocalizedDeathMessage(player));
 
-        // 发送到所有玩家的右上角（使用 Rank 颜色）
-        broadcastSystemMessage(player, deathMessage, COLOR_DEATH);
+        // 发送到所有玩家的右上角（使用该玩家的 Rank 颜色）
+        int borderColor = getRankBorderColor(playerRank);
+        broadcastSystemMessage(player, deathMessage, borderColor);
     }
+
+    // ==================== 离服消息 ====================
+    // 已禁用 - 由 ChangeJoinMessage 处理（支持 Rank 功能）
+    /*
+    @SubscribeEvent
+    public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        Component message = Component.literal("")
+                .append(player.getDisplayName())
+                .append(Component.literal(" 离开了游戏").withStyle(style -> style.withColor(0xFFFF00)));
+
+        // 发送到所有玩家的右上角
+        broadcastSystemMessage(player, message);
+    }
+    */
+
+    // ==================== 通用发送方法 ====================
 
     // ==================== 进服消息 ====================
     // 已禁用 - 由 ChangeJoinMessage 处理（支持 Rank 功能）
@@ -215,6 +233,21 @@ public class SystemMessageEventHandler {
         return switch (rank.getRankName()) {
             case "FISH++" -> 0xFFAA00;  // 真正的金色
             default -> null;
+        };
+    }
+
+    /**
+     * 获取Rank对应的边框颜色
+     */
+    private static int getRankBorderColor(Rank rank) {
+        if (rank == null) return 0xAAAAAA;  // 默认灰色
+        return switch (rank.getRankName()) {
+            case "NO_RANK" -> 0xAAAAAA;     // 灰色
+            case "FISH" -> 0x55FF55;        // 绿色
+            case "FISH+" -> 0x55FFFF;       // 蓝色
+            case "FISH++" -> 0xFFAA00;      // 金色
+            case "OPERATOR" -> 0xFF5555;    // 红色
+            default -> 0xAAAAAA;
         };
     }
 }

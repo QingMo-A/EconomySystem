@@ -152,9 +152,9 @@ public class RevivalInfoManager {
         if (hasRevivalInfo(player.getUUID())) {
             RevivalInfo info = getRevivalInfo(player.getUUID());
             if (info != null) {
-                String reviverIdentity = info.isReviverInfected() ? "§c感染者§f" : "§a幸存者§f";
-                String message = String.format("§e【%s】§f%s§e 复活了您，您以 %s 的身份复活",
-                        reviverIdentity, info.getReviverName(), reviverIdentity);
+                String reviverIdentity = info.isReviverInfected() ? "§c感染者" : "§a幸存者";
+                String message = String.format("§d§l✦ 复活通知 ✦\n§f%s §e牺牲了自己一半的重生点数复活了您\n§7您现在的身份为：%s",
+                        info.getReviverName(), reviverIdentity);
                 TipPushHelper.sendTipToPlayer(player, message, 15000); // 显示15秒
                 // 清除复活信息，避免重复提示
                 removeRevivalInfo(player.getUUID());
