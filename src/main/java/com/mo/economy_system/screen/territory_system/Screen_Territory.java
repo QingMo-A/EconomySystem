@@ -1,595 +1,483 @@
 package com.mo.economy_system.screen.territory_system;
 
+import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.territory_system.Packet_TeleportToTerritory;
 import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
-import com.mo.economy_system.screen.EconomySystem_Screen;
 import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.core.territory_system.Territory;
-import com.mo.economy_system.screen.components.AnimatedButton;
-import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
-import com.mo.economy_system.screen.components.ItemIconAnimation;
-import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-public class Screen_Territory extends EconomySystem_Screen {
+/**
+ * 领地系统屏幕 - 卡片网格风格
+ *
+ * 布局：
+ * - 左上角：搜索框
+ * - 左下角：领地系统标题
+ * - 右下角：ESC返回提示
+ * - 中间：领地卡片网格
+ * - 底部：翻页控制
+ */
+public class Screen_Territory extends Screen {
 
-    private List<Territory> allTerritories = new ArrayList<>(); // 拥有的领地
-    private List<Territory> territorys = new ArrayList<>(); // 商品列表
-    private List<Territory> ownedTerritories = new ArrayList<>(); // 拥有的领地
-    private List<Territory> authorizedTerritories = new ArrayList<>(); // 有权限的领地
+    // ==================== 布局常量 ====================
+    private static final int BASE_WIDTH = 640;
+    private static final int BASE_HEIGHT = 360;
+    private static final int CARD_SPACING = 8;
+    private static final int PANEL_PADDING = 12;
 
-    private TextAnimation pageAnimation;
-    private TextAnimation noTerritory;
+    // ==================== 领地卡片配置 ====================
+    private static final int CARD_WIDTH = 200;
+    private static final int CARD_HEIGHT = 120;
+    private static final int TOTAL_CARD_HEIGHT = CARD_HEIGHT + CARD_SPACING;
 
-    private AnimatedHighLevelTextField searchBox; // 搜索框
+    // ==================== 数据 ====================
+    private boolean dataLoaded = false;
+    private List<Territory> ownedTerritories = new ArrayList<>();
+    private List<Territory> authorizedTerritories = new ArrayList<>();
+    private List<Territory> allTerritories = new ArrayList<>();
+    private List<Territory> filteredTerritories = new ArrayList<>();
+
+    // ==================== 分页 ====================
+    private int currentPage = 0;
+    private int rows = 2;
+    private int columns = -1;
+    private int itemsPerPage = -1;
+
+    // ==================== 搜索 ====================
+    private EditBox searchBox;
+
+    // ==================== 虚拟坐标系统 ====================
+    private float uiScale;
+    private int virtualWidth;
+    private int virtualHeight;
+
+    // ==================== 卡片点击区域 ====================
+    private final List<TerritoryCardArea> cardAreas = new ArrayList<>();
+
+    // ==================== 按钮点击区域 ====================
+    private final List<ActionBtnArea> buttonAreas = new ArrayList<>();
+
+    // ==================== 翻页按钮区域 ====================
+    private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
+    private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
+
+    private record TerritoryCardArea(int x, int y, int width, int height, int territoryIndex) {}
+    private record ActionBtnArea(int x, int y, int width, int height, int territoryIndex, String actionType) {}
 
     public Screen_Territory() {
         super(Component.translatable(Util_MessageKeys.TERRITORY_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
     }
 
+    public void updateTerritoryData(List<Territory> owned, List<Territory> authorized) {
+        this.dataLoaded = true;
+        this.ownedTerritories.clear();
+        this.authorizedTerritories.clear();
+        this.ownedTerritories.addAll(owned);
+        this.authorizedTerritories.addAll(authorized);
+
+        allTerritories = new ArrayList<>();
+        allTerritories.addAll(ownedTerritories);
+        // 添加有权限但不重复的领地
+        for (Territory t : authorizedTerritories) {
+            if (!allTerritories.contains(t)) {
+                allTerritories.add(t);
+            }
+        }
+        filteredTerritories = new ArrayList<>(allTerritories);
+    }
+
     @Override
     protected void init() {
         super.init();
+        calculateVirtualSize();
 
-        this.currentPageNumber = 0;
+        // 创建搜索框（左上角）
+        int searchBoxWidth = 200;
+        int searchBoxX = PANEL_PADDING;
+        int searchBoxY = 20;
 
-        initPart();
+        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, 20, Component.translatable("搜索领地..."));
+        this.searchBox.setMaxLength(50);
+        this.searchBox.setHint(Component.literal("搜索领地..."));
+        this.searchBox.setResponder(this::onSearchChanged);
+        this.searchBox.setFocused(false);
+        this.addRenderableWidget(this.searchBox);
     }
 
-    @Override
-    protected void initPart() {
-        initPosition();
+    private void calculateVirtualSize() {
+        float scaleX = (float) this.width / BASE_WIDTH;
+        float scaleY = (float) this.height / BASE_HEIGHT;
+        uiScale = Math.min(scaleX, scaleY);
+        virtualWidth = (int) (this.width / uiScale);
+        virtualHeight = (int) (this.height / uiScale);
+    }
 
-        this.clearWidgets();
+    private void onSearchChanged(String text) {
+        applySearch(text);
+    }
 
-        if (flag == 1) {
-
-            // 添加搜索框
-            this.searchBox = new AnimatedHighLevelTextField(
-                    this.font,
-                    Math.max((this.width / 2) - 300, 60),
-                    -20,
-                    200,
-                    20,
-                    1000,
-                    Component.translatable("search.territory")
-            );
-            this.addRenderableWidget(searchBox);
-
-            // 设置搜索框的键盘监听器
-            this.searchBox.setFocused(false); // 默认不聚焦
-            this.searchBox.setMaxLength(50); // 限制输入长度
-            this.searchBox.setHint(Component.translatable(Util_MessageKeys.TERRITORY_HINT_TEXT_KEY)); // 提示文本
-            this.searchBox.setResponder(text -> applySearch());
-            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
-
-            // 添加动态翻页按钮
-            addPageAnimatedButtons();
-
-        } else if (flag >= 2) {
-
-            // 添加搜索框
-            this.searchBox = new AnimatedHighLevelTextField(
-                    this.font,
-                    Math.max((this.width / 2) - 300, 60),
-                    20,
-                    200,
-                    20,
-                    1000,
-                    Component.translatable("search.territory")
-            );
-            this.addRenderableWidget(searchBox);
-
-            // 设置搜索框的键盘监听器
-            this.searchBox.setFocused(false); // 默认不聚焦
-            this.searchBox.setMaxLength(50); // 限制输入长度
-            this.searchBox.setHint(Component.translatable(Util_MessageKeys.TERRITORY_HINT_TEXT_KEY)); // 提示文本
-            this.searchBox.setResponder(text -> applySearch());
-            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
-
-            // 添加分页按钮
-            addPageButtons();
-
+    private void applySearch(String searchText) {
+        if (searchText.isEmpty()) {
+            filteredTerritories = new ArrayList<>(allTerritories);
+        } else {
+            String lowerSearch = searchText.toLowerCase();
+            filteredTerritories = allTerritories.stream()
+                .filter(t -> t.getName().toLowerCase().contains(lowerSearch) ||
+                           t.getOwnerName().toLowerCase().contains(lowerSearch))
+                .collect(ArrayList::new, (list, t) -> list.add(t), (list1, list2) -> {});
         }
-
-        flag ++;
-
-        // 初始化渲染缓存（在所有按钮添加后调用）
-        initializeRenderCache();
-
-        super.initPart();
+        currentPage = 0;
     }
 
     @Override
-    public void resize(Minecraft minecraft, int width, int height) {
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 绘制全屏背景
+        renderFullScreenBackground(guiGraphics);
 
-        this.flag = 1;
+        calculateVirtualSize();
 
-        super.resize(minecraft, width, height);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
+
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+
+        // 绘制左下角标题
+        drawTitle(guiGraphics);
+
+        // 绘制右下角ESC提示
+        drawEscHint(guiGraphics);
+
+        // 绘制搜索框背景
+        guiGraphics.pose().popPose();
+        renderSearchBoxBackground(guiGraphics);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
+
+        // 绘制领地卡片网格
+        renderTerritoryCards(guiGraphics, virtualMouseX, virtualMouseY);
+
+        // 绘制翻页控制
+        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY);
+
+        guiGraphics.pose().popPose();
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
+    private void renderFullScreenBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0xB0000000);
+    }
 
-        // 执行渲染缓存中的任务
-        for (RunnableWithGraphics task : renderCache) {
-            task.run(guiGraphics);
+    private void renderSearchBoxBackground(GuiGraphics guiGraphics) {
+        if (searchBox != null) {
+            int boxX = searchBox.getX();
+            int boxY = searchBox.getY();
+            int boxWidth = searchBox.getWidth();
+            int boxHeight = searchBox.getHeight();
+
+            int bgColor = 0xE04A5568;
+            int borderColor = 0xFF9B59B6;
+
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX + boxWidth + 4, boxY + boxHeight + 2, bgColor);
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX + boxWidth + 4, boxY - 1, borderColor);
+            guiGraphics.fill(boxX - 4, boxY + boxHeight + 1, boxX + boxWidth + 4, boxY + boxHeight + 2, borderColor);
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX - 3, boxY + boxHeight + 2, borderColor);
+            guiGraphics.fill(boxX + boxWidth + 3, boxY - 2, boxX + boxWidth + 4, boxY + boxHeight + 2, borderColor);
         }
-
-        // 如果有商品，进行鼠标悬停检测并显示 Tooltip
-        if (!allTerritories.isEmpty()) {
-            detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
-        }
-
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
-    @Override
-    protected void initializeRenderCache() {
-        renderCache.clear(); // 清空旧的缓存
+    private void drawTitle(GuiGraphics guiGraphics) {
+        int x = PANEL_PADDING;
+        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
+        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 140, "🏰 领地系统");
+    }
 
-        pageAnimation = new TextAnimation(
-                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
-                this.height + 33,
-                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
-                this.height - 33,
-                0f,
-                1f,
-                1000
-        );
+    private void drawEscHint(GuiGraphics guiGraphics) {
+        String hint = "按 ESC 返回";
+        int hintWidth = font.width(hint);
+        int x = virtualWidth - PANEL_PADDING - hintWidth;
+        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
+        guiGraphics.drawString(font, hint, x, y, 0x90FFFFFF);
+    }
 
-        renderCache.add((guiGraphics) -> {
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.literal((currentPageNumber + 1) + " / " + getTotalPages()),
-                    pageAnimation
-            );
-        });
+    private void renderTerritoryCards(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        cardAreas.clear();
+        buttonAreas.clear();
 
-        if (ownedTerritories.isEmpty() && authorizedTerritories.isEmpty()) {
-
-            // 动态计算文字居中的位置
-            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.TERRITORY_NO_TERRITORIES_TEXT_KEY));
-            int xPosition = (this.width - textWidth) / 2;
-
-            noTerritory = new TextAnimation(
-                    xPosition,
-                    this.height / 2 - 10,
-                    xPosition,
-                    this.height / 2 - 10,
-                    0f,
-                    1f,
-                    2000
-            );
-            // 没有领地时，显示提示信息
-            renderCache.add((guiGraphics) -> {
-
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.SHOP_LOADING_SHOP_DATA_TEXT_KEY),
-                        noTerritory
-                );
-
-            });
+        // 未加载数据时显示加载中
+        if (!dataLoaded) {
+            String loadingText = "加载中...";
+            int textWidth = font.width(loadingText);
+            int textX = (virtualWidth - textWidth) / 2;
+            int textY = virtualHeight / 2;
+            guiGraphics.drawString(font, loadingText, textX, textY, 0x80FFFFFF);
             return;
         }
 
-        initPosition();
+        // 数据已加载但没有领地时显示提示
+        if (filteredTerritories.isEmpty()) {
+            String emptyText = "暂无领地";
+            int textWidth = font.width(emptyText);
+            int textX = (virtualWidth - textWidth) / 2;
+            int textY = virtualHeight / 2;
+            guiGraphics.drawString(font, emptyText, textX, textY, 0x80FFFFFF);
+            return;
+        }
 
-        int y = startY;
+        // 计算列数
+        columns = Math.max(1, (virtualWidth - PANEL_PADDING * 2 + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
+        itemsPerPage = rows * columns;
 
-        // 渲染领地列表
+        // 计算分页
+        int totalPages = (int) Math.ceil((double) filteredTerritories.size() / itemsPerPage);
+        currentPage = Math.min(currentPage, Math.max(0, totalPages - 1));
+
+        int startIndex = currentPage * itemsPerPage;
+        int endIndex = Math.min(startIndex + itemsPerPage, filteredTerritories.size());
+
+        // 网格配置
+        int gridStartX = PANEL_PADDING;
+        int gridStartY = 55;
+
+        // 按钮配置
+        int buttonHeight = 14;
+        int buttonSpacing = 3;
+        int buttonBottomMargin = 5;
+        int cardPadding = 6;
+
         for (int i = startIndex; i < endIndex; i++) {
-            Territory territory = allTerritories.get(i);
+            int indexInPage = i - startIndex;
+            int col = indexInPage % columns;
+            int row = indexInPage / columns;
 
-            final int currentY = y; // 使用最终变量供 Lambda 表达式使用
+            int cardX = gridStartX + col * (CARD_WIDTH + CARD_SPACING);
+            int cardY = gridStartY + row * TOTAL_CARD_HEIGHT;
 
-            ItemIconAnimation icon;
-            TextAnimation name;
-            TextAnimation area;
+            Territory territory = filteredTerritories.get(i);
+            boolean isOwned = ownedTerritories.contains(territory);
+            CardRenderer.TerritoryType type = getTerritoryType(territory);
 
-            icon = new ItemIconAnimation(
-                    startX,
-                    currentY,
-                    startX,
-                    currentY,
-                    0f,
-                    1f,
-                    0.8f,
-                    1f,
-                    1000
-            );
+            // 检查卡片悬停
+            boolean cardHovered = (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
+                                  mouseY >= cardY && mouseY <= cardY + CARD_HEIGHT);
 
-            name = new TextAnimation(
-                    startX + 20,
-                    currentY + 5,
-                    startX + 20,
-                    currentY + 5,
-                    0f,
-                    1f,
-                    1000
-            );
+            // 计算按钮位置
+            int buttonY = cardY + CARD_HEIGHT - buttonBottomMargin - buttonHeight;
+            boolean teleportHovered = false;
+            boolean manageHovered = false;
 
-            area = new TextAnimation(
-                    startX,
-                    currentY + 18,
-                    startX,
-                    currentY + 18,
-                    0f,
-                    1f,
-                    1000
-            );
+            if (isOwned) {
+                // 两个按钮
+                int totalButtonWidth = CARD_WIDTH - cardPadding * 2;
+                int singleButtonWidth = (totalButtonWidth - buttonSpacing) / 2;
 
-            // 渲染物品图标, 价格与描述
-            renderCache.add((guiGraphics) -> {
-                if (ownedTerritories.contains(territory)) {
-                    if (territory.getDimension().equals(Level.OVERWORLD)) {
-                        renderAnimatedItem(
-                                guiGraphics,
-                                Items.GRASS_BLOCK.getDefaultInstance(),
-                                icon
-                        );
-                    } else if (territory.getDimension().equals(Level.NETHER)) {
-                        renderAnimatedItem(
-                                guiGraphics,
-                                Items.NETHERRACK.getDefaultInstance(),
-                                icon
-                        );
-                    } else if (territory.getDimension().equals(Level.END)) {
-                        renderAnimatedItem(
-                                guiGraphics,
-                                Items.END_STONE.getDefaultInstance(),
-                                icon
-                        );
-                    } else {
-                        renderAnimatedItem(
-                                guiGraphics,
-                                Items.BEDROCK.getDefaultInstance(),
-                                icon
-                        );
-                    }
+                int teleportX = cardX + cardPadding;
+                int manageX = teleportX + singleButtonWidth + buttonSpacing;
 
-                } else {
-                    renderAnimatedItem(
-                            guiGraphics,
-                            Items.OAK_DOOR.getDefaultInstance(),
-                            icon
-                    );
-                }
-
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NAME_TEXT_KEY, territory.getName()),
-                        name,
-                        0xFFFFFF
-                );
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_AREA_TEXT_KEY,
-                                "范围: " +
-                                        territory.getPos1().getX() + " " + territory.getPos1().getY() + " " + territory.getPos1().getZ()
-                                        + " -> " +
-                                        territory.getPos2().getX() + " " + territory.getPos2().getY() + " " + territory.getPos2().getZ()),
-                        area,
-                        0xAAAAAA
-                );
-            });
-
-            // 如果是拥有的领地，显示“传送”和"管理"按钮
-            if (ownedTerritories.contains(territory)) {
-                this.addRenderableWidget(
-                        new AnimatedButton(
-                                this.width + 60,
-                                currentY,
-                                this.width - startX - 60 - 80,
-                                currentY,
-                                60, 20,
-                                Component.translatable(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY),
-                                1000,
-                                button -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
-                                })
-                );
-                this.addRenderableWidget(
-                        new AnimatedButton(
-                                this.width + 60,
-                                currentY,
-                                this.width - startX - 60,
-                                currentY,
-                                60, 20,
-                                Component.translatable(Util_MessageKeys.TERRITORY_MANAGE_BUTTON_KEY),
-                                1000,
-                                button -> {
-                                    Minecraft.getInstance().setScreen(new Screen_ManageTerritory(territory));
-                                })
-                );
+                // 检查按钮悬停
+                teleportHovered = (mouseX >= teleportX && mouseX <= teleportX + singleButtonWidth &&
+                                  mouseY >= buttonY && mouseY <= buttonY + buttonHeight);
+                manageHovered = (mouseX >= manageX && mouseX <= manageX + singleButtonWidth &&
+                                mouseY >= buttonY && mouseY <= buttonY + buttonHeight);
             } else {
-                // 如果是有权限的领地，显示“传送”按钮
-                this.addRenderableWidget(
-                        new AnimatedButton(
-                                this.width + 60,
-                                currentY,
-                                this.width - startX - 60,
-                                currentY,
-                                60, 20,
-                                Component.translatable(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY),
-                                1000,
-                                button -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
-                                })
-                );
+                // 单按钮
+                int buttonWidth = CARD_WIDTH - cardPadding * 2;
+                int teleportX = cardX + cardPadding;
+
+                teleportHovered = (mouseX >= teleportX && mouseX <= teleportX + buttonWidth &&
+                                  mouseY >= buttonY && mouseY <= buttonY + buttonHeight);
             }
 
-            y += THING_SPACING;
+            // 绘制领地卡片（按钮集成在内部）
+            // 准备详细信息
+            String ownerName = territory.getOwnerName();
+            String territoryId = territory.getTerritoryID().toString();
+            String coordinateRange = String.format("[%d,%d,%d]→[%d,%d,%d]",
+                territory.getPos1().getX(), territory.getPos1().getY(), territory.getPos1().getZ(),
+                territory.getPos2().getX(), territory.getPos2().getY(), territory.getPos2().getZ());
+
+            int[] buttonAreas = CardRenderer.drawTerritoryCard(
+                guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
+                territory.getName(), type, isOwned, cardHovered,
+                teleportHovered, manageHovered, isOwned,
+                ownerName, territoryId, coordinateRange
+            );
+
+            // 存储卡片区域
+            this.cardAreas.add(new TerritoryCardArea(cardX, cardY, CARD_WIDTH, CARD_HEIGHT, i));
+
+            // 存储按钮区域（返回值格式：[传送X1,Y1,X2,Y2, 管理X1,Y1,X2,Y2]）
+            if (isOwned) {
+                // 传送按钮
+                this.buttonAreas.add(new ActionBtnArea(buttonAreas[0], buttonAreas[1],
+                    buttonAreas[2] - buttonAreas[0], buttonAreas[3] - buttonAreas[1], i, "teleport"));
+                // 管理按钮
+                this.buttonAreas.add(new ActionBtnArea(buttonAreas[4], buttonAreas[5],
+                    buttonAreas[6] - buttonAreas[4], buttonAreas[7] - buttonAreas[5], i, "manage"));
+            } else {
+                // 只有传送按钮
+                this.buttonAreas.add(new ActionBtnArea(buttonAreas[0], buttonAreas[1],
+                    buttonAreas[2] - buttonAreas[0], buttonAreas[3] - buttonAreas[1], i, "teleport"));
+            }
         }
     }
 
-    @Override
-    protected void detectMouseHoverAndRenderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int y = startY;
-
-        for (int i = startIndex; i < endIndex; i++) {
-            Territory territory = allTerritories.get(i);
-
-            if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
-                List<Component> tooltip = new ArrayList<>();
-                tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_NAME_KEY, territory.getName()));
-                tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_UUID_KEY, territory.getTerritoryID()));
-                tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_OWNER_NAME_KEY, territory.getOwnerName()));
-                tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_OWNER_UUID_KEY, territory.getOwnerUUID()));
-                tooltip.add(Component.literal(territory.getTerritoryBuffs().size() + ""));
-                if (territory.getBackpoint() != null) {
-                    tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_BACK_POINT_KEY, territory.getBackpoint().getX(), territory.getBackpoint().getY(), territory.getBackpoint().getZ()));
-                } else {
-                    tooltip.add(Component.translatable(Util_MessageKeys.TERRITORY_TERRITORY_BACK_POINT_KEY, "null", "null", "null"));
-                }
-
-                guiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), mouseX, mouseY);
-            }
-
-            y += THING_SPACING;
-        }
-    }
-
-    // 添加初始化动态分页按钮
-    @Override
-    protected void addPageAnimatedButtons() {
-        int buttonY = this.height - 40;
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        startX,
-                        this.height,
-                        startX,
-                        buttonY,
-                        PAGE_BUTTON_WIDTH,
-                        PAGE_BUTTON_HEIGHT,
-                        Component.literal("<"),
-                        1000,
-                        button -> {
-                            if (currentPageNumber > 0) {
-                                currentPageNumber--;
-                                this.initPart(); // 刷新页面
-                            }
-                        }
-                )
-        );
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width - startX - PAGE_BUTTON_WIDTH,
-                        this.height,
-                        this.width - startX - PAGE_BUTTON_WIDTH,
-                        buttonY,
-                        PAGE_BUTTON_WIDTH,
-                        PAGE_BUTTON_HEIGHT,
-                        Component.literal(">"),
-                        1000,
-                        button -> {
-                            if (currentPageNumber < getTotalPages() - 1) {
-                                currentPageNumber++;
-                                this.initPart(); // 刷新页面
-                            }
-                        }
-                )
-        );
-    }
-
-    @Override
-    protected void addPageButtons() {
-        int buttonY = this.height - 40;
-
-        // 上一页按钮
-        this.addRenderableWidget(
-                Button.builder(Component.literal("<"), button -> {
-                            if (currentPageNumber > 0) {
-                                currentPageNumber--;
-                                this.initPart(); // 刷新页面
-                            }
-                        }).pos(startX, buttonY)
-                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
-                        .build()
-        );
-
-        // 下一页按钮
-        this.addRenderableWidget(
-                Button.builder(Component.literal(">"), button -> {
-                            if ((currentPageNumber + 1) * thingsPerPage < ownedTerritories.size() + authorizedTerritories.size()) {
-                                currentPageNumber++;
-                                this.initPart(); // 刷新页面
-                            }
-                        }).pos(this.width - startX - PAGE_BUTTON_WIDTH, buttonY)
-                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
-                        .build()
-        );
-    }
-
-    public void updateTerritoryData(List<Territory> owned, List<Territory> authorized) {
-        this.ownedTerritories.clear(); // 清空旧的拥有领地
-        this.authorizedTerritories.clear(); // 清空旧的有权限领地
-        this.ownedTerritories.addAll(owned); // 更新拥有的领地
-        this.authorizedTerritories.addAll(authorized); // 更新有权限的领地
-
-        allTerritories = new ArrayList<>();
-        territorys = new ArrayList<>();
-        allTerritories.addAll(ownedTerritories); // 首先添加拥有的领地
-        allTerritories.addAll(authorizedTerritories); // 再添加有权限但不重复的领地
-        territorys.addAll(allTerritories);
-        
-        initPosition();
-        this.init(); // 刷新界面
-    }
-
-
-    // 动态计算总页数
-    private int getTotalPages() {
-        return (int) Math.ceil((double) this.allTerritories.size() / thingsPerPage);
-    }
-
-    private void applySearch() {
-        applyFilters(); // 调用联合过滤逻辑
-    }
-
-    private void applyFilters() {
-        new Thread(() -> {
-            List<Territory> result = territorys;
-
-            // 2. 应用搜索条件
-            if (searchBox != null && !searchBox.getValue().isEmpty()) {
-                result = result.stream()
-                        .filter(item -> territoryMatchesSearch(item, searchBox.getValue()))
-                        .collect(Collectors.toList());
-            }
-
-            // 3. 更新UI
-            List<Territory> finalResult = result;
-            this.minecraft.execute(() -> {
-                this.allTerritories = finalResult;
-                this.currentPageNumber = 0;
-                refreshItemButtons();
-                initializeRenderCache(); // 重新初始化渲染缓存
-            });
-        }).start();
-    }
-
-    private boolean territoryMatchesSearch(Territory territory, String searchText) {
-        return territory.getName().toLowerCase().contains(searchText.toLowerCase()) ||
-                territory.getOwnerName().toLowerCase().contains(searchText.toLowerCase());
-    }
-
-    private void refreshItemButtons() {
-        clearItemButtons(); // 清除旧的商品按钮
-        addTerritoryButtons();   // 添加新的商品按钮
-    }
-
-    // 移除购买按钮
-    private void clearItemButtons() {
-        // 遍历所有已渲染的控件并移除与商品相关的按钮
-        this.renderables.removeIf(widget -> widget instanceof Button && isItemButton((Button) widget));
-        this.children().removeIf(widget -> widget instanceof Button && isItemButton((Button) widget));
-    }
-
-    private void addTerritoryButtons() {
-        initPosition();
-
-        int y = startY;
-
-        for (int i = startIndex; i < endIndex; i++) {
-            System.out.println(i);
-            Territory territory = allTerritories.get(i);
-
-            // 添加购买或下架按钮
-            this.addActionButton(territory, y);
-
-            y += THING_SPACING;
-        }
-    }
-
-    private void addActionButton(Territory territory, int y) {
-
-        final int currentY = y; // 使用最终变量供 Lambda 表达式使用
-
+    private CardRenderer.TerritoryType getTerritoryType(Territory territory) {
         if (ownedTerritories.contains(territory)) {
-            this.addRenderableWidget(
-                    new AnimatedButton(
-                            this.width + 60,
-                            currentY,
-                            this.width - startX - 60 - 80,
-                            currentY,
-                            60, 20,
-                            Component.translatable(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY),
-                            1000,
-                            button -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
-                            })
-            );
-            this.addRenderableWidget(
-                    new AnimatedButton(
-                            this.width + 60,
-                            currentY,
-                            this.width - startX - 60,
-                            currentY,
-                            60, 20,
-                            Component.translatable(Util_MessageKeys.TERRITORY_MANAGE_BUTTON_KEY),
-                            1000,
-                            button -> {
-                                Minecraft.getInstance().setScreen(new Screen_ManageTerritory(territory));
-                            })
-            );
+            // 通过比较 location 来判断维度
+            String dim = territory.getDimension().location().toString();
+            if (dim.contains("overworld") || dim.contains("主世界")) {
+                return CardRenderer.TerritoryType.OVERWORLD;
+            } else if (dim.contains("the_nether") || dim.contains("下界")) {
+                return CardRenderer.TerritoryType.NETHER;
+            } else if (dim.contains("the_end") || dim.contains("末地")) {
+                return CardRenderer.TerritoryType.END;
+            } else {
+                return CardRenderer.TerritoryType.OVERWORLD;
+            }
         } else {
-            // 如果是有权限的领地，显示“传送”按钮
-            this.addRenderableWidget(
-                    new AnimatedButton(
-                            this.width + 60,
-                            currentY,
-                            this.width - startX - 60,
-                            currentY,
-                            60, 20,
-                            Component.translatable(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY),
-                            1000,
-                            button -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
-                            })
-            );
+            return CardRenderer.TerritoryType.AUTHORIZED;
         }
     }
 
-    private boolean isItemButton(Button button) {
-        Component buttonMessage = button.getMessage();
-        return buttonMessage.equals(Component.translatable(Util_MessageKeys.TERRITORY_TELEPORT_BUTTON_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.TERRITORY_MANAGE_BUTTON_KEY));
+    private void renderPageControls(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        int totalPages = getTotalPages();
+        if (totalPages <= 1) return;
+
+        String pageText = (currentPage + 1) + " / " + totalPages;
+        int pageTextWidth = font.width(pageText);
+        int pageTextX = virtualWidth / 2 - pageTextWidth / 2;
+        int pageTextY = virtualHeight - 35;
+        guiGraphics.drawString(font, pageText, pageTextX, pageTextY, 0xFFFFFFFF);
+
+        int btnWidth = 50;
+        int btnHeight = 24;
+        int btnY = virtualHeight - 40;
+        int prevBtnX = pageTextX - btnWidth - 12;
+
+        prevBtnX1 = prevBtnX;
+        prevBtnY1 = btnY;
+        prevBtnX2 = prevBtnX + btnWidth;
+        prevBtnY2 = btnY + btnHeight;
+
+        boolean prevHovered = (mouseX >= prevBtnX1 && mouseX <= prevBtnX2 && mouseY >= prevBtnY1 && mouseY <= prevBtnY2);
+        drawPageButton(guiGraphics, prevBtnX, btnY, btnWidth, btnHeight, "<", prevHovered, currentPage > 0);
+
+        int nextBtnX = pageTextX + pageTextWidth + 12;
+
+        nextBtnX1 = nextBtnX;
+        nextBtnY1 = btnY;
+        nextBtnX2 = nextBtnX + btnWidth;
+        nextBtnY2 = btnY + btnHeight;
+
+        boolean nextHovered = (mouseX >= nextBtnX1 && mouseX <= nextBtnX2 && mouseY >= nextBtnY1 && mouseY <= nextBtnY2);
+        drawPageButton(guiGraphics, nextBtnX, btnY, btnWidth, btnHeight, ">", nextHovered, currentPage < totalPages - 1);
+    }
+
+    private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text, boolean isHovered, boolean isEnabled) {
+        int bgColor = isEnabled ? (isHovered ? 0xD04A8ACF : 0xB03A7ABF) : 0x602A2A3A;
+        int borderColor = isEnabled ? (isHovered ? 0xFF6AB8FF : 0xFF4A8ACF) : 0xFF3A3A4A;
+        int textColor = isEnabled ? 0xFFFFFFFF : 0x60808080;
+
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
+        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+
+        if (isEnabled) {
+            guiGraphics.fill(x + 2, y + 1, x + width - 2, y + 2, 0x60FFFFFF);
+        }
+
+        int textWidth = font.width(text);
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + (height - font.lineHeight) / 2;
+        guiGraphics.drawString(font, text, textX, textY, textColor);
+    }
+
+    private int getTotalPages() {
+        return (int) Math.ceil((double) filteredTerritories.size() / itemsPerPage);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
+
+        // 检查操作按钮点击
+        for (ActionBtnArea btnArea : buttonAreas) {
+            if (virtualMouseX >= btnArea.x() && virtualMouseX <= btnArea.x() + btnArea.width() &&
+                virtualMouseY >= btnArea.y() && virtualMouseY <= btnArea.y() + btnArea.height()) {
+
+                Territory territory = filteredTerritories.get(btnArea.territoryIndex());
+
+                if ("teleport".equals(btnArea.actionType())) {
+                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
+                } else if ("manage".equals(btnArea.actionType())) {
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new Screen_ManageTerritory(territory));
+                    }
+                }
+                return true;
+            }
+        }
+
+        // 检查翻页按钮
+        if (virtualMouseX >= prevBtnX1 && virtualMouseX <= prevBtnX2 &&
+            virtualMouseY >= prevBtnY1 && virtualMouseY <= prevBtnY2) {
+            if (currentPage > 0) currentPage--;
+            return true;
+        }
+
+        if (virtualMouseX >= nextBtnX1 && virtualMouseX <= nextBtnX2 &&
+            virtualMouseY >= nextBtnY1 && virtualMouseY <= nextBtnY2) {
+            if (currentPage < getTotalPages() - 1) currentPage++;
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int totalPages = getTotalPages();
+        if (totalPages > 1) {
+            int newPage = currentPage - (int) Math.signum(delta);
+            currentPage = Math.max(0, Math.min(totalPages - 1, newPage));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && this.shouldCloseOnEsc()) {
-            Minecraft.getInstance().setScreen(new Screen_Home());
+        if (keyCode == 256) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Home());
+            }
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    protected void initPosition(){
-        TOP_MARGIN = this.height - 100;
-        thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
-
-        startIndex = currentPageNumber * thingsPerPage;
-        endIndex = Math.min(startIndex + thingsPerPage, allTerritories.size());
-
-        startX = Math.max((this.width / 2) - 300, 60);
-        startY = Math.max((this.height - 450) / 4, 55);
+    public boolean isPauseScreen() {
+        return false;
     }
 }

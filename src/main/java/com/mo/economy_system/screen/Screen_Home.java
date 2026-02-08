@@ -2,376 +2,307 @@ package com.mo.economy_system.screen;
 
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
-import com.mo.economy_system.screen.components.AnimatedButton;
-import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
-import com.mo.economy_system.screen.newUI.a1111_Screen;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Screen_Home 类用于创建和管理主界面屏幕，包含多个按钮以导航到不同的子界面，并显示玩家余额和其他相关信息。
+ * 经济系统主页屏幕 - 现代化卡片风格
+ *
+ * 布局：
+ * - 左侧：导航卡片按钮组
+ * - 右侧：余额卡片 + 交易信息卡片（并排） + 富豪榜卡片
+ * - 左下角：版本信息
  */
-public class Screen_Home extends EconomySystem_Screen {
+public class Screen_Home extends Screen {
 
-    private TextAnimation balanceAnimation;
+    // ==================== 布局常量 ====================
+    private static final int BASE_WIDTH = 640;
+    private static final int BASE_HEIGHT = 360;
+    private static final float LEFT_PANEL_PERCENT = 0.25f;
+    private static final int CARD_SPACING = 8;
+    private static final int PANEL_PADDING = 12;
 
-    /**
-     * 用于存储玩家余额，默认值为 -1 表示未获取。
-     */
+    // ==================== 导航卡片配置 ====================
+    private static final String[] NAV_ICONS = {"🛒", "📈", "📦", "🏰", "ℹ️"};
+    private static final String[] NAV_NAMES = {"商店", "市场", "收货箱", "领地", "关于"};
+    private static final int[] NAV_COLORS = {
+        CardRenderer.THEME_SHOP,
+        CardRenderer.THEME_MARKET,
+        CardRenderer.THEME_DELIVERY,
+        CardRenderer.THEME_TERRITORY,
+        CardRenderer.THEME_ABOUT
+    };
+
+    // ==================== 数据 ====================
     private int balance = -1;
-
-    /**
-     * 存储玩家账户列表，键为玩家名称，值为余额。
-     */
     private List<Map.Entry<String, Integer>> accounts;
+    private String playerName;
+    private int sellOrderCount = 0;
+    private int buyOrderCount = 0;
 
-    /**
-     * 构造函数，初始化主界面标题。
-     */
+    // ==================== 动画 ====================
+    private long openTime = 0;
+    private static final long ANIMATION_DURATION = 500;
+    private boolean skipAnimation = false;
+
+    // ==================== 虚拟坐标系统 ====================
+    private float uiScale;
+    private int virtualWidth;
+    private int virtualHeight;
+    private int leftPanelWidth;
+    private int rightPanelStartX;
+    private int rightPanelWidth;
+
+    // ==================== 导航卡片区域（虚拟坐标） ====================
+    private final int[] navCardX1 = new int[NAV_ICONS.length];
+    private final int[] navCardY1 = new int[NAV_ICONS.length];
+    private final int[] navCardX2 = new int[NAV_ICONS.length];
+    private final int[] navCardY2 = new int[NAV_ICONS.length];
+
+    // ==================== 交易信息卡片点击区域 ====================
+    private int tradeCardX1, tradeCardY1, tradeCardX2, tradeCardY2;
+
+    // ==================== 富豪榜滚动 ====================
+    private int leaderboardScrollOffset = 0;
+
     public Screen_Home() {
         super(Component.translatable(Util_MessageKeys.HOME_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
     }
 
-    /**
-     * 初始化屏幕组件，包括添加按钮和请求玩家余额。
-     */
     @Override
     protected void init() {
-        initPosition();
+        super.init();
+        if (skipAnimation) {
+            openTime = System.currentTimeMillis() - ANIMATION_DURATION - 1;
+        } else {
+            openTime = System.currentTimeMillis();
+        }
+        if (this.minecraft != null && this.minecraft.player != null) {
+            this.playerName = this.minecraft.player.getName().getString();
+        }
+    }
 
-        // 添加商店按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,
-                        startY,
-                        startX,
-                        startY,
-                        100, 20,
-                        Component.translatable(Util_MessageKeys.HOME_SHOP_BUTTON_KEY),
-                        1000,
-                        button -> {
-                            // 请求服务器的商店数据并打开 ShopScreen
-                            this.minecraft.setScreen(new Screen_Shop());
-                        })
-        );
+    private void calculateVirtualSize() {
+        float scaleX = (float) this.width / BASE_WIDTH;
+        float scaleY = (float) this.height / BASE_HEIGHT;
+        uiScale = Math.min(scaleX, scaleY);
+        virtualWidth = (int) (this.width / uiScale);
+        virtualHeight = (int) (this.height / uiScale);
+        leftPanelWidth = (int) (virtualWidth * LEFT_PANEL_PERCENT);
+        rightPanelStartX = leftPanelWidth + PANEL_PADDING;
+        rightPanelWidth = virtualWidth - rightPanelStartX - PANEL_PADDING;
+    }
 
-        // 添加市场按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,
-                        startY + 30,
-                        startX,
-                        startY + 30,
-                        100, 20,
-                        Component.translatable(Util_MessageKeys.HOME_MARKET_BUTTON_KEY),
-                        1000,
-                        button -> {
-                            // 请求服务器的市场数据并打开 MarketScreen
-                            this.minecraft.setScreen(new Screen_Market());
-                        })
-        );
+    private float getAnimationProgress() {
+        if (skipAnimation) return 1.0f;
+        long elapsed = System.currentTimeMillis() - openTime;
+        return Math.min(1.0f, (float) elapsed / ANIMATION_DURATION);
+    }
 
-        // 添加物资箱按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,                   // 初始X（屏幕左侧外）
-                        startY + 60,            // 初始Y
-                        startX,                 // 目标X
-                        startY + 60,            // 目标Y
-                        100, 20,                // 宽度和高度
-                        Component.translatable(Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY),
-                        1000,                   // 动画持续时间 1秒
-                        button -> {
-                            // 请求服务器的市场数据并打开 DeliveryBoxScreen
-                            this.minecraft.setScreen(new Screen_DeliveryBox());
-                        })
-        );
-
-        // 添加领地按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,                   // 初始X
-                        startY + 90,            // 初始Y
-                        startX,                 // 目标X
-                        startY + 90,            // 目标Y
-                        100, 20,                // 宽度和高度
-                        Component.translatable(Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY),
-                        1000,                   // 动画持续时间
-                        button -> {
-                            // 请求服务器的领地数据并打开 TerritoryScreen
-                            this.minecraft.setScreen(new Screen_Territory());
-                        })
-        );
-
-        // 添加关于按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,                   // 初始X
-                        startY + 120,           // 初始Y
-                        startX,                 // 目标X
-                        startY + 120,           // 目标Y
-                        100, 20,                // 宽度和高度
-                        Component.translatable(Util_MessageKeys.HOME_ABOUT_BUTTON_KEY),
-                        1000,                   // 动画持续时间
-                        button -> {
-                            // 打开 AboutScreen
-                            this.minecraft.setScreen(new Screen_About());
-                        })
-        );
-
-        // 添加关于按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        -100,                   // 初始X
-                        startY + 150,           // 初始Y
-                        startX,                 // 目标X
-                        startY + 150,           // 目标Y
-                        100, 20,                // 宽度和高度
-                        Component.literal("测试界面"),
-                        1000,                   // 动画持续时间
-                        button -> {
-                            // 打开 AboutScreen
-                            this.minecraft.setScreen(new a1111_Screen());
-                        })
-        );
-
-        // 初始化渲染缓存（在所有按钮添加后调用）
-        initializeRenderCache();
+    private float easeOutCubic(float t) {
+        return 1.0f - (float) Math.pow(1.0f - t, 3);
     }
 
     @Override
-    protected void initializeRenderCache() {
-        renderCache.clear();
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 先绘制全屏背景（在缩放之前，确保填满整个屏幕）
+        renderFullScreenBackground(guiGraphics);
 
-        Component balanceText;
-        if (balance == -1) {
-            // 获取本地化的 "Fetching balance..." 文本
-            balanceText = Component.translatable(Util_MessageKeys.HOME_FETCHING_BALANCE_TEXT_KEY);
-        } else {
-            // 获取本地化的 "Your balance: %s coins" 文本，并替换占位符
-            balanceText = Component.translatable(Util_MessageKeys.HOME_BALANCE_TEXT_KEY, balance);
+        calculateVirtualSize();
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
+        renderPanels(guiGraphics, mouseX, mouseY);
+        guiGraphics.pose().popPose();
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    private void renderFullScreenBackground(GuiGraphics guiGraphics) {
+        // 使用更淡的背景色
+        guiGraphics.fill(0, 0, this.width, this.height, 0x400A0A14);
+    }
+
+    private void renderPanels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        float animProgress = easeOutCubic(getAnimationProgress());
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+        int leftOffsetX = (int) ((1.0f - animProgress) * -50);
+        int rightOffsetX = (int) ((1.0f - animProgress) * 50);
+
+        // 左侧导航面板
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(leftOffsetX, 0, 0);
+        renderNavPanel(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().popPose();
+
+        // 右侧内容面板
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(rightOffsetX, 0, 0);
+        renderContentPanel(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().popPose();
+
+        // 左下角版本信息
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(leftOffsetX, 0, 0);
+        int versionY = virtualHeight - PANEL_PADDING;
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, versionY, leftPanelWidth);
+        guiGraphics.pose().popPose();
+    }
+
+    private void renderNavPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        int cardWidth = leftPanelWidth - PANEL_PADDING * 2;
+        int cardHeight = 28;
+        int startY = PANEL_PADDING;
+
+        for (int i = 0; i < NAV_ICONS.length; i++) {
+            int cardX = PANEL_PADDING;
+            int cardY = startY + i * (cardHeight + CARD_SPACING);
+            navCardX1[i] = cardX;
+            navCardY1[i] = cardY;
+            navCardX2[i] = cardX + cardWidth;
+            navCardY2[i] = cardY + cardHeight;
+            boolean isHovered = (mouseX >= cardX && mouseX <= cardX + cardWidth &&
+                                mouseY >= cardY && mouseY <= cardY + cardHeight);
+            CardRenderer.drawNavCard(guiGraphics, font, cardX, cardY, cardWidth, cardHeight,
+                NAV_ICONS[i], NAV_NAMES[i], NAV_COLORS[i], isHovered);
         }
-        // 计算文本居中位置
-        int textWidth = this.font.width(balanceText);
-        int xPosition = startX + textWidth / 2;
+    }
 
-        balanceAnimation = new TextAnimation(
-                -200,
-                startY - 20,
-                xPosition,
-                startY - 20,
-                0f,
-                1f,
-                1000
-        );
+    private void renderContentPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        int startY = PANEL_PADDING;
+        int topRowHeight = 70;
 
-        renderCache.add((guiGraphics) -> {
-            // 渲染标题（带渐入和左滑效果）
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.translatable(Util_MessageKeys.HOME_BALANCE_TEXT_KEY, balance).withStyle(ChatFormatting.GOLD),
-                    balanceAnimation
-            );
-        });
-
-        // 新增步骤1：计算所有需要渲染的文本（前10条 + 自己）
-        List<Component> allEntries = new ArrayList<>();
-
-        int baseX = 0;
-        // 添加前10条账户数据
-        if (accounts != null) {
-            int count = 0;
-            for (Map.Entry<String, Integer> entry : accounts) {
-                if (count >= 10) break;
-                allEntries.add(createAccountComponent(entry.getKey(), entry.getValue(), count + 1));
-                count++;
-            }
-
-            // 添加自己的条目（无论是否在前10）
-            int selfIndex = getIndexOfPlayer(accounts, this.minecraft.player.getName().getString()) + 1;
-            if (selfIndex != 0) { // 确保自己存在于列表中
-                allEntries.add(Component.literal("[" + selfIndex + "] 你 拥有 " + balance + " 枚梦鱼币"));
-            }
-
-            // 新增步骤2：计算最大文本宽度
-            int maxWidth = allEntries.stream()
-                    .mapToInt(component -> this.font.width(component))
-                    .max()
-                    .orElse(100); // 默认值防止空列表
-
-            // 新增步骤3：计算基准X坐标（右对齐位置）
-            baseX = maxWidth;
-        }
-
-
-
-        // 渲染玩家账户列表
-        int y = this.startY - 20;
-        int index = -1;
-        if (accounts != null) {
-            int i = 1;
-            for (Map.Entry<String, Integer> entry : accounts) {
-                if (i > 10) {
+        // 计算玩家排名
+        int playerRank = 0;
+        if (accounts != null && playerName != null) {
+            for (int i = 0; i < accounts.size(); i++) {
+                if (accounts.get(i).getKey().equals(playerName)) {
+                    playerRank = i + 1;
                     break;
                 }
-                TextAnimation richList;
-
-                richList = new TextAnimation(
-                        this.width + 200,
-                        y,
-                        this.width - startX - baseX,
-                        y,
-                        0f,
-                        1f,
-                        1000
-                );
-
-                String playerName = entry.getKey();
-                Integer playerBalance = entry.getValue();
-
-                // 拼接文本 "玩家名称: 余额"
-                Component account = Component.literal("[" + i + "] " + playerName + " 拥有 " + playerBalance + " 枚梦鱼币");
-
-                renderCache.add((guiGraphics) -> {
-                    // 渲染标题（带渐入和左滑效果）
-                    renderAnimatedText(
-                            guiGraphics,
-                            account,
-                            richList
-                    );
-                });
-
-                // 增加 y 坐标，确保下一行文本显示在下方
-                y += this.font.lineHeight + 2;  // 增加行高和一些间距
-                i++;
             }
-            index = getIndexOfPlayer(accounts, this.minecraft.player.getName().getString()) + 1;
         }
 
-        if (index != -1) {
-            TextAnimation myself;
+        // 顶部一排两个卡片：余额 + 交易信息
+        int halfWidth = (rightPanelWidth - CARD_SPACING) / 2;
 
-            Component account = Component.literal("[" + index + "] 你 拥有 " + balance + " 枚梦鱼币");
-            // 将富豪榜文本的 y 坐标设置为最后一个账户条目下方
-            int leaderboardY = y + 10;  // 在最后一行账户文本之后加一点间隔
+        // 左侧：余额卡片
+        int balanceCardX = rightPanelStartX;
+        int balanceCardY = startY;
+        CardRenderer.drawBalanceCard(guiGraphics, font,
+            balanceCardX, balanceCardY, halfWidth, topRowHeight,
+            balance >= 0 ? balance : 0, playerRank);
 
-            myself = new TextAnimation(
-                    this.width + 200,
-                    leaderboardY,
-                    this.width - startX - baseX,
-                    leaderboardY,
-                    0f,
-                    1f,
-                    1000
-            );
+        // 右侧：交易信息卡片
+        int tradeCardX = balanceCardX + halfWidth + CARD_SPACING;
+        tradeCardX1 = tradeCardX;
+        tradeCardY1 = startY;
+        tradeCardX2 = tradeCardX + halfWidth;
+        tradeCardY2 = startY + topRowHeight;
+        boolean isTradeHovered = (mouseX >= tradeCardX1 && mouseX <= tradeCardX2 &&
+                                  mouseY >= tradeCardY1 && mouseY <= tradeCardY2);
+        CardRenderer.drawTradeInfoCard(guiGraphics, font,
+            tradeCardX, tradeCardY1, halfWidth, topRowHeight,
+            sellOrderCount, buyOrderCount, isTradeHovered);
 
-            renderCache.add((guiGraphics) -> {
-                // 渲染标题（带渐入和左滑效果）
-                renderAnimatedText(
-                        guiGraphics,
-                        account,
-                        myself
-                );
-            });
-        }
+        // ==================== 富豪榜卡片 ====================
+        int leaderboardCardY = startY + topRowHeight + CARD_SPACING;
+        int leaderboardCardHeight = virtualHeight - leaderboardCardY - PANEL_PADDING;
+
+        CardRenderer.drawLeaderboardCard(guiGraphics, font,
+            rightPanelStartX, leaderboardCardY, rightPanelWidth, leaderboardCardHeight,
+            accounts, playerName, balance, leaderboardScrollOffset);
     }
 
-    /**
-     * 渲染屏幕内容，包括背景、按钮、玩家余额和账户列表。
-     *
-     * @param guiGraphics GUI 图形对象
-     * @param mouseX      鼠标 X 坐标
-     * @param mouseY      鼠标 Y 坐标
-     * @param partialTicks 部分刻数
-     */
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        // 绘制背景
-        this.renderBackground(guiGraphics);
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
 
-        // 执行渲染缓存中的任务
-        for (RunnableWithGraphics task : renderCache) {
-            task.run(guiGraphics);
+        // 检查导航卡片点击
+        for (int i = 0; i < NAV_ICONS.length; i++) {
+            if (virtualMouseX >= navCardX1[i] && virtualMouseX <= navCardX2[i] &&
+                virtualMouseY >= navCardY1[i] && virtualMouseY <= navCardY2[i]) {
+                handleNavClick(i);
+                return true;
+            }
         }
 
-        // 渲染父类和按钮
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        // 检查交易信息卡片点击
+        if (virtualMouseX >= tradeCardX1 && virtualMouseX <= tradeCardX2 &&
+            virtualMouseY >= tradeCardY1 && virtualMouseY <= tradeCardY2) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Market());
+            }
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    /**
-     * 更新玩家余额和账户列表的方法，供数据包调用。
-     *
-     * @param balance 玩家余额
-     * @param accounts 玩家账户列表
-     */
+    private void handleNavClick(int index) {
+        if (this.minecraft == null) return;
+        switch (index) {
+            case 0 -> this.minecraft.setScreen(new Screen_Shop());
+            case 1 -> this.minecraft.setScreen(new Screen_Market());
+            case 2 -> this.minecraft.setScreen(new Screen_DeliveryBox());
+            case 3 -> this.minecraft.setScreen(new Screen_Territory());
+            case 4 -> this.minecraft.setScreen(new Screen_About());
+        }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (accounts != null && !accounts.isEmpty()) {
+            int maxScroll = Math.max(0, accounts.size() - 10);
+            int newOffset = leaderboardScrollOffset - (int) Math.signum(delta);
+            leaderboardScrollOffset = Mth.clamp(newOffset, 0, maxScroll);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
     public void updateBalance(int balance, List<Map.Entry<String, Integer>> accounts) {
         this.balance = balance;
         this.accounts = accounts;
-        initializeRenderCache();
     }
 
     /**
-     * 获取指定玩家名称在账户列表中的索引。
-     *
-     * @param accounts 账户列表
-     * @param targetName 目标玩家名称
-     * @return 索引，如果未找到则返回 -1
+     * 更新交易信息（卖单和求购数量）
      */
-    public static int getIndexOfPlayer(List<Map.Entry<String, Integer>> accounts, String targetName) {
-        for (int i = 0; i < accounts.size(); i++) {
-            Map.Entry<String, Integer> entry = accounts.get(i);
-            if (entry.getKey().equals(targetName)) {
-                return i;  // 返回索引
-            }
+    public void updateTradeInfo(int sellCount, int buyCount) {
+        this.sellOrderCount = sellCount;
+        this.buyOrderCount = buyCount;
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) {
+            this.onClose();
+            return true;
         }
-        return -1;  // 如果没有找到，返回 -1
-    }
-
-    @Override
-    protected void initPosition(){
-        TOP_MARGIN = this.height - 100;
-        thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
-
-        startX = Math.max((this.width / 2) - 300, 60);
-        startY = Math.max((this.height) / 4, 40);
-    }
-
-    // 辅助方法：生成带排名的条目文本
-    private Component createAccountComponent(String name, int balance, int rank) {
-        return Component.literal("[" + rank + "] " + name + " 拥有 " + balance + " 枚梦鱼币");
-    }
-
-
-    @Override
-    protected void renderAnimatedText(GuiGraphics guiGraphics, Component text, TextAnimation animation) {
-        // 计算当前属性
-        int x = animation.getCurrentX();
-        int y = animation.getCurrentY();
-        float alpha = animation.getCurrentAlpha();
-
-        // 设置透明度（ARGB格式：0xAARRGGBB）
-        int color = 0xFFFFFF | ((int) (alpha * 255) << 24);
-
-        // 文字居中绘制
-        int textWidth = minecraft.font.width(text);
-        guiGraphics.drawString(
-                minecraft.font,
-                text,
-                x, // 居中计算
-                y,
-                color,
-                true // 启用阴影
-        );
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }

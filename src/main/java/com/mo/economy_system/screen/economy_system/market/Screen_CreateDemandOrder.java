@@ -478,11 +478,18 @@ public class Screen_CreateDemandOrder extends EconomySystem_Screen {
     }
 
     private ItemStack getItemStack(String itemID) {
-        Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemID));
-        if (item != null) {
-            return new ItemStack(item);
-        } else {
-            return ItemStack.EMPTY; // 如果物品 ID 无效，返回空堆
+        try {
+            // 验证 itemID 是否只包含有效字符 [a-z0-9/._-]
+            if (!itemID.matches("^[a-z0-9/._-:]+$")) {
+                return ItemStack.EMPTY;
+            }
+            Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemID));
+            if (item != null) {
+                return new ItemStack(item);
+            }
+        } catch (Exception e) {
+            // 忽略异常，返回空堆
         }
+        return ItemStack.EMPTY; // 如果物品 ID 无效，返回空堆
     }
 }

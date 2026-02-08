@@ -43,9 +43,9 @@ public class Packet_DeliveryBoxDataResponse {
     public static void handle(Packet_DeliveryBoxDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
-            // 获取当前屏幕实例并更新市场商品
+            // 获取当前屏幕实例并更新收货箱物品
             if (Minecraft.getInstance().screen instanceof Screen_DeliveryBox screenDeliveryBox) {
-                screenDeliveryBox.updateDeliveryBoxItems(msg.deliveryItems);
+                screenDeliveryBox.updateDeliveryItems(msg.deliveryItems);
             }
         });
         context.setPacketHandled(true);  // 标记数据包已处理

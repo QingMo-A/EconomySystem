@@ -1,940 +1,734 @@
 package com.mo.economy_system.screen.economy_system.market;
 
-import com.mo.economy_system.network.packets.economy_system.*;
+import com.mo.economy_system.core.economy_system.market.DemandOrder;
+import com.mo.economy_system.core.economy_system.market.MarketItem;
+import com.mo.economy_system.core.economy_system.market.SalesOrder;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
-import com.mo.economy_system.screen.EconomySystem_Screen;
 import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.core.economy_system.market.DemandOrder;
-import com.mo.economy_system.core.economy_system.market.MarketItem;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.core.economy_system.market.SalesOrder;
-import com.mo.economy_system.screen.components.AnimatedButton;
-import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
-import com.mo.economy_system.screen.components.ItemIconAnimation;
-import com.mo.economy_system.screen.components.TextAnimation;
-import com.mo.economy_system.screen.newUI.HBoxWidget;
-import com.mo.economy_system.screen.newUI.ItemIconWidget;
-import com.mo.economy_system.screen.newUI.LabelWidget;
-import com.mo.economy_system.screen.newUI.VBoxWidget;
+import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class Screen_Market extends EconomySystem_Screen {
-    private List<MarketItem> items = new ArrayList<>(); // 根据搜索过滤后的商品列表
-    private List<MarketItem> itemsSnapshot = new ArrayList<>();
-    private final List<ItemIconWidget> itemWidgets = new ArrayList<>();
-    // 计数器变量，初始为 0
-    private int displayTypeIndex = 0;
-    // 定义按钮显示的文本数组
-    private final String[] DISPLAY_TYPE_KEYS = {
-            Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_0_BUTTON_KEY,
-            Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_1_BUTTON_KEY,
-            Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_2_BUTTON_KEY,
-            Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_3_BUTTON_KEY,
-            Util_MessageKeys.MARKET_SWITCH_DISPLAY_TYPE_4_BUTTON_KEY
-    };
+/**
+ * 市场屏幕 - 卡片网格风格
+ *
+ * 布局：
+ * - 左上角：搜索框
+ * - 左下角：市场标题
+ * - 右下角：ESC返回提示
+ * - 中间：订单卡片网格
+ * - 底部：翻页控制
+ */
+public class Screen_Market extends Screen {
 
-    private TextAnimation pageAnimation;
-    private TextAnimation noItem;
+    // ==================== 布局常量 ====================
+    private static final int BASE_WIDTH = 640;
+    private static final int BASE_HEIGHT = 360;
+    private static final int CARD_SPACING = 8;
+    private static final int PANEL_PADDING = 12;
 
-    private AnimatedHighLevelTextField searchBox; // 搜索框
+    // ==================== 订单卡片配置 ====================
+    private static final int CARD_WIDTH = 200;
+    private static final int CARD_HEIGHT = 80;
+    private static final int TOTAL_CARD_HEIGHT = CARD_HEIGHT + CARD_SPACING;
 
+    // ==================== 数据 ====================
+    private List<MarketItem> allItems = new ArrayList<>();
+    private List<MarketItem> filteredItems = new ArrayList<>();
+
+    // ==================== 分页 ====================
+    private int currentPage = 0;
+    private int rows = 3;
+    private int columns = -1;
+    private int itemsPerPage = -1;
+
+    // ==================== 搜索与过滤 ====================
+    private EditBox searchBox;
+    private int filterIndex = 0; // 0:全部, 1:我的, 2:卖单, 3:求单
+
+    // ==================== 虚拟坐标系统 ====================
+    private float uiScale;
+    private int virtualWidth;
+    private int virtualHeight;
+
+    // ==================== 卡片点击区域 ====================
+    private final List<OrderCardArea> cardAreas = new ArrayList<>();
+    private final List<OrderCardArea2> cardAreas2 = new ArrayList<>();
+
+    // ==================== 物品图标区域（用于tooltip） ====================
+    private final List<ItemIconArea> itemIconAreas = new ArrayList<>();
+
+    // ==================== 翻页按钮区域 ====================
+    private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
+    private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
+
+    // ==================== 上架/求购按钮区域 ====================
+    private int listBtnX1, listBtnY1, listBtnX2, listBtnY2;
+    private int requestBtnX1, requestBtnY1, requestBtnX2, requestBtnY2;
+
+    // ==================== 玩家信息 ====================
     private UUID playerUUID;
     private String playerName;
 
-    // 构造方法
+    private record OrderCardArea(int x, int y, int width, int height, int itemIndex, String actionType) {}
+    private record OrderCardArea2(int x, int y, int width, int height, int itemIndex, String actionType) {}
+    private record ItemIconArea(int x, int y, int width, int height, ItemStack itemStack) {}
+
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
     }
 
-    // 初始化
+    public void updateMarketItems(List<MarketItem> items) {
+        this.allItems = items;
+        this.filteredItems = new ArrayList<>(items);
+    }
+
     @Override
     protected void init() {
         super.init();
-
-        this.currentPageNumber = 0;
-
-        initPart();
-
+        calculateVirtualSize();
 
         if (this.minecraft != null && this.minecraft.player != null) {
             this.playerUUID = this.minecraft.player.getUUID();
             this.playerName = this.minecraft.player.getName().getString();
         }
+
+        // 创建搜索框（左上角，给右侧按钮留空间）
+        int searchBoxWidth = 200;
+        int searchBoxX = PANEL_PADDING;
+        int searchBoxY = 20;
+
+        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, 20, Component.translatable("搜索市场..."));
+        this.searchBox.setMaxLength(50);
+        this.searchBox.setHint(Component.literal("搜索市场..."));
+        this.searchBox.setResponder(this::onSearchChanged);
+        this.searchBox.setFocused(false);
+        this.addRenderableWidget(this.searchBox);
+    }
+
+    private void calculateVirtualSize() {
+        float scaleX = (float) this.width / BASE_WIDTH;
+        float scaleY = (float) this.height / BASE_HEIGHT;
+        uiScale = Math.min(scaleX, scaleY);
+        virtualWidth = (int) (this.width / uiScale);
+        virtualHeight = (int) (this.height / uiScale);
+    }
+
+    private void onSearchChanged(String text) {
+        applyFilters();
+    }
+
+    private void applyFilters() {
+        filteredItems = allItems.stream()
+                .filter(item -> {
+                    // 应用搜索过滤
+                    if (searchBox != null && !searchBox.getValue().isEmpty()) {
+                        String search = searchBox.getValue().toLowerCase();
+                        if (!itemMatchesSearch(item, search)) {
+                            return false;
+                        }
+                    }
+
+                    // 应用类型过滤
+                    return switch (filterIndex) {
+                        case 1 -> item.getSellerName().equals(playerName); // 我的订单
+                        case 2 -> item instanceof SalesOrder; // 卖单
+                        case 3 -> item instanceof DemandOrder; // 求单
+                        default -> true;
+                    };
+                })
+                .collect(Collectors.toList());
+        currentPage = 0;
+    }
+
+    private boolean itemMatchesSearch(MarketItem item, String search) {
+        return item.getItemID().toLowerCase().contains(search) ||
+                item.getSellerName().toLowerCase().contains(search) ||
+                item.getItemStack().getHoverName().getString().toLowerCase().contains(search);
     }
 
     @Override
-    protected void initPart() {
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 绘制全屏背景
+        renderFullScreenBackground(guiGraphics);
 
-        initPosition();
+        calculateVirtualSize();
 
-        // 清除现有按钮
-        this.clearWidgets();
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
-        if (flag == 1) {
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
 
-            // 添加搜索框
-            this.searchBox = new AnimatedHighLevelTextField(
-                    this.font,
-                    Math.max((this.width / 2) - 300, 60),
-                    -20,
-                    200,
-                    20,
-                    1000,
-                    Component.translatable("search.market")
-            );
-            this.addRenderableWidget(searchBox);
+        // 绘制左下角标题
+        drawTitle(guiGraphics);
 
-            // 设置搜索框的键盘监听器
-            this.searchBox.setFocused(false); // 默认不聚焦
-            this.searchBox.setMaxLength(50); // 限制输入长度
-            this.searchBox.setHint(Component.translatable(Util_MessageKeys.MARKET_HINT_TEXT_KEY)); // 提示文本
-            this.searchBox.setResponder(text -> applySearch());
-            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
+        // 绘制右上角按钮
+        drawTopButtons(guiGraphics);
 
-            // 添加动态翻页按钮
-            addPageAnimatedButtons();
+        // 绘制右下角ESC提示
+        drawEscHint(guiGraphics);
 
-            addSwitchDisplayTypeAnimatedButton();
+        // 绘制搜索框背景
+        guiGraphics.pose().popPose();
+        renderSearchBoxBackground(guiGraphics);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
-            addListItemAnimatedButton();
+        // 绘制订单卡片网格
+        renderOrderCards(guiGraphics, virtualMouseX, virtualMouseY);
 
-            addRequestItemAnimatedButton();
+        // 绘制翻页控制
+        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY);
 
-        } else if (flag >= 2) {
+        guiGraphics.pose().popPose();
 
-            // 添加搜索框
-            this.searchBox = new AnimatedHighLevelTextField(
-                    this.font,
-                    Math.max((this.width / 2) - 300, 60),
-                    20,
-                    200,
-                    20,
-                    1000,
-                    Component.translatable("search.market")
-            );
-            this.addRenderableWidget(searchBox);
+        // 渲染物品tooltip（在虚拟坐标系统外，使用实际屏幕坐标）
+        renderItemTooltips(guiGraphics, mouseX, mouseY);
 
-            // 设置搜索框的键盘监听器
-            this.searchBox.setFocused(false); // 默认不聚焦
-            this.searchBox.setMaxLength(50); // 限制输入长度
-            this.searchBox.setHint(Component.translatable(Util_MessageKeys.MARKET_HINT_TEXT_KEY)); // 提示文本
-            this.searchBox.setResponder(text -> applySearch());
-            this.searchBox.startMoveAnimation(Math.max((this.width / 2) - 300, 60), 20);
-
-            // 添加静态翻页按钮
-            addPageButtons();
-
-            // 添加切换显示类型的按钮
-            addSwitchDisplayTypeButton();
-
-            // 添加上架按钮
-            addListItemButton();
-
-            // 添加求购按钮
-            addRequestItemButton();
-        }
-
-        flag ++;
-
-        initializeRenderCache();
-
-        super.initPart();
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public void resize(Minecraft minecraft, int width, int height) {
-
-        this.flag = 1;
-
-        super.resize(minecraft, width, height);
+    private void renderFullScreenBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0xB0000000);
     }
 
-    // 渲染(一帧一更新)
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
+    private void renderSearchBoxBackground(GuiGraphics guiGraphics) {
+        if (searchBox != null) {
+            int boxX = searchBox.getX();
+            int boxY = searchBox.getY();
+            int boxWidth = searchBox.getWidth();
+            int boxHeight = searchBox.getHeight();
 
-        // 执行渲染缓存中的任务
-        for (RunnableWithGraphics task : renderCache) {
-            task.run(guiGraphics);
+            int bgColor = 0xE04A5568;
+            int borderColor = 0xFF4FC3F7;
+
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX + boxWidth + 4, boxY + boxHeight + 2, bgColor);
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX + boxWidth + 4, boxY - 1, borderColor);
+            guiGraphics.fill(boxX - 4, boxY + boxHeight + 1, boxX + boxWidth + 4, boxY + boxHeight + 2, borderColor);
+            guiGraphics.fill(boxX - 4, boxY - 2, boxX - 3, boxY + boxHeight + 2, borderColor);
+            guiGraphics.fill(boxX + boxWidth + 3, boxY - 2, boxX + boxWidth + 4, boxY + boxHeight + 2, borderColor);
         }
+    }
 
-        // 如果有商品，进行鼠标悬停检测并显示 Tooltip
-        if (!items.isEmpty()) {
-            detectMouseHoverAndRenderTooltip(guiGraphics, mouseX, mouseY);
-        }
+    private void drawTitle(GuiGraphics guiGraphics) {
+        int x = PANEL_PADDING;
+        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
 
-        // 检查哪个ItemIconWidget被悬停
-        for (ItemIconWidget widget : itemWidgets) {
-            if (widget.isHovered()) {
-                guiGraphics.renderTooltip(this.font, widget.getTooltipLines(), Optional.empty(), mouseX, mouseY);
-                break;
+        // 过滤器按钮
+        String[] filters = {"全部", "我的", "卖单", "求单"};
+        int filterX = x;
+        for (int i = 0; i < filters.length; i++) {
+            String filterText = filters[i];
+            boolean isSelected = filterIndex == i;
+            int textWidth = font.width(filterText);
+            int color = isSelected ? 0xFFFFFFFF : 0x80FFFFFF;
+
+            guiGraphics.drawString(font, filterText, filterX, y, color);
+            if (isSelected) {
+                guiGraphics.fill(filterX, y + font.lineHeight + 2, filterX + textWidth, y + font.lineHeight + 3, 0xFF4FC3F7);
             }
+            filterX += textWidth + 20;
         }
-
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
     }
 
-    @Override
-    protected void initializeRenderCache() {
-        renderCache.clear(); // 清空旧的缓存
+    private void drawTopButtons(GuiGraphics guiGraphics) {
+        // 上架和求购按钮（右上角）
+        int btnY = 20;
+        int btnHeight = 20;
+        int btnSpacing = 8;
+        int btnWidth = 60;
 
-        pageAnimation = new TextAnimation(
-                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
-                this.height + 33,
-                this.width / 2 - this.font.width((currentPageNumber + 1) + " / " + getTotalPages()) / 2,
-                this.height - 33,
-                0f,
-                1f,
-                1000
-        );
+        // 上架按钮（右边）
+        int listBtnX = virtualWidth - PANEL_PADDING - btnWidth;
+        guiGraphics.fill(listBtnX, btnY, listBtnX + btnWidth, btnY + btnHeight, 0xC04CAF50);
+        guiGraphics.fill(listBtnX, btnY, listBtnX + btnWidth, btnY + 1, 0xFF6BCF6B);
+        guiGraphics.fill(listBtnX, btnY + btnHeight - 1, listBtnX + btnWidth, btnY + btnHeight, 0xFF6BCF6B);
+        guiGraphics.fill(listBtnX, btnY, listBtnX + 1, btnY + btnHeight, 0xFF6BCF6B);
+        guiGraphics.fill(listBtnX + btnWidth - 1, btnY, listBtnX + btnWidth, btnY + btnHeight, 0xFF6BCF6B);
+        String listText = "上架";
+        int listTextWidth = font.width(listText);
+        guiGraphics.drawString(font, listText, listBtnX + (btnWidth - listTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        listBtnX1 = listBtnX;
+        listBtnY1 = btnY;
+        listBtnX2 = listBtnX + btnWidth;
+        listBtnY2 = btnY + btnHeight;
 
-        renderCache.add((guiGraphics) -> {
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.literal((currentPageNumber + 1) + " / " + getTotalPages()),
-                    pageAnimation
-            );
-        });
+        // 求购按钮（左边）
+        int requestBtnX = listBtnX - btnSpacing - btnWidth;
+        guiGraphics.fill(requestBtnX, btnY, requestBtnX + btnWidth, btnY + btnHeight, 0xC0FF9800);
+        guiGraphics.fill(requestBtnX, btnY, requestBtnX + btnWidth, btnY + 1, 0xFFFFB74D);
+        guiGraphics.fill(requestBtnX, btnY + btnHeight - 1, requestBtnX + btnWidth, btnY + btnHeight, 0xFFFFB74D);
+        guiGraphics.fill(requestBtnX, btnY, requestBtnX + 1, btnY + btnHeight, 0xFFFFB74D);
+        guiGraphics.fill(requestBtnX + btnWidth - 1, btnY, requestBtnX + btnWidth, btnY + btnHeight, 0xFFFFB74D);
+        String requestText = "求购";
+        int requestTextWidth = font.width(requestText);
+        guiGraphics.drawString(font, requestText, requestBtnX + (btnWidth - requestTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        requestBtnX1 = requestBtnX;
+        requestBtnY1 = btnY;
+        requestBtnX2 = requestBtnX + btnWidth;
+        requestBtnY2 = btnY + btnHeight;
+    }
 
-        if (items.isEmpty()) {
+    private void drawEscHint(GuiGraphics guiGraphics) {
+        String hint = "按 ESC 返回";
+        int hintWidth = font.width(hint);
+        int x = virtualWidth - PANEL_PADDING - hintWidth;
+        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
+        guiGraphics.drawString(font, hint, x, y, 0x90FFFFFF);
+    }
 
-            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.MARKET_NO_ITEMS_TEXT_KEY));
-            int xPosition = (this.width - textWidth) / 2;
+    private void renderOrderCards(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        cardAreas.clear();
+        cardAreas2.clear();
+        itemIconAreas.clear();
 
-            noItem = new TextAnimation(
-                    xPosition,
-                    this.height / 2 - 10,
-                    xPosition,
-                    this.height / 2 - 10,
-                    0f,
-                    1f,
-                    2000
-            );
-
-            // 如果没有商品，添加无商品提示的渲染任务
-            renderCache.add((guiGraphics) -> {
-
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.MARKET_NO_ITEMS_TEXT_KEY),
-                        noItem
-                );
-            });
+        if (filteredItems.isEmpty()) {
+            String emptyText = "暂无订单";
+            int textWidth = font.width(emptyText);
+            int textX = (virtualWidth - textWidth) / 2;
+            int textY = virtualHeight / 2;
+            guiGraphics.drawString(font, emptyText, textX, textY, 0x80FFFFFF);
             return;
         }
 
-        int y = startY;
+        // 计算列数
+        columns = Math.max(1, (virtualWidth - PANEL_PADDING * 2 + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
+        itemsPerPage = rows * columns;
+
+        // 计算分页
+        int totalPages = (int) Math.ceil((double) filteredItems.size() / itemsPerPage);
+        currentPage = Math.min(currentPage, Math.max(0, totalPages - 1));
+
+        int startIndex = currentPage * itemsPerPage;
+        int endIndex = Math.min(startIndex + itemsPerPage, filteredItems.size());
+
+        // 网格配置
+        int gridStartX = PANEL_PADDING;
+        int gridStartY = 55;
 
         for (int i = startIndex; i < endIndex; i++) {
-            MarketItem item = items.get(i);
+            int indexInPage = i - startIndex;
+            int col = indexInPage % columns;
+            int row = indexInPage / columns;
+
+            int cardX = gridStartX + col * (CARD_WIDTH + CARD_SPACING);
+            int cardY = gridStartY + row * TOTAL_CARD_HEIGHT;
+
+            MarketItem item = filteredItems.get(i);
             ItemStack itemStack = item.getItemStack();
 
-            final int currentY = y; // 使用最终变量供 Lambda 表达式使用
+            boolean isSalesOrder = item instanceof SalesOrder;
+            // 只用自己的UUID判断，不包含管理员权限
+            boolean isOwnOrder = item.getSellerID().equals(playerUUID);
+            // 管理员标识
+            boolean isAdmin = this.minecraft != null && this.minecraft.player != null && this.minecraft.player.hasPermissions(2);
+            boolean isHovered = (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
+                                mouseY >= cardY && mouseY <= cardY + CARD_HEIGHT);
 
-            if (i == 1) {
-                int rowHeight = 30;
-                int rowWidth = 120; // 获取 mainPane 当前宽度
+            // 绘制订单卡片
+            drawOrderCard(guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
+                itemStack, item.getSellerName(), item.getBasePrice(), isSalesOrder, isOwnOrder, isAdmin, isHovered);
 
-                HBoxWidget itemRow = new HBoxWidget(0, 0, 0)
-                        .setSpacing(7)
-                        .setPadding(5, 10, 5, 10)
-                        .setBorderColor(0x22FFFFFF)
-                        .setBoxWidth(rowWidth)
-                        .setBoxHeight(rowHeight)
-                        .showBorder(true, false, true, false)
-                        .setBorderThickness(1);
+            // 存储物品图标区域（用于tooltip）
+            // 图标位置与drawOrderCard中一致：居中，32x32基础大小，2倍缩放后64x64
+            int iconSize = 32;
+            int iconX = cardX + (CARD_WIDTH - iconSize) / 2;
+            int iconY = cardY + 22;
+            int actualIconSize = 64; // 2倍缩放后的实际大小
+            itemIconAreas.add(new ItemIconArea(iconX, iconY, actualIconSize, actualIconSize, itemStack));
 
-                // 图标
-                ItemIconWidget icon = new ItemIconWidget(itemStack, font, 0, 0)
-                        .setScale(1.3f)
-                        .setShowDecorations(true);
-                // 构建工具提示
-                List<Component> tooltipLines = buildItemTooltip(this.minecraft.player, item);
-                // Tooltip tooltip = Tooltip.create(buildItemTooltip(player, item));
-                icon.setTooltipLines(tooltipLines);
-                itemWidgets.add(icon);
-                // icon.setCustomTooltipLines(tooltipLines);
+            // 存储卡片和操作按钮区域
+            String actionType = getActionType(item, isOwnOrder);
+            int actionBtnWidth = 50;
+            int actionBtnHeight = 16;
+            int actionBtnX = cardX + CARD_WIDTH - 6 - actionBtnWidth;
+            int actionBtnY = cardY + CARD_HEIGHT - 6 - actionBtnHeight;
+            cardAreas.add(new OrderCardArea(actionBtnX, actionBtnY, actionBtnWidth, actionBtnHeight, i, actionType));
+
+            // 管理员专属：添加额外的强制下架按钮（左侧按钮）
+            if (isAdmin && item instanceof SalesOrder && !item.getSellerID().equals(playerUUID)) {
+                int removeBtnWidth = 50;  // 和普通按钮一样大
+                int removeBtnHeight = 16;
+                int removeBtnX = cardX + CARD_WIDTH - 6 - actionBtnWidth - removeBtnWidth - 4;
+                int removeBtnY = actionBtnY;
+                cardAreas2.add(new OrderCardArea2(removeBtnX, removeBtnY, removeBtnWidth, removeBtnHeight, i, "remove"));
             }
-
-            ItemIconAnimation icon;
-            TextAnimation name;
-            TextAnimation price;
-
-            icon = new ItemIconAnimation(
-                    startX,
-                    currentY,
-                    startX,
-                    currentY,
-                    0f,
-                    1f,
-                    0.8f,
-                    1f,
-                    1000
-            );
-
-            name = new TextAnimation(
-                    startX + 20,
-                    currentY + 5,
-                    startX + 20,
-                    currentY + 5,
-                    0f,
-                    1f,
-                    1000
-            );
-
-            price = new TextAnimation(
-                    startX,
-                    currentY + 18,
-                    startX,
-                    currentY + 18,
-                    0f,
-                    1f,
-                    1000
-            );
-
-            // 渲染物品图标, 价格与描述
-            renderCache.add((guiGraphics) -> {
-                renderAnimatedItem(
-                        guiGraphics,
-                        itemStack,
-                        icon
-                );
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.MARKET_ITEM_NAME_AND_COUNT_KEY, itemStack.getHoverName().getString(), itemStack.getCount()),
-                        name,
-                        0xFFFFFF
-                );
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.MARKET_ITEM_PRICE_KEY, item.getBasePrice()),
-                        price,
-                        0xAAAAAA
-                );
-            });
-
-            // 添加购买或下架按钮（确保在初始化时添加按钮）
-            addActionButton(item, this.width - startX, currentY, playerUUID);
-
-            y += THING_SPACING; // 调整下一件商品的位置
         }
     }
 
-    // 工具提示构建方法
-    private static List<Component> buildItemTooltip(Player player, MarketItem item) {
-        List<Component> tooltipLines = new ArrayList<>(item.getItemStack().getTooltipLines(
-                player,
-                Minecraft.getInstance().options.advancedItemTooltips ?
-                        TooltipFlag.ADVANCED : TooltipFlag.NORMAL
-        ));
-
-        // 添加分隔线
-        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.BOLD));
-
-        // 卖家信息（键带符号，值在下一行缩进）
-        // 卖家名称
-        MutableComponent sellerKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.translatable(Util_MessageKeys.MARKET_SELLER_NAME_KEY)
-                        .withStyle(ChatFormatting.GRAY));
-        tooltipLines.add(sellerKeyLine);
-
-        MutableComponent sellerValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(item.getSellerName())
-                        .withStyle(ChatFormatting.WHITE));
-        tooltipLines.add(sellerValueLine);
-
-        // 卖家UUID
-        MutableComponent sellerIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.translatable(Util_MessageKeys.MARKET_SELLER_UUID_KEY)
-                        .withStyle(ChatFormatting.GRAY));
-        tooltipLines.add(sellerIDKeyLine);
-
-        MutableComponent sellerIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(String.valueOf(item.getSellerID()))
-                        .withStyle(ChatFormatting.WHITE));
-        tooltipLines.add(sellerIDValueLine);
-
-        // 交易ID
-        MutableComponent tradeIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY)
-                        .withStyle(ChatFormatting.GRAY));
-        tooltipLines.add(tradeIDKeyLine);
-
-        MutableComponent tradeIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(String.valueOf(item.getTradeID()))
-                        .withStyle(ChatFormatting.WHITE));
-        tooltipLines.add(tradeIDValueLine);
-
-        // 物品ID
-        MutableComponent itemIDKeyLine = Component.literal("» ").withStyle(ChatFormatting.GRAY)
-                .append(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY)
-                        .withStyle(ChatFormatting.GRAY));
-        tooltipLines.add(itemIDKeyLine);
-
-        MutableComponent itemIDValueLine = Component.literal("  ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(item.getItemID())
-                        .withStyle(ChatFormatting.WHITE));
-        tooltipLines.add(itemIDValueLine);
-
-        // 添加空行和时间戳（注意：只有这里添加空行）
-        tooltipLines.add(Component.empty());
-        tooltipLines.add(Component.literal(formatTimestamp(item.getListingTime())).withStyle(ChatFormatting.GOLD));
-
-        tooltipLines.add(Component.literal("━━━━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.DARK_GRAY).withStyle(ChatFormatting.BOLD));
-
-        // 将多行合并为一个组件
-        //return joinComponents(lines);
-        return  tooltipLines;
-
-    }
-
-    @Override
-    protected void detectMouseHoverAndRenderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        initPosition();
-        int y = startY;
-
-        for (int i = startIndex; i < endIndex; i++) {
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player == null) return;
-
-            MarketItem item = items.get(i);
-
-            if (isMouseOver(mouseX, mouseY, startX, y, 16, 16)) {
-                List<Component> tooltipLines = item.getItemStack().getTooltipLines(
-                        player,
-                        Minecraft.getInstance().options.advancedItemTooltips ?
-                                TooltipFlag.ADVANCED : TooltipFlag.NORMAL
-                );
-                tooltipLines.add(Component.literal("-=-=-=-=-=-").withStyle(ChatFormatting.DARK_GRAY));
-
-                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_NAME_KEY, item.getSellerName()));
-                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_SELLER_UUID_KEY, item.getSellerID()));
-                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_TRADE_ID_KEY, item.getTradeID()));
-                tooltipLines.add(Component.translatable(Util_MessageKeys.MARKET_ITEM_ID_KEY, item.getItemID()));
-                tooltipLines.add(Component.literal(""));
-                tooltipLines.add(Component.literal(formatTimestamp(item.getListingTime())));
-
-                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
-            }
-
-            y += THING_SPACING;
-        }
-    }
-
-    // 添加初始化动态分页按钮
-    @Override
-    protected void addPageAnimatedButtons() {
-        initPosition();
-        int buttonY = this.height - 40;
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        startX,
-                        this.height,
-                        startX,
-                        buttonY,
-                        PAGE_BUTTON_WIDTH,
-                        PAGE_BUTTON_HEIGHT,
-                        Component.literal("<"),
-                        1000,
-                        button -> {
-                            if (currentPageNumber > 0) {
-                                currentPageNumber--;
-                                this.initPart(); // 刷新页面
-                            }
-                        }
-                )
-        );
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width - startX - PAGE_BUTTON_WIDTH,
-                        this.height,
-                        this.width - startX - PAGE_BUTTON_WIDTH,
-                        buttonY,
-                        PAGE_BUTTON_WIDTH,
-                        PAGE_BUTTON_HEIGHT,
-                        Component.literal(">"),
-                        1000,
-                        button -> {
-                            if (currentPageNumber < getTotalPages() - 1) {
-                                currentPageNumber++;
-                                this.initPart(); // 刷新页面
-                            }
-                        }
-                )
-        );
-    }
-
-    // 添加后续静态分页按钮
-    @Override
-    protected void addPageButtons() {
-        initPosition();
-        int buttonY = this.height - 40;
-
-        // 上一页按钮
-        this.addRenderableWidget(
-                Button.builder(Component.literal("<"), button -> {
-                            if (currentPageNumber > 0) {
-                                currentPageNumber--;
-                                this.initPart(); // 刷新页面
-                            }
-                        })
-                        .pos(startX, buttonY)
-                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
-                        .build()
-        );
-
-        // 下一页按钮
-        this.addRenderableWidget(
-                Button.builder(Component.literal(">"), button -> {
-                            if (currentPageNumber < getTotalPages() - 1) {
-                                currentPageNumber++;
-                                this.initPart(); // 刷新页面
-                            }
-                        })
-                        .pos(this.width - startX - PAGE_BUTTON_WIDTH, buttonY)
-                        .size(PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)
-                        .build()
-        );
-    }
-
-    // 添加求购按钮
-    private void addRequestItemAnimatedButton() {
-        int buttonWidth = 70;
-        int buttonHeight = 20;
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width - Math.max((this.width / 2) - 300, 60) - buttonWidth,
-                        -20,
-                        this.width - Math.max((this.width / 2) - 300, 60) - buttonWidth,
-                        20,
-                        buttonWidth,
-                        buttonHeight,
-                        Component.translatable(Util_MessageKeys.MARKET_REQUEST_BUTTON_KEY),
-                        1000,
-                        button -> {
-                            // 打开上架界面
-                            this.minecraft.setScreen(new Screen_CreateDemandOrder(minecraft.player));
-                        }
-                )
-        );
-    }
-
-    private void addRequestItemButton() {
-        int buttonWidth = 70;
-        int buttonHeight = 20;
-
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.MARKET_REQUEST_BUTTON_KEY), button -> {
-                            // 打开上架界面
-                            this.minecraft.setScreen(new Screen_CreateDemandOrder(minecraft.player));
-                        })
-                        .pos(this.width - Math.max((this.width / 2) - 300, 60) - buttonWidth, 20)
-                        .size(buttonWidth, buttonHeight)
-                        .build()
-        );
-    }
-
-    // 添加上架按钮
-    private void addListItemAnimatedButton() {
-        int buttonWidth = 70;
-        int buttonHeight = 20;
-
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width - Math.max((this.width / 2) - 300, 60) - (2 * buttonWidth + 10),
-                        -20,
-                        this.width - Math.max((this.width / 2) - 300, 60) - (2 * buttonWidth + 10),
-                        20,
-                        buttonWidth,
-                        buttonHeight,
-                        Component.translatable(Util_MessageKeys.MARKET_LIST_BUTTON_KEY),
-                        1000,
-                        button -> {
-                            // 打开上架界面
-                            this.minecraft.setScreen(new Screen_CreateSalesOrder(minecraft.player));
-                        }
-                )
-        );
-    }
-
-    private void addListItemButton() {
-        int buttonWidth = 70;
-        int buttonHeight = 20;
-
-        this.addRenderableWidget(
-                Button.builder(Component.translatable(Util_MessageKeys.MARKET_LIST_BUTTON_KEY), button -> {
-                            // 打开上架界面
-                            this.minecraft.setScreen(new Screen_CreateSalesOrder(minecraft.player));
-                        })
-                        .pos(this.width - Math.max((this.width / 2) - 300, 60) - (2 * buttonWidth + 10), 20)
-                        .size(buttonWidth, buttonHeight)
-                        .build()
-        );
-    }
-
-    // 添加切换显示类型按钮
-    private void addSwitchDisplayTypeAnimatedButton() {
-        int buttonWidth = 100;
-        int buttonHeight = 20;
-
-        // 添加到界面
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width - Math.max((this.width / 2) - 300, 60) - (2 * 70 + 20) - buttonWidth,
-                        -20,
-                        this.width - Math.max((this.width / 2) - 300, 60) - (2 * 70 + 20) - buttonWidth,
-                        20,
-                        buttonWidth,
-                        buttonHeight,
-                        Component.translatable(DISPLAY_TYPE_KEYS[displayTypeIndex]),
-                        1000,
-                        button -> {
-                            // 执行切换逻辑
-                            displayTypeIndex = (displayTypeIndex + 1) % DISPLAY_TYPE_KEYS.length; // 循环切换文本索引
-                            button.setMessage(Component.translatable(DISPLAY_TYPE_KEYS[displayTypeIndex])); // 更新按钮显示文本
-
-                            // 执行与当前显示类型相关的操作
-                            handleDisplayTypeAction(displayTypeIndex);
-                        })
-        );
-    }
-
-    private void addSwitchDisplayTypeButton() {
-        int buttonWidth = 100;
-        int buttonHeight = 20;
-
-        // 创建按钮
-        Button switchDisplayButton = Button.builder(
-                        Component.translatable(DISPLAY_TYPE_KEYS[displayTypeIndex]), // 初始文本
-                        button -> {
-                            // 执行切换逻辑
-                            displayTypeIndex = (displayTypeIndex + 1) % DISPLAY_TYPE_KEYS.length; // 循环切换文本索引
-                            button.setMessage(Component.translatable(DISPLAY_TYPE_KEYS[displayTypeIndex])); // 更新按钮显示文本
-
-                            // 执行与当前显示类型相关的操作
-                            handleDisplayTypeAction(displayTypeIndex);
-                        }
-                )
-                .pos(this.width - Math.max((this.width / 2) - 300, 60) - (2 * 70 + 20) - buttonWidth, 20)
-                .size(buttonWidth, buttonHeight)
-                .build();
-
-        // 添加到界面
-        this.addRenderableWidget(switchDisplayButton);
-    }
-
-    // 处理与显示类型相关的操作
-    private void handleDisplayTypeAction(int displayTypeIndex) {
-        this.displayTypeIndex = displayTypeIndex; // 保存过滤条件
-        applyFilters(); // 调用联合过滤逻辑
-    }
-
-    // 添加购买按钮
-    private void addItemButtons() {
-        initPosition();
-
-        int y = startY;
-        UUID playerUUID = this.minecraft.player.getUUID();
-
-        for (int i = startIndex; i < endIndex; i++) {
-
-            MarketItem item = items.get(i);
-
-            // 添加购买或下架按钮
-            this.addActionButton(item, this.width - startX, y, playerUUID);
-
-            y += THING_SPACING;
-        }
-    }
-
-    // 重构后的主方法，根据订单类型与玩家权限添加相应按钮
-    private void addActionButton(MarketItem item, int buttonX, int buttonY, UUID playerUUID) {
-        // 判断玩家是否拥有OP权限
-        boolean isOP = this.minecraft.player.hasPermissions(2);
-
-        if (item instanceof SalesOrder salesOrder) {
-            // 出货单：卖家只显示下架按钮，买家显示购买按钮；OP买家还可以看到下架按钮
-            if (salesOrder.getSellerID().equals(playerUUID)) {
-                addButton(Util_MessageKeys.MARKET_REMOVE_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                        () -> {
-                            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveSalesOrder(salesOrder.getTradeID()));
-                            refresh();
-                        });
-            } else {
-                if (isOP) {
-                    addButton(Util_MessageKeys.MARKET_REMOVE_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                            () -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveSalesOrder(salesOrder.getTradeID()));
-                                refresh();
-                            });
-                    addButton(Util_MessageKeys.MARKET_BUY_BUTTON_KEY, buttonX - 130, buttonY, 60, 20,
-                            () -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_PurchaseSalesOrder(salesOrder.getTradeID()));
-                                refresh();
-                            });
-                } else {
-                    addButton(Util_MessageKeys.MARKET_BUY_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                            () -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_PurchaseSalesOrder(salesOrder.getTradeID()));
-                                refresh();
-                            });
-                }
-            }
+    private String getActionType(MarketItem item, boolean isOwnOrder) {
+        if (item instanceof SalesOrder) {
+            // 只用自己的订单判断，管理员也有独立的强制下架按钮
+            return isOwnOrder ? "remove" : "buy";
         } else if (item instanceof DemandOrder demandOrder) {
-            // 订购单：区分卖家与买家的按钮显示，并根据交付状态及权限做进一步区分
-            if (demandOrder.getSellerID().equals(playerUUID)) {
-                if (demandOrder.isDelivered()) {
-                    addButton(Util_MessageKeys.REQUEST_CLAIM_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                            () -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
-                                refresh();
-                            });
-                } else {
-                    addButton(Util_MessageKeys.REQUEST_CANCEL_KEY, buttonX - 60, buttonY, 60, 20,
-                            () -> {
-                                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
-                                refresh();
-                            });
+            if (isOwnOrder) {
+                return demandOrder.isDelivered() ? "confirm" : "cancel";
+            }
+            return demandOrder.isDelivered() ? "none" : "deliver";
+        }
+        return "none";
+    }
+
+    private void drawOrderCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                              ItemStack itemStack, String sellerName, int price, boolean isSalesOrder, boolean isOwnOrder, boolean isAdmin, boolean isHovered) {
+        // 卡片背景
+        int cardBg = isHovered ? 0xC02A3A4A : 0xA01A2A3A;
+        guiGraphics.fill(x, y, x + width, y + height, cardBg);
+
+        // 边框
+        int borderColor = isHovered ? 0xFF4A8ACF : 0xFF3A6A9F;
+        if (isOwnOrder) {
+            borderColor = isHovered ? 0xFF4CAF50 : 0xFF3A8A3F;
+        }
+        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+
+        // 顶部装饰条
+        int topColor = isSalesOrder ? 0xFF4FC3F7 : 0xFFFF9800;
+        if (isOwnOrder) topColor = 0xFF4CAF50;
+        guiGraphics.fill(x, y, x + width, y + 3, topColor);
+
+        int padding = 6;
+
+        // 订单类型标签（左上角）
+        String typeLabel = isSalesOrder ? "📦 卖单" : "📋 求单";
+        if (isOwnOrder) typeLabel = "📌 我的";
+        guiGraphics.drawString(font, typeLabel, x + padding, y + padding, topColor);
+
+        // 物品名称（类型标签下方，左上角）
+        String itemName = itemStack.getHoverName().getString();
+        String displayName = CardRenderer.truncateText(font, itemName, width - padding * 2 - 60); // 留出右侧价格空间
+        guiGraphics.drawString(font, displayName, x + padding, y + padding + font.lineHeight + 2, 0xFFFFFFFF);
+
+        // 价格（右上角）
+        String priceText = "💰 " + formatNumber(price);
+        int priceWidth = font.width(priceText);
+        guiGraphics.drawString(font, priceText, x + width - padding - priceWidth, y + padding, 0xFFFFD700);
+
+        // 物品图标（居中）
+        int iconSize = 32;
+        int iconX = x + (width - iconSize) / 2;
+        int iconY = y + 22;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(2.0f, 2.0f, 1.0f);
+        guiGraphics.renderItem(itemStack, iconX / 2, iconY / 2);
+        guiGraphics.pose().popPose();
+
+        // 卖家名称（底部左侧）
+        String sellerText = "卖家: " + sellerName;
+        String truncatedSeller = CardRenderer.truncateText(font, sellerText, width - padding * 2 - 55); // 留出按钮空间
+        guiGraphics.drawString(font, truncatedSeller, x + padding, y + height - 12, 0x80CCCCCC);
+
+        // 操作按钮背景
+        int btnWidth = 50;
+        int btnHeight = 16;
+        int btnX = x + width - padding - btnWidth;
+        int btnY = y + height - padding - btnHeight;
+
+        int btnBg = 0xC03A7ABF;
+        int btnBorder = 0xFF4A8ACF;
+        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + btnHeight, btnBg);
+        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + 1, btnBorder);
+        guiGraphics.fill(btnX, btnY + btnHeight - 1, btnX + btnWidth, btnY + btnHeight, btnBorder);
+        guiGraphics.fill(btnX, btnY, btnX + 1, btnY + btnHeight, btnBorder);
+        guiGraphics.fill(btnX + btnWidth - 1, btnY, btnX + btnWidth, btnY + btnHeight, btnBorder);
+
+        // 按钮文字
+        String btnText = isSalesOrder ? (isOwnOrder ? "下架" : "购买") : (isOwnOrder ? "取消" : "交付");
+        int btnTextWidth = font.width(btnText);
+        guiGraphics.drawString(font, btnText, btnX + (btnWidth - btnTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+
+        // 管理员专属：左侧额外的强制下架按钮（仅对卖单且非自己订单）
+        if (isAdmin && isSalesOrder && !isOwnOrder) {
+            int removeBtnWidth = 50;  // 和普通按钮一样大
+            int removeBtnHeight = 16;
+            int removeBtnX = btnX - removeBtnWidth - 4;
+            int removeBtnY = btnY;
+
+            // 强制下架按钮背景（红色）
+            int removeBg = 0xC0AA3333;
+            int removeBorder = 0xFFCC4444;
+            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBg);
+            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + 1, removeBorder);
+            guiGraphics.fill(removeBtnX, removeBtnY + removeBtnHeight - 1, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBorder);
+            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + 1, removeBtnY + removeBtnHeight, removeBorder);
+            guiGraphics.fill(removeBtnX + removeBtnWidth - 1, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBorder);
+
+            // 强制下架按钮文字
+            String removeText = "强制下架";
+            int removeTextWidth = font.width(removeText);
+            guiGraphics.drawString(font, removeText, removeBtnX + (removeBtnWidth - removeTextWidth) / 2, removeBtnY + (removeBtnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        }
+    }
+
+    private void renderPageControls(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        int totalPages = getTotalPages();
+        if (totalPages <= 1) return;
+
+        String pageText = (currentPage + 1) + " / " + totalPages;
+        int pageTextWidth = font.width(pageText);
+        int pageTextX = virtualWidth / 2 - pageTextWidth / 2;
+        int pageTextY = virtualHeight - 35;
+        guiGraphics.drawString(font, pageText, pageTextX, pageTextY, 0xFFFFFFFF);
+
+        int btnWidth = 50;
+        int btnHeight = 24;
+        int btnY = virtualHeight - 40;
+        int prevBtnX = pageTextX - btnWidth - 12;
+
+        prevBtnX1 = prevBtnX;
+        prevBtnY1 = btnY;
+        prevBtnX2 = prevBtnX + btnWidth;
+        prevBtnY2 = btnY + btnHeight;
+
+        boolean prevHovered = (mouseX >= prevBtnX1 && mouseX <= prevBtnX2 && mouseY >= prevBtnY1 && mouseY <= prevBtnY2);
+        drawPageButton(guiGraphics, prevBtnX, btnY, btnWidth, btnHeight, "<", prevHovered, currentPage > 0);
+
+        int nextBtnX = pageTextX + pageTextWidth + 12;
+
+        nextBtnX1 = nextBtnX;
+        nextBtnY1 = btnY;
+        nextBtnX2 = nextBtnX + btnWidth;
+        nextBtnY2 = btnY + btnHeight;
+
+        boolean nextHovered = (mouseX >= nextBtnX1 && mouseX <= nextBtnX2 && mouseY >= nextBtnY1 && mouseY <= nextBtnY2);
+        drawPageButton(guiGraphics, nextBtnX, btnY, btnWidth, btnHeight, ">", nextHovered, currentPage < totalPages - 1);
+    }
+
+    private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text, boolean isHovered, boolean isEnabled) {
+        int bgColor = isEnabled ? (isHovered ? 0xD04A8ACF : 0xB03A7ABF) : 0x602A2A3A;
+        int borderColor = isEnabled ? (isHovered ? 0xFF6AB8FF : 0xFF4A8ACF) : 0xFF3A3A4A;
+        int textColor = isEnabled ? 0xFFFFFFFF : 0x60808080;
+
+        guiGraphics.fill(x, y, x + width, y + height, bgColor);
+        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+
+        if (isEnabled) {
+            guiGraphics.fill(x + 2, y + 1, x + width - 2, y + 2, 0x60FFFFFF);
+        }
+
+        int textWidth = font.width(text);
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + (height - font.lineHeight) / 2;
+        guiGraphics.drawString(font, text, textX, textY, textColor);
+    }
+
+    /**
+     * 渲染物品tooltip
+     * 检测鼠标是否在物品图标区域上，如果是则显示tooltip
+     */
+    private void renderItemTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
+
+        for (ItemIconArea iconArea : itemIconAreas) {
+            if (virtualMouseX >= iconArea.x() && virtualMouseX <= iconArea.x() + iconArea.width() &&
+                virtualMouseY >= iconArea.y() && virtualMouseY <= iconArea.y() + iconArea.height()) {
+
+                ItemStack itemStack = iconArea.itemStack();
+                if (itemStack != null && !itemStack.isEmpty() && this.minecraft != null && this.minecraft.player != null) {
+                    // 获取tooltip行
+                    List<Component> tooltipLines = itemStack.getTooltipLines(
+                        this.minecraft.player,
+                        this.minecraft.options.advancedItemTooltips ?
+                            net.minecraft.world.item.TooltipFlag.ADVANCED : net.minecraft.world.item.TooltipFlag.NORMAL
+                    );
+
+                    // 渲染tooltip，跟随鼠标位置
+                    guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
                 }
-            } else {
-                if (isOP) {
-                    if (demandOrder.isDelivered()) {
-                        addButton(Util_MessageKeys.REQUEST_CLAIM_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
-                        addDisabledButton(Util_MessageKeys.REQUEST_DELIVERED_STATUS_KEY, buttonX - 130, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
-                    } else {
-                        addButton(Util_MessageKeys.REQUEST_CANCEL_KEY, buttonX - 60, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
-                        addButton(Util_MessageKeys.REQUEST_DELIVER_BUTTON_KEY, buttonX - 130, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
-                    }
-                } else {
-                    if (demandOrder.isDelivered()) {
-                        addDisabledButton(Util_MessageKeys.REQUEST_DELIVERED_STATUS_KEY, buttonX - 60, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_PurchaseSalesOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
-                    } else {
-                        addButton(Util_MessageKeys.REQUEST_DELIVER_BUTTON_KEY, buttonX - 60, buttonY, 60, 20,
-                                () -> {
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
-                                    refresh();
-                                });
+                break; // 只显示第一个匹配的tooltip
+            }
+        }
+    }
+
+    private int getTotalPages() {
+        return (int) Math.ceil((double) filteredItems.size() / itemsPerPage);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
+
+        // 检查过滤器点击
+        String[] filters = {"全部", "我的", "卖单", "求单"};
+        int filterX = PANEL_PADDING;
+        int filterY = virtualHeight - PANEL_PADDING - font.lineHeight;
+        for (int i = 0; i < filters.length; i++) {
+            int textWidth = font.width(filters[i]);
+            // 点击区域：文字和下划线
+            if (virtualMouseX >= filterX && virtualMouseX <= filterX + textWidth &&
+                virtualMouseY >= filterY - 2 && virtualMouseY <= filterY + font.lineHeight + 5) {
+                filterIndex = i;
+                applyFilters();
+                return true;
+            }
+            filterX += textWidth + 20;
+        }
+
+        // 检查上架按钮点击
+        if (virtualMouseX >= listBtnX1 && virtualMouseX <= listBtnX2 &&
+            virtualMouseY >= listBtnY1 && virtualMouseY <= listBtnY2) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_CreateSalesOrder(this.minecraft.player));
+            }
+            return true;
+        }
+
+        // 检查求购按钮点击
+        if (virtualMouseX >= requestBtnX1 && virtualMouseX <= requestBtnX2 &&
+            virtualMouseY >= requestBtnY1 && virtualMouseY <= requestBtnY2) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_CreateDemandOrder(this.minecraft.player));
+            }
+            return true;
+        }
+
+        // 检查操作按钮点击
+        for (OrderCardArea cardArea : cardAreas) {
+            if (virtualMouseX >= cardArea.x() && virtualMouseX <= cardArea.x() + cardArea.width() &&
+                virtualMouseY >= cardArea.y() && virtualMouseY <= cardArea.y() + cardArea.height()) {
+
+                MarketItem item = filteredItems.get(cardArea.itemIndex());
+                handleOrderAction(item, cardArea.actionType());
+                return true;
+            }
+        }
+
+        // 检查管理员专属下架按钮点击
+        for (OrderCardArea2 cardArea : cardAreas2) {
+            if (virtualMouseX >= cardArea.x() && virtualMouseX <= cardArea.x() + cardArea.width() &&
+                virtualMouseY >= cardArea.y() && virtualMouseY <= cardArea.y() + cardArea.height()) {
+
+                MarketItem item = filteredItems.get(cardArea.itemIndex());
+                handleOrderAction(item, cardArea.actionType());
+                return true;
+            }
+        }
+
+        // 检查翻页按钮
+        if (virtualMouseX >= prevBtnX1 && virtualMouseX <= prevBtnX2 &&
+            virtualMouseY >= prevBtnY1 && virtualMouseY <= prevBtnY2) {
+            if (currentPage > 0) currentPage--;
+            return true;
+        }
+
+        if (virtualMouseX >= nextBtnX1 && virtualMouseX <= nextBtnX2 &&
+            virtualMouseY >= nextBtnY1 && virtualMouseY <= nextBtnY2) {
+            if (currentPage < getTotalPages() - 1) currentPage++;
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void handleOrderAction(MarketItem item, String actionType) {
+        switch (actionType) {
+            case "buy" -> {
+                if (item instanceof SalesOrder salesOrder) {
+                    // 显示购买确认弹窗
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new Screen_MarketConfirmDialog(
+                            Screen_MarketConfirmDialog.ConfirmType.BUY_SALES, salesOrder, this));
                     }
                 }
             }
+            case "remove" -> {
+                if (item instanceof SalesOrder salesOrder) {
+                    // 显示下架确认弹窗
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new Screen_MarketConfirmDialog(
+                            Screen_MarketConfirmDialog.ConfirmType.REMOVE_SALES, salesOrder, this));
+                    }
+                }
+            }
+            case "deliver" -> {
+                if (item instanceof DemandOrder demandOrder) {
+                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
+                    refresh();
+                }
+            }
+            case "cancel" -> {
+                if (item instanceof DemandOrder demandOrder) {
+                    // 显示取消确认弹窗
+                    if (this.minecraft != null) {
+                        this.minecraft.setScreen(new Screen_MarketConfirmDialog(
+                            Screen_MarketConfirmDialog.ConfirmType.REMOVE_DEMAND, demandOrder, this));
+                    }
+                }
+            }
+            case "confirm" -> {
+                if (item instanceof DemandOrder demandOrder) {
+                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
+                    refresh();
+                }
+            }
         }
-        // 其它类型暂不处理
     }
 
-    // 辅助方法：创建并添加一个按钮
-    private void addButton(String translationKey, int posX, int posY, int width, int height, Runnable onClick) {
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width + width,
-                        posY,
-                        posX,
-                        posY,
-                        width,
-                        height,
-                        Component.translatable(translationKey),
-                        1000,
-                        button -> onClick.run()
-                )
-        );
-    }
-
-    // 辅助方法：创建一个按钮并将其设为不可用（disabled）
-    private void addDisabledButton(String translationKey, int posX, int posY, int width, int height, Runnable onClick) {
-        AnimatedButton button = new AnimatedButton(
-                this.width + width,
-                posY,
-                posX,
-                posY,
-                width,
-                height,
-                Component.translatable(translationKey),
-                1000,
-                btn -> onClick.run()
-        );
-        button.active = false;
-        this.addRenderableWidget(button);
-    }
-
-    // 辅助方法：发送刷新界面
-    private void refresh() {
-        refreshItemButtons();
-        requestMarketUpdate();
-    }
-
-    private void requestMarketUpdate() {
+    public void refresh() {
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int totalPages = getTotalPages();
+        if (totalPages > 1) {
+            int newPage = currentPage - (int) Math.signum(delta);
+            currentPage = Math.max(0, Math.min(totalPages - 1, newPage));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.searchBox.isFocused() && keyCode == 257) { // 检测回车键（keyCode 257）
-            applySearch();
-            return true; // 防止事件进一步传播
-        } else if (keyCode == 256 && this.shouldCloseOnEsc()) {
-            Minecraft.getInstance().setScreen(new Screen_Home());
+        if (keyCode == 256) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Home());
+            }
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    private void applySearch() {
-        applyFilters(); // 调用联合过滤逻辑
-    }
-
-    private void applyFilters() {
-        new Thread(() -> {
-            List<MarketItem> result = itemsSnapshot;
-
-            // 1. 应用过滤条件
-            switch (displayTypeIndex) {
-                case 1: // 仅显示自己的订单
-                    result = result.stream()
-                            .filter(item -> item.getSellerName().toLowerCase().contains(playerName.toLowerCase()))
-                            .collect(Collectors.toList());
-                    break;
-                case 2: // 仅显示非自己的订单
-                    result = result.stream()
-                            .filter(item -> !item.getSellerName().toLowerCase().contains(playerName.toLowerCase()))
-                            .collect(Collectors.toList());
-                    break;
-                case 3: // 仅显示出货单
-                    result = result.stream()
-                            .filter(SalesOrder.class::isInstance)
-                            .collect(Collectors.toList());
-                    break;
-                case 4: // 仅显示订购单
-                    result = result.stream()
-                            .filter(DemandOrder.class::isInstance)
-                            .collect(Collectors.toList());
-                    break;
-                // case 0: 无过滤条件
-            }
-
-            // 2. 应用搜索条件
-            if (searchBox != null && !searchBox.getValue().isEmpty()) {
-                result = result.stream()
-                        .filter(item -> itemMatchesSearch(item, searchBox.getValue()))
-                        .collect(Collectors.toList());
-            }
-
-            // 3. 更新UI
-            List<MarketItem> finalResult = result;
-            this.minecraft.execute(() -> {
-                this.items = finalResult;
-                this.currentPageNumber = 0;
-                refreshItemButtons();
-                initializeRenderCache(); // 重新初始化渲染缓存
-            });
-        }).start();
-    }
-
-    private boolean itemMatchesSearch(MarketItem item, String searchText) {
-        return item.getItemID().toLowerCase().contains(searchText.toLowerCase()) ||
-                item.getSellerName().toLowerCase().contains(searchText.toLowerCase()) ||
-                item.getItemStack().getHoverName().getString().toLowerCase().contains(searchText.toLowerCase());
-    }
-
-    // 刷新购买按钮
-    private void refreshItemButtons() {
-        clearItemButtons(); // 清除旧的商品按钮
-        addItemButtons();   // 添加新的商品按钮
-    }
-
-    // 移除购买按钮
-    private void clearItemButtons() {
-        // 遍历所有已渲染的控件并移除与商品相关的按钮
-        this.renderables.removeIf(widget -> widget instanceof Button && isItemButton((Button) widget));
-        this.children().removeIf(widget -> widget instanceof Button && isItemButton((Button) widget));
-    }
-
-    // 判断是否为购买按钮
-    private boolean isItemButton(Button button) {
-        // 判断按钮是否为 "Buy" 或 "Remove" 按钮
-        Component buttonMessage = button.getMessage();
-        return buttonMessage.equals(Component.translatable(Util_MessageKeys.MARKET_BUY_BUTTON_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.MARKET_REMOVE_BUTTON_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.REQUEST_DELIVER_BUTTON_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.REQUEST_DELIVERED_STATUS_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.REQUEST_CLAIM_BUTTON_KEY)) ||
-                buttonMessage.equals(Component.translatable(Util_MessageKeys.REQUEST_CANCEL_KEY));
-    }
-
-    public void updateMarketItems(List<MarketItem> items) {
-        this.items = new ArrayList<>(items); // 初始化过滤后的列表
-        this.itemsSnapshot = new ArrayList<>(items); // 初始化过滤后的列表
-        this.init(); // 每次更新市场物品后重新初始化界面
-    }
-
-    // 动态计算总页数
-    private int getTotalPages() {
-        return (int) Math.ceil((double) this.items.size() / thingsPerPage);
-    }
-
     @Override
-    protected void initPosition(){
-        TOP_MARGIN = this.height - 100;
-        thingsPerPage = Math.max(1, TOP_MARGIN / THING_SPACING);
-
-        startIndex = currentPageNumber * thingsPerPage;
-        endIndex = Math.min(startIndex + thingsPerPage, items.size());
-
-        startX = Math.max((this.width / 2) - 300, 60);
-        startY = Math.max((this.height - 450) / 4, 55);
+    public boolean isPauseScreen() {
+        return false;
     }
 
-    // 格式化时间戳
-    private static String formatTimestamp(long timestamp) {
-        return Instant.ofEpochMilli(timestamp)
-                .atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM));
+    private static String formatNumber(int num) {
+        if (num >= 10000) {
+            return String.format("%.1fk", num / 1000.0);
+        }
+        return String.valueOf(num);
     }
 }
