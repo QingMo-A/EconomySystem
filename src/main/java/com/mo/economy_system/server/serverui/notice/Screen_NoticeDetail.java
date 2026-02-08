@@ -262,6 +262,8 @@ public class Screen_NoticeDetail extends Screen {
     @Override
     public void onClose() {
         com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI.onSubScreenClosed();
+        // 设置返回标记，跳过打开动画
+        com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI.setReturningFromSubScreen(true);
         Minecraft mc = Minecraft.getInstance();
         com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen screen =
             new com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen();

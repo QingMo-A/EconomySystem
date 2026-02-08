@@ -14,6 +14,9 @@ public class ServerScreenUI {
     // 标记：子屏幕是否正在显示（防止 ClientEventHandler 强制恢复主UI）
     private static boolean SUB_SCREEN_ACTIVE = false;
 
+    // 标记：是否正在从子屏幕返回（用于跳过打开动画）
+    private static boolean RETURNING_FROM_SUB_SCREEN = false;
+
     public static void setShowUI(boolean state) {
         SHOW_UI = state;
     }
@@ -84,5 +87,15 @@ public class ServerScreenUI {
     // 子屏幕关闭时调用此方法
     public static void onSubScreenClosed() {
         SUB_SCREEN_ACTIVE = false;
+    }
+
+    // 设置从子屏幕返回标记
+    public static void setReturningFromSubScreen(boolean state) {
+        RETURNING_FROM_SUB_SCREEN = state;
+    }
+
+    // 检查是否正在从子屏幕返回
+    public static boolean isReturningFromSubScreen() {
+        return RETURNING_FROM_SUB_SCREEN;
     }
 }

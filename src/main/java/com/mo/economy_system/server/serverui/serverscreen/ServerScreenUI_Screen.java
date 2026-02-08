@@ -83,6 +83,9 @@ public class ServerScreenUI_Screen extends Screen {
     private long closeTime = 0;                                // UI 开始关闭的时间戳
     private static final long CLOSE_ANIMATION_DURATION = 150;  // 关闭动画持续时间（毫秒）
 
+    // 跳过动画标记（从子屏幕返回时使用）
+    private boolean skipAnimation = false;
+
     // ==================== 虚拟坐标系统变量 ====================
     // 这些变量在 calculateVirtualSize() 中每帧重新计算
     private float uiScale;           // 虚拟坐标到屏幕坐标的缩放比例
@@ -184,8 +187,18 @@ public class ServerScreenUI_Screen extends Screen {
         super.init();
         // 初始化页面渲染器
         pageRenderer = new ServerScreenUI_PageRenderer(this, LEFT_BUTTON_ICONS.length);
+        // 检查是否从子屏幕返回，保存跳过动画标记
+        skipAnimation = ServerScreenUI.isReturningFromSubScreen();
+        if (skipAnimation) {
+            ServerScreenUI.setReturningFromSubScreen(false);
+        }
         // 记录动画开始时间
-        openTime = Util.getMillis();
+        // 如果是从子屏幕返回，跳过动画（将 openTime 设为过去的时间）
+        if (skipAnimation) {
+            openTime = Util.getMillis() - ANIMATION_DURATION - 1;
+        } else {
+            openTime = Util.getMillis();
+        }
         // 计算缩放比例
         calculateVirtualSize();
         // 请求领地数据
@@ -393,8 +406,8 @@ public class ServerScreenUI_Screen extends Screen {
 
         // 标题 Y 坐标（左下角）
         int titleY;
-        if (!isClosing) {
-            // 打开时：从左往右滑入
+        if (!isClosing && !skipAnimation) {
+            // 打开时：从下往上滑入
             float titleAnimDuration = 600f;
             float titleProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / titleAnimDuration);
             titleProgress = 1.0f - (float) Math.pow(1.0f - titleProgress, 3);
@@ -402,7 +415,7 @@ public class ServerScreenUI_Screen extends Screen {
             int targetTitleY = virtualHeight - mc.font.lineHeight - 10;  // 距底部 10 像素
             int slideDistance = 60;
 
-            titleY = targetTitleY - (int) ((1.0f - titleProgress) * slideDistance);
+            titleY = targetTitleY + (int) ((1.0f - titleProgress) * slideDistance);
         } else {
             titleY = virtualHeight - mc.font.lineHeight - 10;
         }
@@ -431,7 +444,7 @@ public class ServerScreenUI_Screen extends Screen {
         // ========================================================================
         // 计算中栏内容的动画偏移（与右栏保持一致）
         int centerOffsetY;
-        if (!isClosing) {
+        if (!isClosing && !skipAnimation) {
             float centerAnimDuration = 800f;
             float centerProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / centerAnimDuration);
             centerProgress = 1.0f - (float) Math.pow(1.0f - centerProgress, 3);
@@ -611,7 +624,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // ==================== 右侧内容滑入动画 ====================
         int rightOffsetY;
-        if (!isClosing) {
+        if (!isClosing && !skipAnimation) {
             // 打开时：从下往上滑入
             float rightAnimDuration = 800f;
             float rightProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / rightAnimDuration);
@@ -693,7 +706,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // 滑入动画
         int animOffsetY = 0;
-        if (!isClosing) {
+        if (!isClosing && !skipAnimation) {
             float animDuration = 500f;
             float progress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / animDuration);
             progress = 1.0f - (float) Math.pow(1.0f - progress, 3);
@@ -745,7 +758,7 @@ public class ServerScreenUI_Screen extends Screen {
 
         // 服务器信息区域滑入动画（从下往上，比按钮稍晚一点）
         int infoAnimOffsetY = 0;
-        if (!isClosing) {
+        if (!isClosing && !skipAnimation) {
             float infoAnimDuration = 600f;
             float infoProgress = Math.min(1.0f, (float) (Util.getMillis() - openTime) / infoAnimDuration);
             infoProgress = 1.0f - (float) Math.pow(1.0f - infoProgress, 3);

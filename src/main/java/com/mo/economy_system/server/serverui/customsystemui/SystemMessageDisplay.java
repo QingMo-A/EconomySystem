@@ -135,6 +135,9 @@ public class SystemMessageDisplay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
+        // F3 调试菜单打开时隐藏系统消息
+        if (mc.options.renderDebug) return;
+
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
 

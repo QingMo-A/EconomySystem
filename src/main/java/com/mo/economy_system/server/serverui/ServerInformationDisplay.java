@@ -128,6 +128,9 @@ public class ServerInformationDisplay {
 
         if (!SHOW_UI || mc.isPaused() || mc.screen != null || mc.player == null) return;
 
+        // F3 调试菜单打开时隐藏所有信息栏
+        if (mc.options.renderDebug) return;
+
         GuiGraphics guiGraphics = event.getGuiGraphics();
         Font font = mc.font;
         int screenWidth = event.getWindow().getGuiScaledWidth();

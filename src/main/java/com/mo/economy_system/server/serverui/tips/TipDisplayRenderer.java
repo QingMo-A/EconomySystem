@@ -33,6 +33,11 @@ public class TipDisplayRenderer {
             return;
         }
 
+        // F3 调试菜单打开时隐藏提示消息
+        if (mc.options.renderDebug) {
+            return;
+        }
+
         GuiGraphics guiGraphics = event.getGuiGraphics();
         List<TipMessage> messages = TipDisplayManager.getActiveMessages();
         if (messages.isEmpty()) {
