@@ -1,8 +1,11 @@
 package com.mo.economy_system.screen;
 
+import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
 import com.mo.economy_system.screen.components.CardRenderer;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
@@ -23,11 +26,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 经济系统主页屏幕 - 现代化卡片风格
+ * 经济系统主页屏幕 - 现代化卡片风�?
  *
- * 布局：
+ * 布局�?
  * - 左侧：导航卡片按钮组
- * - 右侧：余额卡片 + 交易信息卡片（并排） + 富豪榜卡片
+ * - 右侧：余额卡�?+ 交易信息卡片（并排） + 富豪榜卡�?
  * - 左下角：版本信息
  */
 public class Screen_Home extends Screen {
@@ -41,7 +44,7 @@ public class Screen_Home extends Screen {
 
     // ==================== 导航卡片配置 ====================
     private static final String[] NAV_ICONS = {"🛒", "📈", "📦", "🏰", "ℹ️"};
-    private static final String[] NAV_NAMES = {"商店", "市场", "收货箱", "领地", "关于"};
+    private static final String[] NAV_NAMES = {"商店", "市场", "邮箱", "领地", "关于"};
     private static final int[] NAV_COLORS = {
         CardRenderer.THEME_SHOP,
         CardRenderer.THEME_MARKET,
@@ -58,8 +61,8 @@ public class Screen_Home extends Screen {
     private int buyOrderCount = 0;
 
     // ==================== 动画 ====================
-    private long openTime = 0;
     private static final long ANIMATION_DURATION = 500;
+    private final UiAnimation openAnimation = new UiAnimation(ANIMATION_DURATION, UiAnimation.Easing.EASE_OUT_CUBIC);
     private boolean skipAnimation = false;
 
     // ==================== 虚拟坐标系统 ====================
@@ -79,21 +82,25 @@ public class Screen_Home extends Screen {
     // ==================== 交易信息卡片点击区域 ====================
     private int tradeCardX1, tradeCardY1, tradeCardX2, tradeCardY2;
 
-    // ==================== 富豪榜滚动 ====================
+    // ==================== 富豪榜滚�?====================
     private int leaderboardScrollOffset = 0;
+    private final UiButtonStyle[] navButtonStyles = new UiButtonStyle[NAV_COLORS.length];
 
     public Screen_Home() {
         super(Component.translatable(Util_MessageKeys.HOME_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+        for (int i = 0; i < NAV_COLORS.length; i++) {
+            navButtonStyles[i] = UiButtonStyle.accent(NAV_COLORS[i]);
+        }
     }
 
     @Override
     protected void init() {
         super.init();
         if (skipAnimation) {
-            openTime = System.currentTimeMillis() - ANIMATION_DURATION - 1;
+            openAnimation.finish();
         } else {
-            openTime = System.currentTimeMillis();
+            openAnimation.start();
         }
         if (this.minecraft != null && this.minecraft.player != null) {
             this.playerName = this.minecraft.player.getName().getString();
@@ -111,19 +118,9 @@ public class Screen_Home extends Screen {
         rightPanelWidth = virtualWidth - rightPanelStartX - PANEL_PADDING;
     }
 
-    private float getAnimationProgress() {
-        if (skipAnimation) return 1.0f;
-        long elapsed = System.currentTimeMillis() - openTime;
-        return Math.min(1.0f, (float) elapsed / ANIMATION_DURATION);
-    }
-
-    private float easeOutCubic(float t) {
-        return 1.0f - (float) Math.pow(1.0f - t, 3);
-    }
-
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 先绘制全屏背景（在缩放之前，确保填满整个屏幕）
+        // 先绘制全屏背景（在缩放之前，确保填满整个屏幕�?
         renderFullScreenBackground(guiGraphics);
 
         calculateVirtualSize();
@@ -140,7 +137,7 @@ public class Screen_Home extends Screen {
     }
 
     private void renderPanels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        float animProgress = easeOutCubic(getAnimationProgress());
+        float animProgress = openAnimation.value();
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
         int leftOffsetX = (int) ((1.0f - animProgress) * -50);
@@ -158,7 +155,7 @@ public class Screen_Home extends Screen {
         renderContentPanel(guiGraphics, virtualMouseX, virtualMouseY);
         guiGraphics.pose().popPose();
 
-        // 左下角版本信息
+        // 左下角版本信�?
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(leftOffsetX, 0, 0);
         int versionY = virtualHeight - PANEL_PADDING;
@@ -180,8 +177,8 @@ public class Screen_Home extends Screen {
             navCardY2[i] = cardY + cardHeight;
             boolean isHovered = (mouseX >= cardX && mouseX <= cardX + cardWidth &&
                                 mouseY >= cardY && mouseY <= cardY + cardHeight);
-            CardRenderer.drawNavCard(guiGraphics, font, cardX, cardY, cardWidth, cardHeight,
-                NAV_ICONS[i], NAV_NAMES[i], NAV_COLORS[i], isHovered);
+            UiButtonRenderer.drawStripedButton(guiGraphics, font, cardX, cardY, cardWidth, cardHeight,
+                NAV_NAMES[i], NAV_ICONS[i], navButtonStyles[i], isHovered);
         }
     }
 
@@ -203,14 +200,14 @@ public class Screen_Home extends Screen {
         // 顶部一排两个卡片：余额 + 交易信息
         int halfWidth = (rightPanelWidth - CARD_SPACING) / 2;
 
-        // 左侧：余额卡片
+        // 左侧：余额卡�?
         int balanceCardX = rightPanelStartX;
         int balanceCardY = startY;
         CardRenderer.drawBalanceCard(guiGraphics, font,
             balanceCardX, balanceCardY, halfWidth, topRowHeight,
             balance >= 0 ? balance : 0, playerRank);
 
-        // 右侧：交易信息卡片
+        // 右侧：交易信息卡�?
         int tradeCardX = balanceCardX + halfWidth + CARD_SPACING;
         tradeCardX1 = tradeCardX;
         tradeCardY1 = startY;
@@ -222,7 +219,7 @@ public class Screen_Home extends Screen {
             tradeCardX, tradeCardY1, halfWidth, topRowHeight,
             sellOrderCount, buyOrderCount, isTradeHovered);
 
-        // ==================== 富豪榜卡片 ====================
+        // ==================== 富豪榜卡�?====================
         int leaderboardCardY = startY + topRowHeight + CARD_SPACING;
         int leaderboardCardHeight = virtualHeight - leaderboardCardY - PANEL_PADDING;
 
@@ -236,7 +233,7 @@ public class Screen_Home extends Screen {
         float virtualMouseX = (float) mouseX / uiScale;
         float virtualMouseY = (float) mouseY / uiScale;
 
-        // 检查导航卡片点击
+        // 检查导航卡片点�?
         for (int i = 0; i < NAV_ICONS.length; i++) {
             if (virtualMouseX >= navCardX1[i] && virtualMouseX <= navCardX2[i] &&
                 virtualMouseY >= navCardY1[i] && virtualMouseY <= navCardY2[i]) {
@@ -245,7 +242,7 @@ public class Screen_Home extends Screen {
             }
         }
 
-        // 检查交易信息卡片点击
+        // 检查交易信息卡片点�?
         if (virtualMouseX >= tradeCardX1 && virtualMouseX <= tradeCardX2 &&
             virtualMouseY >= tradeCardY1 && virtualMouseY <= tradeCardY2) {
             if (this.minecraft != null) {
@@ -285,7 +282,7 @@ public class Screen_Home extends Screen {
     }
 
     /**
-     * 更新交易信息（卖单和求购数量）
+     * 更新交易信息（卖单和求购数量�?
      */
     public void updateTradeInfo(int sellCount, int buyCount) {
         this.sellOrderCount = sellCount;
