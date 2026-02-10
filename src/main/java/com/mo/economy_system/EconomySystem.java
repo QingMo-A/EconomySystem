@@ -12,6 +12,7 @@ import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.core.playerattributes_system.limb_health_system.LimbDamageConfig;
+import com.mo.economy_system.loot.EconomySystem_LootModifiers;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.server.notice.NoticeManager;
 import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
@@ -51,6 +52,7 @@ public class EconomySystem {
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
         // 注册实体
         EconomySystem_Entities.ENTITIES.register(modEventBus);
+        EconomySystem_LootModifiers.register(modEventBus);
         // 注册世界渲染事件
         // modEventBus.addListener(CustomHitboxRenderer::onRenderWorld);
         // modEventBus.addListener(ArmorTickHandler::onPlayerTick);
