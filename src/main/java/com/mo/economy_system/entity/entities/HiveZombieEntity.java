@@ -13,19 +13,27 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,9 +61,17 @@ public class HiveZombieEntity extends Monster {
     private static final UUID NIGHT_RANGE_MODIFIER =
             UUID.fromString("22222222-aaaa-bbbb-cccc-000000000003");
 
+    private final WaterBoundPathNavigation waterNavigation;
+    private final GroundPathNavigation groundNavigation;
+
 
     public HiveZombieEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
+        this.setMaxUpStep(1.0F);
+        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.1F, true);
+        this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
+        this.waterNavigation = new WaterBoundPathNavigation(this, level);
+        this.groundNavigation = new GroundPathNavigation(this, level);
     }
 
     /*  =========================
@@ -89,32 +105,123 @@ public class HiveZombieEntity extends Monster {
     protected void registerGoals() {
         super.registerGoals();
 
-        // 包围移动（优先于近战）
+        // 游泳
+
+        // 嗜血追击：持续压迫目�?        this.goalSelector.addGoal(1, new HiveBloodlustGoal(this, 1.45D));
+
+        // 逼近目标（中距离维持压迫感）
+        this.goalSelector.addGoal(4, new net.minecraft.world.entity.ai.goal.MoveTowardsTargetGoal(this, 1.25D, 32.0F));
+
+        // 受伤反击
+        this.targetSelector.addGoal(0, new net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal(this));
+
+        // 包围移动（优先于近战�?
         this.goalSelector.addGoal(2, new com.mo.economy_system.entity.entities.model.ai.HiveEncircleGoal(this));
 
         // 近战
-        this.goalSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.0D, false));
+        this.goalSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.3D, false));
 
         // 随机移动
-        this.goalSelector.addGoal(7, new net.minecraft.world.entity.ai.goal.RandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(7, new net.minecraft.world.entity.ai.goal.RandomStrollGoal(this, 0.9D));
 
         // 看向玩家
         this.goalSelector.addGoal(8, new net.minecraft.world.entity.ai.goal.LookAtPlayerGoal(this, Player.class, 8.0F));
 
         // 随机环顾
-        this.goalSelector.addGoal(8, new net.minecraft.world.entity.ai.goal.RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(9, new net.minecraft.world.entity.ai.goal.RandomLookAroundGoal(this));
 
         // 丧尸基础AI
-        this.targetSelector.addGoal(2, new HiveZombieTargetGoal(this));
+        this.targetSelector.addGoal(1, new HiveZombieTargetGoal(this));
+    }
+
+    @Override
+    public void travel(Vec3 p_32394_) {
+        if (this.isControlledByLocalInstance() && this.isInWater() && this.economySystem$wantsToSwim()) {
+            this.moveRelative(0.01F, p_32394_);
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
+        } else {
+            super.travel(p_32394_);
+        }
+    }
+
+    @Override
+    public void updateSwimming() {
+        if (!this.level().isClientSide) {
+            if (this.isEffectiveAi() && this.isInWater() && this.economySystem$wantsToSwim()) {
+                this.navigation = this.waterNavigation;
+                this.setSwimming(true);
+            } else {
+                this.navigation = this.groundNavigation;
+                this.setSwimming(false);
+            }
+        }
+    }
+
+    private boolean economySystem$wantsToSwim() {
+        if (this.isInWater()) {
+            return true;
+        }
+        LivingEntity target = this.getTarget();
+        return target != null && target.isInWater();
+    }
+
+    private static class HiveBloodlustGoal extends Goal {
+        private final HiveZombieEntity zombie;
+        private final double speed;
+        private int repathTick = 0;
+
+        private HiveBloodlustGoal(HiveZombieEntity zombie, double speed) {
+            this.zombie = zombie;
+            this.speed = speed;
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = this.zombie.getTarget();
+            return target != null && target.isAlive();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            LivingEntity target = this.zombie.getTarget();
+            return target != null && target.isAlive();
+        }
+
+        @Override
+        public void start() {
+            this.zombie.setAggressive(true);
+            this.repathTick = 0;
+        }
+
+        @Override
+        public void stop() {
+            this.zombie.setAggressive(false);
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = this.zombie.getTarget();
+            if (target == null) {
+                return;
+            }
+
+            this.zombie.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            if (this.repathTick-- <= 0 || this.zombie.getNavigation().isDone()) {
+                this.repathTick = 10;
+                this.zombie.getNavigation().moveTo(target, this.speed);
+            }
+        }
     }
 
 
     // 创建属性构建器
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 60.0D)  // 生命值
-                .add(Attributes.MOVEMENT_SPEED, 0.23F)  // 移动速度
-                .add(Attributes.ATTACK_DAMAGE, 3.0D)  // 攻击伤害
+                .add(Attributes.MAX_HEALTH, 40.0D)  // 生命�?
+                .add(Attributes.MOVEMENT_SPEED, 2.0F)  // 移动速度
+                .add(Attributes.ATTACK_DAMAGE, 4.0D)  // 攻击伤害
                 .add(Attributes.ARMOR, 2.0D)  // 护甲
                 .add(Attributes.FOLLOW_RANGE, 35.0D);  // 跟随范围
     }
@@ -137,12 +244,12 @@ public class HiveZombieEntity extends Monster {
        ========================= */
 
     /**
-     * 更新实体在白天和夜晚环境下的属性效果
+     * 更新实体在白天和夜晚环境下的属性效�?
      * <p> 该方法根据当前光照条件动态调整实体的移动速度、攻击伤害和跟随范围属性：
-     * <p> 在阳光直射下（白天）：削弱移动速度和攻击伤害
+     * <p> 在阳光直射下（白天）：削弱移动速度和攻击伤�?
      * <p> 在夜间：增强移动速度、攻击伤害和视野范围
-     * <p> 在其他条件下：移除所有特殊修饰符，恢复默认状态
-     * <p> 方法会先清除之前添加的所有日夜修饰符，然后根据当前环境重新应用相应的修饰符
+     * <p> 在其他条件下：移除所有特殊修饰符，恢复默认状�?
+     * <p> 方法会先清除之前添加的所有日夜修饰符，然后根据当前环境重新应用相应的修饰�?
      */
     private void updateDayNightEffects() {
         var speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -159,7 +266,7 @@ public class HiveZombieEntity extends Monster {
         range.removeModifier(NIGHT_RANGE_MODIFIER);
 
         if (isInDirectSunlight()) {
-            // 白天削弱（不燃烧）
+            // 白天削弱（不燃烧�?
             speed.addTransientModifier(new AttributeModifier(
                     DAY_SPEED_MODIFIER,
                     "Day slow",
@@ -195,7 +302,7 @@ public class HiveZombieEntity extends Monster {
     }
 
     /* =========================
-       Sunlight Detection | 阳光检测
+       Sunlight Detection | 阳光检�?
        ========================= */
 
     private boolean isInDirectSunlight() {
@@ -207,7 +314,7 @@ public class HiveZombieEntity extends Monster {
     }
 
     /* =========================
-       Disable Burning | 禁用阳光下燃烧
+       Disable Burning | 禁用阳光下燃�?
        ========================= */
 
     @Override
@@ -230,10 +337,10 @@ public class HiveZombieEntity extends Monster {
             this.playHiveCallSound();
             hasPlayedCallSound = true;
 
-            // 3秒后重置，可以再次播放
+            // 3秒后重置，可以再次播�?
             this.level().getServer().execute(() -> {
                 try {
-                    Thread.sleep(3000); // 3秒
+                    Thread.sleep(3000); // 3�?
                     hasPlayedCallSound = false;
                 } catch (InterruptedException e) {
                     // 忽略中断
@@ -293,7 +400,7 @@ public class HiveZombieEntity extends Monster {
         return EconomySystem_Sounds.HIVE_ZOMBIE_HURT.get();
     }
 
-    // 注册实体属性
+    // 注册实体属�?
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(EconomySystem_Entities.HIVE_ZOMBIE.get(), HiveZombieEntity.createAttributes().build());
@@ -303,12 +410,12 @@ public class HiveZombieEntity extends Monster {
     public enum Variant {
         NORMAL(0, true, true, true, true),       // 完整丧尸
         NO_HEAD(1, false, true, true, true),     // 无头丧尸
-        NO_LEFT_ARM(2, true, false, true, true), // 无左臂
-        NO_RIGHT_ARM(3, true, true, false, true), // 无右臂
-        NO_ARMS(4, true, false, false, true),    // 无双臂
+        NO_LEFT_ARM(2, true, false, true, true), // 无左�?
+        NO_RIGHT_ARM(3, true, true, false, true), // 无右�?
+        NO_ARMS(4, true, false, false, true),    // 无双�?
         NO_LEGS(5, true, true, true, false),     // 无腿（拖着走）
-        CRAWLER(6, true, true, true, true),      // 爬行者（特殊动画）
-        BLOODY(7, true, true, true, true),       // 血腥版本
+        CRAWLER(6, true, true, true, true),      // 爬行者（特殊动画�?
+        BLOODY(7, true, true, true, true),       // 血腥版�?
         ROTTEN(8, true, true, true, true);       // 腐烂严重版本
 
         private final int id;

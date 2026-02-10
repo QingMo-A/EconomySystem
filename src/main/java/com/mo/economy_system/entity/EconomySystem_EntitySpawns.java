@@ -22,14 +22,14 @@ public class EconomySystem_EntitySpawns {
     public static void onRegisterSpawnPlacements(SpawnPlacementRegisterEvent event) {
         event.register(
                 EconomySystem_Entities.HIVE_ZOMBIE.get(),
-                SpawnPlacements.Type.ON_GROUND,            //地面上生成
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, //不穿透树叶
-                EconomySystem_EntitySpawns::canSpawn,                // 自定义生成条件
+                SpawnPlacements.Type.ON_GROUND,            // 地面上生成
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, // 不穿透树叶
+                EconomySystem_EntitySpawns::canSpawn,      // 自定义生成条件
                 SpawnPlacementRegisterEvent.Operation.REPLACE
         );
     }
 
-    //生成条件判断方法
+    // 生成条件判断方法
     public static boolean canSpawn(
             EntityType<HiveZombieEntity> type,
             LevelAccessor world,
@@ -37,21 +37,40 @@ public class EconomySystem_EntitySpawns {
             BlockPos pos,
             RandomSource random
     ) {
-        //仅在晚上生成
-        long dayTime = world.dayTime() % 24000;
-        boolean isNight = dayTime > 13000 && dayTime < 23000;
-
-        //脚下方块必须是grass
+        // 允许生成的地表方块
+        boolean isConcrete = world.getBlockState(pos.below()).is(Blocks.WHITE_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.ORANGE_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.MAGENTA_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.LIGHT_BLUE_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.YELLOW_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.LIME_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.PINK_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.GRAY_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.LIGHT_GRAY_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.CYAN_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.PURPLE_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.BLUE_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.BROWN_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.GREEN_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.RED_CONCRETE) ||
+                world.getBlockState(pos.below()).is(Blocks.BLACK_CONCRETE);
         boolean isValidGround = world.getBlockState(pos.below()).is(Blocks.GRASS_BLOCK) ||
-                world.getBlockState(pos.below()).is(Blocks.DIRT);
+                world.getBlockState(pos.below()).is(Blocks.DIRT) ||
+                world.getBlockState(pos.below()).is(Blocks.STONE_BRICKS) ||
+                world.getBlockState(pos.below()).is(Blocks.SAND) ||
+                isConcrete;
 
-        //亮度条件
-        boolean isDarkEnough = world.getRawBrightness(pos, 0) <= 30;
+        // 光照条件
+        boolean isDarkEnough = world.getRawBrightness(pos, 0) <= 7;
 
-        //和平模式不生成
+        // 和平模式不生成
         boolean isNotPeaceful = world.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL;
 
-        //所有条件同时满足
-        return isNight && isValidGround && isDarkEnough && isNotPeaceful;
+        // 所有条件同时满足
+        return false;
     }
 }
+
+
+
+
