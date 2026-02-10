@@ -650,7 +650,7 @@ public class CardRenderer {
             String end = parts[1].replaceAll("[\\[\\]]", "").trim();
             String[] endCoords = end.split(",");
             if (startCoords.length >= 3 && endCoords.length >= 3) {
-                coordDisplay = "X:" + startCoords[0] + "~" + endCoords[0] + "  Z:" + startCoords[2] + "~" + endCoords[2];
+                coordDisplay = "X: " + startCoords[0] + " ~ " + endCoords[0] + "  Z: " + startCoords[2] + " ~ " + endCoords[2];
             }
         }
         if (coordDisplay.isEmpty()) {

@@ -103,15 +103,17 @@ public class Screen_DeliveryBox extends Screen {
 
         // 创建搜索框
         int searchBoxWidth = 200;
+        int searchBoxHeight = 20;
         int searchBoxX = PANEL_PADDING;
         int searchBoxY = 20;
 
-        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, 20, Component.literal("搜索收货箱..."));
+        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight, Component.literal("搜索收货箱..."));
         this.searchBox.setMaxLength(50);
         this.searchBox.setHint(Component.literal("搜索收货箱..."));
         this.searchBox.setResponder(this::onSearchChanged);
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
+        updateSearchBoxLayout();
     }
 
     private void calculateVirtualSize() {
@@ -120,6 +122,22 @@ public class Screen_DeliveryBox extends Screen {
         uiScale = Math.min(scaleX, scaleY);
         virtualWidth = (int) (this.width / uiScale);
         virtualHeight = (int) (this.height / uiScale);
+    }
+
+    private void updateSearchBoxLayout() {
+        if (searchBox == null) {
+            return;
+        }
+
+        int boxX = Math.round(PANEL_PADDING * uiScale);
+        int boxY = Math.round(20 * uiScale);
+        int boxWidth = Math.round(200 * uiScale);
+        int boxHeight = Math.round(20 * uiScale);
+
+        searchBox.setX(boxX);
+        searchBox.setY(boxY);
+        searchBox.setWidth(boxWidth);
+        searchBox.setHeight(boxHeight);
     }
 
     private void onSearchChanged(String text) {
@@ -150,6 +168,7 @@ public class Screen_DeliveryBox extends Screen {
         renderFullScreenBackground(guiGraphics);
 
         calculateVirtualSize();
+        updateSearchBoxLayout();
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(uiScale, uiScale, 1.0f);

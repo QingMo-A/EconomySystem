@@ -4,7 +4,9 @@ import com.mo.economy_system.item.items.Item_Blueprint;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
@@ -30,8 +32,10 @@ public class PlayerBlueprintData {
     private static final Set<ResourceLocation> ITEMS_REQUIRING_BLUEPRINT = new HashSet<>();
 
     private static Set<String> defaultItems = new HashSet<>();
+    private static final List<ResourceLocation> BLUEPRINT_POOL = new ArrayList<>();
+    private static boolean blueprintPoolDirty = true;
 
-    // 定义一个需要排除的物品关键字集合
+    // 定义一个需要排除的物品关键字集??
     public static final Set<String> EXCLUDED_ITEM_KEYWORDS = new HashSet<>(Arrays.asList(
             "*_wood",
             "*_planks",
@@ -71,6 +75,8 @@ public class PlayerBlueprintData {
     public static void clearWorkbenchRecipes() {
         WORKBENCH_RECIPE_MAP.clear();
         ITEMS_REQUIRING_BLUEPRINT.clear();
+        BLUEPRINT_POOL.clear();
+        blueprintPoolDirty = true;
     }
 
     /**
@@ -78,10 +84,11 @@ public class PlayerBlueprintData {
      */
     public static void addWorkbenchRecipe(ResourceLocation recipeId, Recipe<?> recipe) {
         WORKBENCH_RECIPE_MAP.put(recipeId, recipe);
-        // 获取结果物品ID并添加到集合中
+        // 获取结果物品ID并添加到集合??
         ResourceLocation outputItemId = getRecipeOutputItemId(recipe);
         if (outputItemId != null) {
             ITEMS_REQUIRING_BLUEPRINT.add(outputItemId);
+            blueprintPoolDirty = true;
 
             // 调试输出
             System.out.println("[Blueprint] 添加配方: " + recipeId + " -> 物品: " + outputItemId);
@@ -93,8 +100,8 @@ public class PlayerBlueprintData {
      */
     private static ResourceLocation getRecipeOutputItemId(Recipe<?> recipe) {
         try {
-            // 尝试获取配方的输出
-            ItemStack output = recipe.getResultItem(null); // 注意：这里需要RegistryAccess
+            // 尝试获取配方的输??
+            ItemStack output = recipe.getResultItem(RegistryAccess.EMPTY); // 注意：这里需要RegistryAccess
             if (output != null && !output.isEmpty()) {
                 return ForgeRegistries.ITEMS.getKey(output.getItem());
             }
@@ -114,17 +121,17 @@ public class PlayerBlueprintData {
             String recipeString = recipe.toString();
             if (recipeString.contains("result=")) {
                 // 简化解析逻辑
-                // 实际实现可能需要更复杂的解析
+                // 实际实现可能需要更复杂的解??
             }
 
-            // 方法2：对于特定类型的配方，可以尝试获取
+            // 方法2：对于特定类型的配方，可以尝试获??
             if (recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe shapedRecipe) {
-                ItemStack output = shapedRecipe.getResultItem(null);
+                ItemStack output = shapedRecipe.getResultItem(RegistryAccess.EMPTY);
                 if (output != null) {
                     return ForgeRegistries.ITEMS.getKey(output.getItem());
                 }
             } else if (recipe instanceof net.minecraft.world.item.crafting.ShapelessRecipe shapelessRecipe) {
-                ItemStack output = shapelessRecipe.getResultItem(null);
+                ItemStack output = shapelessRecipe.getResultItem(RegistryAccess.EMPTY);
                 if (output != null) {
                     return ForgeRegistries.ITEMS.getKey(output.getItem());
                 }
@@ -149,8 +156,8 @@ public class PlayerBlueprintData {
         // 遍历所有配方，查找输出为指定物品的配方
         for (Recipe<?> recipe : WORKBENCH_RECIPE_MAP.values()) {
             try {
-                // 获取配方的输出物品
-                net.minecraft.world.item.ItemStack output = recipe.getResultItem(null); // 注意：需要RegistryAccess
+                // 获取配方的输出物??
+                net.minecraft.world.item.ItemStack output = recipe.getResultItem(RegistryAccess.EMPTY); // 注意：需要RegistryAccess
                 if (output != null && !output.isEmpty()) {
                     ResourceLocation outputItemId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(output.getItem());
                     if (itemId.equals(outputItemId)) {
@@ -178,7 +185,7 @@ public class PlayerBlueprintData {
             "minecraft:crafting_special_firework_star",
             "minecraft:crafting_special_firework_rocket",
 
-            // 药水箭
+            // 药水??
             "minecraft:crafting_special_tippedarrow",
 
             // 地图相关
@@ -226,17 +233,17 @@ public class PlayerBlueprintData {
     }
 
     /**
-     * 检查玩家是否可以制作某个物品
+     * 检查玩家是否可以制作某个物??
      */
     public static boolean canCraftItem(Player player, String itemId) {
-        // 先检查默认解锁的物品（基础物品）
+        // 先检查默认解锁的物品（基础物品??
         if (isDefaultUnlocked(itemId)) {
             return true;
         }
 
         CompoundTag playerData = player.getPersistentData();
 
-        // 如果连数据都没有，检查默认列表
+        // 如果连数据都没有，检查默认列??
         if (!playerData.contains(UNLOCKED_ITEMS_KEY, 9)) {
             return false;
         }
@@ -254,7 +261,7 @@ public class PlayerBlueprintData {
     }
 
     /**
-     * 检查玩家是否可以制作某个物品（通过ItemStack）
+     * 检查玩家是否可以制作某个物品（通过ItemStack??
      */
     public static boolean canCraftItem(Player player, ItemStack stack) {
         if (stack.isEmpty()) return true; // 空物品堆总是允许
@@ -265,13 +272,13 @@ public class PlayerBlueprintData {
 
     public static void initAllBlueprintItems() {
         // 定义需要蓝图解锁的物品列表
-        // 获取所有已注册的物品
+        // 获取所有已注册的物??
         for (ResourceLocation resourceLocation : ITEMS_REQUIRING_BLUEPRINT) {
             if (resourceLocation == null) continue;
 
             String itemId = resourceLocation.toString();
 
-            // 检查是否需要蓝图
+            // 检查是否需要蓝??
             if (!(PlayerBlueprintData.isDefaultUnlocked(itemId))) {
                 itemsRequiringBlueprint.add(itemId);
             }
@@ -284,6 +291,30 @@ public class PlayerBlueprintData {
 
     public static List<ItemStack> getAllBlueprintItems() {
         return itemStackList;
+    }
+
+    public static ItemStack createRandomBlueprint(RandomSource random) {
+        refreshBlueprintPool();
+        if (BLUEPRINT_POOL.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ResourceLocation itemId = BLUEPRINT_POOL.get(random.nextInt(BLUEPRINT_POOL.size()));
+        return Item_Blueprint.createBlueprint(itemId.toString());
+    }
+
+    private static void refreshBlueprintPool() {
+        if (!blueprintPoolDirty) {
+            return;
+        }
+        BLUEPRINT_POOL.clear();
+        for (ResourceLocation resourceLocation : ITEMS_REQUIRING_BLUEPRINT) {
+            if (resourceLocation == null) continue;
+            String itemId = resourceLocation.toString();
+            if (isDefaultUnlocked(itemId)) continue;
+            if ("economy_system:blueprint".equals(itemId) || "economy_system:blank_blueprint".equals(itemId)) continue;
+            BLUEPRINT_POOL.add(resourceLocation);
+        }
+        blueprintPoolDirty = false;
     }
 
     /**
@@ -346,7 +377,7 @@ public class PlayerBlueprintData {
             }
         }
 
-        // 添加默认解锁的物品
+        // 添加默认解锁的物??
         items.addAll(getDefaultUnlockedItems());
 
         return items;
@@ -354,6 +385,7 @@ public class PlayerBlueprintData {
 
     public static void addDefaultUnlockedItems(String itemId) {
         defaultItems.add(itemId);
+        blueprintPoolDirty = true;
     }
 
     /**
@@ -372,17 +404,19 @@ public class PlayerBlueprintData {
     }
 
     /**
-     * 检查物品是否默认解锁
+     * 检查物品是否默认解??
      */
     public static boolean isDefaultUnlocked(String itemId) {
         return getDefaultUnlockedItems().contains(itemId);
     }
 
     /**
-     * 清除玩家的所有解锁物品（用于重置）
+     * 清除玩家的所有解锁物品（用于重置??
      */
     public static void clearAllUnlocks(Player player) {
         CompoundTag playerData = player.getPersistentData();
         playerData.remove(UNLOCKED_ITEMS_KEY);
     }
 }
+
+
