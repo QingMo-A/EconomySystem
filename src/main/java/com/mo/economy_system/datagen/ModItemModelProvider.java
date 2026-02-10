@@ -52,6 +52,8 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.REVIVAL_CHARM);
         // 基因复苏药剂
         simpleItem(EconomySystem_Items.GENE_RESURGENCE_POTION);
+        // 线索物品
+        simpleItem(EconomySystem_Items.CLUE_ITEM);
 
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }

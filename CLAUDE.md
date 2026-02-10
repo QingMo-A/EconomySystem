@@ -309,3 +309,47 @@ guiGraphics.drawString(font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, fal
 2. 实现 `encode()`、`decode()` 和 `handle()` 方法
 3. 在 `EconomySystem_NetworkManager.register()` 中注册
 4. 客户端专用数据包需要指定 `Optional.of(NetworkDirection.PLAY_TO_CLIENT)`
+
+## Bash 命令在 Windows 上的注意事项
+
+### ⚠️ 路径包含空格、中文或特殊字符时的处理
+
+当在 Windows 上使用 Bash 工具执行命令时，如果路径包含空格、中文字符或特殊字符（如 `#`），直接使用 `cmd /c` 或普通 bash 命令会失败。
+
+#### ❌ WRONG - 会失败：
+```bash
+# 直接执行会因引号解析问题失败
+copy "D:\Desktop\EconomySystem\build\libs\economy_system-1.2.03 #mandatory.jar" "D:\Desktop\mc\.minecraft\versions\Dreamingfish-EP01\mods\"
+
+# cmd /c 也会失败
+cmd /c copy "D:\Desktop\EconomySystem\build\libs\economy_system-1.2.03 #mandatory.jar" "D:\Desktop\mc\.minecraft\versions\Dreamingfish-EP01\mods\"
+```
+
+#### ✅ CORRECT - 使用 PowerShell：
+```bash
+# 对于文件操作（复制、移动等）
+powershell -Command "Copy-Item 'D:\Desktop\EconomySystem\build\libs\economy_system-1.2.03 #mandatory.jar' 'D:\Desktop\mc\.minecraft\versions\Dreamingfish-EP01\mods\'"
+
+# 对于列出目录
+powershell -Command "Get-ChildItem 'D:\Desktop\mc\.minecraft\versions\Dreamingfish-EP01\mods\' | Select-Object Name"
+
+# 对于删除文件
+powershell -Command "Remove-Item 'D:\path\to\file.jar'"
+
+# 对于创建目录
+powershell -Command "New-Item -ItemType Directory -Path 'D:\path\to\new\folder'"
+```
+
+#### 常用 PowerShell 命令对照：
+| 操作 | CMD | PowerShell |
+|------|-----|------------|
+| 复制文件 | `copy` | `Copy-Item` |
+| 移动文件 | `move` | `Move-Item` |
+| 删除文件 | `del` | `Remove-Item` |
+| 列出目录 | `dir` | `Get-ChildItem` |
+| 创建目录 | `mkdir` | `New-Item -ItemType Directory` |
+
+#### 原因：
+- Git Bash 在 Windows 上对包含中文和特殊字符的路径处理不佳
+- `cmd /c` 中的引号嵌套解析容易出错
+- PowerShell 对 Unicode 路径的支持更好，且单引号字符串不会解析转义字符

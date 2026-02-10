@@ -29,6 +29,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("item.economy_system.professional_aid_kit", "专业急救包");
         add("item.economy_system.revival_charm", "重生锦鲤");
         add("item.economy_system.restore_uninfected_potion", "基因复苏药剂");
+        add("item.economy_system.clue_item", "线索");
 
         // ToolTips | 物品描述
         add("item.economy_system.dreamingfish.tooltip", "§6为什么一条破鱼叫锦鲤....\n纪念一下添加了一个物品花了10多个小时的笨笨的hhy");

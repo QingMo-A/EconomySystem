@@ -7,10 +7,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.PlainTextButton;
+import net.minecraft.client.gui.screens.CreditsAndAttributionScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.Util;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -48,11 +51,13 @@ public abstract class TitleScreenMixin extends Screen {
     private static volatile String economySystem$updateLogPreview = "§7暂无更新";
     @Unique
     private static volatile boolean economySystem$updateLogFetchStarted = false;
+
     private static final String UPDATE_LOG_URL = "https://github.com/QingMo-A/EconomySystem/releases";
     private static final String UPDATE_LOG_API_URL = "https://api.github.com/repos/QingMo-A/EconomySystem/releases/latest";
 
     // 版权和版本信息
-    private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1 §8Copyright Mojang AB. Do not distribute!";
+    private static final String MINECRAFT_VERSION = "§7Minecraft §f1.20.1";
+    private static final String COPYRIGHT_TEXT = "Copyright Mojang AB. Do not distribute!";
     private static final String DREAMINGFISH_TITLE = "§b§lDreaming§d§lFish §7- §6§l梦鱼服-「守望梦屿」 §7v0.1(private)";
     private static final String DREAMINGFISH_COPYRIGHT = "© 2026 DreamingFish - EconomySystem";
     private static final String DEVELOPER_COPYRIGHT = "  Developed by QINGMO & HANHANYU";
@@ -126,30 +131,187 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private int economySystem$panelHeight = 0;
 
+    @Unique
+    private int economySystem$copyrightX = 0;
+    @Unique
+    private int economySystem$copyrightY = 0;
+    @Unique
+    private int economySystem$copyrightWidth = 0;
+    @Unique
+    private int economySystem$copyrightHeight = 0;
+
     @Inject(method = "init", at = @At("RETURN"))
     private void economySystem$init(CallbackInfo ci) {
-        economySystem$hideOriginalButtons();
         economySystem$startUpdateLogFetch();
     }
 
     @Unique
-    private void economySystem$hideOriginalButtons() {
+    private String economySystem$getTranslationKey(Component component) {
+        // 获取Component的Contents，如果是TranslatableContents则返回key
+        if (component.getContents() instanceof TranslatableContents) {
+            return ((TranslatableContents) component.getContents()).getKey();
+        }
+        return null;
+    }
+
+    @Unique
+    private boolean economySystem$isVanillaButtonKey(String key) {
+        if (key == null) {
+            return false;
+        }
+
+        // 原版按钮的翻译键
+        return "menu.singleplayer".equals(key)
+                || "menu.multiplayer".equals(key)
+                || "menu.online".equals(key)          // Realms
+                || "menu.options".equals(key)         // 设置/选项
+                || "menu.quit".equals(key)            // 退出
+                || "narrator.button.language".equals(key)
+                || "narrator.button.accessibility".equals(key)
+                || "fml.menu.mods".equals(key);       // Forge模组按钮，我们也隐藏它
+    }
+
+    @Unique
+    private void economySystem$relayModButtons(java.util.List<AbstractWidget> modButtons) {
+        if (modButtons.isEmpty()) {
+            return;
+        }
+
+        // 右下角区域
+        int startX = this.width - 210;  // 从右边210像素开始
+        int startY = this.height - 30;  // 从底部30像素开始
+        int buttonGap = 5;
+        int maxButtonsPerRow = 4;
+
+        for (int i = 0; i < modButtons.size(); i++) {
+            AbstractWidget btn = modButtons.get(i);
+            int row = i / maxButtonsPerRow;
+            int col = i % maxButtonsPerRow;
+
+            // 计算按钮位置（从右到左排列）
+            int btnX = startX - col * (btn.getWidth() + buttonGap);
+            int btnY = startY - row * (btn.getHeight() + buttonGap);
+
+            btn.setX(btnX);
+            btn.setY(btnY);
+        }
+
+        // 保存模组按钮数量供渲染使用
+        economySystem$modButtonCount = modButtons.size();
+    }
+
+    @Unique
+    private int economySystem$modButtonCount = 0;
+
+    @Unique
+    private void economySystem$hideVanillaButtons() {
         TitleScreen self = (TitleScreen) (Object) this;
+
+        // 遍历所有子元素，隐藏原版按钮
         for (var widget : self.children()) {
             if (widget instanceof AbstractWidget) {
                 AbstractWidget aw = (AbstractWidget) widget;
-                aw.setX(-1000);
+                String translationKey = economySystem$getTranslationKey(aw.getMessage());
+
+                if (economySystem$isVanillaButtonKey(translationKey)) {
+                    // 隐藏原版按钮（移到屏幕外）
+                    aw.setX(-1000);
+                } else if (aw instanceof PlainTextButton) {
+                    // 隐藏原版版权按钮
+                    aw.setX(-1000);
+                }
             }
         }
     }
 
+    @Unique
+    private void economySystem$hideVanillaButtonsAndRelayModButtons() {
+        TitleScreen self = (TitleScreen) (Object) this;
+
+        // 收集模组按钮（非原版按钮）
+        java.util.List<AbstractWidget> modButtons = new java.util.ArrayList<>();
+
+        for (var widget : self.children()) {
+            if (widget instanceof AbstractWidget) {
+                AbstractWidget aw = (AbstractWidget) widget;
+                String translationKey = economySystem$getTranslationKey(aw.getMessage());
+
+                if (economySystem$isVanillaButtonKey(translationKey)) {
+                    // 隐藏原版按钮（移到屏幕外）
+                    aw.setX(-1000);
+                } else if (aw instanceof PlainTextButton) {
+                    // 隐藏原版版权按钮
+                    aw.setX(-1000);
+                } else if (aw.getHeight() <= 15 && aw.getY() > this.height - 30) {
+                    // 其他底部小按钮，隐藏（我们自己绘制）
+                    aw.setX(-1000);
+                } else if (aw.getX() >= 0) {
+                    // 收集模组按钮（未被隐藏的）
+                    modButtons.add(aw);
+                }
+            }
+        }
+
+        // 将模组按钮重新排列到右下角
+        economySystem$relayModButtons(modButtons);
+    }
+
+    @Unique
+    private void economySystem$renderFadeIn(GuiGraphics guiGraphics, float fadeAlpha) {
+        // 渲染淡入效果（类似原版的Panorama渲染）
+        // 使用纯黑色背景逐渐淡入
+        int alphaValue = (int) (fadeAlpha * 255.0F) << 24;
+        guiGraphics.fill(0, 0, this.width, this.height, 0xFF000000 | alphaValue);
+    }
+
+    @Unique
+    private void economySystem$renderBackground(GuiGraphics guiGraphics, float fadeAlpha) {
+        // 渲染自定义背景图（拉伸填满整个屏幕）
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        guiGraphics.setColor(1.0F, 1.0F, 1.0F, fadeAlpha);
+        guiGraphics.blit(BACKGROUND_TEXTURE, 0, 0, 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
+        guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+
+        // 如果背景图加载失败，渲染深灰色背景
+        // guiGraphics.fill(0, 0, this.width, this.height, 0xFF1a1a1a);
+    }
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void economySystem$render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+        // 取消原版渲染，完全替换标题界面
         ci.cancel();
 
+        // 处理淡入效果
         if (this.fadeInStart == 0L) {
             this.fadeInStart = System.currentTimeMillis();
         }
+
+        // 计算淡入alpha值
+        float fadeAlpha = this.fading ? java.lang.Math.min((System.currentTimeMillis() - this.fadeInStart) / 1000.0F, 1.0F) : 1.0F;
+
+        // ========== 步骤1: 渲染背景图 ==========
+        economySystem$renderBackground(guiGraphics, fadeAlpha);
+
+        // 如果淡入未完成，提前返回（只渲染背景）
+        if (fadeAlpha < 1.0F) {
+            return;
+        }
+
+        // ========== 步骤2: 手动调用Forge钩子，让其他模组可以添加按钮 ==========
+        net.minecraftforge.client.ForgeHooksClient.renderMainMenu(
+            (TitleScreen) (Object) this,
+            guiGraphics,
+            this.font,
+            this.width,
+            this.height,
+            0xFFFFFFFF
+        );
+
+        // ========== 步骤3: 隐藏原版按钮并重新定位模组按钮 ==========
+        economySystem$hideVanillaButtonsAndRelayModButtons();
+
+        // ========== 步骤4: 手动调用super.render()来渲染模组按钮 ==========
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         long time = System.currentTimeMillis();
 
@@ -220,11 +382,6 @@ public abstract class TitleScreenMixin extends Screen {
             this.economySystem$hoverTime = time;
         }
 
-        // 渲染背景图片（填满整个屏幕）
-        guiGraphics.blit(BACKGROUND_TEXTURE,
-            0, 0, this.width, this.height,
-            0, 0, 256, 144, 256, 144);
-
         PoseStack poseStack = guiGraphics.pose();
 
         // 应用缩放变换（主面板使用虚拟坐标）
@@ -232,7 +389,7 @@ public abstract class TitleScreenMixin extends Screen {
         poseStack.translate(offsetX, offsetY, 0);
         poseStack.scale(scale, scale, 1.0f);
 
-        // 渲染主面板
+        // 渲染主面板（覆盖在原版内容之上）
         economySystem$renderMainPanel(guiGraphics, panelX, panelY, panelWidth, panelHeight, time);
 
         poseStack.popPose();
@@ -522,8 +679,33 @@ public abstract class TitleScreenMixin extends Screen {
         // 左上角 - DreamingFish
         guiGraphics.drawString(this.font, DREAMINGFISH_TITLE, 5, 5, TEXT_WHITE, false);
 
-        // 左下角 - Minecraft 1.20.1 + Mojang 版权
-        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 10, TEXT_GRAY, false);
+        // 左下角 - 版权按钮（可点击）
+        int copyrightX = 5;
+        int copyrightY = virtualH - 10;
+        int copyrightWidth = this.font.width(COPYRIGHT_TEXT);
+        int copyrightHeight = 10;
+
+        // 检测版权按钮悬停（需要转换坐标）
+        // 检测版权按钮悬停
+        boolean copyrightHovered = economySystem$isCopyrightHovered();
+
+        // 保存版权按钮区域供点击检测使用
+        economySystem$copyrightX = copyrightX;
+        economySystem$copyrightY = copyrightY;
+        economySystem$copyrightWidth = copyrightWidth;
+        economySystem$copyrightHeight = copyrightHeight;
+
+        // 渲染版权文本（悬停时白色，否则灰色）
+        int copyrightColor = copyrightHovered ? TEXT_WHITE : 0xFFAAAAAA;
+        guiGraphics.drawString(this.font, COPYRIGHT_TEXT, copyrightX, copyrightY, copyrightColor, false);
+
+        // 悬停时添加下划线
+        if (copyrightHovered) {
+            guiGraphics.fill(copyrightX, copyrightY + copyrightHeight, copyrightX + copyrightWidth, copyrightY + copyrightHeight + 1, 0xFFFFFFFF);
+        }
+
+        // 左上角 - Minecraft 1.20.1（在版权上方）
+        guiGraphics.drawString(this.font, MINECRAFT_VERSION, 5, virtualH - 22, TEXT_GRAY, false);
 
         // 右下角 - Mod、语言和退出按钮
         guiGraphics.drawString(this.font, BUTTON_MODS, virtualW - 155, virtualH - 10, TEXT_GRAY, false);
@@ -646,6 +828,13 @@ public abstract class TitleScreenMixin extends Screen {
             mc.stop();
             cir.setReturnValue(true);
         }
+
+        // 版权按钮
+        if (vmxNoOffset >= economySystem$copyrightX && vmxNoOffset <= economySystem$copyrightX + economySystem$copyrightWidth
+                && vmyNoOffset >= economySystem$copyrightY && vmyNoOffset <= economySystem$copyrightY + economySystem$copyrightHeight) {
+            economySystem$openCopyright(mc);
+            cir.setReturnValue(true);
+        }
     }
 
     @Unique
@@ -710,5 +899,25 @@ public abstract class TitleScreenMixin extends Screen {
         } catch (URISyntaxException e) {
             // Ignore malformed URL to avoid crashing the title screen.
         }
+    }
+
+    @Unique
+    private boolean economySystem$isCopyrightHovered() {
+        Minecraft mc = Minecraft.getInstance();
+        double mouseX = mc.mouseHandler.xpos();
+        double mouseY = mc.mouseHandler.ypos();
+
+        // 转换鼠标坐标到虚拟坐标（只有缩放，无偏移）
+        int vmx = (int) (mouseX / economySystem$scale);
+        int vmy = (int) (mouseY / economySystem$scale);
+
+        return vmx >= economySystem$copyrightX && vmx <= economySystem$copyrightX + economySystem$copyrightWidth
+                && vmy >= economySystem$copyrightY && vmy <= economySystem$copyrightY + economySystem$copyrightHeight;
+    }
+
+    @Unique
+    private void economySystem$openCopyright(Minecraft mc) {
+        TitleScreen self = (TitleScreen) (Object) this;
+        mc.setScreen(new CreditsAndAttributionScreen(self));
     }
 }
