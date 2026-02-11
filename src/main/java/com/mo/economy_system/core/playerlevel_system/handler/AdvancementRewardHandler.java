@@ -57,7 +57,7 @@ public class AdvancementRewardHandler {
         // 根据进度类型给予不同经验奖励
         FrameType frameType = advancement.getDisplay().getFrame();
         boolean isHidden = advancement.getDisplay().isHidden();
-        long expReward = calculateExperienceReward(frameType, isHidden);
+        long expReward = calculateExperienceReward(frameType, isHidden, advancement);
 
         // 发放经验奖励
         PlayerLevelManager.addPlayerExperienceServer(player, expReward);
@@ -72,15 +72,20 @@ public class AdvancementRewardHandler {
      * 根据进度类型计算经验奖励
      * @param frameType 进度框架类型
      * @param isHidden 是否为隐藏进度
+     * @param advancement 进度对象（用于检查命名空间）
      * @return 经验值
      */
-    private static long calculateExperienceReward(FrameType frameType, boolean isHidden) {
+    private static long calculateExperienceReward(FrameType frameType, boolean isHidden, Advancement advancement) {
         long baseReward = switch (frameType) {
             case TASK -> TASK_EXPERIENCE_REWARD;
             case GOAL -> GOAL_EXPERIENCE_REWARD;
             case CHALLENGE -> CHALLENGE_EXPERIENCE_REWARD;
         };
-        // 隐藏进度额外加成
-        return isHidden ? baseReward + HIDDEN_BONUS_EXPERIENCE : baseReward;
+        // 仅原版（minecraft命名空间）的隐藏进度给予额外加成
+        boolean isVanilla = "minecraft".equals(advancement.getId().getNamespace());
+        if (isHidden && isVanilla) {
+            return baseReward + HIDDEN_BONUS_EXPERIENCE;
+        }
+        return baseReward;
     }
 }

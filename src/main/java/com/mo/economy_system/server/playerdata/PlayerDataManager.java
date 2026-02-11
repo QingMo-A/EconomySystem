@@ -7,7 +7,9 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.server.LoginSync;
 import com.mo.economy_system.server.chattitle.Title;
+import com.mo.economy_system.server.chattitle.TitleRegistry;
 import com.mo.economy_system.server.rank.Rank;
+import com.mo.economy_system.server.rank.RankRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -128,6 +130,16 @@ public class PlayerDataManager {
     public static void updatePlayerData(ServerPlayer serverPlayer, Rank rank, Title title, int level, long experience) {
         UUID playerUUID = serverPlayer.getUUID();
         Map<UUID, PlayerData> allPlayerData = loadAllPlayerDataFromFile();
+
+        // 防御性检查：确保 rank 和 title 不为 null
+        if (rank == null) {
+            rank = serverPlayer.getUUID() != null ? getPlayerData(playerUUID).getRank() : RankRegistry.NO_RANK;
+            if (rank == null) rank = RankRegistry.NO_RANK;
+        }
+        if (title == null) {
+            title = serverPlayer.getUUID() != null ? getPlayerData(playerUUID).getTitle() : TitleRegistry.getDefaultTitle();
+            if (title == null) title = TitleRegistry.getDefaultTitle();
+        }
 
         PlayerData playerData = allPlayerData.get(playerUUID);
         if (playerData == null) {

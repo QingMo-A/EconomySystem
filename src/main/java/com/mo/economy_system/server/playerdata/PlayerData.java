@@ -19,7 +19,12 @@ public class PlayerData {
     private long totalPlayTime;
 
     public PlayerData() {
-
+        this.rank = RankRegistry.NO_RANK;
+        this.title = TitleRegistry.getDefaultTitle();
+        this.level = 1;
+        this.currentExperience = 0;
+        this.lastLoginTime = System.currentTimeMillis();
+        this.totalPlayTime = 0;
     }
 
     public PlayerData(ServerPlayer player) {
