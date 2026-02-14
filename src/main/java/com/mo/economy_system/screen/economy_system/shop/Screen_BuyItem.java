@@ -3,35 +3,56 @@ package com.mo.economy_system.screen.economy_system.shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_ShopBuyItem;
-import com.mo.economy_system.screen.EconomySystem_Screen;
-import com.mo.economy_system.screen.components.AnimatedButton;
-import com.mo.economy_system.screen.components.AnimatedHighLevelTextField;
-import com.mo.economy_system.screen.components.ItemIconAnimation;
-import com.mo.economy_system.screen.components.TextAnimation;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
+public class Screen_BuyItem extends Screen {
 
-public class Screen_BuyItem extends EconomySystem_Screen {
+    private static final int BASE_WIDTH = 640;
+    private static final int BASE_HEIGHT = 360;
+    private static final int PANEL_WIDTH = 320;
+    private static final int PANEL_HEIGHT = 160;
+    private static final int PANEL_PADDING = 12;
 
-    private Player player;
-    private ShopItem shopItem;
-    private ItemStack itemStack;
-    private AnimatedHighLevelTextField countInput; // 输入框用于设置价格
+    private static final int INPUT_WIDTH = 140;
+    private static final int INPUT_MIN_WIDTH = 90;
+    private static final int INPUT_HEIGHT = 20;
+    private static final int LABEL_INPUT_GAP = 8;
+    private static final int BUTTON_WIDTH = 96;
+    private static final int BUTTON_HEIGHT = 24;
 
-    private TextAnimation noItem;
-    private ItemIconAnimation icon;
-    private TextAnimation name;
-    private TextAnimation count;
-    private TextAnimation price;
+    private static final int BG_COLOR = 0xB0000000;
+    private static final int PANEL_BG = 0xB01A2A3A;
+    private static final int PANEL_BORDER = 0xFF4A8ACF;
 
-    protected Screen_BuyItem(ShopItem shopItem) {
+    private final ShopItem shopItem;
+    private final ItemStack itemStack;
+
+    private EditBox countInput;
+    private int countLabelX;
+    private int countLabelY;
+    private int countInputXVirtual;
+    private int countInputYVirtual;
+    private int countInputWidthVirtual;
+
+    private float uiScale;
+    private int virtualWidth;
+    private int virtualHeight;
+
+    private int buyBtnX1;
+    private int buyBtnY1;
+    private int buyBtnX2;
+    private int buyBtnY2;
+
+    public Screen_BuyItem(ShopItem shopItem) {
         super(Component.translatable(Util_MessageKeys.SHOP_BUY_TITLE_KEY));
         this.shopItem = shopItem;
         this.itemStack = shopItem.getItemStack();
@@ -40,260 +61,245 @@ public class Screen_BuyItem extends EconomySystem_Screen {
     @Override
     protected void init() {
         super.init();
+        calculateVirtualSize();
 
-        if (this.minecraft != null && this.minecraft.player != null) {
-            this.player = this.minecraft.player;
+        this.countInput = new EditBox(this.font, 0, 0, 10, INPUT_HEIGHT,
+                Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
+        this.countInput.setHint(Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
+        this.countInput.setMaxLength(8);
+        this.countInput.setValue("1");
+        this.addRenderableWidget(this.countInput);
+
+        updateInputLayout();
+    }
+
+    private void calculateVirtualSize() {
+        float scaleX = (float) this.width / BASE_WIDTH;
+        float scaleY = (float) this.height / BASE_HEIGHT;
+        uiScale = Math.min(scaleX, scaleY);
+        virtualWidth = (int) (this.width / uiScale);
+        virtualHeight = (int) (this.height / uiScale);
+    }
+
+    private int panelX() {
+        return (virtualWidth - PANEL_WIDTH) / 2;
+    }
+
+    private int panelY() {
+        return (virtualHeight - PANEL_HEIGHT) / 2;
+    }
+
+    private void updateInputLayout() {
+        if (countInput == null) {
+            return;
         }
 
-        initPart();
+        Component countLabel = Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY);
+        int labelWidth = this.font.width(countLabel);
+        int panelX = panelX();
+        int panelY = panelY();
+        int rowY = panelY + 100;
+        int contentMaxWidth = PANEL_WIDTH - PANEL_PADDING * 2;
 
-    }
+        int preferredInlineWidth = labelWidth + LABEL_INPUT_GAP + INPUT_WIDTH;
 
-    @Override
-    protected void initPart() {
-
-        // 清除所有组件
-        this.clearWidgets();
-
-        if (flag == 0) {
-            this.countInput = new AnimatedHighLevelTextField(
-                    this.font,
-                    this.width / 2 - 75,
-                    this.height + 20,
-                    150,
-                    20,
-                    1000,
-                    Component.literal("Enter Count")
-            );
-            this.addRenderableWidget(countInput);
-
-            // 设置搜索框的键盘监听器
-            this.countInput.setFocused(false); // 默认不聚焦
-            this.countInput.setMaxLength(50); // 限制输入长度
-            this.countInput.setHint(Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
-            // this.countInput.setResponder(text -> pricePrediction());
-            this.countInput.startMoveAnimation(this.width / 2 - 75, this.height / 2 - 20);
-
-            this.addRenderableWidget(
-                    new AnimatedButton(
-                            this.width / 2 - 50,
-                            this.height + 20,
-                            this.width / 2 - 50,
-                            this.height / 2 + 10,
-                            100,
-                            20,
-                            Component.translatable(Util_MessageKeys.SHOP_BUY_BUY_BUTTON_KEY),
-                            1000,
-                            button -> {
-                                buyItem();
-                            }
-                    )
-            );
-
-        } else if (flag >= 1){
-            this.countInput = new AnimatedHighLevelTextField(
-                    this.font,
-                    this.width / 2 - 75,
-                    this.height / 2 - 20,
-                    150,
-                    20,
-                    1000,
-                    Component.literal("Enter Count")
-            );
-            this.addRenderableWidget(countInput);
-
-            // 设置搜索框的键盘监听器
-            this.countInput.setFocused(false); // 默认不聚焦
-            this.countInput.setMaxLength(50); // 限制输入长度
-            this.countInput.setHint(Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
-            this.countInput.setResponder(text -> pricePrediction());
-            this.countInput.startMoveAnimation(this.width / 2 - 75, this.height / 2 - 20);
-
-            this.addRenderableWidget(
-                    Button.builder(Component.translatable(Util_MessageKeys.SHOP_BUY_BUY_BUTTON_KEY), button -> buyItem())
-                            .pos(this.width / 2 - 50, this.height / 2 + 10)
-                            .size(100, 20)
-                            .build()
-            );
-
-        }
-
-        flag ++;
-
-        initializeRenderCache();
-
-        super.initPart();
-    }
-
-    @Override
-    public void resize(Minecraft minecraft, int width, int height) {
-
-        this.flag = 0;
-
-        super.resize(minecraft, width, height);
-    }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
-
-        // 执行渲染缓存中的任务
-        for (RunnableWithGraphics task : renderCache) {
-            task.run(guiGraphics);
-        }
-
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
-    }
-
-    @Override
-    protected void initializeRenderCache() {
-        renderCache.clear();
-
-        // 渲染物品信息
-        if (!itemStack.isEmpty()) {
-            int textWidth = this.font.width(itemStack.getHoverName().getString());
-
-            // 计算整体宽度（物品图标宽度为16，间距为2）
-            int totalWidth = textWidth + 16 + 2;
-
-            // 计算整体的居中位置
-            int xPosition = (this.width - totalWidth) / 2;
-
-            icon = new ItemIconAnimation(
-                    xPosition,
-                    this.height / 2 - 40,
-                    xPosition,
-                    this.height / 2 - 40,
-                    0f,
-                    1f,
-                    0.8f,
-                    1f,
-                    1000
-            );
-
-            name = new TextAnimation(
-                    xPosition + 16 + 2,
-                    this.height / 2 - 36,
-                    xPosition + 16 + 2,
-                    this.height / 2 - 36,
-                    0f,
-                    1f,
-                    1000
-            );
-
-            renderCache.add((guiGraphics) -> {
-
-                renderAnimatedItem(
-                        guiGraphics,
-                        itemStack,
-                        icon
-                );
-
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.literal(itemStack.getHoverName().getString()),
-                        name,
-                        0xFFFFFF
-                );
-
-            });
-
+        if (preferredInlineWidth <= contentMaxWidth) {
+            int groupX = panelX + (PANEL_WIDTH - preferredInlineWidth) / 2;
+            countLabelX = groupX;
+            countLabelY = rowY;
+            countInputXVirtual = groupX + labelWidth + LABEL_INPUT_GAP;
+            countInputYVirtual = rowY - 2;
+            countInputWidthVirtual = INPUT_WIDTH;
         } else {
-
-            // 动态计算文字居中的位置
-            int textWidth = this.font.width(Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_TEXT_KEY));
-            int xPosition = (this.width - textWidth) / 2;
-
-            noItem = new TextAnimation(
-                    xPosition,
-                    this.height / 2 - 40,
-                    xPosition,
-                    this.height / 2 - 40,
-                    0f,
-                    1f,
-                    2000
-            );
-
-            renderCache.add((guiGraphics) -> {
-
-                renderAnimatedText(
-                        guiGraphics,
-                        Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_TEXT_KEY),
-                        noItem,
-                        0xAAAAAA
-                );
-
-            });
-
+            countLabelX = panelX + (PANEL_WIDTH - labelWidth) / 2;
+            countLabelY = panelY + 88;
+            countInputWidthVirtual = Math.max(INPUT_MIN_WIDTH, Math.min(INPUT_WIDTH, contentMaxWidth));
+            countInputXVirtual = panelX + (PANEL_WIDTH - countInputWidthVirtual) / 2;
+            countInputYVirtual = countLabelY + this.font.lineHeight + 4;
         }
 
-        int textWidth = this.font.width(Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY));
-
-        count = new TextAnimation(
-                this.width / 2 - 78 - textWidth,
-                this.height / 2 - 15,
-                this.width / 2 - 78 - textWidth,
-                this.height / 2 - 15,
-                0f,
-                1f,
-                1000
-        );
-
-        /*price = new TextAnimation(
-                this.width
-        );*/
-
-        renderCache.add((guiGraphics) -> {
-
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY),
-                    count,
-                    0xFFFFFF
-            );
-
-        });
-
+        countInput.setX(Math.round(countInputXVirtual * uiScale));
+        countInput.setY(Math.round(countInputYVirtual * uiScale));
+        countInput.setWidth(Math.round(countInputWidthVirtual * uiScale));
+        countInput.setHeight(Math.round(INPUT_HEIGHT * uiScale));
     }
 
-    private void pricePrediction() {
+    @Override
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        renderFullScreenBackground(guiGraphics);
 
+        calculateVirtualSize();
+        updateInputLayout();
+
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
+
+        renderMainPanel(guiGraphics, virtualMouseX, virtualMouseY);
+        drawEscHint(guiGraphics);
+
+        guiGraphics.pose().popPose();
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    }
+
+    private void renderFullScreenBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, BG_COLOR);
+    }
+
+    private void renderMainPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        int panelX = panelX();
+        int panelY = panelY();
+
+        guiGraphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, PANEL_BG);
+        guiGraphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + 1, PANEL_BORDER);
+        guiGraphics.fill(panelX, panelY + PANEL_HEIGHT - 1, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, PANEL_BORDER);
+        guiGraphics.fill(panelX, panelY, panelX + 1, panelY + PANEL_HEIGHT, PANEL_BORDER);
+        guiGraphics.fill(panelX + PANEL_WIDTH - 1, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, PANEL_BORDER);
+
+        String itemName = itemStack.isEmpty()
+                ? Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_TEXT_KEY).getString()
+                : itemStack.getHoverName().getString();
+
+        int nameWidth = this.font.width(itemName);
+        int nameX = panelX + (PANEL_WIDTH - nameWidth) / 2;
+        int nameY = panelY + 16;
+        guiGraphics.drawString(this.font, itemName, nameX, nameY, 0xFFFFFFFF);
+
+        if (!itemStack.isEmpty()) {
+            int iconX = panelX + (PANEL_WIDTH - 16) / 2;
+            int iconY = panelY + 34;
+            guiGraphics.renderItem(itemStack, iconX, iconY);
+        }
+
+        Component priceText = Component.translatable(Util_MessageKeys.SHOP_ITEM_CURRENT_PRICE_KEY, shopItem.getCurrentPrice())
+                .withStyle(ChatFormatting.YELLOW);
+        int priceWidth = this.font.width(priceText);
+        int priceY = panelY + 56;
+        guiGraphics.drawString(this.font, priceText, panelX + (PANEL_WIDTH - priceWidth) / 2, priceY, 0xFFFFFFFF);
+
+        int countValue = parseCountValue();
+        int totalPrice = countValue > 0 ? shopItem.getCurrentPrice() * countValue : 0;
+        Component totalText = Component.translatable(Util_MessageKeys.SHOP_BUY_TOTAL_PRICE_TEXT_KEY, totalPrice)
+                .withStyle(ChatFormatting.GOLD);
+        int totalWidth = this.font.width(totalText);
+        int totalY = priceY + this.font.lineHeight + 4;
+        guiGraphics.drawString(this.font, totalText, panelX + (PANEL_WIDTH - totalWidth) / 2, totalY, 0xFFFFFFFF);
+
+        Component countLabel = Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY);
+        guiGraphics.drawString(this.font, countLabel, countLabelX, countLabelY, 0xD0FFFFFF);
+
+        int btnX = panelX + (PANEL_WIDTH - BUTTON_WIDTH) / 2;
+        int btnY = panelY + PANEL_HEIGHT - PANEL_PADDING - BUTTON_HEIGHT;
+
+        buyBtnX1 = btnX;
+        buyBtnY1 = btnY;
+        buyBtnX2 = btnX + BUTTON_WIDTH;
+        buyBtnY2 = btnY + BUTTON_HEIGHT;
+
+        boolean hovered = mouseX >= buyBtnX1 && mouseX <= buyBtnX2 && mouseY >= buyBtnY1 && mouseY <= buyBtnY2;
+        drawBuyButton(guiGraphics, btnX, btnY, hovered);
+    }
+
+    private void drawBuyButton(GuiGraphics guiGraphics, int x, int y, boolean hovered) {
+        int bg = hovered ? 0xD04A8ACF : 0xB03A7ABF;
+        int border = hovered ? 0xFF6AB8FF : 0xFF4A8ACF;
+
+        guiGraphics.fill(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, bg);
+        guiGraphics.fill(x, y, x + BUTTON_WIDTH, y + 1, border);
+        guiGraphics.fill(x, y + BUTTON_HEIGHT - 1, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, border);
+        guiGraphics.fill(x, y, x + 1, y + BUTTON_HEIGHT, border);
+        guiGraphics.fill(x + BUTTON_WIDTH - 1, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT, border);
+
+        String text = Component.translatable(Util_MessageKeys.SHOP_BUY_BUY_BUTTON_KEY).getString();
+        int textWidth = this.font.width(text);
+        int textX = x + (BUTTON_WIDTH - textWidth) / 2;
+        int textY = y + (BUTTON_HEIGHT - this.font.lineHeight) / 2;
+        guiGraphics.drawString(this.font, text, textX, textY, 0xFFFFFFFF);
+    }
+
+    private void drawEscHint(GuiGraphics guiGraphics) {
+        String hint = Component.translatable(Util_MessageKeys.SHOP_ESC_HINT_TEXT_KEY).getString();
+        int hintWidth = this.font.width(hint);
+        int x = virtualWidth - PANEL_PADDING - hintWidth;
+        int y = virtualHeight - PANEL_PADDING - this.font.lineHeight;
+        guiGraphics.drawString(this.font, hint, x, y, 0x90FFFFFF);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
+
+        if (virtualMouseX >= buyBtnX1 && virtualMouseX <= buyBtnX2 &&
+                virtualMouseY >= buyBtnY1 && virtualMouseY <= buyBtnY2) {
+            buyItem();
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void buyItem() {
+        Player player = Minecraft.getInstance().player;
+        if (player == null) {
+            return;
+        }
+
         if (itemStack.isEmpty()) {
-            this.player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_MESSAGE_KEY));
+            player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_MESSAGE_KEY));
             return;
         }
 
-        String countText = countInput.getValue();
-        Optional<Integer> count = parsePrice(countText);
-
-        if (count.isEmpty() || count.get() <= 0) {
-            this.player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY));
+        String countText = countInput == null ? "" : countInput.getValue().trim();
+        int count;
+        try {
+            count = Integer.parseInt(countText);
+        } catch (NumberFormatException e) {
+            player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY));
             return;
         }
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopBuyItem(shopItem.getItemId(), shopItem.getNbt(), shopItem.getCurrentPrice(), count.get()));
+        if (count <= 0) {
+            player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY));
+            return;
+        }
 
-        this.minecraft.setScreen(new Screen_Shop());
+        EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                new Packet_ShopBuyItem(shopItem.getItemId(), shopItem.getNbt(), shopItem.getCurrentPrice(), count)
+        );
+
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(new Screen_Shop());
+        }
     }
 
-
-    private Optional<Integer> parsePrice(String priceText) {
+    private int parseCountValue() {
+        if (countInput == null) {
+            return -1;
+        }
         try {
-            return Optional.of(Integer.parseInt(priceText));
+            return Integer.parseInt(countInput.getValue().trim());
         } catch (NumberFormatException e) {
-            return Optional.empty();
+            return -1;
         }
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && this.shouldCloseOnEsc()) {
-            Minecraft.getInstance().setScreen(new Screen_Shop());
+        if (keyCode == 256) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Shop());
+            }
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }

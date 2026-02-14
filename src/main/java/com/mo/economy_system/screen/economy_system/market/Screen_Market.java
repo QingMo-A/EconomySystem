@@ -125,6 +125,7 @@ public class Screen_Market extends Screen {
         this.searchBox.setResponder(this::onSearchChanged);
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
+        updateSearchBoxLayout();
     }
 
     private void calculateVirtualSize() {
@@ -133,6 +134,22 @@ public class Screen_Market extends Screen {
         uiScale = Math.min(scaleX, scaleY);
         virtualWidth = (int) (this.width / uiScale);
         virtualHeight = (int) (this.height / uiScale);
+    }
+
+    private void updateSearchBoxLayout() {
+        if (searchBox == null) {
+            return;
+        }
+
+        int boxX = Math.round(PANEL_PADDING * uiScale);
+        int boxY = Math.round(20 * uiScale);
+        int boxWidth = Math.round(200 * uiScale);
+        int boxHeight = Math.round(20 * uiScale);
+
+        searchBox.setX(boxX);
+        searchBox.setY(boxY);
+        searchBox.setWidth(boxWidth);
+        searchBox.setHeight(boxHeight);
     }
 
     private void onSearchChanged(String text) {
@@ -174,6 +191,7 @@ public class Screen_Market extends Screen {
         renderFullScreenBackground(guiGraphics);
 
         calculateVirtualSize();
+        updateSearchBoxLayout();
 
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(uiScale, uiScale, 1.0f);

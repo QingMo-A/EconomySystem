@@ -41,10 +41,21 @@ public class Screen_Home extends Screen {
     private static final float LEFT_PANEL_PERCENT = 0.25f;
     private static final int CARD_SPACING = 8;
     private static final int PANEL_PADDING = 12;
+    private static final int NAV_CARD_HEIGHT = 28;
+    private static final int TOP_ROW_HEIGHT = 70;
+    private static final int PANEL_ANIMATION_OFFSET = 50;
+    private static final int LEADERBOARD_VISIBLE_ROWS = 10;
+    private static final int BACKGROUND_COLOR = 0x400A0A14;
 
     // ==================== 导航卡片配置 ====================
     private static final String[] NAV_ICONS = {"🛒", "📈", "📦", "🏰", "ℹ️"};
-    private static final String[] NAV_NAMES = {"商店", "市场", "邮箱", "领地", "关于"};
+    private static final String[] NAV_NAME_KEYS = {
+        Util_MessageKeys.HOME_SHOP_BUTTON_KEY,
+        Util_MessageKeys.HOME_MARKET_BUTTON_KEY,
+        Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY,
+        Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY,
+        Util_MessageKeys.HOME_ABOUT_BUTTON_KEY
+    };
     private static final int[] NAV_COLORS = {
         CardRenderer.THEME_SHOP,
         CardRenderer.THEME_MARKET,
@@ -133,15 +144,15 @@ public class Screen_Home extends Screen {
 
     private void renderFullScreenBackground(GuiGraphics guiGraphics) {
         // 使用更淡的背景色
-        guiGraphics.fill(0, 0, this.width, this.height, 0x400A0A14);
+        guiGraphics.fill(0, 0, this.width, this.height, BACKGROUND_COLOR);
     }
 
     private void renderPanels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         float animProgress = openAnimation.value();
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
-        int leftOffsetX = (int) ((1.0f - animProgress) * -50);
-        int rightOffsetX = (int) ((1.0f - animProgress) * 50);
+        int leftOffsetX = (int) ((1.0f - animProgress) * -PANEL_ANIMATION_OFFSET);
+        int rightOffsetX = (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
 
         // 左侧导航面板
         guiGraphics.pose().pushPose();
@@ -165,7 +176,7 @@ public class Screen_Home extends Screen {
 
     private void renderNavPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
         int cardWidth = leftPanelWidth - PANEL_PADDING * 2;
-        int cardHeight = 28;
+        int cardHeight = NAV_CARD_HEIGHT;
         int startY = PANEL_PADDING;
 
         for (int i = 0; i < NAV_ICONS.length; i++) {
@@ -178,13 +189,13 @@ public class Screen_Home extends Screen {
             boolean isHovered = (mouseX >= cardX && mouseX <= cardX + cardWidth &&
                                 mouseY >= cardY && mouseY <= cardY + cardHeight);
             UiButtonRenderer.drawStripedButton(guiGraphics, font, cardX, cardY, cardWidth, cardHeight,
-                NAV_NAMES[i], NAV_ICONS[i], navButtonStyles[i], isHovered);
+                Component.translatable(NAV_NAME_KEYS[i]).getString(), NAV_ICONS[i], navButtonStyles[i], isHovered);
         }
     }
 
     private void renderContentPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
         int startY = PANEL_PADDING;
-        int topRowHeight = 70;
+        int topRowHeight = TOP_ROW_HEIGHT;
 
         // 计算玩家排名
         int playerRank = 0;
@@ -268,7 +279,7 @@ public class Screen_Home extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (accounts != null && !accounts.isEmpty()) {
-            int maxScroll = Math.max(0, accounts.size() - 10);
+            int maxScroll = Math.max(0, accounts.size() - LEADERBOARD_VISIBLE_ROWS);
             int newOffset = leaderboardScrollOffset - (int) Math.signum(delta);
             leaderboardScrollOffset = Mth.clamp(newOffset, 0, maxScroll);
             return true;

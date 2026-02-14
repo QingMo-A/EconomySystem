@@ -51,6 +51,10 @@ public class Util_MessageKeys {
     public static final String SHOP_ITEM_CHANGE_PRICE_KEY = "screen.shop.item.change_price";
     public static final String SHOP_ITEM_FLUCTUATION_FACTOR_KEY = "screen.shop.item.fluctuation_factor";
     public static final String SHOP_LOADING_SHOP_DATA_TEXT_KEY = "text.shop.loading_shop_data";
+    public static final String SHOP_NO_MATCHING_ITEMS_TEXT_KEY = "text.shop.no_matching_items";
+    public static final String SHOP_NO_ITEMS_AVAILABLE_TEXT_KEY = "text.shop.no_items_available";
+    public static final String SHOP_SEARCH_HINT_TEXT_KEY = "text.shop.search_hint";
+    public static final String SHOP_ESC_HINT_TEXT_KEY = "text.shop.esc_hint";
     public static final String SHOP_BUY_BUTTON_KEY = "button.shop.buy";
     public static final String SHOP_HINT_TEXT_KEY = "text.shop.hint";
     public static final String SHOP_BUY_PRICE_TEXT_KEY = "text_buy.price";
@@ -69,6 +73,7 @@ public class Util_MessageKeys {
     public static final String SHOP_BUY_NO_ITEM_MESSAGE_KEY = "message.shop_buy.no_item";
     public static final String SHOP_BUY_INVALID_COUNT_MESSAGE_KEY = "message.shop_buy.invalid_count";
     public static final String SHOP_BUY_COUNT_TEXT_KEY = "text.shop_buy.count";
+    public static final String SHOP_BUY_TOTAL_PRICE_TEXT_KEY = "text.shop_buy.total_price";
 
     // Screen_Market | 市场
     public static final String MARKET_TITLE_KEY = "screen.market.title";

@@ -1,6 +1,7 @@
 package com.mo.economy_system.datagen;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.datagen.lang.EnUsLanguageProvider;
 import com.mo.economy_system.datagen.lang.ZhCnLanguageProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
@@ -23,5 +24,6 @@ public class EconomySystem_DataGenerators {
 
         dataGenerator.addProvider(event.includeServer(), new ModItemModelProvider(packOutput, existingFileHelper));
         dataGenerator.addProvider(event.includeServer(), new ZhCnLanguageProvider(dataGenerator, EconomySystem.MODID));
+        dataGenerator.addProvider(event.includeServer(), new EnUsLanguageProvider(dataGenerator, EconomySystem.MODID));
     }
 }

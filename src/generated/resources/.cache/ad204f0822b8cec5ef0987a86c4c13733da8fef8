@@ -1,11 +1,13 @@
-// 1.20.1	2026-02-01T23:43:04.8838553	Item Models: economy_system
+// 1.20.1	2026-02-13T23:57:48.8602662	Item Models: economy_system
 5eab98defef0e2399191220a0cddbaec55ec9033 assets/economy_system/models/item/advanced_aid_kit.json
 5775ccd2f7df4e1b51b9b0f9ef63f043da581332 assets/economy_system/models/item/blueprint.json
 86ce6629a54ce58b9315e27592c4545ec0abb1ba assets/economy_system/models/item/claim_wand.json
+bbf54a65cf1cbb668439e7cac83017112642fa6f assets/economy_system/models/item/clue_item.json
 829dcc4b5068bac38c0be1e4e90aef189539cbfc assets/economy_system/models/item/dreamingfish.json
 ddf1e987d831e5af5d2ca2b4db59a0d4bb3048bb assets/economy_system/models/item/easy_aid_kit.json
 5c63ee58db4e19cf3b9001e1b5967095193b1a94 assets/economy_system/models/item/professional_aid_kit.json
 8c73d61d8b8554cd37dfad96e13350200114b7b9 assets/economy_system/models/item/recall_potion.json
+c7825936a844e98241aed7d2c6a69698d529b73c assets/economy_system/models/item/restore_uninfected_potion.json
 a16e4f20e9bfb6e4ce63f2783947d70a434ab984 assets/economy_system/models/item/revival_charm.json
 660d8319bf30a4bfb9e0cd8a5bfe117f9aee4365 assets/economy_system/models/item/supporter_hat.json
 a92303741eb1a96eb4d85cbb7af4a953862e12d2 assets/economy_system/models/item/supporter_hat_amethyst_trim.json

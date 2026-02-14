@@ -39,6 +39,12 @@ public class Screen_Shop extends Screen {
     private static final int BASE_HEIGHT = 360;
     private static final int CARD_SPACING = 8;
     private static final int PANEL_PADDING = 12;
+    private static final int SEARCH_BOX_WIDTH = 200;
+    private static final int SEARCH_BOX_HEIGHT = 20;
+    private static final int SEARCH_BOX_TOP = 20;
+    private static final int GRID_START_Y = 55;
+    private static final int PAGE_BUTTON_WIDTH = 50;
+    private static final int PAGE_BUTTON_HEIGHT = 24;
 
     // ==================== 商品卡片配置 ====================
     private static final int CARD_WIDTH = 100;
@@ -47,6 +53,7 @@ public class Screen_Shop extends Screen {
     // ==================== 数据 ====================
     private List<ShopItem> items = new ArrayList<>();
     private List<ShopItem> filteredItems = new ArrayList<>();
+    private boolean dataLoaded = false;
 
     // ==================== 分页 ====================
     private int currentPage = 0;
@@ -79,6 +86,7 @@ public class Screen_Shop extends Screen {
     public void updateShopItems(List<ShopItem> items) {
         this.items = items;
         this.filteredItems = new ArrayList<>(items);
+        this.dataLoaded = true;
     }
 
     @Override
@@ -87,14 +95,14 @@ public class Screen_Shop extends Screen {
         calculateVirtualSize();
 
         // 创建搜索框（左上角）
-        int searchBoxWidth = 200;
-        int searchBoxHeight = 20;
+        int searchBoxWidth = SEARCH_BOX_WIDTH;
+        int searchBoxHeight = SEARCH_BOX_HEIGHT;
         int searchBoxX = PANEL_PADDING;
-        int searchBoxY = 20;
-
-        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight, Component.translatable("搜索商品..."));
+        int searchBoxY = SEARCH_BOX_TOP;
+        Component searchHint = Component.translatable(Util_MessageKeys.SHOP_SEARCH_HINT_TEXT_KEY);
+        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight, searchHint);
         this.searchBox.setMaxLength(50);
-        this.searchBox.setHint(Component.literal("搜索商品..."));
+        this.searchBox.setHint(searchHint);
         this.searchBox.setResponder(this::onSearchChanged);
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
@@ -115,9 +123,9 @@ public class Screen_Shop extends Screen {
         }
 
         int boxX = Math.round(PANEL_PADDING * uiScale);
-        int boxY = Math.round(20 * uiScale);
-        int boxWidth = Math.round(200 * uiScale);
-        int boxHeight = Math.round(20 * uiScale);
+        int boxY = Math.round(SEARCH_BOX_TOP * uiScale);
+        int boxWidth = Math.round(SEARCH_BOX_WIDTH * uiScale);
+        int boxHeight = Math.round(SEARCH_BOX_HEIGHT * uiScale);
 
         searchBox.setX(boxX);
         searchBox.setY(boxY);
@@ -222,8 +230,16 @@ public class Screen_Shop extends Screen {
                     priceChangeText = String.valueOf(priceDifference);
                 }
 
+                ChatFormatting changeColor;
+                if (priceDifference > 0) {
+                    changeColor = ChatFormatting.RED;
+                } else if (priceDifference < 0) {
+                    changeColor = ChatFormatting.GREEN;
+                } else {
+                    changeColor = ChatFormatting.GRAY;
+                }
                 tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CHANGE_PRICE_KEY, priceChangeText)
-                        .withStyle(priceDifference > 0 ? ChatFormatting.GREEN : ChatFormatting.RED));
+                        .withStyle(changeColor));
                 tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_BASIC_PRICE_KEY, item.getBasePrice())
                         .withStyle(ChatFormatting.GRAY));
                 tooltipLines.add(Component.translatable(Util_MessageKeys.SHOP_ITEM_CURRENT_PRICE_KEY, item.getCurrentPrice())
@@ -268,11 +284,11 @@ public class Screen_Shop extends Screen {
         int x = PANEL_PADDING;
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
 
-        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 120, "🛒 商店");
+        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 120, Component.translatable(Util_MessageKeys.SHOP_TITLE_KEY).getString());
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {
-        String hint = "按 ESC 返回";
+        String hint = Component.translatable(Util_MessageKeys.SHOP_ESC_HINT_TEXT_KEY).getString();
         int hintWidth = font.width(hint);
         int x = virtualWidth - PANEL_PADDING - hintWidth;
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
@@ -284,16 +300,17 @@ public class Screen_Shop extends Screen {
         cardAreas.clear();
 
         if (filteredItems.isEmpty()) {
-            String loadingText = "加载中...";
-            int textWidth = font.width(loadingText);
+            String emptyText = getEmptyStateText();
+            int textWidth = font.width(emptyText);
             int textX = (virtualWidth - textWidth) / 2;
             int textY = virtualHeight / 2;
-            guiGraphics.drawString(font, loadingText, textX, textY, 0x80FFFFFF);
+            guiGraphics.drawString(font, emptyText, textX, textY, 0x80FFFFFF);
             return;
         }
 
         // 计算列数（根据虚拟宽度和卡片宽度）
-        columns = Math.max(1, (virtualWidth - PANEL_PADDING * 2 + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
+        int contentWidth = virtualWidth - PANEL_PADDING * 2;
+        columns = Math.max(1, (contentWidth + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
         itemsPerPage = rows * columns;
 
         // 计算分页
@@ -305,8 +322,8 @@ public class Screen_Shop extends Screen {
 
         // 网格配置（动态列数 x 3行，从左到右排列）
         int totalGridWidth = columns * CARD_WIDTH + (columns - 1) * CARD_SPACING;
-        int gridStartX = PANEL_PADDING;  // 左对齐
-        int gridStartY = 55;  // 往上移
+        int gridStartX = PANEL_PADDING + Math.max(0, (contentWidth - totalGridWidth) / 2);  // 左对齐
+        int gridStartY = GRID_START_Y;  // 往上移
 
         for (int i = startIndex; i < endIndex; i++) {
             int indexInPage = i - startIndex;
@@ -345,8 +362,8 @@ public class Screen_Shop extends Screen {
         guiGraphics.drawString(font, pageText, pageTextX, pageTextY, 0xFFFFFFFF);
 
         // 上一页按钮
-        int btnWidth = 50;
-        int btnHeight = 24;
+        int btnWidth = PAGE_BUTTON_WIDTH;
+        int btnHeight = PAGE_BUTTON_HEIGHT;
         int btnY = virtualHeight - 40;
         int prevBtnX = pageTextX - btnWidth - 12;
 
@@ -398,7 +415,18 @@ public class Screen_Shop extends Screen {
     }
 
     private int getTotalPages() {
-        return (int) Math.ceil((double) filteredItems.size() / itemsPerPage);
+        int safeItemsPerPage = Math.max(1, itemsPerPage);
+        return (int) Math.ceil((double) filteredItems.size() / safeItemsPerPage);
+    }
+
+    private String getEmptyStateText() {
+        if (!dataLoaded) {
+            return Component.translatable(Util_MessageKeys.SHOP_LOADING_SHOP_DATA_TEXT_KEY).getString();
+        }
+        if (!items.isEmpty()) {
+            return Component.translatable(Util_MessageKeys.SHOP_NO_MATCHING_ITEMS_TEXT_KEY).getString();
+        }
+        return Component.translatable(Util_MessageKeys.SHOP_NO_ITEMS_AVAILABLE_TEXT_KEY).getString();
     }
 
     @Override

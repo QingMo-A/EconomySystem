@@ -94,7 +94,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.SHOP_ITEM_CURRENT_PRICE_KEY, "§8物品当前价格: §7%s");
         add(Util_MessageKeys.SHOP_ITEM_CHANGE_PRICE_KEY, "§8变化: §7%s");
         add(Util_MessageKeys.SHOP_ITEM_FLUCTUATION_FACTOR_KEY, "§8涨幅系数: §7%s");
-        add(Util_MessageKeys.SHOP_LOADING_SHOP_DATA_TEXT_KEY, "没有商品数据喵~");
+        add(Util_MessageKeys.SHOP_LOADING_SHOP_DATA_TEXT_KEY, "加载中...");
+        add(Util_MessageKeys.SHOP_NO_MATCHING_ITEMS_TEXT_KEY, "没有匹配的商品");
+        add(Util_MessageKeys.SHOP_NO_ITEMS_AVAILABLE_TEXT_KEY, "暂无商品");
+        add(Util_MessageKeys.SHOP_SEARCH_HINT_TEXT_KEY, "搜索商品...");
+        add(Util_MessageKeys.SHOP_ESC_HINT_TEXT_KEY, "按 ESC 返回");
         add(Util_MessageKeys.SHOP_BUY_BUTTON_KEY, "§7购买");
         add(Util_MessageKeys.SHOP_BUY_SUCCESSFULLY_MESSAGE_KEY, "§a你成功花费 §6%s §a枚梦鱼币购买了 §7%s §a个 §8%s");
         add(Util_MessageKeys.SHOP_BUY_FAILED_MESSAGE_KEY, "你没有足够的梦鱼币来购买此商品");
@@ -111,6 +115,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.SHOP_BUY_NO_ITEM_MESSAGE_KEY, "未知物品");
         add(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY, "非法数量");
         add(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY, "数量: ");
+        add(Util_MessageKeys.SHOP_BUY_TOTAL_PRICE_TEXT_KEY, "总价: %s");
 
         // Screen_Market | 市场
         add(Util_MessageKeys.MARKET_TITLE_KEY, "市场");
