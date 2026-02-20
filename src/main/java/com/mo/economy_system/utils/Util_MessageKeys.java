@@ -74,6 +74,7 @@ public class Util_MessageKeys {
     public static final String SHOP_BUY_INVALID_COUNT_MESSAGE_KEY = "message.shop_buy.invalid_count";
     public static final String SHOP_BUY_COUNT_TEXT_KEY = "text.shop_buy.count";
     public static final String SHOP_BUY_TOTAL_PRICE_TEXT_KEY = "text.shop_buy.total_price";
+    public static final String SHOP_BUY_INVENTORY_INSUFFICIENT_TEXT_KEY = "text.shop_buy.inventory_insufficient";
 
     // Screen_Market | 市场
     public static final String MARKET_TITLE_KEY = "screen.market.title";

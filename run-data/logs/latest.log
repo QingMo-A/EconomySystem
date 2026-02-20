@@ -1,36 +1,36 @@
-[142月2026 02:56:49.980] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgedatauserdev, --assetIndex, 5, --assetsDir, F:\.gradle\caches\forge_gradle\assets, --gameDir, ., --fml.forgeVersion, 47.3.20, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, --mod, economy_system, --all, --output, F:\Java项目\EconomySystem\src\generated\resources, --existing, F:\Java项目\EconomySystem\src\main\resources, --mixin.config, economy_system.mixins.json]
-[142月2026 02:56:49.983] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.10 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
-[142月2026 02:56:50.060] [main/INFO] [net.minecraftforge.fml.loading.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgedatauserdev
-[142月2026 02:56:50.094] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/F:/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23128!/ Service=ModLauncher Env=CLIENT
-[142月2026 02:56:50.294] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.3.20\699aa20eaac814c5a14b7ba5166d8d30e3957ec8\javafmllanguage-1.20.1-47.3.20.jar is missing mods.toml file
-[142月2026 02:56:50.295] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.3.20\a83e0425b51dc29a591c37b317d73482e5620cd5\lowcodelanguage-1.20.1-47.3.20.jar is missing mods.toml file
-[142月2026 02:56:50.297] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.3.20\c1f7b3b6cbffb742dc273a6cf19b47e184f86b6\mclanguage-1.20.1-47.3.20.jar is missing mods.toml file
-[142月2026 02:56:50.299] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.3.20\5f30692efa3201b8fd57d012e9423bd3b9f04fcc\fmlcore-1.20.1-47.3.20.jar is missing mods.toml file
-[142月2026 02:56:50.357] [main/INFO] [net.minecraftforge.fml.loading.moddiscovery.JarInJarDependencyLocator/]: No dependencies to load found. Skipping!
-[142月2026 02:56:51.502] [main/INFO] [mixin/]: Compatibility level set to JAVA_17
-[142月2026 02:56:51.504] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgedatauserdev' with arguments [--gameDir, ., --assetsDir, F:\.gradle\caches\forge_gradle\assets, --assetIndex, 5, --mod, economy_system, --all, --output, F:\Java项目\EconomySystem\src\generated\resources, --existing, F:\Java项目\EconomySystem\src\main\resources]
-[142月2026 02:56:51.579] [main/WARN] [mixin/]: Reference map 'economy_system.refmap.json' for economy_system.mixins.json could not be read. If this is a development environment you can ignore this message
-[142月2026 02:56:51.952] [main/INFO] [net.minecraftforge.data.loading.DatagenModLoader/]: Initializing Data Gatherer for mods [economy_system]
-[142月2026 02:56:54.857] [modloading-worker-0/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 47.3.20, for MC 1.20.1 with MCP 20230612.114412
-[142月2026 02:56:54.858] [modloading-worker-0/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v47.3.20 Initialized
-[142月2026 02:56:55.147] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 已加载 8 条公告
-[142月2026 02:56:55.151] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 已加载 0 个玩家的公告阅读记录
-[142月2026 02:56:55.153] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 肢体伤害系统配置已加载: 头部×1.2, 胸部×1.0, 腿部×0.9, 脚部×0.9
-[142月2026 02:56:55.154] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: Economy System Mod Initialized!
-[142月2026 02:56:55.214] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager...
-[142月2026 02:56:55.226] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager took 7.714 ms
-[142月2026 02:56:55.275] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家属性数据文件已存在：config\economy_system\data\player_attributes_data.json
-[142月2026 02:56:55.297] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 故事阶段数据文件已存在：config\economy_system\story_stage_data.json
-[142月2026 02:56:55.302] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家任务数据文件已存在：config\economy_system\task_player_data.json
-[142月2026 02:56:55.400] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 生物群系数据文件已存在：config\economy_system\data\player_biomes_data.json
-[142月2026 02:56:55.401] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家数据文件已存在：config\economy_system\data\player_data.json
-[142月2026 02:56:55.579] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/F:/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.3.20_mapped_official_1.20.1/forge-1.20.1-47.3.20_mapped_official_1.20.1-recomp.jar%23191!/assets/.mcassetsroot' uses unexpected schema
-[142月2026 02:56:55.579] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/F:/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.3.20_mapped_official_1.20.1/forge-1.20.1-47.3.20_mapped_official_1.20.1-recomp.jar%23191!/data/.mcassetsroot' uses unexpected schema
-[142月2026 02:56:55.731] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Item Models: economy_system
-[142月2026 02:56:55.767] [main/INFO] [net.minecraft.data.DataGenerator/]: Item Models: economy_system finished after 35 ms
-[142月2026 02:56:55.767] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: zh_cn
-[142月2026 02:56:55.770] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: zh_cn finished after 2 ms
-[142月2026 02:56:55.770] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: en_us
-[142月2026 02:56:55.772] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: en_us finished after 1 ms
-[142月2026 02:56:55.772] [main/INFO] [net.minecraft.data.DataGenerator/]: All providers took: 41 ms
-[142月2026 02:56:55.778] [main/INFO] [net.minecraft.data.HashCache/]: Caching: total files: 24, old count: 24, new count: 25, removed stale: 0, written: 1
+[202月2026 12:10:23.618] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgedatauserdev, --assetIndex, 5, --assetsDir, F:\.gradle\caches\forge_gradle\assets, --gameDir, ., --fml.forgeVersion, 47.3.20, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, --mod, economy_system, --all, --output, F:\Java项目\EconomySystem\src\generated\resources, --existing, F:\Java项目\EconomySystem\src\main\resources, --mixin.config, economy_system.mixins.json]
+[202月2026 12:10:23.628] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.10 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
+[202月2026 12:10:23.748] [main/INFO] [net.minecraftforge.fml.loading.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgedatauserdev
+[202月2026 12:10:23.782] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/F:/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23128!/ Service=ModLauncher Env=CLIENT
+[202月2026 12:10:23.979] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.3.20\699aa20eaac814c5a14b7ba5166d8d30e3957ec8\javafmllanguage-1.20.1-47.3.20.jar is missing mods.toml file
+[202月2026 12:10:23.981] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.3.20\a83e0425b51dc29a591c37b317d73482e5620cd5\lowcodelanguage-1.20.1-47.3.20.jar is missing mods.toml file
+[202月2026 12:10:23.984] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.3.20\c1f7b3b6cbffb742dc273a6cf19b47e184f86b6\mclanguage-1.20.1-47.3.20.jar is missing mods.toml file
+[202月2026 12:10:23.986] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file F:\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.3.20\5f30692efa3201b8fd57d012e9423bd3b9f04fcc\fmlcore-1.20.1-47.3.20.jar is missing mods.toml file
+[202月2026 12:10:24.043] [main/INFO] [net.minecraftforge.fml.loading.moddiscovery.JarInJarDependencyLocator/]: No dependencies to load found. Skipping!
+[202月2026 12:10:25.219] [main/INFO] [mixin/]: Compatibility level set to JAVA_17
+[202月2026 12:10:25.223] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgedatauserdev' with arguments [--gameDir, ., --assetsDir, F:\.gradle\caches\forge_gradle\assets, --assetIndex, 5, --mod, economy_system, --all, --output, F:\Java项目\EconomySystem\src\generated\resources, --existing, F:\Java项目\EconomySystem\src\main\resources]
+[202月2026 12:10:25.307] [main/WARN] [mixin/]: Reference map 'economy_system.refmap.json' for economy_system.mixins.json could not be read. If this is a development environment you can ignore this message
+[202月2026 12:10:25.734] [main/INFO] [net.minecraftforge.data.loading.DatagenModLoader/]: Initializing Data Gatherer for mods [economy_system]
+[202月2026 12:10:28.874] [modloading-worker-0/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 47.3.20, for MC 1.20.1 with MCP 20230612.114412
+[202月2026 12:10:28.875] [modloading-worker-0/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v47.3.20 Initialized
+[202月2026 12:10:29.247] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 已加载 8 条公告
+[202月2026 12:10:29.273] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 已加载 0 个玩家的公告阅读记录
+[202月2026 12:10:29.275] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 肢体伤害系统配置已加载: 头部×1.2, 胸部×1.0, 腿部×0.9, 脚部×0.9
+[202月2026 12:10:29.276] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: Economy System Mod Initialized!
+[202月2026 12:10:29.331] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家属性数据文件已存在：config\economy_system\data\player_attributes_data.json
+[202月2026 12:10:29.344] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 故事阶段数据文件已存在：config\economy_system\story_stage_data.json
+[202月2026 12:10:29.425] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家任务数据文件已存在：config\economy_system\task_player_data.json
+[202月2026 12:10:29.434] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager...
+[202月2026 12:10:29.437] [modloading-worker-0/INFO] [mezz.jei.library.load.PluginCaller/]: Sending ConfigManager took 1.583 ms
+[202月2026 12:10:29.497] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 生物群系数据文件已存在：config\economy_system\data\player_biomes_data.json
+[202月2026 12:10:29.499] [modloading-worker-0/INFO] [com.mo.economy_system.EconomySystem/]: 玩家数据文件已存在：config\economy_system\data\player_data.json
+[202月2026 12:10:29.664] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/F:/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.3.20_mapped_official_1.20.1/forge-1.20.1-47.3.20_mapped_official_1.20.1-recomp.jar%23191!/assets/.mcassetsroot' uses unexpected schema
+[202月2026 12:10:29.665] [main/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/F:/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.3.20_mapped_official_1.20.1/forge-1.20.1-47.3.20_mapped_official_1.20.1-recomp.jar%23191!/data/.mcassetsroot' uses unexpected schema
+[202月2026 12:10:29.810] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Item Models: economy_system
+[202月2026 12:10:29.832] [main/INFO] [net.minecraft.data.DataGenerator/]: Item Models: economy_system finished after 21 ms
+[202月2026 12:10:29.832] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: zh_cn
+[202月2026 12:10:29.835] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: zh_cn finished after 2 ms
+[202月2026 12:10:29.835] [main/INFO] [net.minecraft.data.DataGenerator/]: Starting provider: Languages: en_us
+[202月2026 12:10:29.838] [main/INFO] [net.minecraft.data.DataGenerator/]: Languages: en_us finished after 2 ms
+[202月2026 12:10:29.838] [main/INFO] [net.minecraft.data.DataGenerator/]: All providers took: 28 ms
+[202月2026 12:10:29.845] [main/INFO] [net.minecraft.data.HashCache/]: Caching: total files: 24, old count: 24, new count: 25, removed stale: 0, written: 2

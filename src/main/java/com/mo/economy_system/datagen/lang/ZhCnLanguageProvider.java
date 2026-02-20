@@ -116,6 +116,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY, "非法数量");
         add(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY, "数量: ");
         add(Util_MessageKeys.SHOP_BUY_TOTAL_PRICE_TEXT_KEY, "总价: %s");
+        add(Util_MessageKeys.SHOP_BUY_INVENTORY_INSUFFICIENT_TEXT_KEY, "背包空间不足，还缺 %s 格");
 
         // Screen_Market | 市场
         add(Util_MessageKeys.MARKET_TITLE_KEY, "市场");

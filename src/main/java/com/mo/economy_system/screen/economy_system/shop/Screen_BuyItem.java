@@ -67,7 +67,7 @@ public class Screen_BuyItem extends Screen {
                 Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
         this.countInput.setHint(Component.translatable(Util_MessageKeys.SHOP_BUY_HINT_TEXT_KEY));
         this.countInput.setMaxLength(8);
-        this.countInput.setValue("1");
+        // this.countInput.setValue("1");
         this.addRenderableWidget(this.countInput);
 
         updateInputLayout();
@@ -188,6 +188,19 @@ public class Screen_BuyItem extends Screen {
         int totalY = priceY + this.font.lineHeight + 4;
         guiGraphics.drawString(this.font, totalText, panelX + (PANEL_WIDTH - totalWidth) / 2, totalY, 0xFFFFFFFF);
 
+        Player player = Minecraft.getInstance().player;
+        if (player != null && countValue > 0) {
+            int missingSlots = calculateMissingSlots(player, countValue);
+            if (missingSlots > 0) {
+                Component inventoryHintText = Component.translatable(
+                        Util_MessageKeys.SHOP_BUY_INVENTORY_INSUFFICIENT_TEXT_KEY, missingSlots
+                ).withStyle(ChatFormatting.RED);
+                int hintWidth = this.font.width(inventoryHintText);
+                int hintY = totalY + this.font.lineHeight + 3;
+                guiGraphics.drawString(this.font, inventoryHintText, panelX + (PANEL_WIDTH - hintWidth) / 2, hintY, 0xFFFFFFFF);
+            }
+        }
+
         Component countLabel = Component.translatable(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY);
         guiGraphics.drawString(this.font, countLabel, countLabelX, countLabelY, 0xD0FFFFFF);
 
@@ -267,6 +280,11 @@ public class Screen_BuyItem extends Screen {
             return;
         }
 
+        if (!hasEnoughInventorySpace(player, count)) {
+            player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_FAILED_INVENTORY_FULL_MESSAGE_KEY));
+            return;
+        }
+
         EconomySystem_NetworkManager.INSTANCE.sendToServer(
                 new Packet_ShopBuyItem(shopItem.getItemId(), shopItem.getNbt(), shopItem.getCurrentPrice(), count)
         );
@@ -285,6 +303,45 @@ public class Screen_BuyItem extends Screen {
         } catch (NumberFormatException e) {
             return -1;
         }
+    }
+
+    private boolean hasEnoughInventorySpace(Player player, int quantity) {
+        return calculateMissingSlots(player, quantity) <= 0;
+    }
+
+    private int calculateMissingSlots(Player player, int quantity) {
+        int maxStackSize = itemStack.getMaxStackSize();
+        int remaining = quantity;
+
+        if (maxStackSize > 1) {
+            for (ItemStack stack : player.getInventory().items) {
+                if (ItemStack.isSameItemSameTags(stack, itemStack) && stack.getCount() < stack.getMaxStackSize()) {
+                    int availableSpace = stack.getMaxStackSize() - stack.getCount();
+                    int transfer = Math.min(availableSpace, remaining);
+                    remaining -= transfer;
+                    if (remaining == 0) {
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        if (remaining <= 0) {
+            return 0;
+        }
+
+        int requiredSlots = maxStackSize == 1
+                ? remaining
+                : (remaining + maxStackSize - 1) / maxStackSize;
+
+        int freeSlots = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.isEmpty()) {
+                freeSlots++;
+            }
+        }
+
+        return Math.max(0, requiredSlots - freeSlots);
     }
 
     @Override

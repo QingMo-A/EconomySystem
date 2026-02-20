@@ -115,6 +115,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.SHOP_BUY_INVALID_COUNT_MESSAGE_KEY, "Shop Buy Invalid Count");
         add(Util_MessageKeys.SHOP_BUY_COUNT_TEXT_KEY, "Count: ");
         add(Util_MessageKeys.SHOP_BUY_TOTAL_PRICE_TEXT_KEY, "Total: %s");
+        add(Util_MessageKeys.SHOP_BUY_INVENTORY_INSUFFICIENT_TEXT_KEY, "Not enough inventory space (%s slots missing)");
 
         // Screen_Market | 市场
         add(Util_MessageKeys.MARKET_TITLE_KEY, "Market Title");

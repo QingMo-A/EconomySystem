@@ -241,6 +241,7 @@
   "text.shop.search_hint": "搜索商品...",
   "text.shop_buy.count": "数量: ",
   "text.shop_buy.hint": "请输入要购买的数量",
+  "text.shop_buy.inventory_insufficient": "背包空间不足，还缺 %s 格",
   "text.shop_buy.no_item": "未知物品",
   "text.shop_buy.total_price": "总价: %s",
   "text.territory.hint": "输入领地的任意信息",

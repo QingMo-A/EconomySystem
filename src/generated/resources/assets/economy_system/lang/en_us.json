@@ -241,6 +241,7 @@
   "text.shop.search_hint": "Search items...",
   "text.shop_buy.count": "Count: ",
   "text.shop_buy.hint": "Shop Buy Hint",
+  "text.shop_buy.inventory_insufficient": "Not enough inventory space (%s slots missing)",
   "text.shop_buy.no_item": "Shop Buy No Item",
   "text.shop_buy.total_price": "Total: %s",
   "text.territory.hint": "Territory Hint",
