@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -30,15 +31,20 @@ public abstract class DisconnectedScreenMixin extends Screen {
     private static final int BASE_HEIGHT = 360;
 
     // ==================== 颜色定义 - 暗红色调 ====================
-    private static final int BG_OUTER = 0xDD0A0000;
-    private static final int BG_INNER = 0xEE1A0505;
-    private static final int BORDER_DARK = 0xFF3D0000;
-    private static final int BORDER_GLOW = 0xFFFF1A1A;
+    private static final int GLASS_TOP = 0x66D16868;
+    private static final int GLASS_BOTTOM = 0x33201010;
+    private static final int GLASS_BORDER = 0x55FF9C9C;
+    private static final int GLASS_SHADOW = 0x33280000;
+    private static final int GLASS_HIGHLIGHT = 0x66FFD2D2;
     private static final int ACCENT_RED = 0xFFCC0000;
 
     // ==================== 虚拟坐标系统变量 ====================
     @Unique
     private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
+
+    @Unique
+    private static final ResourceLocation BACKGROUND_TEXTURE =
+            new ResourceLocation("economy_system", "background.png");
 
     @Unique
     private Button economySystem$returnButton;
@@ -162,7 +168,10 @@ public abstract class DisconnectedScreenMixin extends Screen {
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
 
         // ========== 背景（使用屏幕坐标） ==========
-        guiGraphics.fillGradient(0, 0, this.width, this.height, BG_OUTER, BG_OUTER);
+        guiGraphics.blit(BACKGROUND_TEXTURE,
+                0, 0, this.width, this.height,
+                0, 0, 256, 144, 256, 144);
+        guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
         // ========== 应用虚拟坐标缩放 ==========
         guiGraphics.pose().pushPose();
@@ -178,9 +187,7 @@ public abstract class DisconnectedScreenMixin extends Screen {
         int boxY = centerY - boxHeight / 2;
 
         // 主面板
-        renderRoundedBox(guiGraphics, boxX - 4, boxY - 4, boxX + boxWidth + 4, boxY + boxHeight + 4, BORDER_DARK);
-        renderRoundedBox(guiGraphics, boxX - 2, boxY - 2, boxX + boxWidth + 2, boxY + boxHeight + 2, BORDER_GLOW);
-        guiGraphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, BG_INNER);
+        renderGlassPanel(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0xAAC25E5E);
 
         // 标题区域
         PoseStack poseStack = guiGraphics.pose();
@@ -395,9 +402,35 @@ public abstract class DisconnectedScreenMixin extends Screen {
      * 绘制圆角矩形
      */
     @Unique
-    private void renderRoundedBox(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int color) {
-        guiGraphics.fill(x1 + 1, y1, x2 - 1, y2, color);
-        guiGraphics.fill(x1, y1 + 1, x2, y2 - 1, color);
+    private void renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, int tint) {
+        guiGraphics.fillGradient(x, y, x + width, y + height, GLASS_TOP, GLASS_BOTTOM);
+        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, withAlpha(tint, 0x12));
+        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, GLASS_SHADOW);
+        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, GLASS_SHADOW);
+        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, GLASS_HIGHLIGHT);
+        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, GLASS_SHADOW);
+        renderGlassNoise(guiGraphics, x, y, width, height);
+    }
+
+    @Unique
+    private void renderGlassNoise(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        if (width < 20 || height < 20) {
+            return;
+        }
+        int maxX = x + width - 6;
+        int maxY = y + height - 6;
+        for (int i = 0; i < 6; i++) {
+            int nx = x + 6 + (i * 23 + x) % (maxX - x);
+            int ny = y + 6 + (i * 17 + y) % (maxY - y);
+            guiGraphics.fill(nx, ny, nx + 1, ny + 1, 0x22FFFFFF);
+        }
+    }
+
+    @Unique
+    private int withAlpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24);
     }
 
     /**
