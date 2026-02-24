@@ -1,248 +1,235 @@
 package com.mo.economy_system.screen;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.screen.components.AnimatedButton;
-import com.mo.economy_system.screen.components.TextAnimation;
+import com.mo.economy_system.screen.components.CardRenderer;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.utils.Util_MessageKeys;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 
-public class Screen_About extends EconomySystem_Screen {
+public class Screen_About extends Screen {
 
-    private static final String MOD_NAME = "Economy System";
-    private static final String AUTHOR_NAME = "QingMo";
-    private static final String GITHUB_URL = "https://github.com/QingMo-A/EconoeySystem"; // 替换为你的 GitHub 链接
-
-    private TextAnimation titleA;
-    private TextAnimation modName;
-    private TextAnimation authorName;
-    private TextAnimation githubURL;
+    private static final String AUTHOR_NAME = "QingMo HanHanYu";
+    private static final String GITHUB_URL = "https://github.com/QingMo-A/EconoeySystem";
 
     private static final ResourceLocation VX_TEXTURE = new ResourceLocation(EconomySystem.MODID, "textures/gui/vx.png");
     private static final ResourceLocation ZFB_TEXTURE = new ResourceLocation(EconomySystem.MODID, "textures/gui/zfb.png");
 
-    // 背景图像的资源路径（可选，如果需要自定义背景）
-    private static final ResourceLocation BACKGROUND_TEXTURE = new ResourceLocation("economy_system", "textures/gui/about_screen_background.png");
+    private static final int BASE_WIDTH = 640;
+    private static final int BASE_HEIGHT = 360;
+    private static final int PANEL_PADDING = 12;
+    private static final int INFO_PANEL_WIDTH = 420;
+    private static final int INFO_PANEL_HEIGHT = 170;
+    private static final int QR_CARD_SIZE = 110;
+    private static final int QR_IMAGE_PADDING = 6;
+    private static final int BUTTON_HEIGHT = 22;
+    private static final int BUTTON_WIDTH = 110;
+
+    private float uiScale;
+    private int virtualWidth;
+    private int virtualHeight;
+    private int panelX;
+    private int panelY;
+    private int panelWidth;
+    private int panelHeight;
+
+    private int githubX1, githubY1, githubX2, githubY2;
+    private int backBtnX1, backBtnY1, backBtnX2, backBtnY2;
+
+    private final UiButtonStyle backStyle;
 
     public Screen_About() {
         super(Component.translatable(Util_MessageKeys.ABOUT_TITLE_KEY));
+        backStyle = createButtonStyle(CardRenderer.THEME_ABOUT);
     }
 
     @Override
     protected void init() {
         super.init();
+        calculateVirtualSize();
+        updateLayout();
+    }
 
-        initPosition();
+    private void calculateVirtualSize() {
+        float scaleX = (float) this.width / BASE_WIDTH;
+        float scaleY = (float) this.height / BASE_HEIGHT;
+        uiScale = Math.min(scaleX, scaleY);
+        virtualWidth = (int) (this.width / uiScale);
+        virtualHeight = (int) (this.height / uiScale);
+    }
 
-        // 添加一个返回按钮
-        this.addRenderableWidget(
-                new AnimatedButton(
-                        this.width / 2 - 50,
-                        this.height + 20,
-                        this.width / 2 - 50,
-                        this.height - 40,
-                        100,
-                        20,
-                        Component.translatable(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY),
-                        1000,
-                        button -> {
-                            this.minecraft.setScreen(new Screen_Home()); // 返回主菜单
-                        }
-                )
-        );
+    private void updateLayout() {
+        panelWidth = Math.min(INFO_PANEL_WIDTH, virtualWidth - PANEL_PADDING * 2);
+        int availableHeight = virtualHeight - PANEL_PADDING * 2;
+        panelHeight = Math.min(INFO_PANEL_HEIGHT, Math.max(120, availableHeight - 120));
+        panelX = (virtualWidth - panelWidth) / 2;
+        panelY = PANEL_PADDING + 16;
 
-        this.initializeRenderCache();
+        int buttonWidth = Math.min(BUTTON_WIDTH, Math.max(90, panelWidth - PANEL_PADDING * 2));
+        backBtnX1 = panelX + (panelWidth - buttonWidth) / 2;
+        backBtnY1 = panelY + panelHeight - 34;
+        backBtnX2 = backBtnX1 + buttonWidth;
+        backBtnY2 = backBtnY1 + BUTTON_HEIGHT;
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        // 渲染背景
-        this.renderBackground(guiGraphics);
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        renderFullScreenBackground(guiGraphics);
 
-        // 执行渲染缓存中的任务
-        for (EconomySystem_Screen.RunnableWithGraphics task : renderCache) {
-            task.run(guiGraphics);
-        }
+        calculateVirtualSize();
+        updateLayout();
 
-        // 如果有自定义背景图像，可以启用以下代码（确保资源文件路径正确）
-        /*
-        guiGraphics.blit(BACKGROUND_TEXTURE, 0, 0, 0, 0, this.width, this.height, 256, 256);
-        */
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
-        // 渲染图片
-        renderImage(guiGraphics);
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
 
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        drawTitle(guiGraphics);
+        drawEscHint(guiGraphics);
+        renderInfoPanel(guiGraphics, virtualMouseX, virtualMouseY);
+        renderQrCards(guiGraphics);
+
+        guiGraphics.pose().popPose();
+
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    protected void initializeRenderCache() {
-        renderCache.clear(); // 清空旧的缓存
+    private void renderFullScreenBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0xB0000000);
+    }
 
-        titleA = new TextAnimation(
-                this.width / 2 - this.font.width(this.title.getString()) / 2,
-                20,
-                this.width / 2 - this.font.width(this.title.getString()) / 2,
-                20,
-                0f,
-                1f,
-                1000
-        );
+    private void drawTitle(GuiGraphics guiGraphics) {
+        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 200, "ℹ️ 关于");
+    }
 
-        modName = new TextAnimation(
-                this.width / 2 - this.font.width(Component.translatable(Util_MessageKeys.ABOUT_MOD_NAME_KEY)) / 2,
-                50,
-                this.width / 2 - this.font.width(Component.translatable(Util_MessageKeys.ABOUT_MOD_NAME_KEY)) / 2,
-                50,
-                0f,
-                1f,
-                1000
-        );
+    private void drawEscHint(GuiGraphics guiGraphics) {
+        String hint = "按 ESC 返回";
+        int hintWidth = font.width(hint);
+        int x = virtualWidth - PANEL_PADDING - hintWidth;
+        int y = PANEL_PADDING + 6;
+        guiGraphics.drawString(font, hint, x, y, 0x90FFFFFF);
+    }
 
-        authorName = new TextAnimation(
-                this.width / 2 - this.font.width(Component.translatable(Util_MessageKeys.ABOUT_AUTHOR_NAME_KEY, AUTHOR_NAME)) / 2,
-                70,
-                this.width / 2 - this.font.width(Component.translatable(Util_MessageKeys.ABOUT_AUTHOR_NAME_KEY, AUTHOR_NAME)) / 2,
-                70,
-                0f,
-                1f,
-                1000
-        );
+    private void renderInfoPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+        CardRenderer.drawCard(guiGraphics, panelX, panelY, panelWidth, panelHeight, CardRenderer.THEME_ABOUT, false);
 
-        // 渲染 GitHub 链接
-        Component githubLink = Component.translatable(Util_MessageKeys.ABOUT_GITHUB_URL_KEY, GITHUB_URL)
-                .withStyle(style -> style
-                        .withColor(0x55FF55) // 绿色
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, GITHUB_URL))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY)))
-                );
-        githubURL = new TextAnimation(
-                this.width / 2 - this.font.width(githubLink) / 2,
-                90,
-                this.width / 2 - this.font.width(githubLink) / 2,
-                90,
-                0f,
-                1f,
-                1000
-        );
+        int textX = panelX + PANEL_PADDING;
+        int textY = panelY + 8;
 
-        renderCache.add((guiGraphics) -> {
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.literal(this.title.getString()),
-                    titleA
-            );
+        String titleText = Component.translatable(Util_MessageKeys.ABOUT_TITLE_KEY).getString();
+        guiGraphics.drawString(font, titleText, textX, textY, CardRenderer.TEXT_TITLE);
+        textY += font.lineHeight + 4;
 
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.translatable(Util_MessageKeys.ABOUT_MOD_NAME_KEY),
-                    modName,
-                    0x8B658B
-            );
+        String modName = Component.translatable(Util_MessageKeys.ABOUT_MOD_NAME_KEY).getString();
+        guiGraphics.drawString(font, modName, textX, textY, CardRenderer.TEXT_DESC);
+        textY += font.lineHeight + 2;
 
-            renderAnimatedText(
-                    guiGraphics,
-                    Component.translatable(Util_MessageKeys.ABOUT_AUTHOR_NAME_KEY, AUTHOR_NAME),
-                    authorName
-            );
+        String author = Component.translatable(Util_MessageKeys.ABOUT_AUTHOR_NAME_KEY, AUTHOR_NAME).getString();
+        guiGraphics.drawString(font, author, textX, textY, CardRenderer.TEXT_DESC);
+        textY += font.lineHeight + 8;
 
-            renderAnimatedText(
-                    guiGraphics,
-                    githubLink,
-                    githubURL
-            );
-        });
+        String githubLine = Component.translatable(Util_MessageKeys.ABOUT_GITHUB_URL_KEY, GITHUB_URL).getString();
+        int githubWidth = font.width(githubLine);
+        int githubColor = (mouseX >= textX && mouseX <= textX + githubWidth &&
+                           mouseY >= textY && mouseY <= textY + font.lineHeight) ? 0xFF6AB8FF : CardRenderer.THEME_MARKET;
+        guiGraphics.drawString(font, githubLine, textX, textY, githubColor);
 
-        super.initializeRenderCache();
+        githubX1 = textX;
+        githubY1 = textY;
+        githubX2 = textX + githubWidth;
+        githubY2 = textY + font.lineHeight;
+
+        textY += font.lineHeight + 2;
+        String hint = Component.translatable(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY).getString();
+        guiGraphics.drawString(font, hint, textX, textY, 0x80FFFFFF);
+
+        boolean backHovered = mouseX >= backBtnX1 && mouseX <= backBtnX2 &&
+                              mouseY >= backBtnY1 && mouseY <= backBtnY2;
+        drawStripedButton(guiGraphics, backBtnX1, backBtnY1, backBtnX2 - backBtnX1, BUTTON_HEIGHT,
+            Component.translatable(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY).getString(), backStyle, backHovered);
+    }
+
+    private void renderQrCards(GuiGraphics guiGraphics) {
+        int qrY = virtualHeight - PANEL_PADDING - QR_CARD_SIZE;
+        int leftX = PANEL_PADDING;
+        int rightX = virtualWidth - PANEL_PADDING - QR_CARD_SIZE;
+
+        CardRenderer.drawCard(guiGraphics, leftX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
+        CardRenderer.drawCard(guiGraphics, rightX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
+
+        int imgSize = QR_CARD_SIZE - QR_IMAGE_PADDING * 2;
+        guiGraphics.blit(VX_TEXTURE, leftX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
+            imgSize, imgSize, 0, 0, 256, 256, 256, 256);
+        guiGraphics.blit(ZFB_TEXTURE, rightX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
+            imgSize, imgSize, 0, 0, 256, 256, 256, 256);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // 检测 GitHub 链接的点击事件
-        if (mouseX >= this.width / 2 - 100 && mouseX <= this.width / 2 + 100 && mouseY >= 85 && mouseY <= 105) {
+        float virtualMouseX = (float) mouseX / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale;
+
+        if (virtualMouseX >= githubX1 && virtualMouseX <= githubX2 &&
+            virtualMouseY >= githubY1 && virtualMouseY <= githubY2) {
             Minecraft.getInstance().keyboardHandler.setClipboard(GITHUB_URL);
             Minecraft.getInstance().getChatListener().handleSystemMessage(
-                    Component.translatable(Util_MessageKeys.ABOUT_COPY_URL).withStyle(style -> style.withColor(0x00FF00)),
-                    false
+                Component.translatable(Util_MessageKeys.ABOUT_COPY_URL).withStyle(style -> style.withColor(0x00FF00)),
+                false
             );
+            return true;
+        }
+
+        if (virtualMouseX >= backBtnX1 && virtualMouseX <= backBtnX2 &&
+            virtualMouseY >= backBtnY1 && virtualMouseY <= backBtnY2) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Home());
+            }
             return true;
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private void renderImage(GuiGraphics guiGraphics) {
-        float maxScale = 0.4f;
-        int screenWidth = this.width;
-        int screenHeight = this.height;
-
-        // 计算图片尺寸（不超过屏幕的 80%）
-        int imageSize = (int) (Math.min(screenWidth, screenHeight) * maxScale);
-        imageSize = Math.min(imageSize, Math.min(screenWidth, screenHeight));
-
-        //===== 微信（左下对齐） =====
-        int vxX = 0; // 左侧紧贴屏幕边缘
-        int vxY = screenHeight - imageSize; // 底部紧贴屏幕边缘
-
-        // 检查高度不足时（例如窗口太矮）
-        if (vxY < 0) {
-            vxY = 0; // 如果高度不够，强制顶部对齐
-            imageSize = screenHeight; // 图片高度占满屏幕（可能变形，需谨慎）
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 && this.shouldCloseOnEsc()) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_Home());
+            }
+            return true;
         }
-
-        // 渲染微信二维码
-        guiGraphics.blit(
-                VX_TEXTURE,
-                vxX, vxY,                // 左下角坐标
-                imageSize, imageSize,    // 目标宽高
-                0, 0,                    // 纹理起始UV坐标
-                256, 256,                // 纹理裁剪区域（假设原图256x256）
-                256, 256                 // 纹理实际尺寸
-        );
-
-        //===== 支付宝（右下对齐） =====
-        int zfbX = screenWidth - imageSize; // 右侧紧贴屏幕边缘
-        int zfbY = screenHeight - imageSize; // 底部紧贴屏幕边缘
-
-        // 检查宽度不足时（例如窗口太窄）
-        if (zfbX < 0) {
-            zfbX = 0; // 如果宽度不够，强制左对齐
-            imageSize = screenWidth; // 图片宽度占满屏幕（可能变形）
-        }
-
-        // 渲染支付宝二维码
-        guiGraphics.blit(
-                ZFB_TEXTURE,
-                zfbX, zfbY,             // 右下角坐标
-                imageSize, imageSize,    // 目标宽高
-                0, 0,                    // 纹理起始UV坐标
-                256, 256,                // 纹理裁剪区域
-                256, 256                 // 纹理实际尺寸
-        );
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean isPauseScreen() {
-        return false; // 打开关于页面时游戏不暂停
+        return false;
     }
 
-    @Override
-    public boolean keyPressed(int p_96552_, int p_96553_, int p_96554_) {
-        if (p_96552_ == 256 && this.shouldCloseOnEsc()) {
-            Minecraft.getInstance().setScreen(new Screen_Home());
-            return true;
-        }
-        return  false;
+    private void drawStripedButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                   String text, UiButtonStyle style, boolean hovered) {
+        UiButtonRenderer.drawStripedButton(guiGraphics, this.font, x, y, width, height,
+            text, "", style, hovered, UiButtonRenderer.TextAlign.CENTER, false);
     }
 
-    @Override
-    protected void initPosition() {
-        startX = Math.max((this.width / 2) - 300, 60);
-        startY = Math.max((this.height - 450) / 4, 55);
+    private UiButtonStyle createButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(8)
+            .setStripeWidth(4)
+            .setGlowHeight(6)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
     }
 }
+
+

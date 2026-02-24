@@ -12,6 +12,8 @@ import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_P
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -51,6 +53,14 @@ public class Screen_Market extends Screen {
     private static final int CARD_WIDTH = 200;
     private static final int CARD_HEIGHT = 80;
     private static final int TOTAL_CARD_HEIGHT = CARD_HEIGHT + CARD_SPACING;
+    private static final int CARD_PADDING = 8;
+    private static final int ACTION_BTN_WIDTH = 62;
+    private static final int ACTION_BTN_HEIGHT = 18;
+    private static final int ADMIN_BTN_WIDTH = 72;
+    private static final int ACTION_BTN_GAP = 6;
+    private static final int ICON_SIZE = 32;
+    private static final int ICON_OFFSET_Y = 26;
+    private static final int COLOR_DANGER = 0xFFE05D5D;
 
     // ==================== 数据 ====================
     private List<MarketItem> allItems = new ArrayList<>();
@@ -90,6 +100,16 @@ public class Screen_Market extends Screen {
     private UUID playerUUID;
     private String playerName;
 
+    // ==================== 按钮样式 ====================
+    private final UiButtonStyle topListStyle;
+    private final UiButtonStyle topRequestStyle;
+    private final UiButtonStyle actionBuyStyle;
+    private final UiButtonStyle actionRemoveStyle;
+    private final UiButtonStyle actionDeliverStyle;
+    private final UiButtonStyle actionConfirmStyle;
+    private final UiButtonStyle actionCancelStyle;
+    private final UiButtonStyle actionDisabledStyle;
+
     private record OrderCardArea(int x, int y, int width, int height, int itemIndex, String actionType) {}
     private record OrderCardArea2(int x, int y, int width, int height, int itemIndex, String actionType) {}
     private record ItemIconArea(int x, int y, int width, int height, ItemStack itemStack) {}
@@ -97,6 +117,22 @@ public class Screen_Market extends Screen {
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
         EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        topListStyle = createTopButtonStyle(CardRenderer.THEME_DELIVERY);
+        topRequestStyle = createTopButtonStyle(CardRenderer.THEME_SHOP);
+        actionBuyStyle = createActionButtonStyle(CardRenderer.THEME_MARKET);
+        actionRemoveStyle = createActionButtonStyle(COLOR_DANGER);
+        actionDeliverStyle = createActionButtonStyle(CardRenderer.THEME_SHOP);
+        actionConfirmStyle = createActionButtonStyle(CardRenderer.THEME_DELIVERY);
+        actionCancelStyle = createActionButtonStyle(COLOR_DANGER);
+        actionDisabledStyle = createActionButtonStyle(0xFF6F7F8C)
+            .setTextColor(0xFFB0BBC6)
+            .setBgAlpha(0x30)
+            .setBgAlphaHover(0x30)
+            .setStripeAlpha(0x50)
+            .setStripeAlphaHover(0x50)
+            .setGlowHeight(0)
+            .setBorderAlpha(0x20)
+            .setBorderAlphaHover(0x20);
     }
 
     public void updateMarketItems(List<MarketItem> items) {
@@ -203,7 +239,7 @@ public class Screen_Market extends Screen {
         drawTitle(guiGraphics);
 
         // 绘制右上角按钮
-        drawTopButtons(guiGraphics);
+        drawTopButtons(guiGraphics, virtualMouseX, virtualMouseY);
 
         // 绘制右下角ESC提示
         drawEscHint(guiGraphics);
@@ -271,23 +307,18 @@ public class Screen_Market extends Screen {
         }
     }
 
-    private void drawTopButtons(GuiGraphics guiGraphics) {
+    private void drawTopButtons(GuiGraphics guiGraphics, float mouseX, float mouseY) {
         // 上架和求购按钮（右上角）
-        int btnY = 20;
-        int btnHeight = 20;
-        int btnSpacing = 8;
-        int btnWidth = 60;
+        int btnY = 18;
+        int btnHeight = 24;
+        int btnSpacing = 10;
+        int btnWidth = 84;
 
         // 上架按钮（右边）
         int listBtnX = virtualWidth - PANEL_PADDING - btnWidth;
-        guiGraphics.fill(listBtnX, btnY, listBtnX + btnWidth, btnY + btnHeight, 0xC04CAF50);
-        guiGraphics.fill(listBtnX, btnY, listBtnX + btnWidth, btnY + 1, 0xFF6BCF6B);
-        guiGraphics.fill(listBtnX, btnY + btnHeight - 1, listBtnX + btnWidth, btnY + btnHeight, 0xFF6BCF6B);
-        guiGraphics.fill(listBtnX, btnY, listBtnX + 1, btnY + btnHeight, 0xFF6BCF6B);
-        guiGraphics.fill(listBtnX + btnWidth - 1, btnY, listBtnX + btnWidth, btnY + btnHeight, 0xFF6BCF6B);
-        String listText = "上架";
-        int listTextWidth = font.width(listText);
-        guiGraphics.drawString(font, listText, listBtnX + (btnWidth - listTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        boolean listHovered = (mouseX >= listBtnX && mouseX <= listBtnX + btnWidth &&
+                               mouseY >= btnY && mouseY <= btnY + btnHeight);
+        drawStripedButton(guiGraphics, listBtnX, btnY, btnWidth, btnHeight, "上架", topListStyle, listHovered);
         listBtnX1 = listBtnX;
         listBtnY1 = btnY;
         listBtnX2 = listBtnX + btnWidth;
@@ -295,14 +326,9 @@ public class Screen_Market extends Screen {
 
         // 求购按钮（左边）
         int requestBtnX = listBtnX - btnSpacing - btnWidth;
-        guiGraphics.fill(requestBtnX, btnY, requestBtnX + btnWidth, btnY + btnHeight, 0xC0FF9800);
-        guiGraphics.fill(requestBtnX, btnY, requestBtnX + btnWidth, btnY + 1, 0xFFFFB74D);
-        guiGraphics.fill(requestBtnX, btnY + btnHeight - 1, requestBtnX + btnWidth, btnY + btnHeight, 0xFFFFB74D);
-        guiGraphics.fill(requestBtnX, btnY, requestBtnX + 1, btnY + btnHeight, 0xFFFFB74D);
-        guiGraphics.fill(requestBtnX + btnWidth - 1, btnY, requestBtnX + btnWidth, btnY + btnHeight, 0xFFFFB74D);
-        String requestText = "求购";
-        int requestTextWidth = font.width(requestText);
-        guiGraphics.drawString(font, requestText, requestBtnX + (btnWidth - requestTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        boolean requestHovered = (mouseX >= requestBtnX && mouseX <= requestBtnX + btnWidth &&
+                                  mouseY >= btnY && mouseY <= btnY + btnHeight);
+        drawStripedButton(guiGraphics, requestBtnX, btnY, btnWidth, btnHeight, "求购", topRequestStyle, requestHovered);
         requestBtnX1 = requestBtnX;
         requestBtnY1 = btnY;
         requestBtnX2 = requestBtnX + btnWidth;
@@ -364,32 +390,32 @@ public class Screen_Market extends Screen {
             boolean isAdmin = this.minecraft != null && this.minecraft.player != null && this.minecraft.player.hasPermissions(2);
             boolean isHovered = (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
                                 mouseY >= cardY && mouseY <= cardY + CARD_HEIGHT);
+            String actionType = getActionType(item, isOwnOrder);
 
             // 绘制订单卡片
             drawOrderCard(guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
-                itemStack, item.getSellerName(), item.getBasePrice(), isSalesOrder, isOwnOrder, isAdmin, isHovered);
+                itemStack, item.getSellerName(), item.getBasePrice(), isSalesOrder, isOwnOrder, isAdmin, isHovered,
+                actionType, mouseX, mouseY);
 
             // 存储物品图标区域（用于tooltip）
-            // 图标位置与drawOrderCard中一致：居中，32x32基础大小，2倍缩放后64x64
-            int iconSize = 32;
-            int iconX = cardX + (CARD_WIDTH - iconSize) / 2;
-            int iconY = cardY + 22;
-            int actualIconSize = 64; // 2倍缩放后的实际大小
+            // 图标位置与drawOrderCard中一致：居中，16x16基础大小，2倍缩放后约32x32
+            int iconX = cardX + (CARD_WIDTH - ICON_SIZE) / 2;
+            int iconY = cardY + ICON_OFFSET_Y;
+            int actualIconSize = ICON_SIZE; // 2倍缩放后的实际大小为32
             itemIconAreas.add(new ItemIconArea(iconX, iconY, actualIconSize, actualIconSize, itemStack));
 
             // 存储卡片和操作按钮区域
-            String actionType = getActionType(item, isOwnOrder);
-            int actionBtnWidth = 50;
-            int actionBtnHeight = 16;
-            int actionBtnX = cardX + CARD_WIDTH - 6 - actionBtnWidth;
-            int actionBtnY = cardY + CARD_HEIGHT - 6 - actionBtnHeight;
-            cardAreas.add(new OrderCardArea(actionBtnX, actionBtnY, actionBtnWidth, actionBtnHeight, i, actionType));
+            int actionBtnX = cardX + CARD_WIDTH - CARD_PADDING - ACTION_BTN_WIDTH;
+            int actionBtnY = cardY + CARD_HEIGHT - CARD_PADDING - ACTION_BTN_HEIGHT;
+            if (!"none".equals(actionType)) {
+                cardAreas.add(new OrderCardArea(actionBtnX, actionBtnY, ACTION_BTN_WIDTH, ACTION_BTN_HEIGHT, i, actionType));
+            }
 
             // 管理员专属：添加额外的强制下架按钮（左侧按钮）
             if (isAdmin && item instanceof SalesOrder && !item.getSellerID().equals(playerUUID)) {
-                int removeBtnWidth = 50;  // 和普通按钮一样大
-                int removeBtnHeight = 16;
-                int removeBtnX = cardX + CARD_WIDTH - 6 - actionBtnWidth - removeBtnWidth - 4;
+                int removeBtnWidth = ADMIN_BTN_WIDTH;
+                int removeBtnHeight = ACTION_BTN_HEIGHT;
+                int removeBtnX = cardX + CARD_WIDTH - CARD_PADDING - ACTION_BTN_WIDTH - removeBtnWidth - ACTION_BTN_GAP;
                 int removeBtnY = actionBtnY;
                 cardAreas2.add(new OrderCardArea2(removeBtnX, removeBtnY, removeBtnWidth, removeBtnHeight, i, "remove"));
             }
@@ -410,97 +436,108 @@ public class Screen_Market extends Screen {
     }
 
     private void drawOrderCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
-                              ItemStack itemStack, String sellerName, int price, boolean isSalesOrder, boolean isOwnOrder, boolean isAdmin, boolean isHovered) {
-        // 卡片背景
-        int cardBg = isHovered ? 0xC02A3A4A : 0xA01A2A3A;
-        guiGraphics.fill(x, y, x + width, y + height, cardBg);
+                              ItemStack itemStack, String sellerName, int price, boolean isSalesOrder, boolean isOwnOrder,
+                              boolean isAdmin, boolean isHovered, String actionType, float mouseX, float mouseY) {
+        int themeColor = isOwnOrder ? CardRenderer.THEME_DELIVERY : (isSalesOrder ? CardRenderer.THEME_MARKET : CardRenderer.THEME_SHOP);
+        CardRenderer.drawCard(guiGraphics, x, y, width, height, themeColor, isHovered);
 
-        // 边框
-        int borderColor = isHovered ? 0xFF4A8ACF : 0xFF3A6A9F;
-        if (isOwnOrder) {
-            borderColor = isHovered ? 0xFF4CAF50 : 0xFF3A8A3F;
-        }
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
+        int headerY = y + 6;
+        String typeLabel = isOwnOrder ? "我的" : (isSalesOrder ? "卖单" : "求单");
+        guiGraphics.drawString(font, typeLabel, x + CARD_PADDING, headerY, themeColor);
 
-        // 顶部装饰条
-        int topColor = isSalesOrder ? 0xFF4FC3F7 : 0xFFFF9800;
-        if (isOwnOrder) topColor = 0xFF4CAF50;
-        guiGraphics.fill(x, y, x + width, y + 3, topColor);
-
-        int padding = 6;
-
-        // 订单类型标签（左上角）
-        String typeLabel = isSalesOrder ? "📦 卖单" : "📋 求单";
-        if (isOwnOrder) typeLabel = "📌 我的";
-        guiGraphics.drawString(font, typeLabel, x + padding, y + padding, topColor);
-
-        // 物品名称（类型标签下方，左上角）
-        String itemName = itemStack.getHoverName().getString();
-        String displayName = CardRenderer.truncateText(font, itemName, width - padding * 2 - 60); // 留出右侧价格空间
-        guiGraphics.drawString(font, displayName, x + padding, y + padding + font.lineHeight + 2, 0xFFFFFFFF);
-
-        // 价格（右上角）
-        String priceText = "💰 " + formatNumber(price);
+        String priceText = "￥" + formatNumber(price);
         int priceWidth = font.width(priceText);
-        guiGraphics.drawString(font, priceText, x + width - padding - priceWidth, y + padding, 0xFFFFD700);
+        guiGraphics.drawString(font, priceText, x + width - CARD_PADDING - priceWidth, headerY, CardRenderer.THEME_BALANCE);
 
-        // 物品图标（居中）
-        int iconSize = 32;
-        int iconX = x + (width - iconSize) / 2;
-        int iconY = y + 22;
+        String itemName = itemStack.getHoverName().getString();
+        String displayName = CardRenderer.truncateText(font, itemName, width - CARD_PADDING * 2);
+        guiGraphics.drawString(font, displayName, x + CARD_PADDING, headerY + font.lineHeight + 2, CardRenderer.TEXT_TITLE);
+
+        int iconX = x + (width - ICON_SIZE) / 2;
+        int iconY = y + ICON_OFFSET_Y;
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(2.0f, 2.0f, 1.0f);
         guiGraphics.renderItem(itemStack, iconX / 2, iconY / 2);
         guiGraphics.pose().popPose();
 
-        // 卖家名称（底部左侧）
         String sellerText = "卖家: " + sellerName;
-        String truncatedSeller = CardRenderer.truncateText(font, sellerText, width - padding * 2 - 55); // 留出按钮空间
-        guiGraphics.drawString(font, truncatedSeller, x + padding, y + height - 12, 0x80CCCCCC);
+        int maxSellerWidth = width - CARD_PADDING * 2 - ACTION_BTN_WIDTH - ACTION_BTN_GAP;
+        String truncatedSeller = CardRenderer.truncateText(font, sellerText, maxSellerWidth);
+        guiGraphics.drawString(font, truncatedSeller, x + CARD_PADDING, y + height - 12, CardRenderer.TEXT_DESC);
 
-        // 操作按钮背景
-        int btnWidth = 50;
-        int btnHeight = 16;
-        int btnX = x + width - padding - btnWidth;
-        int btnY = y + height - padding - btnHeight;
+        int btnX = x + width - CARD_PADDING - ACTION_BTN_WIDTH;
+        int btnY = y + height - CARD_PADDING - ACTION_BTN_HEIGHT;
+        boolean actionHovered = (mouseX >= btnX && mouseX <= btnX + ACTION_BTN_WIDTH &&
+                                 mouseY >= btnY && mouseY <= btnY + ACTION_BTN_HEIGHT);
 
-        int btnBg = 0xC03A7ABF;
-        int btnBorder = 0xFF4A8ACF;
-        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + btnHeight, btnBg);
-        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + 1, btnBorder);
-        guiGraphics.fill(btnX, btnY + btnHeight - 1, btnX + btnWidth, btnY + btnHeight, btnBorder);
-        guiGraphics.fill(btnX, btnY, btnX + 1, btnY + btnHeight, btnBorder);
-        guiGraphics.fill(btnX + btnWidth - 1, btnY, btnX + btnWidth, btnY + btnHeight, btnBorder);
-
-        // 按钮文字
-        String btnText = isSalesOrder ? (isOwnOrder ? "下架" : "购买") : (isOwnOrder ? "取消" : "交付");
-        int btnTextWidth = font.width(btnText);
-        guiGraphics.drawString(font, btnText, btnX + (btnWidth - btnTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
-
-        // 管理员专属：左侧额外的强制下架按钮（仅对卖单且非自己订单）
-        if (isAdmin && isSalesOrder && !isOwnOrder) {
-            int removeBtnWidth = 50;  // 和普通按钮一样大
-            int removeBtnHeight = 16;
-            int removeBtnX = btnX - removeBtnWidth - 4;
-            int removeBtnY = btnY;
-
-            // 强制下架按钮背景（红色）
-            int removeBg = 0xC0AA3333;
-            int removeBorder = 0xFFCC4444;
-            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBg);
-            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + 1, removeBorder);
-            guiGraphics.fill(removeBtnX, removeBtnY + removeBtnHeight - 1, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBorder);
-            guiGraphics.fill(removeBtnX, removeBtnY, removeBtnX + 1, removeBtnY + removeBtnHeight, removeBorder);
-            guiGraphics.fill(removeBtnX + removeBtnWidth - 1, removeBtnY, removeBtnX + removeBtnWidth, removeBtnY + removeBtnHeight, removeBorder);
-
-            // 强制下架按钮文字
-            String removeText = "强制下架";
-            int removeTextWidth = font.width(removeText);
-            guiGraphics.drawString(font, removeText, removeBtnX + (removeBtnWidth - removeTextWidth) / 2, removeBtnY + (removeBtnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        if (!"none".equals(actionType)) {
+            drawStripedButton(guiGraphics, btnX, btnY, ACTION_BTN_WIDTH, ACTION_BTN_HEIGHT,
+                getActionText(actionType), getActionStyle(actionType), actionHovered);
+        } else {
+            drawStripedButton(guiGraphics, btnX, btnY, ACTION_BTN_WIDTH, ACTION_BTN_HEIGHT,
+                "已完成", actionDisabledStyle, false);
         }
+
+        if (isAdmin && isSalesOrder && !isOwnOrder) {
+            int removeBtnX = btnX - ADMIN_BTN_WIDTH - ACTION_BTN_GAP;
+            int removeBtnY = btnY;
+            boolean removeHovered = (mouseX >= removeBtnX && mouseX <= removeBtnX + ADMIN_BTN_WIDTH &&
+                                     mouseY >= removeBtnY && mouseY <= removeBtnY + ACTION_BTN_HEIGHT);
+            drawStripedButton(guiGraphics, removeBtnX, removeBtnY, ADMIN_BTN_WIDTH, ACTION_BTN_HEIGHT,
+                "强制下架", actionRemoveStyle, removeHovered);
+        }
+    }
+
+    private void drawStripedButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                   String text, UiButtonStyle style, boolean hovered) {
+        UiButtonRenderer.drawStripedButton(guiGraphics, this.font, x, y, width, height,
+            text, "", style, hovered, UiButtonRenderer.TextAlign.CENTER, false);
+    }
+
+    private UiButtonStyle getActionStyle(String actionType) {
+        return switch (actionType) {
+            case "buy" -> actionBuyStyle;
+            case "remove" -> actionRemoveStyle;
+            case "deliver" -> actionDeliverStyle;
+            case "confirm" -> actionConfirmStyle;
+            case "cancel" -> actionCancelStyle;
+            default -> actionDisabledStyle;
+        };
+    }
+
+    private String getActionText(String actionType) {
+        return switch (actionType) {
+            case "buy" -> "购买";
+            case "remove" -> "下架";
+            case "deliver" -> "交付";
+            case "confirm" -> "确认";
+            case "cancel" -> "取消";
+            default -> "操作";
+        };
+    }
+
+    private UiButtonStyle createTopButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(10)
+            .setStripeWidth(4)
+            .setGlowHeight(7)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
+    }
+
+    private UiButtonStyle createActionButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(6)
+            .setStripeWidth(3)
+            .setGlowHeight(4)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
     }
 
     private void renderPageControls(GuiGraphics guiGraphics, float mouseX, float mouseY) {
@@ -750,3 +787,5 @@ public class Screen_Market extends Screen {
         return String.valueOf(num);
     }
 }
+
+
