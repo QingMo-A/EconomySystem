@@ -1,6 +1,7 @@
 package com.mo.economy_system.mixin.ui;
 
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -16,26 +17,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * ConnectScreen Mixin
- * 统一服务器连接界面样式为：背景图 + 绿色玻璃面板 + 动态加载条。
+ * 连接界面：绿色玻璃风格，布局与连接失败界面一致。
  */
 @Mixin(ConnectScreen.class)
 public abstract class ConnectScreenMixin extends Screen {
 
-    // ===== 视觉样式常量 =====
     private static final int ACCENT_GREEN = 0xFF3FBF7F;
-    private static final int TEXT_WHITE = 0xFFFFFFFF;
-    private static final int TEXT_GRAY = 0xFFAAAAAA;
+    private static final int TITLE_COLOR = 0xFFB8FFD6;
+    private static final int STATUS_COLOR = 0xFFCFE9DA;
+
     private static final int GLASS_TOP = 0x663FAF7F;
     private static final int GLASS_BOTTOM = 0x33102218;
     private static final int GLASS_BORDER = 0x5590D9B0;
     private static final int GLASS_SHADOW = 0x33201028;
     private static final int GLASS_HIGHLIGHT = 0x66B8FFD5;
+
     private static final int PADDING = 12;
 
     @Unique
     private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
 
-    // 连接界面背景图（与加载界面保持一致）
     @Unique
     private static final ResourceLocation BACKGROUND_TEXTURE =
         new ResourceLocation("economy_system", "background.png");
@@ -49,14 +50,10 @@ public abstract class ConnectScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("HEAD"), cancellable = true)
     private void economySystem$init(CallbackInfo ci) {
-        // 取消原版 init，改用自定义布局
         ci.cancel();
         initCustomScreen();
     }
 
-    /**
-     * 初始化按钮并将虚拟坐标转换为实际屏幕坐标。
-     */
     @Unique
     private void initCustomScreen() {
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
@@ -64,15 +61,15 @@ public abstract class ConnectScreenMixin extends Screen {
         int centerX = virtualSize.virtualWidth / 2;
         int centerY = virtualSize.virtualHeight / 2;
 
-        int boxWidth = 400;
-        int boxHeight = 170;
+        int boxWidth = 420;
+        int boxHeight = 200;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
-        int buttonWidth = boxWidth - 2 * PADDING;
+        int buttonWidth = 380;
         int buttonHeight = 24;
-        int virtualButtonX = boxX + PADDING;
-        int virtualButtonY = boxY + 132;
+        int virtualButtonX = boxX + (boxWidth - buttonWidth) / 2;
+        int virtualButtonY = boxY + boxHeight - 40;
 
         int screenButtonX = (int) (virtualButtonX * virtualSize.uiScale);
         int screenButtonY = (int) (virtualButtonY * virtualSize.uiScale);
@@ -93,7 +90,6 @@ public abstract class ConnectScreenMixin extends Screen {
     @Unique
     private void economySystem$disconnect() {
         Minecraft mc = Minecraft.getInstance();
-        // 主动关闭连接并返回标题界面
         if (mc.getConnection() != null) {
             mc.getConnection().close();
         }
@@ -106,51 +102,65 @@ public abstract class ConnectScreenMixin extends Screen {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void economySystem$render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        // 取消原版 render，完全接管绘制
         ci.cancel();
         renderCustomScreen(guiGraphics, mouseX, mouseY, partialTick);
     }
 
-    /**
-     * 渲染连接界面主体。
-     */
     @Unique
     private void renderCustomScreen(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
 
-        // 背景图 + 暗色遮罩
         guiGraphics.blit(BACKGROUND_TEXTURE,
             0, 0, this.width, this.height,
             0, 0, 256, 144, 256, 144);
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
-        // 切换到虚拟分辨率坐标系，保证不同分辨率布局一致
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(virtualSize.uiScale, virtualSize.uiScale, 1.0f);
 
         int centerX = virtualSize.virtualWidth / 2;
         int centerY = virtualSize.virtualHeight / 2;
 
-        int boxWidth = 400;
-        int boxHeight = 170;
+        int boxWidth = 420;
+        int boxHeight = 200;
         int boxX = centerX - boxWidth / 2;
         int boxY = centerY - boxHeight / 2;
 
-        // 绿色玻璃主面板
         economySystem$renderGlassPanel(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0xAA78C89A);
 
-        // 标题与分隔线
-        guiGraphics.drawCenteredString(this.font, "正在连接服务器...", centerX, boxY + 16, TEXT_WHITE);
-        guiGraphics.fill(boxX + PADDING, boxY + 34, boxX + boxWidth - PADDING, boxY + 35, ACCENT_GREEN);
+        // 左上角闪电标志
+        PoseStack iconPose = guiGraphics.pose();
+        iconPose.pushPose();
+        iconPose.scale(2.6f, 2.6f, 1.0f);
+        int iconX = (int) ((boxX + 20) / 2.6f);
+        int iconY = (int) ((boxY + 18) / 2.6f);
+        guiGraphics.drawString(this.font, "⚡", iconX, iconY, ACCENT_GREEN, false);
+        iconPose.popPose();
 
-        // 动态连接状态文字（点动画）
+        PoseStack poseStack = guiGraphics.pose();
+        poseStack.pushPose();
+        poseStack.scale(2.2f, 2.2f, 1.0f);
+        String titleText = "§l正在连接服务器";
+        int titleX = (int) ((centerX + 15) / 2.2f - font.width(titleText) / 2.0f);
+        int titleY = (int) ((boxY + 28) / 2.2f);
+        guiGraphics.drawString(this.font, titleText, titleX, titleY, TITLE_COLOR, false);
+        poseStack.popPose();
+
+        String domainText = "§b§lDreaming§d§lFish";
+        int domainX = boxX + boxWidth - 12 - font.width(domainText);
+        int domainY = boxY + 15;
+        guiGraphics.drawString(this.font, domainText, domainX, domainY, 0xFFFFFFFF, false);
+
+        int lineY = boxY + 55;
+        guiGraphics.fill(boxX + 12, lineY, boxX + boxWidth - 12, lineY + 2, ACCENT_GREEN);
+        guiGraphics.fill(boxX + 12, lineY + 3, boxX + boxWidth - 12, lineY + 4, 0xAA2C6E4A);
+
         long time = System.currentTimeMillis();
         int dots = (int) ((time / 500) % 4);
         String loadingDots = ".".repeat(dots);
-        guiGraphics.drawCenteredString(this.font, "正在建立连接" + loadingDots, centerX, boxY + 70, TEXT_GRAY);
+        guiGraphics.drawCenteredString(this.font, "正在建立连接" + loadingDots, centerX, boxY + 90, STATUS_COLOR);
 
-        // 动态进度条动画（时间驱动）
-        int progressBarY = boxY + 108;
+        int progressBarY = boxY + 132;
         int progressBarWidth = boxWidth - 2 * PADDING;
         int progressBarX = boxX + PADDING;
         int progressBarHeight = 6;
@@ -162,18 +172,13 @@ public abstract class ConnectScreenMixin extends Screen {
             guiGraphics.fill(progressBarX + 2, progressBarY, progressBarX + progressWidth - 2, progressBarY + 1, 0xFF8EF0B8);
         }
 
-        // 恢复屏幕坐标系
         guiGraphics.pose().popPose();
 
-        // 按钮使用屏幕坐标渲染
         if (economySystem$disconnectButton != null) {
             economySystem$disconnectButton.render(guiGraphics, mouseX, mouseY, partialTick);
         }
     }
 
-    /**
-     * 绘制玻璃风格面板。
-     */
     @Unique
     private void economySystem$renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, int tint) {
         guiGraphics.fillGradient(x, y, x + width, y + height, GLASS_TOP, GLASS_BOTTOM);
@@ -187,9 +192,6 @@ public abstract class ConnectScreenMixin extends Screen {
         economySystem$renderGlassNoise(guiGraphics, x, y, width, height);
     }
 
-    /**
-     * 玻璃表面细微噪点，避免纯色过于平。
-     */
     @Unique
     private void economySystem$renderGlassNoise(GuiGraphics guiGraphics, int x, int y, int width, int height) {
         if (width < 20 || height < 20) {
@@ -204,17 +206,11 @@ public abstract class ConnectScreenMixin extends Screen {
         }
     }
 
-    /**
-     * 替换颜色透明度通道。
-     */
     @Unique
     private int economySystem$withAlpha(int color, int alpha) {
         return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24);
     }
 
-    /**
-     * 绘制圆角风格进度条（用于背景和前景）。
-     */
     @Unique
     private void economySystem$renderRoundedBar(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
         if (width <= 0 || height <= 0) {
@@ -231,9 +227,6 @@ public abstract class ConnectScreenMixin extends Screen {
         guiGraphics.fill(x + width - radius, y + 1, x + width, y + 1 + innerHeight, color);
     }
 
-    /**
-     * 自定义按钮，保持与玻璃主题一致的绿色样式。
-     */
     @Unique
     private static class CustomButton extends Button {
         public CustomButton(int x, int y, int width, int height, Component message, OnPress onPress) {

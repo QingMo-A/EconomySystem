@@ -11,6 +11,8 @@
     "ui.ConnectScreenMixin",
     "ui.ReceivingLevelScreenMixin",
     "ui.LevelLoadingScreenMixin",
+    "ui.LoadingOverlayMixin",
+    "ui.ForgeLoadingOverlayMixin",
     "ui.GenericDirtMessageScreenMixin",
     "ui.GenericWaitingScreenMixin",
     "ui.TitleScreenMixin",

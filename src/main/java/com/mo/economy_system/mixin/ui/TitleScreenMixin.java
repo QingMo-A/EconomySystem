@@ -140,9 +140,18 @@ public abstract class TitleScreenMixin extends Screen {
     @Unique
     private int economySystem$copyrightHeight = 0;
 
+    @Unique
+    private long economySystem$openTime = 0;
+
+    @Unique
+    private static final long ANIMATION_DURATION = 600; // 600ms 滑入动画
+    @Unique
+    private static final float EASE_POWER = 2.0F; // 缓动指数
+
     @Inject(method = "init", at = @At("RETURN"))
     private void economySystem$init(CallbackInfo ci) {
         economySystem$startUpdateLogFetch();
+        // openTime 会在渐显完成时设置
     }
 
     @Unique
@@ -292,9 +301,14 @@ public abstract class TitleScreenMixin extends Screen {
         // ========== 步骤1: 渲染背景图 ==========
         economySystem$renderBackground(guiGraphics, fadeAlpha);
 
-        // 如果淡入未完成，提前返回（只渲染背景）
+        // 如果渐显未完成，提前返回（只渲染背景，等渐显完成后再渲染卡片）
         if (fadeAlpha < 1.0F) {
             return;
+        }
+
+        // 渐显完成时，初始化动画开始时间
+        if (economySystem$openTime == 0) {
+            economySystem$openTime = System.currentTimeMillis();
         }
 
         // ========== 步骤2: 手动调用Forge钩子，让其他模组可以添加按钮 ==========
@@ -382,6 +396,11 @@ public abstract class TitleScreenMixin extends Screen {
             this.economySystem$hoverTime = time;
         }
 
+        // 计算动画进度
+        long elapsed = time - economySystem$openTime;
+        float animationProgress = Math.min((float) elapsed / ANIMATION_DURATION, 1.0F);
+        float easedProgress = economySystem$easeOutCubic(animationProgress);
+
         PoseStack poseStack = guiGraphics.pose();
 
         // 应用缩放变换（主面板使用虚拟坐标）
@@ -389,8 +408,8 @@ public abstract class TitleScreenMixin extends Screen {
         poseStack.translate(offsetX, offsetY, 0);
         poseStack.scale(scale, scale, 1.0f);
 
-        // 渲染主面板（覆盖在原版内容之上）
-        economySystem$renderMainPanel(guiGraphics, panelX, panelY, panelWidth, panelHeight, time);
+        // 渲染主面板（覆盖在原版内容之上，带动画）
+        economySystem$renderMainPanel(guiGraphics, panelX, panelY, panelWidth, panelHeight, time, easedProgress);
 
         poseStack.popPose();
 
@@ -416,62 +435,82 @@ public abstract class TitleScreenMixin extends Screen {
 
 
     @Unique
-    private void economySystem$renderMainPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, long time) {
+    private void economySystem$renderMainPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, long time, float animProgress) {
         // 无主面板背景，只有按钮有背景
 
         // 统一间距系统
-        int gap = 6;  // 所有间距统一为 6
-        int smallButtonHeight = 36;  // 小按钮高度
+        int gap = 6;
+        int smallButtonHeight = 36;
 
-        // 左右分栏：[gap][左栏][gap][右栏][gap]
+        // 左右分栏
         int columnWidth = (width - gap * 3) / 2;
         int leftX = x + gap;
         int rightX = leftX + columnWidth + gap;
-
-        // 右上单人/设置按钮：精确平分右侧宽度
         int rightSmallButtonWidth = (columnWidth - gap) / 2;
 
-        // ========== 左侧 - 多人游戏（整个区域） ==========
-        boolean multiHovered = economySystem$hoveredButtonIndex == 0;
-        economySystem$renderMultiplayerButton(guiGraphics, leftX, y + gap, columnWidth, height - gap * 2,
-            ACCENT_GREEN, multiHovered);
+        // ========== 统一的优雅动画：所有卡片从下方轻微滑入 + 淡入 ==========
+        // 多人游戏 (第一个出现)
+        float multiProgress = economySystem$getStaggeredProgress(animProgress, 0.0F);
+        int multiOffsetY = (int) ((1.0F - multiProgress) * 24); // 从下方24px滑入
 
-        // ========== 右上左 - 单人游戏 ==========
-        boolean singleHovered = economySystem$hoveredButtonIndex == 1;
-        economySystem$renderSmallButton(guiGraphics, rightX, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            BUTTON_SINGLEPLAYER, ICON_SINGLEPLAYER, ACCENT_GOLD, singleHovered);
+        // 单人游戏 (第二个)
+        float singleProgress = economySystem$getStaggeredProgress(animProgress, 0.12F);
+        int singleOffsetY = (int) ((1.0F - singleProgress) * 24);
 
-        // ========== 右上右 - 设置 ==========
-        boolean settingsHovered = economySystem$hoveredButtonIndex == 2;
-        economySystem$renderSmallButton(guiGraphics, rightX + rightSmallButtonWidth + gap, y + gap, rightSmallButtonWidth, smallButtonHeight,
-            BUTTON_SETTINGS, ICON_SETTINGS, ACCENT_BLUE, settingsHovered);
+        // 设置 (第三个)
+        float settingsProgress = economySystem$getStaggeredProgress(animProgress, 0.24F);
+        int settingsOffsetY = (int) ((1.0F - settingsProgress) * 24);
 
-        // ========== 右中 - 更新日志按钮 ==========
+        // 更新日志 (第四个)
         int updateLogY = y + gap + smallButtonHeight + gap;
-        int updateLogHeight = smallButtonHeight;
-        int updateLogX = rightX;
-        int updateLogWidth = columnWidth;
-        boolean updateLogHovered = economySystem$hoveredButtonIndex == 3;
-        economySystem$renderUpdateLogButton(guiGraphics, updateLogX, updateLogY, updateLogWidth, updateLogHeight, updateLogHovered);
+        float updateLogProgress = economySystem$getStaggeredProgress(animProgress, 0.36F);
+        int updateLogOffsetY = (int) ((1.0F - updateLogProgress) * 24);
 
-        // ========== 右下 - 资助说明 ==========
-        int donateY = updateLogY + updateLogHeight + gap;
-        int donateHeight = height - gap * 2 - smallButtonHeight * 2 - gap * 2;  // 总高度 - 上下边距 - 两个按钮高度 - 中间间距
-        int donateX = rightX;
-        int donateWidth = columnWidth;
-        economySystem$renderDonatePanel(guiGraphics, donateX, donateY, donateWidth, donateHeight);
+        // 资助面板 (第五个)
+        int donateY = updateLogY + smallButtonHeight + gap;
+        float donateProgress = economySystem$getStaggeredProgress(animProgress, 0.48F);
+        int donateOffsetY = (int) ((1.0F - donateProgress) * 24);
+
+        // ========== 渲染各卡片 ==========
+        boolean multiHovered = economySystem$hoveredButtonIndex == 0;
+        economySystem$renderMultiplayerButton(guiGraphics, leftX, y + gap + multiOffsetY, columnWidth, height - gap * 2,
+            ACCENT_GREEN, multiHovered, multiProgress);
+
+        boolean singleHovered = economySystem$hoveredButtonIndex == 1;
+        economySystem$renderSmallButton(guiGraphics, rightX, y + gap + singleOffsetY, rightSmallButtonWidth, smallButtonHeight,
+            BUTTON_SINGLEPLAYER, ICON_SINGLEPLAYER, ACCENT_GOLD, singleHovered, singleProgress);
+
+        boolean settingsHovered = economySystem$hoveredButtonIndex == 2;
+        economySystem$renderSmallButton(guiGraphics, rightX + rightSmallButtonWidth + gap, y + gap + settingsOffsetY, rightSmallButtonWidth, smallButtonHeight,
+            BUTTON_SETTINGS, ICON_SETTINGS, ACCENT_BLUE, settingsHovered, settingsProgress);
+
+        boolean updateLogHovered = economySystem$hoveredButtonIndex == 3;
+        int updateLogHeight = smallButtonHeight;
+        economySystem$renderUpdateLogButton(guiGraphics, rightX, updateLogY + updateLogOffsetY, columnWidth, updateLogHeight, updateLogHovered, updateLogProgress);
+
+        int donateHeight = height - gap * 2 - smallButtonHeight * 2 - gap * 2;
+        economySystem$renderDonatePanel(guiGraphics, rightX, donateY + donateOffsetY, columnWidth, donateHeight, donateProgress);
+    }
+
+    @Unique
+    private float economySystem$getStaggeredProgress(float animProgress, float delay) {
+        // 获取错开的动画进度（delay 0-1 之间的值）
+        float adjusted = Math.max((animProgress - delay) / (1.0F - delay), 0);
+        adjusted = Math.min(adjusted, 1.0F);
+        // 使用 smooth step 让动画更柔和
+        return economySystem$easeSmooth(adjusted);
     }
 
     @Unique
     private void economySystem$renderMultiplayerButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                       int color, boolean hovered) {
+                                                       int color, boolean hovered, float progress) {
         // 深色半透明背景（稍微降低不透明度）
-        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgAlpha = (int) ((hovered ? 0xAA : 0x99) * progress);
         int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 左侧颜色条纹（4像素宽）
-        int stripeAlpha = hovered ? 0xFF : 0xCC;
+        int stripeAlpha = (int) ((hovered ? 0xFF : 0xCC) * progress);
         int stripeColor = (stripeAlpha << 24) | (color & 0x00FFFFFF);
         guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
 
@@ -532,14 +571,14 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderSmallButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                 String title, String icon, int color, boolean hovered) {
+                                                 String title, String icon, int color, boolean hovered, float progress) {
         // 深色半透明背景（稍微降低不透明度）
-        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgAlpha = (int) ((hovered ? 0xAA : 0x99) * progress);
         int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 左侧颜色条纹（4像素宽）
-        int stripeAlpha = hovered ? 0xFF : 0xCC;
+        int stripeAlpha = (int) ((hovered ? 0xFF : 0xCC) * progress);
         int stripeColor = (stripeAlpha << 24) | (color & 0x00FFFFFF);
         guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
 
@@ -565,14 +604,15 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderUpdateLogButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                                     boolean hovered) {
+                                                     boolean hovered, float progress) {
         // 深色半透明背景（稍微降低不透明度）
-        int bgAlpha = hovered ? 0xAA : 0x99;
+        int bgAlpha = (int) ((hovered ? 0xAA : 0x99) * progress);
         int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 左侧颜色条纹（4像素宽，使用更新日志的绿色）
-        int stripeColor = 0xFF00AA44;
+        int stripeAlpha = (int) (0xFF * progress);
+        int stripeColor = (stripeAlpha << 24) | 0x00AA44;
         guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
 
         // 顶部渐变光效（悬停时，颜色更深）
@@ -619,14 +659,15 @@ public abstract class TitleScreenMixin extends Screen {
     }
 
     @Unique
-    private void economySystem$renderDonatePanel(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+    private void economySystem$renderDonatePanel(GuiGraphics guiGraphics, int x, int y, int width, int height, float progress) {
         // 深色半透明背景（稍微降低不透明度）
-        int bgAlpha = 0x99;
+        int bgAlpha = (int) (0x99 * progress);
         int bgColor = (bgAlpha << 24) | 0x000000;
         guiGraphics.fill(x, y, x + width, y + height, bgColor);
 
         // 左侧颜色条纹（4像素宽，使用橙红色）
-        int stripeColor = 0xFFAA4444;
+        int stripeAlpha = (int) (0xFF * progress);
+        int stripeColor = (stripeAlpha << 24) | 0xAA4444;
         guiGraphics.fill(x, y, x + 4, y + height, stripeColor);
 
         // 细边框（只有右侧和底部）
@@ -919,5 +960,17 @@ public abstract class TitleScreenMixin extends Screen {
     private void economySystem$openCopyright(Minecraft mc) {
         TitleScreen self = (TitleScreen) (Object) this;
         mc.setScreen(new CreditsAndAttributionScreen(self));
+    }
+
+    @Unique
+    private float economySystem$easeOutCubic(float t) {
+        // Ease out cubic: 1 - (1-t)^3 - 更柔和的缓动
+        return 1.0F - (float) Math.pow(1.0F - t, EASE_POWER);
+    }
+
+    @Unique
+    private float economySystem$easeSmooth(float t) {
+        // Smooth step: 3t^2 - 2t^3 - 最柔和的缓动
+        return t * t * (3.0F - 2.0F * t);
     }
 }
