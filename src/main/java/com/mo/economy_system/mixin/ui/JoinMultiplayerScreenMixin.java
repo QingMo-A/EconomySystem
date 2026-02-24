@@ -3,59 +3,76 @@ package com.mo.economy_system.mixin.ui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * JoinMultiplayerScreen Mixin
- * 自定义服务器列表界面背景
+ * Replace dirt background with custom texture.
  */
 @Mixin(JoinMultiplayerScreen.class)
 public abstract class JoinMultiplayerScreenMixin extends Screen {
 
-    private static final int BG_TOP = 0xFF0A0A1A;
-    private static final int BG_BOTTOM = 0xFF00000A;
-    private static final int ACCENT_BLUE = 0xFF0088FF;
-    private static final int ACCENT_GREEN = 0xFF55FF55;
+    private static final int PANEL_MARGIN = 16;
+    private static final int PANEL_TOP = 32;
+    private static final int PANEL_BOTTOM = 64;
+    private static final int PANEL_FILL = 0xCC0F1525;
+    private static final int PANEL_BORDER = 0x55FFFFFF;
 
     @Unique
-    private long openTime = 0;
+    private static final ResourceLocation BACKGROUND_TEXTURE =
+        new ResourceLocation("economy_system", "background.png");
+
+    @Shadow
+    protected ServerSelectionList serverSelectionList;
 
     protected JoinMultiplayerScreenMixin(Component title) {
         super(title);
     }
 
-    @Inject(method = "<init>", at = @At("RETURN"))
-    private void economySystem$init(CallbackInfo ci) {
-        this.openTime = System.currentTimeMillis();
+    @Inject(method = "init", at = @At("RETURN"))
+    private void economySystem$disableListDirt(CallbackInfo ci) {
+        if (this.serverSelectionList != null) {
+            this.serverSelectionList.setRenderBackground(false);
+            this.serverSelectionList.setRenderTopAndBottom(false);
+        }
     }
 
-    @Inject(method = "render", at = @At("HEAD"))
-    private void economySystem$renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        // 渲染自定义渐变背景
-        guiGraphics.fillGradient(0, 0, this.width, this.height / 2, BG_TOP, BG_TOP);
-        guiGraphics.fillGradient(0, this.height / 2, this.width, this.height, BG_BOTTOM, BG_BOTTOM);
-
-        // 中间渐变过渡
-        guiGraphics.fillGradient(0, this.height / 2 - 50, this.width, this.height / 2 + 50, 0x00000000, 0x44000044);
-
-        // 底部装饰线
-        guiGraphics.fill(0, this.height - 2, this.width, this.height, ACCENT_BLUE);
-
-        // 右上角服务器标识
-        long time = System.currentTimeMillis();
-        float pulse = (float) Math.sin(time / 500.0) * 0.3f + 0.7f;
-        int brandAlpha = (int) (180 * pulse) << 24;
-        String brandText = "§b§lDreaming§d§lFish";
-        int brandX = this.width - font.width(brandText) - 8;
-        guiGraphics.drawString(this.font, brandText, brandX, 8, 0xFFFFFF | brandAlpha, false);
-
-        // 左上角服务器图标
-        String serverIcon = "§a⚁";
-        guiGraphics.drawString(this.font, serverIcon, 8, 8, ACCENT_GREEN, false);
+    @Redirect(
+        method = "render",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/multiplayer/JoinMultiplayerScreen;renderBackground(Lnet/minecraft/client/gui/GuiGraphics;)V"
+        )
+    )
+    private void economySystem$renderCustomBackground(JoinMultiplayerScreen instance, GuiGraphics guiGraphics) {
+        guiGraphics.blit(BACKGROUND_TEXTURE,
+            0, 0, this.width, this.height,
+            0, 0, 256, 144, 256, 144);
+        renderPanel(guiGraphics);
     }
+
+    @Unique
+    private void renderPanel(GuiGraphics guiGraphics) {
+        int x = 0;
+        int y = PANEL_TOP;
+        int width = this.width;
+        int height = this.height - y - PANEL_BOTTOM;
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        guiGraphics.fill(x, y, x + width, y + height, PANEL_FILL);
+        guiGraphics.fill(x, y, x + width, y + 2, PANEL_BORDER);
+        guiGraphics.fill(x, y + height - 2, x + width, y + height, PANEL_BORDER);
+    }
+
+
 }
