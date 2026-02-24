@@ -1,6 +1,7 @@
 package com.mo.economy_system.screen;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -29,6 +30,8 @@ public class Screen_About extends Screen {
     private static final int QR_IMAGE_PADDING = 6;
     private static final int BUTTON_HEIGHT = 22;
     private static final int BUTTON_WIDTH = 110;
+    private static final int PANEL_ANIMATION_OFFSET = 50;
+    private static final long ANIMATION_DURATION = 500;
 
     private float uiScale;
     private int virtualWidth;
@@ -40,8 +43,12 @@ public class Screen_About extends Screen {
 
     private int githubX1, githubY1, githubX2, githubY2;
     private int backBtnX1, backBtnY1, backBtnX2, backBtnY2;
+    private int lastLeftOffsetX;
+    private int lastLeftOffsetY;
 
     private final UiButtonStyle backStyle;
+    private final UiAnimation openAnimation = new UiAnimation(ANIMATION_DURATION, UiAnimation.Easing.EASE_OUT_CUBIC);
+    private boolean skipAnimation = false;
 
     public Screen_About() {
         super(Component.translatable(Util_MessageKeys.ABOUT_TITLE_KEY));
@@ -51,6 +58,11 @@ public class Screen_About extends Screen {
     @Override
     protected void init() {
         super.init();
+        if (skipAnimation) {
+            openAnimation.finish();
+        } else {
+            openAnimation.start();
+        }
         calculateVirtualSize();
         updateLayout();
     }
@@ -89,11 +101,31 @@ public class Screen_About extends Screen {
 
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
+        float animProgress = openAnimation.value();
+        int titleOffsetX = (int) ((1.0f - animProgress) * -PANEL_ANIMATION_OFFSET);
+        int panelOffsetY = (int) ((1.0f - animProgress) * -PANEL_ANIMATION_OFFSET);
+        int escOffsetX = (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
+        int leftQrOffsetX = (int) ((1.0f - animProgress) * -PANEL_ANIMATION_OFFSET);
+        int rightQrOffsetX = (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
+        lastLeftOffsetX = 0;
+        lastLeftOffsetY = panelOffsetY;
 
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(titleOffsetX, 0, 0);
         drawTitle(guiGraphics);
+        guiGraphics.pose().popPose();
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
+        renderInfoPanel(guiGraphics, virtualMouseX, virtualMouseY - panelOffsetY);
+        guiGraphics.pose().popPose();
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(escOffsetX, 0, 0);
         drawEscHint(guiGraphics);
-        renderInfoPanel(guiGraphics, virtualMouseX, virtualMouseY);
-        renderQrCards(guiGraphics);
+        guiGraphics.pose().popPose();
+
+        renderQrCards(guiGraphics, leftQrOffsetX, rightQrOffsetX);
 
         guiGraphics.pose().popPose();
 
@@ -105,8 +137,8 @@ public class Screen_About extends Screen {
     }
 
     private void drawTitle(GuiGraphics guiGraphics) {
-        int y = virtualHeight - PANEL_PADDING - font.lineHeight;
-        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 200, "ℹ️ 关于");
+        int y = PANEL_PADDING + font.lineHeight + 10;
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y, 200, "ℹ️ 关于");
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {
@@ -156,18 +188,18 @@ public class Screen_About extends Screen {
             Component.translatable(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY).getString(), backStyle, backHovered);
     }
 
-    private void renderQrCards(GuiGraphics guiGraphics) {
+    private void renderQrCards(GuiGraphics guiGraphics, int leftOffsetX, int rightOffsetX) {
         int qrY = virtualHeight - PANEL_PADDING - QR_CARD_SIZE;
         int leftX = PANEL_PADDING;
         int rightX = virtualWidth - PANEL_PADDING - QR_CARD_SIZE;
 
-        CardRenderer.drawCard(guiGraphics, leftX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
-        CardRenderer.drawCard(guiGraphics, rightX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
+        CardRenderer.drawCard(guiGraphics, leftX + leftOffsetX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
+        CardRenderer.drawCard(guiGraphics, rightX + rightOffsetX, qrY, QR_CARD_SIZE, QR_CARD_SIZE, CardRenderer.THEME_ABOUT, false);
 
         int imgSize = QR_CARD_SIZE - QR_IMAGE_PADDING * 2;
-        guiGraphics.blit(VX_TEXTURE, leftX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
+        guiGraphics.blit(VX_TEXTURE, leftX + leftOffsetX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
             imgSize, imgSize, 0, 0, 256, 256, 256, 256);
-        guiGraphics.blit(ZFB_TEXTURE, rightX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
+        guiGraphics.blit(ZFB_TEXTURE, rightX + rightOffsetX + QR_IMAGE_PADDING, qrY + QR_IMAGE_PADDING,
             imgSize, imgSize, 0, 0, 256, 256, 256, 256);
     }
 
@@ -175,9 +207,11 @@ public class Screen_About extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         float virtualMouseX = (float) mouseX / uiScale;
         float virtualMouseY = (float) mouseY / uiScale;
+        float leftMouseX = virtualMouseX - lastLeftOffsetX;
+        float leftMouseY = virtualMouseY - lastLeftOffsetY;
 
-        if (virtualMouseX >= githubX1 && virtualMouseX <= githubX2 &&
-            virtualMouseY >= githubY1 && virtualMouseY <= githubY2) {
+        if (leftMouseX >= githubX1 && leftMouseX <= githubX2 &&
+            leftMouseY >= githubY1 && leftMouseY <= githubY2) {
             Minecraft.getInstance().keyboardHandler.setClipboard(GITHUB_URL);
             Minecraft.getInstance().getChatListener().handleSystemMessage(
                 Component.translatable(Util_MessageKeys.ABOUT_COPY_URL).withStyle(style -> style.withColor(0x00FF00)),
@@ -186,8 +220,8 @@ public class Screen_About extends Screen {
             return true;
         }
 
-        if (virtualMouseX >= backBtnX1 && virtualMouseX <= backBtnX2 &&
-            virtualMouseY >= backBtnY1 && virtualMouseY <= backBtnY2) {
+        if (leftMouseX >= backBtnX1 && leftMouseX <= backBtnX2 &&
+            leftMouseY >= backBtnY1 && leftMouseY <= backBtnY2) {
             if (this.minecraft != null) {
                 this.minecraft.setScreen(new Screen_Home());
             }
@@ -231,5 +265,9 @@ public class Screen_About extends Screen {
             .setTextShadow(false);
     }
 }
+
+
+
+
 
 
