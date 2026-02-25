@@ -6,6 +6,8 @@ import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxCl
 import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxDataRequest;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -45,6 +47,10 @@ public class Screen_DeliveryBox extends Screen {
     private static final int CARD_WIDTH = 200;
     private static final int CARD_HEIGHT = 70;
     private static final int TOTAL_CARD_HEIGHT = CARD_HEIGHT + CARD_SPACING;
+    private static final int CARD_PADDING = 8;
+    private static final int ICON_SIZE = 32;
+    private static final int CLAIM_BTN_WIDTH = 60;
+    private static final int CLAIM_BTN_HEIGHT = 18;
 
     // ==================== 数据 ====================
     private boolean dataLoaded = false;
@@ -72,6 +78,11 @@ public class Screen_DeliveryBox extends Screen {
     // ==================== 翻页按钮区域 ====================
     private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
     private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
+
+    // ==================== 按钮样式 ====================
+    private final UiButtonStyle pageButtonStyle = createPageButtonStyle(CardRenderer.THEME_SHOP);
+    private final UiButtonStyle pageButtonDisabledStyle = createDisabledPageButtonStyle();
+    private final UiButtonStyle claimButtonStyle = createActionButtonStyle(CardRenderer.THEME_DELIVERY);
 
     // ==================== 玩家信息 ====================
     private UUID playerUUID;
@@ -291,79 +302,51 @@ public class Screen_DeliveryBox extends Screen {
 
             // 绘制物品卡片
             drawItemCard(guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
-                itemStack, item.getSource(), isHovered);
+                itemStack, item.getSource(), isHovered, mouseX, mouseY);
 
             // 存储卡片区域
             cardAreas.add(new ItemCardArea(cardX, cardY, CARD_WIDTH, CARD_HEIGHT, i));
 
             // 存储物品图标区域（用于tooltip）
-            int iconSize = 32;
-            int iconX = cardX + 12;
-            int iconY = cardY + (CARD_HEIGHT - iconSize) / 2;
-            int actualIconSize = 32;
+            int iconX = cardX + CARD_PADDING;
+            int iconY = cardY + (CARD_HEIGHT - ICON_SIZE) / 2;
+            int actualIconSize = ICON_SIZE;
             iconAreas.add(new IconArea(iconX, iconY, actualIconSize, actualIconSize, itemStack));
         }
     }
 
     private void drawItemCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
-                              ItemStack itemStack, String source, boolean isHovered) {
-        int padding = 8;
+                              ItemStack itemStack, String source, boolean isHovered, float mouseX, float mouseY) {
+        CardRenderer.drawCard(guiGraphics, x, y, width, height, CardRenderer.THEME_SHOP, isHovered);
 
-        // 卡片背景
-        int cardBg = isHovered ? 0xD02A2A3A : 0xB01A1A2A;
-        guiGraphics.fill(x, y, x + width, y + height, cardBg);
-
-        // 边框
-        int borderColor = isHovered ? 0xFFFFB74D : 0xFFFF9800;
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
-
-        // 顶部装饰条（橙色）
-        guiGraphics.fill(x, y, x + width, y + 3, 0xFFFF9800);
-
-        // 物品图标（左侧）
-        int iconSize = 32;
-        int iconX = x + padding;
-        int iconY = y + (height - iconSize) / 2;
+        int iconX = x + CARD_PADDING;
+        int iconY = y + (height - ICON_SIZE) / 2;
         guiGraphics.pose().pushPose();
-        guiGraphics.renderItem(itemStack, iconX, iconY);
+        guiGraphics.pose().scale(2.0f, 2.0f, 1.0f);
+        guiGraphics.renderItem(itemStack, iconX / 2, iconY / 2);
         guiGraphics.pose().popPose();
 
-        // 物品信息（右侧）
-        int infoX = iconX + iconSize + 8;
-        int infoY = y + padding;
+        int infoX = iconX + ICON_SIZE + 8;
+        int infoY = y + 8;
+        int infoOffset = infoX - x;
+        int maxTextWidth = width - infoOffset - CARD_PADDING - CLAIM_BTN_WIDTH - 6;
 
-        // 物品名称和数量
         String itemName = itemStack.getHoverName().getString();
         int count = itemStack.getCount();
         String nameText = count > 1 ? itemName + " x" + count : itemName;
-        String truncatedName = CardRenderer.truncateText(font, nameText, width - iconSize - padding * 3 - 55);
-        guiGraphics.drawString(font, truncatedName, infoX, infoY, 0xFFFFFFFF);
+        String truncatedName = CardRenderer.truncateText(font, nameText, maxTextWidth);
+        guiGraphics.drawString(font, truncatedName, infoX, infoY, CardRenderer.TEXT_TITLE);
 
-        // 来源
         infoY += font.lineHeight + 2;
-        String sourceText = CardRenderer.truncateText(font, "来自: " + source, width - iconSize - padding * 3 - 55);
-        guiGraphics.drawString(font, sourceText, infoX, infoY, 0x80CCCCCC);
+        String sourceText = CardRenderer.truncateText(font, "来自: " + source, maxTextWidth);
+        guiGraphics.drawString(font, sourceText, infoX, infoY, CardRenderer.TEXT_DESC);
 
-        // 领取按钮
-        int btnWidth = 50;
-        int btnHeight = 18;
-        int btnX = x + width - padding - btnWidth;
-        int btnY = y + (height - btnHeight) / 2;
-
-        int btnBg = isHovered ? 0xE04CAF50 : 0xC03A8A3F;
-        int btnBorder = isHovered ? 0xFF6BCF6B : 0xFF4AAF4A;
-        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + btnHeight, btnBg);
-        guiGraphics.fill(btnX, btnY, btnX + btnWidth, btnY + 1, btnBorder);
-        guiGraphics.fill(btnX, btnY + btnHeight - 1, btnX + btnWidth, btnY + btnHeight, btnBorder);
-        guiGraphics.fill(btnX, btnY, btnX + 1, btnY + btnHeight, btnBorder);
-        guiGraphics.fill(btnX + btnWidth - 1, btnY, btnX + btnWidth, btnY + btnHeight, btnBorder);
-
-        String btnText = "领取";
-        int btnTextWidth = font.width(btnText);
-        guiGraphics.drawString(font, btnText, btnX + (btnWidth - btnTextWidth) / 2, btnY + (btnHeight - font.lineHeight) / 2, 0xFFFFFFFF);
+        int btnX = x + width - CARD_PADDING - CLAIM_BTN_WIDTH;
+        int btnY = y + height - CARD_PADDING - CLAIM_BTN_HEIGHT;
+        boolean btnHovered = mouseX >= btnX && mouseX <= btnX + CLAIM_BTN_WIDTH &&
+                             mouseY >= btnY && mouseY <= btnY + CLAIM_BTN_HEIGHT;
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, btnX, btnY, CLAIM_BTN_WIDTH, CLAIM_BTN_HEIGHT,
+            "领取", "", claimButtonStyle, btnHovered, UiButtonRenderer.TextAlign.CENTER, false);
     }
 
     private void renderItemTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -424,24 +407,9 @@ public class Screen_DeliveryBox extends Screen {
     }
 
     private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text, boolean isHovered, boolean isEnabled) {
-        int bgColor = isEnabled ? (isHovered ? 0xD04A8ACF : 0xB03A7ABF) : 0x602A2A3A;
-        int borderColor = isEnabled ? (isHovered ? 0xFF6AB8FF : 0xFF4A8ACF) : 0xFF3A3A4A;
-        int textColor = isEnabled ? 0xFFFFFFFF : 0x60808080;
-
-        guiGraphics.fill(x, y, x + width, y + height, bgColor);
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
-
-        if (isEnabled) {
-            guiGraphics.fill(x + 2, y + 1, x + width - 2, y + 2, 0x60FFFFFF);
-        }
-
-        int textWidth = font.width(text);
-        int textX = x + (width - textWidth) / 2;
-        int textY = y + (height - font.lineHeight) / 2;
-        guiGraphics.drawString(font, text, textX, textY, textColor);
+        UiButtonStyle style = isEnabled ? pageButtonStyle : pageButtonDisabledStyle;
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, x, y, width, height,
+            text, "", style, isEnabled && isHovered, UiButtonRenderer.TextAlign.CENTER, false);
     }
 
     private int getTotalPages() {
@@ -459,10 +427,10 @@ public class Screen_DeliveryBox extends Screen {
                 virtualMouseY >= cardArea.y() && virtualMouseY <= cardArea.y() + cardArea.height()) {
 
                 // 检查是否点击了右侧领取按钮区域
-                int claimBtnX = cardArea.x() + CARD_WIDTH - 8 - 50;
-                int claimBtnY = cardArea.y() + (CARD_HEIGHT - 18) / 2;
-                if (virtualMouseX >= claimBtnX && virtualMouseX <= claimBtnX + 50 &&
-                    virtualMouseY >= claimBtnY && virtualMouseY <= claimBtnY + 18) {
+                int claimBtnX = cardArea.x() + CARD_WIDTH - CARD_PADDING - CLAIM_BTN_WIDTH;
+                int claimBtnY = cardArea.y() + CARD_HEIGHT - CARD_PADDING - CLAIM_BTN_HEIGHT;
+                if (virtualMouseX >= claimBtnX && virtualMouseX <= claimBtnX + CLAIM_BTN_WIDTH &&
+                    virtualMouseY >= claimBtnY && virtualMouseY <= claimBtnY + CLAIM_BTN_HEIGHT) {
 
                     DeliveryItem item = filteredItems.get(cardArea.itemIndex());
                     EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxClaimItem(item.getDataID()));
@@ -513,4 +481,44 @@ public class Screen_DeliveryBox extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    private UiButtonStyle createPageButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(6)
+            .setStripeWidth(3)
+            .setGlowHeight(4)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
+    }
+
+    private UiButtonStyle createActionButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(6)
+            .setStripeWidth(3)
+            .setGlowHeight(4)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
+    }
+
+    private UiButtonStyle createDisabledPageButtonStyle() {
+        return UiButtonStyle.accent(0xFF6F7F8C)
+            .setTextColor(0xFFB0BBC6)
+            .setBgAlpha(0x30)
+            .setBgAlphaHover(0x30)
+            .setStripeAlpha(0x50)
+            .setStripeAlphaHover(0x50)
+            .setGlowHeight(0)
+            .setBorderAlpha(0x20)
+            .setBorderAlphaHover(0x20)
+            .setTextShadow(false);
+    }
 }
+
+
+

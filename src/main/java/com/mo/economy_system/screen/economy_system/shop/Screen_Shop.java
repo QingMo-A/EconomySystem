@@ -5,6 +5,8 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_ShopDataRequest;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -49,6 +51,8 @@ public class Screen_Shop extends Screen {
     // ==================== 商品卡片配置 ====================
     private static final int CARD_WIDTH = 100;
     private static final int CARD_HEIGHT = 80;
+    private static final int CARD_PADDING = 6;
+    private static final int ICON_SIZE = 32;
 
     // ==================== 数据 ====================
     private List<ShopItem> items = new ArrayList<>();
@@ -75,6 +79,10 @@ public class Screen_Shop extends Screen {
     // ==================== 翻页按钮区域 ====================
     private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
     private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
+
+    // ==================== 按钮样式 ====================
+    private final UiButtonStyle pageButtonStyle = createPageButtonStyle(CardRenderer.THEME_MARKET);
+    private final UiButtonStyle pageButtonDisabledStyle = createDisabledPageButtonStyle();
 
     private record ItemCardArea(int x, int y, int width, int height, int itemIndex) {}
 
@@ -341,9 +349,9 @@ public class Screen_Shop extends Screen {
             boolean isHovered = (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
                                 mouseY >= cardY && mouseY <= cardY + CARD_HEIGHT);
 
-            // 绘制商品卡片（不显示价格变化）
-            CardRenderer.drawShopItemCard(guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
-                itemStack, itemName, price, 0, isHovered);
+            // 绘制商品卡片
+            drawShopItemCard(guiGraphics, font, cardX, cardY, CARD_WIDTH, CARD_HEIGHT,
+                itemStack, itemName, price, isHovered);
 
             // 存储卡片区域（用于点击和Tooltip）
             cardAreas.add(new ItemCardArea(cardX, cardY, CARD_WIDTH, CARD_HEIGHT, i));
@@ -388,30 +396,9 @@ public class Screen_Shop extends Screen {
     }
 
     private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text, boolean isHovered, boolean isEnabled) {
-        // 按钮背景（渐变蓝色）
-        int bgColor = isEnabled ? (isHovered ? 0xD04A8ACF : 0xB03A7ABF) : 0x602A2A3A;
-        int borderColor = isEnabled ? (isHovered ? 0xFF6AB8FF : 0xFF4A8ACF) : 0xFF3A3A4A;
-        int textColor = isEnabled ? 0xFFFFFFFF : 0x60808080;
-
-        // 背景
-        guiGraphics.fill(x, y, x + width, y + height, bgColor);
-
-        // 边框
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
-
-        // 顶部高光条
-        if (isEnabled) {
-            guiGraphics.fill(x + 2, y + 1, x + width - 2, y + 2, 0x60FFFFFF);
-        }
-
-        // 文字
-        int textWidth = font.width(text);
-        int textX = x + (width - textWidth) / 2;
-        int textY = y + (height - font.lineHeight) / 2;
-        guiGraphics.drawString(font, text, textX, textY, textColor);
+        UiButtonStyle style = isEnabled ? pageButtonStyle : pageButtonDisabledStyle;
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, x, y, width, height,
+            text, "", style, isEnabled && isHovered, UiButtonRenderer.TextAlign.CENTER, false);
     }
 
     private int getTotalPages() {
@@ -494,4 +481,51 @@ public class Screen_Shop extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    private void drawShopItemCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                  ItemStack itemStack, String itemName, int price, boolean isHovered) {
+        CardRenderer.drawCard(guiGraphics, x, y, width, height, CardRenderer.THEME_SHOP, isHovered);
+
+        int textX = x + CARD_PADDING;
+        int headerY = y + 6;
+        String name = CardRenderer.truncateText(font, itemName, width - CARD_PADDING * 2);
+        guiGraphics.drawString(font, name, textX, headerY, CardRenderer.TEXT_TITLE);
+
+        String priceText = "￥" + CardRenderer.formatNumber(price);
+        int priceWidth = font.width(priceText);
+        guiGraphics.drawString(font, priceText, x + width - CARD_PADDING - priceWidth, headerY, CardRenderer.THEME_BALANCE);
+
+        int iconX = x + (width - ICON_SIZE) / 2;
+        int iconY = y + 26;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(2.0f, 2.0f, 1.0f);
+        guiGraphics.renderItem(itemStack, iconX / 2, iconY / 2);
+        guiGraphics.pose().popPose();
+    }
+
+    private UiButtonStyle createPageButtonStyle(int accentColor) {
+        return UiButtonStyle.accent(accentColor)
+            .setPadding(6)
+            .setStripeWidth(3)
+            .setGlowHeight(4)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
+    }
+
+    private UiButtonStyle createDisabledPageButtonStyle() {
+        return UiButtonStyle.accent(0xFF6F7F8C)
+            .setTextColor(0xFFB0BBC6)
+            .setBgAlpha(0x30)
+            .setBgAlphaHover(0x30)
+            .setStripeAlpha(0x50)
+            .setStripeAlphaHover(0x50)
+            .setGlowHeight(0)
+            .setBorderAlpha(0x20)
+            .setBorderAlphaHover(0x20)
+            .setTextShadow(false);
+    }
 }
+

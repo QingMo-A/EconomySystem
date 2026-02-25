@@ -22,6 +22,7 @@ eclipse
 MC源代码
 run/*
 !run/config/economy_system
+run/config/economy_system/data
 run-data
 log
 run2

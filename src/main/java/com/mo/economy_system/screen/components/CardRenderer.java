@@ -3,6 +3,8 @@ package com.mo.economy_system.screen.components;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
+import com.mo.economy_system.screen.components.UiButtonRenderer;
+import com.mo.economy_system.screen.components.UiButtonStyle;
 
 /**
  * 卡片渲染工具类
@@ -585,25 +587,16 @@ public class CardRenderer {
                                          String territoryName, TerritoryType type, boolean isOwned, boolean isHovered,
                                          boolean teleportHovered, boolean manageHovered, boolean showManageButton,
                                          String ownerName, String territoryId, String coordinateRange) {
-        // ==================== 顶部装饰条 ====================
-        int topColor = type.getColor();
-        int topHeight = 4;
-        guiGraphics.fill(x, y, x + width, y + topHeight, topColor);
-
         // ==================== 卡片背景 ====================
-        int cardBg = isHovered ? 0xD02A2A3A : 0xB01A1A2A;
-        guiGraphics.fill(x, y + topHeight, x + width, y + height, cardBg);
+        int themeColor = isOwned ? THEME_TERRITORY : type.getColor();
+        drawCard(guiGraphics, x, y, width, height, themeColor, isHovered);
 
-        // ==================== 边框 ====================
-        int borderColor = isOwned ? (isHovered ? 0xFFB58CE6 : 0xFF9B59B6) : (isHovered ? 0xFF9E9E9E : 0xFF757575);
-        // 绘制边框（跳过顶部装饰条位置）
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
+        // 顶部细条强调
+        guiGraphics.fill(x + 1, y, x + width - 1, y + 2, type.getColor());
 
         // ==================== 内容区域 ====================
         int padding = 8;
-        int contentY = y + topHeight + 4;
+        int contentY = y + 6;
 
         // 领地名称（顶部，粗体，白色）
         String displayName = truncateText(font, territoryName, width - padding * 2);
@@ -661,7 +654,7 @@ public class CardRenderer {
         guiGraphics.drawString(font, coordDisplay, coordX, infoY, 0xFF98FB98);
 
         // ==================== 按钮区域 ====================
-        int buttonHeight = 16;
+        int buttonHeight = 18;
         int buttonSpacing = 4;
         int buttonBottomMargin = 4;
         int buttonY = y + height - buttonBottomMargin - buttonHeight;
@@ -675,7 +668,8 @@ public class CardRenderer {
 
             // 传送按钮（左）
             int teleportX = x + padding;
-            drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, singleButtonWidth, buttonHeight, "📍 传送", teleportHovered);
+            drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, singleButtonWidth, buttonHeight,
+                "📍 传送", teleportHovered, type.getColor());
             result[0] = teleportX;
             result[1] = buttonY;
             result[2] = teleportX + singleButtonWidth;
@@ -683,7 +677,8 @@ public class CardRenderer {
 
             // 管理按钮（右）
             int manageX = teleportX + singleButtonWidth + buttonSpacing;
-            drawTerritoryActionButton(guiGraphics, font, manageX, buttonY, singleButtonWidth, buttonHeight, "⚙️ 管理", manageHovered);
+            drawTerritoryActionButton(guiGraphics, font, manageX, buttonY, singleButtonWidth, buttonHeight,
+                "⚙️ 管理", manageHovered, THEME_TERRITORY);
             result[4] = manageX;
             result[5] = buttonY;
             result[6] = manageX + singleButtonWidth;
@@ -692,7 +687,8 @@ public class CardRenderer {
             // 只有传送按钮（全宽）
             int buttonWidth = width - padding * 2;
             int teleportX = x + padding;
-            drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, buttonWidth, buttonHeight, "📍 传送", teleportHovered);
+            drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, buttonWidth, buttonHeight,
+                "📍 传送", teleportHovered, type.getColor());
             result[0] = teleportX;
             result[1] = buttonY;
             result[2] = teleportX + buttonWidth;
@@ -719,28 +715,18 @@ public class CardRenderer {
      * 绘制领地操作按钮（内部小按钮）
      */
     private static void drawTerritoryActionButton(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
-                                                   String text, boolean isHovered) {
-        // 按钮背景
-        int bgColor = isHovered ? 0xE04A8ACF : 0xC03A7ABF;
-        guiGraphics.fill(x, y, x + width, y + height, bgColor);
-
-        // 边框
-        int borderColor = isHovered ? 0xFF6AB8FF : 0xFF4A8ACF;
-        guiGraphics.fill(x, y, x + width, y + 1, borderColor);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, borderColor);
-        guiGraphics.fill(x, y, x + 1, y + height, borderColor);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, borderColor);
-
-        // 顶部高光条
-        if (isHovered) {
-            guiGraphics.fill(x + 2, y + 1, x + width - 2, y + 2, 0x60FFFFFF);
-        }
-
-        // 文字
-        int textWidth = font.width(text);
-        int textX = x + (width - textWidth) / 2;
-        int textY = y + (height - font.lineHeight) / 2;
-        guiGraphics.drawString(font, text, textX, textY, 0xFFFFFFFF);
+                                                   String text, boolean isHovered, int accentColor) {
+        UiButtonStyle style = UiButtonStyle.accent(accentColor)
+            .setPadding(6)
+            .setStripeWidth(3)
+            .setGlowHeight(4)
+            .setBgAlpha(0x55)
+            .setBgAlphaHover(0x70)
+            .setBorderAlpha(0x25)
+            .setBorderAlphaHover(0x40)
+            .setTextShadow(false);
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, x, y, width, height,
+            text, "", style, isHovered, UiButtonRenderer.TextAlign.CENTER, false);
     }
 
     /**
@@ -751,3 +737,4 @@ public class CardRenderer {
         drawTerritoryCard(guiGraphics, font, x, y, width, height, territoryName, type, isOwned, isHovered, false, false, isOwned, "", "", "");
     }
 }
+
