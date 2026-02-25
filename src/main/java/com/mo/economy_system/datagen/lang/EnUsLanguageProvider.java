@@ -266,6 +266,23 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "Invite Decline Button");
 
         // Screen_TerritoryBuff | 领地增益
+        add(Util_MessageKeys.TERRITORY_BUFF_TITLE_KEY, "Territory Buffs");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_NO_BUFFS_TEXT_KEY, "No buffs available");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_LOCKED_TEXT_KEY, "Locked");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_UNLOCKED_TEXT_KEY, "Unlocked");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_ID_TEXT_KEY, "Buff ID: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_NAME_TEXT_KEY, "Buff Name: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_CURRENT_LEVEL_TEXT_KEY, "Current Level: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_MAX_LEVEL_TEXT_KEY, "Max Level: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_EFFECT_ID_TEXT_KEY, "Effect ID: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_UNLOCK_STATE_KEY, "Unlocked: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_COST_LABEL_KEY, "[Upgrade Cost]");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UNLOCK_KEY, "Unlock");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UPGRADE_KEY, "Upgrade");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_MAX_KEY, "Max");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_BUFF_MAX_LEVEL_KEY, "This buff is already at max level");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_ITEM_FAIL_KEY, "Required items not found");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_XP_LEVEL_FAIL_KEY, "Insufficient XP level");
 
 
         // Claim Territory | 圈地

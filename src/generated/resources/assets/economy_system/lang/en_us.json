@@ -247,5 +247,22 @@
   "text.territory.hint": "Territory Hint",
   "text.territory.no_territories": "Territory No Territories",
   "text.territory.territory_area": "Territory Territory Area: %s",
-  "text.territory.territory_name": "Territory Territory Name: %s"
+  "text.territory.territory_name": "Territory Territory Name: %s",
+  "text.territory_buff.be_locked": "Locked",
+  "screen.territory_buff.title": "Territory Buffs",
+  "tooltip.territory_buff.buff_effect_id": "Effect ID: %s",
+  "tooltip.territory_buff.buff_max_level": "Max Level: %s",
+  "text.territory_buff.be_unlocked": "Unlocked",
+  "button.territory_buff.unlock": "Unlock",
+  "tooltip.territory_buff.buff_id": "Buff ID: %s",
+  "message.territory_buff.requirement_xp_level_fail": "Insufficient XP level",
+  "button.territory_buff.max": "Max",
+  "button.territory_buff.upgrade": "Upgrade",
+  "tooltip.territory_buff.buff_unlock_state": "Unlocked: %s",
+  "tooltip.territory_buff.buff_current_level": "Current Level: %s",
+  "message.territory_buff.buff_max_level": "This buff is already at max level",
+  "message.territory_buff.requirement_item_fail": "Required items not found",
+  "text.territory_buff.no_buffs": "No buffs available",
+  "tooltip.territory_buff.buff_name": "Buff Name: %s",
+  "text.territory_buff.cost_label": "[Upgrade Cost]"
 }

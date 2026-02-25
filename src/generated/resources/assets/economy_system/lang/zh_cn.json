@@ -247,5 +247,22 @@
   "text.territory.hint": "输入领地的任意信息",
   "text.territory.no_territories": "你还没有自己的领地喵~",
   "text.territory.territory_area": "领地范围: %s",
-  "text.territory.territory_name": "领地名称: %s"
+  "text.territory.territory_name": "领地名称: %s",
+  "button.territory_buff.max": "满级",
+  "text.territory_buff.be_unlocked": "已解锁",
+  "tooltip.territory_buff.buff_id": "增益ID: %s",
+  "tooltip.territory_buff.buff_name": "增益名称: %s",
+  "tooltip.territory_buff.buff_unlock_state": "解锁状态: %s",
+  "message.territory_buff.requirement_item_fail": "所需物品不足",
+  "tooltip.territory_buff.buff_current_level": "当前等级: %s",
+  "button.territory_buff.unlock": "解锁",
+  "text.territory_buff.be_locked": "未解锁",
+  "screen.territory_buff.title": "领地增益",
+  "tooltip.territory_buff.buff_max_level": "最大等级: %s",
+  "button.territory_buff.upgrade": "升级",
+  "message.territory_buff.requirement_xp_level_fail": "经验等级不足",
+  "text.territory_buff.no_buffs": "暂无增益",
+  "tooltip.territory_buff.buff_effect_id": "效果ID: %s",
+  "message.territory_buff.buff_max_level": "该增益已达到满级",
+  "text.territory_buff.cost_label": "[升级消耗]"
 }

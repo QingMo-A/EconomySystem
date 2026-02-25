@@ -235,6 +235,7 @@ public class Util_MessageKeys {
     public static final String TERRITORY_BUFF_TOOLTIP_BUFF_MAX_LEVEL_TEXT_KEY = "tooltip.territory_buff.buff_max_level";
     public static final String TERRITORY_BUFF_TOOLTIP_BUFF_EFFECT_ID_TEXT_KEY = "tooltip.territory_buff.buff_effect_id";
     public static final String TERRITORY_BUFF_TOOLTIP_BUFF_UNLOCK_STATE_KEY = "tooltip.territory_buff.buff_unlock_state";
+    public static final String TERRITORY_BUFF_COST_LABEL_KEY = "text.territory_buff.cost_label";
     public static final String TERRITORY_BUFF_BUTTON_UNLOCK_KEY = "button.territory_buff.unlock";
     public static final String TERRITORY_BUFF_BUTTON_UPGRADE_KEY = "button.territory_buff.upgrade";
     public static final String TERRITORY_BUFF_BUTTON_MAX_KEY = "button.territory_buff.max";

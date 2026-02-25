@@ -267,6 +267,23 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "§c[拒绝]");
 
         // Screen_TerritoryBuff | 领地增益
+        add(Util_MessageKeys.TERRITORY_BUFF_TITLE_KEY, "领地增益");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_NO_BUFFS_TEXT_KEY, "暂无增益");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_LOCKED_TEXT_KEY, "未解锁");
+        add(Util_MessageKeys.TERRITORY_BUFF_TEXT_BE_UNLOCKED_TEXT_KEY, "已解锁");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_ID_TEXT_KEY, "增益ID: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_NAME_TEXT_KEY, "增益名称: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_CURRENT_LEVEL_TEXT_KEY, "当前等级: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_MAX_LEVEL_TEXT_KEY, "最大等级: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_EFFECT_ID_TEXT_KEY, "效果ID: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_TOOLTIP_BUFF_UNLOCK_STATE_KEY, "解锁状态: %s");
+        add(Util_MessageKeys.TERRITORY_BUFF_COST_LABEL_KEY, "[升级消耗]");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UNLOCK_KEY, "解锁");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_UPGRADE_KEY, "升级");
+        add(Util_MessageKeys.TERRITORY_BUFF_BUTTON_MAX_KEY, "满级");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_BUFF_MAX_LEVEL_KEY, "该增益已达到满级");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_ITEM_FAIL_KEY, "所需物品不足");
+        add(Util_MessageKeys.TERRITORY_BUFF_MESSAGE_REQUIREMENT_XP_LEVEL_FAIL_KEY, "经验等级不足");
 
 
         // Claim Territory | 圈地
