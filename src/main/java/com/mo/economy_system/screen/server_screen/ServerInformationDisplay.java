@@ -338,15 +338,11 @@ public class ServerInformationDisplay {
     private static void renderEnhancedSmallBox(GuiGraphics guiGraphics, Font font, int x, int y, InfoBox box) {
         int boxHeight = BOX_HEIGHT;
 
-        // ========== 背景效果 ==========
-        // 主背景（淡黑色半透明）
-        guiGraphics.fill(RenderType.gui(), x, y, x + box.boxWidth, y + boxHeight, box.backgroundColor);
+        // 圆角背景
+        int radius = 1;
+        drawRoundedRect(guiGraphics, x, y, box.boxWidth, boxHeight, radius, box.backgroundColor);
 
-        // ========== 微妙的发光背景效果 ==========
-        int glowColor = 0x30000000 | (box.borderColor & 0x00FFFFFF);
-        guiGraphics.fill(RenderType.gui(), x - 1, y - 1, x + box.boxWidth + 1, y + boxHeight + 1, glowColor);
-
-        // ========== 文本居中渲染（应用缩放）==========
+        // 文本居中渲染（应用缩放）
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
 
@@ -359,10 +355,45 @@ public class ServerInformationDisplay {
         poseStack.translate(textX, textY, 0);
         poseStack.scale(INFO_TEXT_SCALE, INFO_TEXT_SCALE, 1.0f);
 
-        // 主文字
+        // 主文本
         guiGraphics.drawString(font, box.text, 0, 0, 0xFFFFFFFF);
 
         poseStack.popPose();
+    }
+
+    private static void drawRoundedRect(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int color) {
+        if (radius <= 0) {
+            guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, color);
+            return;
+        }
+        int r = Math.min(radius, Math.min(width / 2, height / 2));
+
+        // ??
+        guiGraphics.fill(RenderType.gui(), x + r, y + r, x + width - r, y + height - r, color);
+        // ??
+        guiGraphics.fill(RenderType.gui(), x + r, y, x + width - r, y + r, color);
+        guiGraphics.fill(RenderType.gui(), x + r, y + height - r, x + width - r, y + height, color);
+        // ??
+        guiGraphics.fill(RenderType.gui(), x, y + r, x + r, y + height - r, color);
+        guiGraphics.fill(RenderType.gui(), x + width - r, y + r, x + width, y + height - r, color);
+    }
+
+    private static void drawRoundedBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int color) {
+        if (radius <= 0) {
+            guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, color);
+            guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, color);
+            guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, color);
+            guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + height, color);
+            return;
+        }
+        int r = Math.min(radius, Math.min(width / 2, height / 2));
+
+        // ???
+        guiGraphics.fill(RenderType.gui(), x + r, y, x + width - r, y + 1, color);
+        guiGraphics.fill(RenderType.gui(), x + r, y + height - 1, x + width - r, y + height, color);
+        // ???
+        guiGraphics.fill(RenderType.gui(), x, y + r, x + 1, y + height - r, color);
+        guiGraphics.fill(RenderType.gui(), x + width - 1, y + r, x + width, y + height - r, color);
     }
 
     // 渲染小框（带文字缩放）- 保留旧方法备用

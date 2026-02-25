@@ -40,19 +40,19 @@ public class CustomStatueGUI {
     private static float lastHealth = 0;                 // 上次记录的血量
     //控制小人与屏幕右侧的距离
 //    private static final int RIGHT_OFFSET = 5;
-    private static final int LEFT_OFFSET = 20;
+    private static final int LEFT_OFFSET = 12;
     private static final int PLAYER_ICON_Y_OFFSET = 5;
     //样式常量
     // 基础样式
-    private static final int BACKGROUND_ALPHA = 128;
-    private static final int BORDER_COLOR = 0xFFFFFFFF; // 白色边框，更明显
+    private static final int BACKGROUND_ALPHA = 96;
+    private static final int BORDER_COLOR = 0x60FFFFFF; // 边框更克制
     private static final int BG_COLOR = (BACKGROUND_ALPHA << 24) | 0x000000;
     private static final int LOW_COLOR = (255 << 24) | 0xFF2222;
 
-    private static final int BAR_WIDTH = 5; // 进度条宽度
-    private static final int BAR_HEIGHT = 40;//进度条高度
-    private static final int BAR_TO_PLAYER_SPACING = 8; //进度条与小人的间距（增大）
-    private static final int BAR_BAR_SPACING = 3; //两进度条之间的间距
+    private static final int BAR_WIDTH = 4; // 进度条宽度
+    private static final int BAR_HEIGHT = 36;//进度条高度
+    private static final int BAR_TO_PLAYER_SPACING = 6; //进度条与小人的间距
+    private static final int BAR_BAR_SPACING = 2; //两进度条之间的间距
 
     // 颜色配置（深饱和鲜艳版本）
     private static final int FOOD_BAR_COLOR = (255 << 24) | 0xFFCC00;      // 深金黄色
@@ -357,9 +357,6 @@ public class CustomStatueGUI {
             int finalColor = progress < 0.2f ? LOW_COLOR : normalColor;
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
             // 左侧高光效果（白色半透明细线）
-            if (fillHeight > 2) {
-                guiGraphics.fill(x + 1, fillStartY, x + Math.min(3, BAR_WIDTH / 2), y + BAR_HEIGHT, 0x60FFFFFF);
-            }
         }
 
         // 绘制边框（带淡色发光）
@@ -379,9 +376,6 @@ public class CustomStatueGUI {
             int finalColor = progress < 0.2f ? LOW_COLOR : normalColor;
             guiGraphics.fill(x, fillStartY, x + BAR_WIDTH, y + BAR_HEIGHT, finalColor);
             // 左侧高光效果（白色半透明细线）
-            if (fillHeight > 2) {
-                guiGraphics.fill(x + 1, fillStartY, x + Math.min(3, BAR_WIDTH / 2), y + BAR_HEIGHT, 0x60FFFFFF);
-            }
         }
 
         // 绘制边框（带淡色发光）
@@ -393,8 +387,6 @@ public class CustomStatueGUI {
      */
     private static void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int barColor) {
         // 外发光效果（更鲜艳，使用进度条自身的颜色）
-        int glowColor = 0x60000000 | (barColor & 0x00FFFFFF);
-        guiGraphics.fill(x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
 
         // 上边框
         guiGraphics.fill(x, y, x + width, y + 1, BORDER_COLOR);
@@ -411,7 +403,7 @@ public class CustomStatueGUI {
      */
     private static void drawIcon(GuiGraphics guiGraphics, String icon, int x, int y, int color) {
         Minecraft mc = Minecraft.getInstance();
-        float iconScale = 0.8f; // 图标缩放比例
+        float iconScale = 0.7f; // 图标缩放比例
 
         // 绘制缩放后的图标
         guiGraphics.pose().pushPose();
