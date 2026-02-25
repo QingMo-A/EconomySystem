@@ -1,6 +1,6 @@
 package com.mo.economy_system.network.packets.playerdata_system;
 
-import com.mo.economy_system.server.serverui.tips.TipDisplayManager;
+import com.mo.economy_system.screen.server_screen.tips.TipDisplayManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;

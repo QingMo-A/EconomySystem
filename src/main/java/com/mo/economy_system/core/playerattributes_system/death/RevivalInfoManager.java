@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.server.serverui.tips.TipPushHelper;
+import com.mo.economy_system.screen.server_screen.tips.TipPushHelper;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.io.File;
@@ -12,7 +12,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;

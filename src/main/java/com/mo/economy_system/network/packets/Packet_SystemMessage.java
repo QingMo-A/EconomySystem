@@ -1,7 +1,7 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.server.serverui.customsystemui.SystemMessageDisplay;
+import com.mo.economy_system.screen.server_screen.customsystemui.SystemMessageDisplay;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;

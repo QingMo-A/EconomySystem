@@ -2,7 +2,7 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
-import com.mo.economy_system.screen.newUI.a1111_Screen;
+import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;

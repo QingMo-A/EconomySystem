@@ -2,8 +2,7 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
-import com.mo.economy_system.screen.newUI.a1111_Screen;
-import com.mo.economy_system.utils.Util_Message;
+import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;

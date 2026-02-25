@@ -1,12 +1,11 @@
 package com.mo.economy_system.core.login_system;
 
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.core.playerattributes_system.death.DeathEventHandler;
 import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest;
 import com.mo.economy_system.server.notice.NewPlayerGuide;
-import com.mo.economy_system.server.serverui.tips.TipPushHelper;
+import com.mo.economy_system.screen.server_screen.tips.TipPushHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;

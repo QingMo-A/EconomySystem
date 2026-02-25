@@ -1,6 +1,6 @@
 package com.mo.economy_system.network.packets.playerdata_system;
 
-import com.mo.economy_system.server.serverui.customsystemui.SystemMessageDisplay;
+import com.mo.economy_system.screen.server_screen.customsystemui.SystemMessageDisplay;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;

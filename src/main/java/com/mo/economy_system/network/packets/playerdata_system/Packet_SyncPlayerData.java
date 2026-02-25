@@ -2,7 +2,6 @@ package com.mo.economy_system.network.packets.playerdata_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
-import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen;
 import com.mo.economy_system.server.chattitle.PlayerTitleManager;
 import com.mo.economy_system.server.chattitle.Title;
 import com.mo.economy_system.server.chattitle.TitleRegistry;

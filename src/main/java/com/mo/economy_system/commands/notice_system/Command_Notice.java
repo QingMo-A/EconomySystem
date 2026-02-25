@@ -3,7 +3,7 @@ package com.mo.economy_system.commands.notice_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.server.notice.NoticeData;
 import com.mo.economy_system.server.notice.NoticeManager;
-import com.mo.economy_system.server.serverui.tips.TipPushHelper;
+import com.mo.economy_system.screen.server_screen.tips.TipPushHelper;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;

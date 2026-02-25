@@ -1,6 +1,7 @@
 package com.mo.economy_system.network.packets.notice_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.screen.server_screen.serverscreen.ServerScreenUI_Screen;
 import com.mo.economy_system.server.notice.NoticeData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
@@ -82,7 +83,7 @@ public class Packet_NoticeListResponse {
     private static void handleClient(Packet_NoticeListResponse msg) {
         EconomySystem.LOGGER.info("收到 {} 条公告", msg.notices.size());
         // 将公告数据传递给UI
-        com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI_Screen.setNoticeData(msg.notices, msg.readNoticeIds);
+        ServerScreenUI_Screen.setNoticeData(msg.notices, msg.readNoticeIds);
     }
 
     public List<NoticeData> getNotices() {

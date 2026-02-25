@@ -1,8 +1,7 @@
 package com.mo.economy_system.network.packets;
 
-import com.mo.economy_system.network.packets.economy_system.Packet_BalanceResponse;
 import com.mo.economy_system.screen.territory_system.Screen_InvitePlayer;
-import com.mo.economy_system.server.serverui.ServerInformationDisplay;
+import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;

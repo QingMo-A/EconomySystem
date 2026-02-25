@@ -2,11 +2,10 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.screen.newUI.a1111_Screen;
+import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.*;

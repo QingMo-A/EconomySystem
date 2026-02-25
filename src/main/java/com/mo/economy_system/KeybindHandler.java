@@ -1,8 +1,8 @@
 package com.mo.economy_system;
 
 import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.server.serverui.ServerInformationDisplay;
-import com.mo.economy_system.server.serverui.serverscreen.ServerScreenUI;
+import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
+import com.mo.economy_system.screen.server_screen.serverscreen.ServerScreenUI;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;

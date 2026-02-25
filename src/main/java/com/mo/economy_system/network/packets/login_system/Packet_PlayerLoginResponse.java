@@ -5,7 +5,7 @@ import com.mo.economy_system.core.login_system.PlayerLoginData;
 import com.mo.economy_system.core.login_system.PlayerLoginDataManager;
 import com.mo.economy_system.core.playerattributes_system.death.RevivalInfoManager;
 import com.mo.economy_system.server.notice.NewPlayerGuide;
-import com.mo.economy_system.server.serverui.tips.TipPushHelper;
+import com.mo.economy_system.screen.server_screen.tips.TipPushHelper;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
@@ -13,9 +13,6 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.UUID;
 import java.util.function.Supplier;
-
-import static com.mo.economy_system.server.GetServerInstance.SERVER_INSTANCE;
-import static com.mo.economy_system.utils.Util_Player.getPlayerNameByUUID;
 
 public class Packet_PlayerLoginResponse {
     //true是注册，false是登录

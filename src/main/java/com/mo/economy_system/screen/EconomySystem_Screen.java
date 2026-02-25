@@ -6,7 +6,7 @@ import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
-import com.mo.economy_system.screen.newUI.ItemIconWidget;
+import com.mo.economy_system.screen.components.newUI.ItemIconWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;

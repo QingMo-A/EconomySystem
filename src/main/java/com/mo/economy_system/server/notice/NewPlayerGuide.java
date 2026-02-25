@@ -3,7 +3,7 @@ package com.mo.economy_system.server.notice;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.login_system.PlayerLoginData;
 import com.mo.economy_system.core.login_system.PlayerLoginDataManager;
-import com.mo.economy_system.server.serverui.tips.TipPushHelper;
+import com.mo.economy_system.screen.server_screen.tips.TipPushHelper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
