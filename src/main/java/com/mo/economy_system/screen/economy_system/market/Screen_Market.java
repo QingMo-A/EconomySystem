@@ -3,6 +3,7 @@ package com.mo.economy_system.screen.economy_system.market;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
+import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
@@ -48,6 +49,12 @@ public class Screen_Market extends Screen {
     private static final int BASE_HEIGHT = 360;
     private static final int CARD_SPACING = 8;
     private static final int PANEL_PADDING = 12;
+    private static final int SEARCH_BOX_WIDTH = 200;
+    private static final int SEARCH_BOX_HEIGHT = 20;
+    private static final int SEARCH_BOX_TOP = 20;
+    private static final int SEARCH_BOX_ANIMATION_OFFSET = 30;
+    private static final int TOP_BUTTON_ANIMATION_OFFSET = 30;
+    private static final int PANEL_ANIMATION_OFFSET = 40;
 
     // ==================== 订单卡片配置 ====================
     private static final int CARD_WIDTH = 200;
@@ -91,6 +98,11 @@ public class Screen_Market extends Screen {
     // ==================== 翻页按钮区域 ====================
     private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
     private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
+
+    // ==================== 动画 ====================
+    private static final long ANIMATION_DURATION = 420;
+    private final UiAnimation openAnimation = new UiAnimation(ANIMATION_DURATION, UiAnimation.Easing.EASE_OUT_CUBIC);
+    private boolean skipAnimation = false;
 
     // ==================== 上架/求购按钮区域 ====================
     private int listBtnX1, listBtnY1, listBtnX2, listBtnY2;
@@ -145,6 +157,11 @@ public class Screen_Market extends Screen {
     @Override
     protected void init() {
         super.init();
+        if (skipAnimation) {
+            openAnimation.finish();
+        } else {
+            openAnimation.start();
+        }
         calculateVirtualSize();
 
         if (this.minecraft != null && this.minecraft.player != null) {
@@ -153,11 +170,11 @@ public class Screen_Market extends Screen {
         }
 
         // 创建搜索框（左上角，给右侧按钮留空间）
-        int searchBoxWidth = 200;
+        int searchBoxWidth = SEARCH_BOX_WIDTH;
         int searchBoxX = PANEL_PADDING;
-        int searchBoxY = 20;
+        int searchBoxY = SEARCH_BOX_TOP;
 
-        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, 20, Component.translatable("搜索市场..."));
+        this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, SEARCH_BOX_HEIGHT, Component.translatable("搜索市场..."));
         this.searchBox.setMaxLength(50);
         this.searchBox.setHint(Component.literal("搜索市场..."));
         this.searchBox.setResponder(this::onSearchChanged);
@@ -180,9 +197,9 @@ public class Screen_Market extends Screen {
         }
 
         int boxX = Math.round(PANEL_PADDING * uiScale);
-        int boxY = Math.round(20 * uiScale);
-        int boxWidth = Math.round(200 * uiScale);
-        int boxHeight = Math.round(20 * uiScale);
+        int boxY = Math.round(SEARCH_BOX_TOP * uiScale) - getSearchBoxOffsetY();
+        int boxWidth = Math.round(SEARCH_BOX_WIDTH * uiScale);
+        int boxHeight = Math.round(SEARCH_BOX_HEIGHT * uiScale);
 
         searchBox.setX(boxX);
         searchBox.setY(boxY);
@@ -236,15 +253,27 @@ public class Screen_Market extends Screen {
 
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
+        float animProgress = openAnimation.value();
+        int panelOffsetY = (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
+        int topButtonsOffsetY = (int) ((1.0f - animProgress) * TOP_BUTTON_ANIMATION_OFFSET);
 
         // 绘制左下角标题
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
         drawTitle(guiGraphics);
+        guiGraphics.pose().popPose();
 
         // 绘制右上角按钮
-        drawTopButtons(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, -topButtonsOffsetY, 0);
+        drawTopButtons(guiGraphics, virtualMouseX, virtualMouseY + topButtonsOffsetY);
+        guiGraphics.pose().popPose();
 
         // 绘制右下角ESC提示
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
         drawEscHint(guiGraphics);
+        guiGraphics.pose().popPose();
 
         // 绘制搜索框背景
         guiGraphics.pose().popPose();
@@ -253,10 +282,16 @@ public class Screen_Market extends Screen {
         guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
         // 绘制订单卡片网格
-        renderOrderCards(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
+        renderOrderCards(guiGraphics, virtualMouseX, virtualMouseY - panelOffsetY);
+        guiGraphics.pose().popPose();
 
         // 绘制翻页控制
-        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
+        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY - panelOffsetY);
+        guiGraphics.pose().popPose();
 
         guiGraphics.pose().popPose();
 
@@ -588,7 +623,7 @@ public class Screen_Market extends Screen {
      */
     private void renderItemTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         float virtualMouseX = (float) mouseX / uiScale;
-        float virtualMouseY = (float) mouseY / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale - getContentOffsetY();
 
         for (ItemIconArea iconArea : itemIconAreas) {
             if (virtualMouseX >= iconArea.x() && virtualMouseX <= iconArea.x() + iconArea.width() &&
@@ -618,7 +653,8 @@ public class Screen_Market extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         float virtualMouseX = (float) mouseX / uiScale;
-        float virtualMouseY = (float) mouseY / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale - getContentOffsetY();
+        float virtualMouseYTop = (float) mouseY / uiScale + getTopButtonsOffsetY();
 
         // 检查过滤器点击
         String[] filters = {"全部", "我的", "卖单", "求单"};
@@ -638,7 +674,7 @@ public class Screen_Market extends Screen {
 
         // 检查上架按钮点击
         if (virtualMouseX >= listBtnX1 && virtualMouseX <= listBtnX2 &&
-            virtualMouseY >= listBtnY1 && virtualMouseY <= listBtnY2) {
+            virtualMouseYTop >= listBtnY1 && virtualMouseYTop <= listBtnY2) {
             if (this.minecraft != null) {
                 this.minecraft.setScreen(new Screen_CreateSalesOrder(this.minecraft.player));
             }
@@ -647,7 +683,7 @@ public class Screen_Market extends Screen {
 
         // 检查求购按钮点击
         if (virtualMouseX >= requestBtnX1 && virtualMouseX <= requestBtnX2 &&
-            virtualMouseY >= requestBtnY1 && virtualMouseY <= requestBtnY2) {
+            virtualMouseYTop >= requestBtnY1 && virtualMouseYTop <= requestBtnY2) {
             if (this.minecraft != null) {
                 this.minecraft.setScreen(new Screen_CreateDemandOrder(this.minecraft.player));
             }
@@ -690,6 +726,21 @@ public class Screen_Market extends Screen {
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private int getContentOffsetY() {
+        float animProgress = openAnimation.value();
+        return (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
+    }
+
+    private int getTopButtonsOffsetY() {
+        float animProgress = openAnimation.value();
+        return (int) ((1.0f - animProgress) * TOP_BUTTON_ANIMATION_OFFSET);
+    }
+
+    private int getSearchBoxOffsetY() {
+        float animProgress = openAnimation.value();
+        return Math.round((1.0f - animProgress) * SEARCH_BOX_ANIMATION_OFFSET * uiScale);
     }
 
     private void handleOrderAction(MarketItem item, String actionType) {
