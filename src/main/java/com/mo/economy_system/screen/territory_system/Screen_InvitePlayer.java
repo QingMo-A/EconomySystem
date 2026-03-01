@@ -172,7 +172,9 @@ public class Screen_InvitePlayer extends Screen {
         guiGraphics.drawString(font, subDisplay, textX, titleY + font.lineHeight + 2, 0x90FFFFFF);
 
         String label = "玩家名称";
-        guiGraphics.drawString(font, label, textX, inputY - font.lineHeight - 2, CardRenderer.TEXT_DESC);
+        int labelWidth = font.width(label);
+        int labelX = inputX + (inputWidth - labelWidth) / 2;
+        guiGraphics.drawString(font, label, labelX, inputY - font.lineHeight - 2, CardRenderer.TEXT_DESC);
 
         boolean inviteHovered = mouseX >= inviteBtnX1 && mouseX <= inviteBtnX2 &&
                                 mouseY >= inviteBtnY1 && mouseY <= inviteBtnY2;

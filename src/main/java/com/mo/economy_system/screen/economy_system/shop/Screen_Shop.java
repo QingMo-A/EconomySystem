@@ -4,6 +4,7 @@ import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_ShopDataRequest;
 import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -44,9 +45,11 @@ public class Screen_Shop extends Screen {
     private static final int SEARCH_BOX_WIDTH = 200;
     private static final int SEARCH_BOX_HEIGHT = 20;
     private static final int SEARCH_BOX_TOP = 20;
+    private static final int SEARCH_BOX_ANIMATION_OFFSET = 30;
     private static final int GRID_START_Y = 55;
     private static final int PAGE_BUTTON_WIDTH = 50;
     private static final int PAGE_BUTTON_HEIGHT = 24;
+    private static final int PANEL_ANIMATION_OFFSET = 40;
 
     // ==================== 商品卡片配置 ====================
     private static final int CARD_WIDTH = 100;
@@ -80,6 +83,11 @@ public class Screen_Shop extends Screen {
     private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
     private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
 
+    // ==================== 动画 ====================
+    private static final long ANIMATION_DURATION = 420;
+    private final UiAnimation openAnimation = new UiAnimation(ANIMATION_DURATION, UiAnimation.Easing.EASE_OUT_CUBIC);
+    private boolean skipAnimation = false;
+
     // ==================== 按钮样式 ====================
     private final UiButtonStyle pageButtonStyle = createPageButtonStyle(CardRenderer.THEME_MARKET);
     private final UiButtonStyle pageButtonDisabledStyle = createDisabledPageButtonStyle();
@@ -100,6 +108,11 @@ public class Screen_Shop extends Screen {
     @Override
     protected void init() {
         super.init();
+        if (skipAnimation) {
+            openAnimation.finish();
+        } else {
+            openAnimation.start();
+        }
         calculateVirtualSize();
 
         // 创建搜索框（左上角）
@@ -131,7 +144,7 @@ public class Screen_Shop extends Screen {
         }
 
         int boxX = Math.round(PANEL_PADDING * uiScale);
-        int boxY = Math.round(SEARCH_BOX_TOP * uiScale);
+        int boxY = Math.round(SEARCH_BOX_TOP * uiScale) - getSearchBoxOffsetY();
         int boxWidth = Math.round(SEARCH_BOX_WIDTH * uiScale);
         int boxHeight = Math.round(SEARCH_BOX_HEIGHT * uiScale);
 
@@ -176,12 +189,20 @@ public class Screen_Shop extends Screen {
 
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
+        float animProgress = openAnimation.value();
+        int panelOffsetY = (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
 
         // 绘制左下角标题（经济系统）
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
         drawTitle(guiGraphics);
+        guiGraphics.pose().popPose();
 
         // 绘制右下角ESC提示
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
         drawEscHint(guiGraphics);
+        guiGraphics.pose().popPose();
 
         // 绘制搜索框背景（需要恢复坐标系统）
         guiGraphics.pose().popPose();
@@ -190,10 +211,16 @@ public class Screen_Shop extends Screen {
         guiGraphics.pose().scale(uiScale, uiScale, 1.0f);
 
         // 绘制商品卡片网格
-        renderShopItems(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
+        renderShopItems(guiGraphics, virtualMouseX, virtualMouseY - panelOffsetY);
+        guiGraphics.pose().popPose();
 
         // 绘制翻页控制
-        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, panelOffsetY, 0);
+        renderPageControls(guiGraphics, virtualMouseX, virtualMouseY - panelOffsetY);
+        guiGraphics.pose().popPose();
 
         guiGraphics.pose().popPose();
 
@@ -208,7 +235,7 @@ public class Screen_Shop extends Screen {
      */
     private void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         float virtualMouseX = mouseX / uiScale;
-        float virtualMouseY = mouseY / uiScale;
+        float virtualMouseY = mouseY / uiScale - getContentOffsetY();
 
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
@@ -419,7 +446,7 @@ public class Screen_Shop extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         float virtualMouseX = (float) mouseX / uiScale;
-        float virtualMouseY = (float) mouseY / uiScale;
+        float virtualMouseY = (float) mouseY / uiScale - getContentOffsetY();
 
         // 检查商品卡片点击（点击卡片直接跳转购买）
         for (ItemCardArea cardArea : cardAreas) {
@@ -463,6 +490,16 @@ public class Screen_Shop extends Screen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    private int getContentOffsetY() {
+        float animProgress = openAnimation.value();
+        return (int) ((1.0f - animProgress) * PANEL_ANIMATION_OFFSET);
+    }
+
+    private int getSearchBoxOffsetY() {
+        float animProgress = openAnimation.value();
+        return Math.round((1.0f - animProgress) * SEARCH_BOX_ANIMATION_OFFSET * uiScale);
     }
 
     @Override
