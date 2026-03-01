@@ -22,6 +22,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("item.economy_system.wormhole_potion", "虫洞药水");
         add("item.economy_system.recall_potion", "回忆药水");
         add("item.economy_system.claim_wand", "圈地杖");
+        add("item.economy_system.fragment_page", "片段残页");
+        add("item.economy_system.story_book", "随记本");
         add("item.economy_system.supporter_hat", "赞助者帽子");
         add("item.economy_system.dreamingfish", "启程锦鲤");
         add("item.economy_system.easy_aid_kit", "简易急救包");
@@ -29,10 +31,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("item.economy_system.professional_aid_kit", "专业急救包");
         add("item.economy_system.revival_charm", "重生锦鲤");
         add("item.economy_system.restore_uninfected_potion", "基因复苏药剂");
-        add("item.economy_system.clue_item", "线索");
 
         // ToolTips | 物品描述
         add("item.economy_system.dreamingfish.tooltip", "§6为什么一条破鱼叫锦鲤....\n纪念一下添加了一个物品花了10多个小时的笨笨的hhy");
+        add("advancement.economy_system.storybook.journey_started.title", "远旅开端");
+        add("advancement.economy_system.storybook.journey_started.description", "人是具有好奇心的生物，既然知晓了，就会想知晓更多……");
 
         // Enchantment | 附魔
         add("enchantment.economy_system.carefully", "细心");

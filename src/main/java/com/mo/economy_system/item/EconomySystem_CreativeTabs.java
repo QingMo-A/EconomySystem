@@ -22,6 +22,8 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.CLAIM_WAND.get());
                         output.accept(EconomySystem_Items.WORMHOLE_POTION.get());
                         output.accept(EconomySystem_Items.RECALL_POTION.get());
+                        output.accept(EconomySystem_Items.FRAGMENT_PAGE.get());
+                        output.accept(EconomySystem_Items.STORY_BOOK.get());
                         output.accept(EconomySystem_Items.SUPPORTER_HAT.get());
                         output.accept(EconomySystem_Items.DREAMINGFISH.get());
                         output.accept(EconomySystem_Items.HIVE_ZOMBIE_SPAWN_EGG.get());

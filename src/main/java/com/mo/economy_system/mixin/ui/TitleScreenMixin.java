@@ -2,6 +2,7 @@ package com.mo.economy_system.mixin.ui;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -275,10 +276,10 @@ public abstract class TitleScreenMixin extends Screen {
 
     @Unique
     private void economySystem$renderBackground(GuiGraphics guiGraphics, float fadeAlpha) {
-        // 渲染自定义背景图（拉伸填满整个屏幕）
+        // 渲染自定义背景图（保持宽高比并裁切铺满）
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, fadeAlpha);
-        guiGraphics.blit(BACKGROUND_TEXTURE, 0, 0, 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
+        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
         guiGraphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
 
         // 如果背景图加载失败，渲染深灰色背景

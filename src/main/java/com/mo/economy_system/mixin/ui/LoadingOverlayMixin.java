@@ -2,6 +2,7 @@ package com.mo.economy_system.mixin.ui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -59,7 +60,7 @@ public abstract class LoadingOverlayMixin extends Overlay {
 
         // Draw full-screen background
         RenderSystem.enableBlend();
-        guiGraphics.blit(ECONOMY_SYSTEM_BACKGROUND, 0, 0, width, height, 0, 0, 256, 144, 256, 144);
+        UiBackgroundRenderer.renderCover(guiGraphics, ECONOMY_SYSTEM_BACKGROUND, width, height);
 
         // Update progress
         float actualProgress = this.reload.getActualProgress();

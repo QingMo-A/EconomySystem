@@ -45,7 +45,8 @@
       "Bash(python:*)",
       "Bash(rd:*)",
       "Bash(D:/Desktop/EconomySystem/gradlew.bat build:*)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(find:*)"
     ]
   }
 }

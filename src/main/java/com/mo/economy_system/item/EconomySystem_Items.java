@@ -8,7 +8,6 @@ import com.mo.economy_system.item.items.*;
 import com.mo.economy_system.item.items.medicine.Easy_Aid_Kit;
 import com.mo.economy_system.item.items.Potion_RestoreUnInfected;
 import com.mo.economy_system.item.items.Item_RevivalCharm;
-import com.mo.economy_system.item.items.Item_Clue;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
@@ -90,6 +89,18 @@ public class EconomySystem_Items {
                     .fireResistant()  // 防火（重要物品）
             ));
 
+    public static final RegistryObject<Item> FRAGMENT_PAGE = ITEMS.register("fragment_page",
+            () -> new Item_FragmentPage(new Item.Properties()
+                    .stacksTo(64)
+                    .rarity(Rarity.UNCOMMON)
+            ));
+
+    public static final RegistryObject<Item> STORY_BOOK = ITEMS.register("story_book",
+            () -> new Item_StoryBook(new Item.Properties()
+                    .stacksTo(1)
+                    .rarity(Rarity.RARE)
+            ));
+
     // 空白蓝图（用于制作特定蓝图）
     public static final RegistryObject<Item> BLANK_BLUEPRINT = ITEMS.register("blank_blueprint",
             () -> new Item(new Item.Properties()
@@ -147,18 +158,7 @@ public class EconomySystem_Items {
                     .rarity(Rarity.EPIC)  // 史诗品质
             ));
 
-    // 线索物品 - 荒野大镖客2风格的线索查看系统
-    public static final RegistryObject<Item> CLUE_ITEM = ITEMS.register("clue_item",
-            () -> new Item_Clue(new Item.Properties()
-                    .stacksTo(1)  // 只能堆叠1个
-                    .rarity(Rarity.UNCOMMON)  // 罕见品质
-            ));
-
-
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus); // 注册物品
-
-        // 设置线索物品的Supplier（用于创建线索ItemStack）
-        Item_Clue.setClueItemSupplier(CLUE_ITEM);
     }
 }

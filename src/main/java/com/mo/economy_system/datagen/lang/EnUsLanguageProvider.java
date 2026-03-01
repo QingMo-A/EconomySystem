@@ -21,6 +21,8 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("item.economy_system.wormhole_potion", "Wormhole Potion");
         add("item.economy_system.recall_potion", "Recall Potion");
         add("item.economy_system.claim_wand", "Claim Wand");
+        add("item.economy_system.fragment_page", "Fragment Page");
+        add("item.economy_system.story_book", "Storybook");
         add("item.economy_system.supporter_hat", "Supporter Hat");
         add("item.economy_system.dreamingfish", "Dreaming Fish");
         add("item.economy_system.easy_aid_kit", "Basic Aid Kit");
@@ -28,10 +30,11 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("item.economy_system.professional_aid_kit", "Professional Aid Kit");
         add("item.economy_system.revival_charm", "Revival Charm");
         add("item.economy_system.restore_uninfected_potion", "Gene Resurgence Potion");
-        add("item.economy_system.clue_item", "Clue");
 
         // Tooltips
         add("item.economy_system.dreamingfish.tooltip", "Why is this fish called Dreaming Fish...?\nA small memorial for hhy.'s many hours of work.");
+        add("advancement.economy_system.storybook.journey_started.title", "Journey Begins");
+        add("advancement.economy_system.storybook.journey_started.description", "Curiosity is where every long journey starts.");
 
         // Enchantment
         add("enchantment.economy_system.carefully", "Careful");

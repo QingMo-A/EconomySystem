@@ -1,5 +1,6 @@
 package com.mo.economy_system.mixin.ui;
 
+import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
@@ -47,9 +48,7 @@ public abstract class SelectWorldScreenMixin extends Screen {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void economySystem$renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        guiGraphics.blit(BACKGROUND_TEXTURE,
-            0, 0, this.width, this.height,
-            0, 0, 256, 144, 256, 144);
+        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
         renderListPanel(guiGraphics);
     }
 

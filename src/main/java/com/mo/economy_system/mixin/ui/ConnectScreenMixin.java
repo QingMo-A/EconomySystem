@@ -1,6 +1,7 @@
 package com.mo.economy_system.mixin.ui;
 
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
+import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -110,9 +111,7 @@ public abstract class ConnectScreenMixin extends Screen {
     private void renderCustomScreen(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
 
-        guiGraphics.blit(BACKGROUND_TEXTURE,
-            0, 0, this.width, this.height,
-            0, 0, 256, 144, 256, 144);
+        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
         guiGraphics.pose().pushPose();

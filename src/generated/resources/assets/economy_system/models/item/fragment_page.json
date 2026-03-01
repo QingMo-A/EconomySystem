@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "economy_system:item/clue_item"
+    "layer0": "economy_system:item/fragment_page"
   }
 }
