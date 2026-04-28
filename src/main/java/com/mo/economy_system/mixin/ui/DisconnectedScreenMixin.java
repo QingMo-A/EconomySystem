@@ -11,8 +11,10 @@ import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -51,9 +53,11 @@ public abstract class DisconnectedScreenMixin extends Screen {
     private Button economySystem$returnButton;
 
     @Shadow
-    private Component reason;
+    @Final
+    private DisconnectionDetails details;
 
     @Shadow
+    @Final
     private Screen parent;
 
     protected DisconnectedScreenMixin(Component title) {
@@ -65,8 +69,9 @@ public abstract class DisconnectedScreenMixin extends Screen {
      */
     @Unique
     private boolean isPermaDeathDisconnect() {
-        if (this.reason == null) return false;
-        String msg = this.reason.getString();
+        Component reason = economySystem$getDisconnectReason();
+        if (reason == null) return false;
+        String msg = reason.getString();
         return msg.contains("复活点数耗尽") || msg.contains("细胞分裂");
     }
 
@@ -75,9 +80,15 @@ public abstract class DisconnectedScreenMixin extends Screen {
      */
     @Unique
     private boolean isBanDisconnect() {
-        if (this.reason == null) return false;
-        String msg = this.reason.getString();
+        Component reason = economySystem$getDisconnectReason();
+        if (reason == null) return false;
+        String msg = reason.getString();
         return msg.contains("banned") || msg.contains("封禁") || msg.contains("banned.expiration");
+    }
+
+    @Unique
+    private Component economySystem$getDisconnectReason() {
+        return this.details == null ? null : this.details.reason();
     }
 
     /**
@@ -259,7 +270,8 @@ public abstract class DisconnectedScreenMixin extends Screen {
      */
     @Unique
     private void renderDisconnectMessage(GuiGraphics guiGraphics, int centerX, int boxY) {
-        String messageText = this.reason.getString();
+        Component reason = economySystem$getDisconnectReason();
+        String messageText = reason == null ? "" : reason.getString();
 
         if (isBanDisconnect()) {
             String expiration = extractBanExpiration(messageText);
