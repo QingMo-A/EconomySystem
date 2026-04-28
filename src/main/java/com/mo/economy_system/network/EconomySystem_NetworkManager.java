@@ -46,6 +46,7 @@ import com.mo.economy_system.network.packets.storybook_system.Packet_UpdateStory
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_SyncWorldWrapConfig;
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_WorldWrapVisualState;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.bus.api.IEventBus;
 import com.mo.economy_system.compat.network.NetworkDirection;
 import com.mo.economy_system.compat.network.NetworkRegistry;
 import com.mo.economy_system.compat.network.simple.SimpleChannel;
@@ -61,7 +62,9 @@ public class EconomySystem_NetworkManager {
             PROTOCOL_VERSION::equals
     );
 
-    public static void register() {
+    public static void register(IEventBus modEventBus) {
+        modEventBus.addListener(INSTANCE::registerPayloadHandlers);
+
         int packetId = 0;
 
         // 注册数据包

@@ -41,7 +41,7 @@ public class EconomySystem {
         // 注册附魔
         EconomySystem_Enchants.register(modEventBus);
         // 注册网络包
-        EconomySystem_NetworkManager.register();
+        EconomySystem_NetworkManager.register(modEventBus);
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
         // 注册实体
