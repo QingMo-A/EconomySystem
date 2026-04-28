@@ -1,0 +1,68 @@
+{
+  "parent": "minecraft:item/generated",
+  "overrides": [
+    {
+      "model": "economy_system:item/supporter_hat_quartz_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_iron_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_netherite_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_redstone_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_copper_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_gold_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_emerald_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_diamond_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_lapis_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    },
+    {
+      "model": "economy_system:item/supporter_hat_amethyst_trim",
+      "predicate": {
+        "minecraft:trim_type": 0.1
+      }
+    }
+  ],
+  "textures": {
+    "layer0": "economy_system:item/supporter_hat"
+  }
+}
