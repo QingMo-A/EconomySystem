@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "refmap": "economy_system.refmap.json",
   "client": [
+    "PoseStackMixin",
     "death.DeathScreenMixin",
     "ui.DisconnectedScreenMixin",
     "ui.ConnectScreenMixin",
