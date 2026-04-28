@@ -1,21 +1,15 @@
 package com.mo.economy_system.core.playerattributes_system.strength;
 
-import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 服务端体力同步工具类（主动发送同步包给客户端）
  */
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class StrengthSyncManager {
     /**
      * 服务端向指定玩家发送体力同步包（核心方法）

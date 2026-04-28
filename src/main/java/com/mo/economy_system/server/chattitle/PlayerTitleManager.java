@@ -1,16 +1,12 @@
 package com.mo.economy_system.server.chattitle;
 
-import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 
 
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class PlayerTitleManager {
     public static void setPlayerTitleServer(ServerPlayer serverPlayer, Title title) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());

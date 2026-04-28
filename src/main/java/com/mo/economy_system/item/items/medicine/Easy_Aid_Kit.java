@@ -20,10 +20,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
 
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class Easy_Aid_Kit extends Item {
     // 状态标记
     private static final String USING_FIRST_AID = "UsingEasyAidKit";

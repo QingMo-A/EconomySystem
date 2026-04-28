@@ -4,10 +4,7 @@ import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.playerattributes_system.PlayerAttributesData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 
-@EventBusSubscriber(modid = "economy_system", value = net.neoforged.api.distmarker.Dist.CLIENT)
 public class PlayerStrengthClientSync {
 
     public static void setCurrentStrength(Player player, int currentStrength) {

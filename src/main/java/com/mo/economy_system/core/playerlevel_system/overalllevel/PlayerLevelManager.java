@@ -1,6 +1,5 @@
 package com.mo.economy_system.core.playerlevel_system.overalllevel;
 
-import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
@@ -8,14 +7,11 @@ import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * 玩家无限等级+经验核心管理框架
  * 功能：经验累积、满经验升级、升级发提示、等级/经验获取与设置
  */
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class PlayerLevelManager {
     /**
      * 计算指定等级升级所需的总经验（累积经验）

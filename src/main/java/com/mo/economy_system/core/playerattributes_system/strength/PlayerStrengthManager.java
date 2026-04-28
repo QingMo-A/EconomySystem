@@ -385,22 +385,6 @@ public class PlayerStrengthManager {
             }
         }
 
-        // 监听鼠标输入事件
-        @SubscribeEvent
-        public static void onMouseInput(InputEvent.MouseButton event) {
-            Minecraft mc = Minecraft.getInstance();
-            LocalPlayer player = mc.player;
-            if (player == null || !player.isAlive()) return;
-
-            UUID uuid = player.getUUID();
-            boolean isExhausted = IS_STRENGTH_EXHAUSTED_CLIENT.getOrDefault(uuid, false);
-
-            // 如果体力耗尽且正在疾跑，强制停止
-            if (isExhausted && player.isSprinting()) {
-                player.setSprinting(false);
-            }
-        }
-
         // 监听玩家 tick 事件，在物理更新前阻止疾跑加速
         @SubscribeEvent
         public static void onTick(PlayerTickEvent.Post event) {

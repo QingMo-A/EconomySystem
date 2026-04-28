@@ -1,19 +1,15 @@
 package com.mo.economy_system.server.rank;
 
-import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 
 
 /**
  * 玩家Rank数据管理器（使用全局统一存储）
  */
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class PlayerRankManager {
     public static void setPlayerRankServer(ServerPlayer serverPlayer, Rank rank) {
         PlayerData playerData = PlayerDataManager.getPlayerData(serverPlayer.getUUID());

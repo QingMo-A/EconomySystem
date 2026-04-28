@@ -15,15 +15,12 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.util.List;
 
-@EventBusSubscriber(modid = EconomySystem.MODID)
 public class EconomySystem_Items {
 
     // 创建物品的 DeferredRegister

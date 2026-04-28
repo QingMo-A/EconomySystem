@@ -5,9 +5,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.EventBusSubscriber;
 import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -54,7 +51,6 @@ public class Packet_KeepInventoryResponse {
         context.setPacketHandled(true);
     }
 
-    @EventBusSubscriber
     private static class Handler {
         // 静态类用于事件处理
     }
