@@ -162,12 +162,8 @@ public abstract class DisconnectedScreenMixin extends Screen {
         mc.setScreen(new TitleScreen());
     }
 
-    /**
-     * 注入 render() 方法
-     */
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void economySystem$render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        ci.cancel();
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderCustomScreen(guiGraphics, mouseX, mouseY, partialTick);
     }
 
