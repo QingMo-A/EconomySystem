@@ -3,7 +3,7 @@ package com.mo.economy_system.network.packets.storybook_system;
 import com.mo.economy_system.core.storybook_system.StoryBookDataManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -5,8 +5,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.DistExecutor;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.DistExecutor;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.function.Supplier;
 

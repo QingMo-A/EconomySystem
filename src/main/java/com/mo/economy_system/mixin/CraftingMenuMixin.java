@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -64,6 +65,7 @@ public class CraftingMenuMixin {
             Player player,
             CraftingContainer craftingContainer,
             ResultContainer resultContainer,
+            RecipeHolder<CraftingRecipe> recipeHolder,
             CallbackInfo ci
     ) {
         if (level.isClientSide) return;

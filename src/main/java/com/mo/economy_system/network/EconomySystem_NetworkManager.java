@@ -46,9 +46,9 @@ import com.mo.economy_system.network.packets.storybook_system.Packet_UpdateStory
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_SyncWorldWrapConfig;
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_WorldWrapVisualState;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.NetworkDirection;
-import net.neoforged.neoforge.network.NetworkRegistry;
-import net.neoforged.neoforge.network.simple.SimpleChannel;
+import com.mo.economy_system.compat.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkRegistry;
+import com.mo.economy_system.compat.network.simple.SimpleChannel;
 
 import java.util.Optional;
 

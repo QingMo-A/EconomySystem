@@ -11,7 +11,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkDirection;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @EventBusSubscriber(modid = EconomySystem.MODID)

@@ -2,6 +2,7 @@ package com.mo.economy_system.mixin.death;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.playerattributes_system.death.DeathItemStorage;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +24,7 @@ public class RespawnMixin {
      * 如果是玩家且设置了 EconomySystem_DeathPending 标记，存储物品副本
      */
     @Inject(method = "dropAllDeathLoot", at = @At("HEAD"))
-    private void economySystem$onDropAllDeathLoot(DamageSource damageSource, CallbackInfo ci) {
+    private void economySystem$onDropAllDeathLoot(ServerLevel level, DamageSource damageSource, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
 
         // 只处理玩家

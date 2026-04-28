@@ -6,7 +6,7 @@ import com.mo.economy_system.server.notice.NoticeData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;

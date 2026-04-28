@@ -2,11 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.mo.economy_system.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "economy_system.refmap.json",
   "client": [
     "death.DeathScreenMixin",
-    "ui.SelectWorldScreenMixin",
     "ui.DisconnectedScreenMixin",
     "ui.ConnectScreenMixin",
     "ui.ReceivingLevelScreenMixin",
@@ -15,8 +14,7 @@
     "ui.ForgeLoadingOverlayMixin",
     "ui.GenericDirtMessageScreenMixin",
     "ui.GenericWaitingScreenMixin",
-    "ui.TitleScreenMixin",
-    "ui.JoinMultiplayerScreenMixin"
+    "ui.TitleScreenMixin"
   ],
   "server": [
 
@@ -28,15 +26,7 @@
     "AnvilBlockMixin",
     "SystemMessageMixin",
     "CraftingMenuMixin",
-    "RecipeManagerMixin",
-    "world_wrap_system.ClientboundLevelChunkWithLightPacketAccessor",
-    "world_wrap_system.ChunkMapWorldWrapMixin",
-    "world_wrap_system.ServerPlayerWorldWrapChunkMixin",
-    "world_wrap_system.ChunkMapTrackedEntityWorldWrapMixin",
-    "world_wrap_system.ServerGamePacketListenerImplWorldWrapEntityMixin",
-    "world_wrap_system.ItemEntityWorldWrapMixin",
-    "world_wrap_system.BlendedNoiseWorldWrapMixin",
-    "world_wrap_system.ClimateSamplerWorldWrapMixin"
+    "RecipeManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

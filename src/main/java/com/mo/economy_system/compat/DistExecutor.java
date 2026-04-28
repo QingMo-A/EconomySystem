@@ -1,4 +1,4 @@
-package net.neoforged.fml;
+package com.mo.economy_system.compat;
 
 import java.util.function.Supplier;
 import net.neoforged.api.distmarker.Dist;

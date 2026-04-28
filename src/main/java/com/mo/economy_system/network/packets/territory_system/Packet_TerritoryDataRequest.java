@@ -5,7 +5,7 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.function.Supplier;

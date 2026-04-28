@@ -3,7 +3,7 @@ package com.mo.economy_system.network.packets.notice_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.function.Supplier;
 

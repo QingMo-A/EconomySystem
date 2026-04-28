@@ -6,7 +6,7 @@ import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.screen.server_screen.serverscreen.ServerScreenUI_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;

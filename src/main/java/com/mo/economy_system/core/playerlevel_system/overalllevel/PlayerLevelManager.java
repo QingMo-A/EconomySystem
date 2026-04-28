@@ -164,7 +164,7 @@ public class PlayerLevelManager {
         EconomySystem_NetworkManager.INSTANCE.sendTo(
                 new Packet_LevelUpNotify(newLevel),
                 serverPlayer,
-                net.neoforged.neoforge.network.NetworkDirection.PLAY_TO_CLIENT
+                com.mo.economy_system.compat.network.NetworkDirection.PLAY_TO_CLIENT
         );
     }
 

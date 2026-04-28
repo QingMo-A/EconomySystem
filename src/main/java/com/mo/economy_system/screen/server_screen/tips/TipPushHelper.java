@@ -4,7 +4,7 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkDirection;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Collection;

@@ -6,7 +6,7 @@ import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataMa
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_SyncRespawnPointData;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 服务端复活点数同步工具类（主动发送同步包给客户端）

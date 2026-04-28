@@ -1,12 +1,13 @@
-package net.neoforged.neoforge.network;
+package com.mo.economy_system.compat.network;
 
+import com.mo.economy_system.compat.network.simple.SimpleChannel;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.simple.SimpleChannel;
 
 public final class NetworkRegistry {
-    private NetworkRegistry() {}
+    private NetworkRegistry() {
+    }
 
     public static SimpleChannel newSimpleChannel(
             ResourceLocation name,

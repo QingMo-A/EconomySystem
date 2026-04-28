@@ -4,7 +4,7 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.function.Supplier;
 

@@ -5,7 +5,7 @@ import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.*;
 import java.util.function.Supplier;

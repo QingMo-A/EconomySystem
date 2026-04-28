@@ -1,12 +1,12 @@
-package net.neoforged.neoforge.network.simple;
+package com.mo.economy_system.compat.network.simple;
 
+import com.mo.economy_system.compat.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkEvent;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.NetworkDirection;
-import net.neoforged.neoforge.network.NetworkEvent;
 
 public class SimpleChannel {
     private final ResourceLocation name;

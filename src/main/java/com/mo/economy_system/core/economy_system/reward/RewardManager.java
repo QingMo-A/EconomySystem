@@ -40,10 +40,18 @@ public class RewardManager {
     }
 
     public void saveToConfig() {
+        ensureConfigDirectory();
         try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
             GSON.toJson(rewards, writer);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void ensureConfigDirectory() {
+        File parent = CONFIG_FILE.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
         }
     }
 

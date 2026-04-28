@@ -1,10 +1,11 @@
-package net.neoforged.neoforge.network;
+package com.mo.economy_system.compat.network;
 
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 public final class NetworkEvent {
-    private NetworkEvent() {}
+    private NetworkEvent() {
+    }
 
     public static class Context {
         @Nullable

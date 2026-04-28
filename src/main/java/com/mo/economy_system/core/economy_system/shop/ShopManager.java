@@ -52,11 +52,19 @@ public class ShopManager {
     }
 
     public synchronized void saveToConfig() {
+        ensureConfigDirectory();
         try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE);
              OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
             GSON.toJson(items, osw);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void ensureConfigDirectory() {
+        File parent = CONFIG_FILE.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
         }
     }
 

@@ -4,7 +4,7 @@ package com.mo.economy_system.network.packets.task_system;
 import com.mo.economy_system.core.task_system.TaskDataManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.NetworkEvent;
+import com.mo.economy_system.compat.network.NetworkEvent;
 
 import java.util.UUID;
 import java.util.function.Supplier;

@@ -10,7 +10,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 服务端体力同步工具类（主动发送同步包给客户端）

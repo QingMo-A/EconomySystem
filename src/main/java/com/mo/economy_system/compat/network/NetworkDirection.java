@@ -1,4 +1,4 @@
-package net.neoforged.neoforge.network;
+package com.mo.economy_system.compat.network;
 
 import net.neoforged.fml.LogicalSide;
 

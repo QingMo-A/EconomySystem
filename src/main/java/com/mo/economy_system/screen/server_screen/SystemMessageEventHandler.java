@@ -17,7 +17,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.NetworkDirection;
+import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 系统消息事件处理器
