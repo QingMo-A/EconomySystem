@@ -14,6 +14,7 @@
     "ui.ForgeLoadingOverlayMixin",
     "ui.GenericDirtMessageScreenMixin",
     "ui.GenericWaitingScreenMixin",
+    "ui.ModScreenBackgroundMixin",
     "ui.TitleScreenMixin"
   ],
   "server": [

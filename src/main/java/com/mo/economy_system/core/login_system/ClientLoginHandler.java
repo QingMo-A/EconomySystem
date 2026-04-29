@@ -32,10 +32,7 @@ public class ClientLoginHandler {
             Minecraft.getInstance().player.getUUID()
         );
 
-        EconomySystem_NetworkManager.sendToClient(
-            null,
-            packet
-        );
+        EconomySystem_NetworkManager.sendToServer(packet);
 
         EconomySystem.LOGGER.info("注册请求包已发送");
     }
@@ -59,10 +56,7 @@ public class ClientLoginHandler {
             Minecraft.getInstance().player.getUUID()
         );
 
-        EconomySystem_NetworkManager.sendToClient(
-            null,
-            packet
-        );
+        EconomySystem_NetworkManager.sendToServer(packet);
 
         EconomySystem.LOGGER.info("登录请求包已发送");
     }
