@@ -1,18 +1,27 @@
 package com.mo.economy_system.screen.server_screen.serverscreen;
 
 import com.mo.economy_system.client.cache.ClientCacheManager;
+import com.mo.economy_system.core.playerattributes_system.courage.PlayerCourageManager;
 import com.mo.economy_system.core.playerattributes_system.infection.PlayerInfectionManager;
+import com.mo.economy_system.core.playerattributes_system.strength.PlayerStrengthClientSync;
 import com.mo.economy_system.core.playerlevel_system.overalllevel.PlayerLevelManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestPlayerStats;
 import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
 import com.mo.economy_system.core.territory_system.Territory;
+import com.mo.economy_system.server.chattitle.PlayerTitleManager;
+import com.mo.economy_system.server.chattitle.Title;
+import com.mo.economy_system.server.playerdata.PlayerData;
+import com.mo.economy_system.server.rank.PlayerRankManager;
+import com.mo.economy_system.server.rank.Rank;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderType;
@@ -25,6 +34,10 @@ import com.mo.economy_system.network.packets.notice_system.Packet_MarkNoticeRead
 import com.mo.economy_system.server.notice.NoticeData;
 import com.mo.economy_system.screen.server_screen.notice.Screen_NoticeDetail;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -58,12 +71,21 @@ public class ServerScreenUI_Screen extends Screen {
     private static final int BASE_HEIGHT = 360;
 
     // ==================== 面板比例 ====================
-    private static final float LEFT_PANEL_PERCENT = 0.20f;  // 左侧面板占虚拟宽度的 20%
-    private static final float RIGHT_PANEL_PERCENT = 0.45f;  // 右侧面板占虚拟宽度的 35%
+    private static final float LEFT_PANEL_PERCENT = 0.36f;  // 左侧平板入口区占虚拟宽度的 36%
+    private static final float RIGHT_PANEL_PERCENT = 0.40f;  // 右侧内容区占虚拟宽度的 40%
 
-    // ==================== 颜色定义（淡色系） ====================
-    private static final int PANEL_BACKGROUND_COLOR = 0x801A1A2A;  // 半透明深蓝背景（alpha=128）
-    private static final int PANEL_BORDER_COLOR = 0xFF4A5568;      // 淡灰边框
+    // ==================== 颜色定义（平板/终端风格） ====================
+    private static final int PANEL_BACKGROUND_COLOR = 0xE61B2530;  // 柔和深蓝灰内容底
+    private static final int PANEL_BORDER_COLOR = 0xFF7AA8C7;      // 降低饱和度的终端蓝
+    private static final int TABLET_SHELL_COLOR = 0xDC0B1118;
+    private static final int TABLET_HEADER_COLOR = 0xE6131B24;
+    private static final int TABLET_CONTENT_COLOR = 0xF01B2530;
+    private static final int TABLET_SHADOW_COLOR = 0x55000000;
+    private static final int TABLET_CARD_COLOR = 0xFF24313E;
+    private static final int TABLET_CARD_HOVER_COLOR = 0xFF2C3B4A;
+    private static final int TABLET_CARD_BORDER_COLOR = 0xFF344555;
+    private static final int TABLET_TEXT_COLOR = 0xFFE8EDF2;
+    private static final int TABLET_MUTED_TEXT_COLOR = 0xFFA7B2BE;
     // 注意：游戏化卡片配色、进度条颜色等常量已移至 ServerScreenUI_RendererUtils
 
     // ==================== 动画时间配置 ====================
@@ -130,8 +152,8 @@ public class ServerScreenUI_Screen extends Screen {
     private int[] leftButtonX2 = new int[LEFT_BUTTON_ICONS.length];
     private int[] leftButtonY2 = new int[LEFT_BUTTON_ICONS.length];
 
-    // 当前选中的左侧按钮索引（0=个人档案，默认选中）
-    private int selectedLeftButtonIndex = 0;
+    // 当前选中的模块索引，-1 表示一级模块桌面
+    private int selectedLeftButtonIndex = -1;
     // 箭头动画时间
     private long arrowAnimTime = 0;
     // 上次选中的按钮索引（用于动画检测）
@@ -148,8 +170,8 @@ public class ServerScreenUI_Screen extends Screen {
     // 注意：公告点击区域已移至 PageRenderer.noticeClickArea
 
     // ==================== 任务系统数据 ====================
-    private static final int TASK_CARD_HEIGHT = 60;  // 任务卡片高度
-    private static final int VISIBLE_TASKS = 4;  // 可见任务数量
+    private static final int TASK_CARD_HEIGHT = 48;  // 任务卡片高度
+    private static final int VISIBLE_TASKS = 3;  // 可见任务数量
     private static long taskScrollOffset = 0;  // 任务滚动偏移量
     private static boolean taskShowServerTasks = true;  // true=服务器任务, false=个人任务
     private static String selectedStageId = null;  // 当前选中的阶段ID，null表示显示阶段列表
@@ -320,6 +342,20 @@ public class ServerScreenUI_Screen extends Screen {
         }
     }
 
+    private float getTerminalRevealProgress() {
+        long elapsed = Util.getMillis() - openTime;
+        float progress = Math.min(1.0f, (float) elapsed / 520.0f);
+        return 1.0f - (float) Math.pow(1.0f - progress, 3);
+    }
+
+    private void drawTerminalRevealSweep(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        float progress = getTerminalRevealProgress();
+        if (progress >= 1.0f) return;
+        int sweepX = x + (int) (width * progress);
+        guiGraphics.fill(RenderType.gui(), sweepX - 2, y, sweepX + 1, y + height, 0x667AA8C7);
+        guiGraphics.fill(RenderType.gui(), sweepX + 1, y, sweepX + 14, y + height, 0x117AA8C7);
+    }
+
     /**
      * 绘制左右两栏，全部基于虚拟坐标计算
      *
@@ -357,6 +393,68 @@ public class ServerScreenUI_Screen extends Screen {
             rightOffsetX = (int) (closeProgress * RIGHT_PANEL_SLIDE_DISTANCE);  // 向右
         }
 
+        // ==================== 平板外壳（参考新闻流界面的悬浮设备感） ====================
+        int tabletMarginX = Math.max(12, virtualWidth / 28);
+        int tabletMarginY = Math.max(10, virtualHeight / 14);
+        int tabletX = tabletMarginX;
+        int tabletY = tabletMarginY;
+        int tabletWidth = virtualWidth - tabletMarginX * 2;
+        int tabletHeight = virtualHeight - tabletMarginY * 2;
+        int headerHeight = 34;
+
+        guiGraphics.fill(RenderType.gui(), 0, 0, virtualWidth, virtualHeight, 0x66000000);
+        drawSoftRect(guiGraphics, tabletX + 4, tabletY + 5, tabletWidth, tabletHeight, 3, TABLET_SHADOW_COLOR, 0x00000000);
+        drawSoftRect(guiGraphics, tabletX, tabletY, tabletWidth, tabletHeight, 3, TABLET_SHELL_COLOR, 0x66526372);
+        drawSoftRect(guiGraphics, tabletX + 6, tabletY + 6, tabletWidth - 12, headerHeight, 2, TABLET_HEADER_COLOR, 0x224A5A68);
+        drawSoftRect(guiGraphics, tabletX + 6, tabletY + headerHeight, tabletWidth - 12, tabletHeight - headerHeight - 6, 2, TABLET_CONTENT_COLOR, 0x22384755);
+
+        if (selectedLeftButtonIndex >= 0) {
+            drawText(guiGraphics, "<", tabletX + 18, tabletY + 15, 0xFFE8EDF6);
+        }
+
+        if (selectedLeftButtonIndex < 0) {
+            drawBrandTitle(guiGraphics, tabletX + 18, tabletY + 15);
+        } else {
+            String pageTitle = selectedLeftButtonIndex < LEFT_BUTTON_NAMES.length
+                ? LEFT_BUTTON_NAMES[selectedLeftButtonIndex]
+                : "梦屿终端";
+            drawText(guiGraphics, pageTitle, tabletX + 34, tabletY + 15, TABLET_TEXT_COLOR);
+        }
+
+        int onlinePlayers = mc.player != null && mc.player.connection != null ?
+            mc.player.connection.getOnlinePlayers().size() : 0;
+        drawTopDateTime(guiGraphics, tabletX + 6, tabletY + 12, tabletWidth - 12, 16);
+        drawTabletStatusBar(guiGraphics, tabletX + tabletWidth - 148, tabletY + 12, 130, 16, onlinePlayers, 20, 20.0f);
+
+        boolean revealContent = !skipAnimation && !isClosing && getAnimationProgress() < 1.0f;
+        if (revealContent) {
+            int revealRight = tabletX + 6 + (int) ((tabletWidth - 12) * getTerminalRevealProgress());
+            guiGraphics.enableScissor(
+                (int) ((tabletX + 6) * uiScale),
+                (int) ((tabletY + headerHeight) * uiScale),
+                (int) (revealRight * uiScale),
+                (int) ((tabletY + tabletHeight - 6) * uiScale)
+            );
+        }
+
+        if (selectedLeftButtonIndex < 0) {
+            renderModuleDashboard(guiGraphics, mouseX, mouseY, tabletX + 16, tabletY + headerHeight + 16,
+                tabletWidth - 32, tabletHeight - headerHeight - 28);
+            if (revealContent) {
+                guiGraphics.disableScissor();
+                drawTerminalRevealSweep(guiGraphics, tabletX + 6, tabletY + headerHeight, tabletWidth - 12, tabletHeight - headerHeight - 6);
+            }
+            return;
+        }
+
+        renderModulePage(guiGraphics, mouseX, mouseY, tabletX + 16, tabletY + headerHeight + 14,
+            tabletWidth - 32, tabletHeight - headerHeight - 24);
+        if (revealContent) {
+            guiGraphics.disableScissor();
+            drawTerminalRevealSweep(guiGraphics, tabletX + 6, tabletY + headerHeight, tabletWidth - 12, tabletHeight - headerHeight - 6);
+        }
+        if (selectedLeftButtonIndex >= 0) return;
+
         // ========================================================================
         //                           左栏 (LEFT PANEL)
         // 内容：灵动岛（按钮网格） + 版本号
@@ -368,8 +466,9 @@ public class ServerScreenUI_Screen extends Screen {
             guiGraphics.pose().translate(-leftOffsetX, 0, 0);
         }
 
-        // 左侧背景（虚拟坐标：从原点到左栏宽度）
-        guiGraphics.fill(RenderType.gui(), 0, 0, leftPanelWidth, virtualHeight, PANEL_BACKGROUND_COLOR);
+        // 左侧入口背景
+        guiGraphics.fill(RenderType.gui(), tabletX + 8, tabletY + headerHeight + 4,
+            leftPanelWidth - 6, tabletY + tabletHeight - 8, 0x10FFFFFF);
 
         // ==================== 左侧右边框动画 ====================
         if (!isClosing) {
@@ -377,11 +476,11 @@ public class ServerScreenUI_Screen extends Screen {
             // 高度随动画进度从 0 增加到 virtualHeight
             int leftBorderHeight = (int) (virtualHeight * animationProgress);
             if (leftBorderHeight > 0) {
-                guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, 0, leftPanelWidth, leftBorderHeight, PANEL_BORDER_COLOR);
+                guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, tabletY + headerHeight + 6, leftPanelWidth, Math.min(tabletY + headerHeight + 6 + leftBorderHeight, tabletY + tabletHeight - 8), PANEL_BORDER_COLOR);
             }
         } else {
             // 关闭时：保持完整边框
-            guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, 0, leftPanelWidth, virtualHeight, PANEL_BORDER_COLOR);
+            guiGraphics.fill(RenderType.gui(), leftPanelWidth - 1, tabletY + headerHeight + 6, leftPanelWidth, tabletY + tabletHeight - 8, PANEL_BORDER_COLOR);
         }
 
         // ==================== 绘制左侧灵动岛（按钮容器） ====================
@@ -585,7 +684,6 @@ public class ServerScreenUI_Screen extends Screen {
                 com.mo.economy_system.client.cache.ClientCacheManager.getPlayerTasks(),
                 taskScrollOffset, TASK_CARD_HEIGHT, VISIBLE_TASKS,
                 selectedStageId, stageScrollOffset);
-            guiGraphics.pose().popPose();
             return;  // 跳过后续右栏内容渲染
         }
 
@@ -594,7 +692,6 @@ public class ServerScreenUI_Screen extends Screen {
             // 渲染排行榜页面（使用整个中间+右侧区域）
             pageRenderer.renderRankPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale, mc.player);
-            guiGraphics.pose().popPose();
             return;  // 跳过后续右栏内容渲染
         }
 
@@ -603,7 +700,6 @@ public class ServerScreenUI_Screen extends Screen {
             // 渲染成就页面（使用整个中间+右侧区域）
             pageRenderer.renderAchievementPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale);
-            guiGraphics.pose().popPose();
             return;  // 跳过后续右栏内容渲染
         }
 
@@ -612,7 +708,6 @@ public class ServerScreenUI_Screen extends Screen {
             // 渲染帮助页面（使用整个中间+右侧区域）
             pageRenderer.renderHelpPage(guiGraphics, leftPanelWidth, virtualWidth - leftPanelWidth, mouseX, mouseY,
                 virtualWidth, uiScale);
-            guiGraphics.pose().popPose();
             return;  // 跳过后续右栏内容渲染
         }
 
@@ -682,21 +777,781 @@ public class ServerScreenUI_Screen extends Screen {
         guiGraphics.pose().popPose();
     }
 
+    private void renderModulePage(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height) {
+        switch (selectedLeftButtonIndex) {
+            case 0 -> renderProfilePage(guiGraphics, mouseX, mouseY, x, y, width, height);
+            case 2 -> renderNoticeFeedPage(guiGraphics, x, y, width, height);
+            case 3 -> renderStoryTaskPage(guiGraphics, mouseX, mouseY, x, y, width, height);
+            case 1 -> renderHelpTerminalPage(guiGraphics, x, y, width, height);
+            case 4 -> renderPlaceholderPage(guiGraphics, x, y, width, height, "玩家与排行", "排行面板还在接入数据");
+            case 5 -> renderPlaceholderPage(guiGraphics, x, y, width, height, "服务器成就", "成就面板还在接入数据");
+            default -> renderPlaceholderPage(guiGraphics, x, y, width, height, LEFT_BUTTON_NAMES[selectedLeftButtonIndex], "该模块将打开独立界面");
+        }
+    }
+
+    private void renderProfilePage(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height) {
+        LocalPlayer player = mc.player;
+        if (player == null) return;
+
+        int heroW = Math.max(138, Math.min(176, (int) (width * 0.30f)));
+        int gap = 10;
+        int contentH = height;
+        int rightX = x + heroW + gap;
+        int rightW = width - heroW - gap;
+
+        drawSoftRect(guiGraphics, x, y, heroW, contentH, 3, 0xFF121B24, 0xFF344555);
+        drawText(guiGraphics, "PLAYER", x + 12, y + 12, TABLET_MUTED_TEXT_COLOR);
+
+        float infection = PlayerInfectionManager.getCurrentInfectionClient(player);
+        String status = infection >= 100 ? "感染者" : "幸存者";
+        int statusColor = infection >= 100 ? 0xFFFF6677 : 0xFF50D890;
+        String playerName = player.getScoreboardName();
+        if (mc.font.width(playerName) > heroW - 24) {
+            playerName = ServerScreenUI_RendererUtils.truncateText(mc.font, playerName, heroW - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, playerName, x + 12, y + 28, TABLET_TEXT_COLOR);
+        drawSoftRect(guiGraphics, x + 12, y + 44, mc.font.width(status) + 14, 15, 2, 0x332E3C49, 0x224A5A68);
+        drawText(guiGraphics, status, x + 19, y + 48, statusColor);
+
+        PlayerData playerData = ClientCacheManager.getPlayerData(player.getUUID());
+        long registrationTime = 0L;
+        long totalPlayTime = 0L;
+        if (playerData != null) {
+            registrationTime = playerData.getRegistrationTime() > 0 ? playerData.getRegistrationTime() : playerData.getLastLoginTime();
+            totalPlayTime = playerData.getTotalPlayTime();
+        }
+        Rank rank = PlayerRankManager.getPlayerRankClient(player);
+        Title title = PlayerTitleManager.getPlayerTitleClient(player);
+
+        int modelSize = Math.max(38, Math.min(56, contentH / 4));
+        pageRenderer.renderPlayerModel(guiGraphics, 10, mouseX, mouseY, x + heroW / 2, y + contentH - 28, modelSize, uiScale);
+
+        int level = PlayerLevelManager.getPlayerLevelClient(player);
+        long exp = PlayerLevelManager.getPlayerExperienceClient(player);
+        long expNeed = PlayerLevelManager.getExperienceNeededForNextLevelClient(player);
+        float progress = PlayerLevelManager.getExperienceProgressClient(player);
+
+        int levelCardH = 44;
+        drawSoftRect(guiGraphics, rightX, y, rightW, levelCardH, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), rightX, y, rightX + 4, y + levelCardH, 0xFFFFB84D);
+        drawText(guiGraphics, "LEVEL " + level, rightX + 12, y + 7, TABLET_TEXT_COLOR);
+        drawText(guiGraphics, "EXP " + exp + "/" + expNeed, rightX + 12, y + 23, TABLET_MUTED_TEXT_COLOR);
+        drawProgressBar(guiGraphics, rightX + 110, y + 22, rightW - 124, 6, progress, 0xFFFFB84D);
+
+        int tileY = y + levelCardH + gap;
+        int tileW = (rightW - gap * 2) / 3;
+        int tileH = 42;
+        int goldBalance = ClientCacheManager.getPlayerBalance(player.getUUID());
+        java.util.List<Territory> territories = ClientCacheManager.getTerritories(player.getUUID());
+        drawStatTile(guiGraphics, rightX, tileY, tileW, tileH, "梦鱼币", ServerScreenUI_RendererUtils.formatNumber(goldBalance), 0xFFFFC857);
+        drawStatTile(guiGraphics, rightX + tileW + gap, tileY, tileW, tileH, "领地", String.valueOf(territories.size()), 0xFF48C78E);
+        drawStatTile(guiGraphics, rightX + (tileW + gap) * 2, tileY, tileW, tileH, "探索", String.valueOf(ClientCacheManager.getExploredBiomesCount(player.getUUID())), 0xFF4FC3F7);
+        int[] goldBoxClick = pageRenderer.getGoldBoxClick();
+        goldBoxClick[0] = rightX;
+        goldBoxClick[1] = tileY;
+        goldBoxClick[2] = rightX + tileW;
+        goldBoxClick[3] = tileY + tileH;
+        int[] territoryBoxClick = pageRenderer.getTerritoryBoxClick();
+        territoryBoxClick[0] = rightX + tileW + gap;
+        territoryBoxClick[1] = tileY;
+        territoryBoxClick[2] = rightX + tileW * 2 + gap;
+        territoryBoxClick[3] = tileY + tileH;
+
+        tileY += tileH + gap;
+        drawStatTile(guiGraphics, rightX, tileY, tileW, tileH, "蓝图", String.valueOf(ClientCacheManager.getUnlockedRecipesCount(player.getUUID())), 0xFF8EA7FF);
+        drawStatTile(guiGraphics, rightX + tileW + gap, tileY, tileW, tileH, "Rank", rank.getRankName(), getRankColor(rank.getRankLevel()));
+        drawStatTile(guiGraphics, rightX + (tileW + gap) * 2, tileY, tileW, tileH, "称号", title.getTitleName(), 0xFF000000 | title.getColor());
+
+        int attrY = tileY + tileH + gap;
+        int attrBottom = y + contentH;
+        int attrH = Math.max(0, attrBottom - attrY);
+        drawSoftRect(guiGraphics, rightX, attrY, rightW, attrH, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        boolean infected = ClientCacheManager.isInfected(player.getUUID());
+        float respawnPoint = ClientCacheManager.getRespawnPoint(player.getUUID());
+        int deathCost = infected ? 20 : 5;
+        int respawnTimes = (int) (respawnPoint / deathCost);
+        String respawnWarning = respawnTimes <= 0 ? "警告: 无法复活" : (respawnTimes < 2 ? "警告: 复活不足" : "");
+        drawText(guiGraphics, "身体状态", rightX + 12, attrY + 9, TABLET_TEXT_COLOR);
+        if (!respawnWarning.isEmpty()) {
+            drawText(guiGraphics, respawnWarning, rightX + rightW - mc.font.width(respawnWarning) - 12, attrY + 9,
+                respawnTimes <= 0 ? 0xFFFF6677 : 0xFFFFC857);
+        }
+        int innerX = rightX + 12;
+        int innerY = attrY + 28;
+        int columnGap = 10;
+        int rowAreaH = Math.max(0, attrY + attrH - 8 - innerY);
+        int rowGap = rowAreaH < 62 ? 4 : 6;
+        int rowH = Math.max(8, Math.min(18, (rowAreaH - rowGap * 2) / 3));
+        int barW = (rightW - 24 - columnGap) / 2;
+        int strength = PlayerStrengthClientSync.getCurrentStrengthClient(player);
+        int maxStrength = PlayerStrengthClientSync.getMaxStrengthClient(player);
+        if (maxStrength <= 0) maxStrength = 100;
+        float courage = PlayerCourageManager.getCurrentCourageClient(player);
+        float maxCourage = PlayerCourageManager.getMaxCourageClient(player);
+        if (maxCourage <= 0) maxCourage = 100;
+        drawMiniBar(guiGraphics, innerX, innerY, barW, rowH, "生命", player.getHealth() / player.getMaxHealth(),
+            String.format("%.0f/%.0f", player.getHealth(), player.getMaxHealth()), 0xFFFF6677);
+        drawMiniBar(guiGraphics, innerX + barW + columnGap, innerY, barW, rowH, "饥饿", player.getFoodData().getFoodLevel() / 20.0f,
+            player.getFoodData().getFoodLevel() + "/20", 0xFFFFC857);
+        drawMiniBar(guiGraphics, innerX, innerY + rowH + rowGap, barW, rowH, "体力", (float) strength / maxStrength,
+            strength + "/" + maxStrength, 0xFF50D890);
+        drawMiniBar(guiGraphics, innerX + barW + columnGap, innerY + rowH + rowGap, barW, rowH, "勇气", courage / maxCourage,
+            String.format("%.0f/%.0f", courage, maxCourage), 0xFFB58BFF);
+        drawMiniBar(guiGraphics, innerX, innerY + (rowH + rowGap) * 2, barW, rowH, "感染", infection / 100.0f,
+            String.format("%.1f/100", infection), 0xFF8B5CF6);
+        drawMiniBar(guiGraphics, innerX + barW + columnGap, innerY + (rowH + rowGap) * 2, barW, rowH, "分裂", respawnPoint / 100.0f,
+            String.format("%.1f/%d次", respawnPoint, respawnTimes), infected ? 0xFFFF6677 : 0xFF7AA8C7);
+    }
+
+    private void renderStoryTaskPage(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height) {
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+        var storyStages = ClientCacheManager.getStoryStages();
+        var playerTasks = ClientCacheManager.getPlayerTasks();
+
+        String storyText = "📋 故事";
+        String personalText = "📜 个人任务";
+        int tabY = y;
+        int tabH = 22;
+        int storyW = mc.font.width(storyText) + 16;
+        int personalW = mc.font.width(personalText) + 16;
+        int tabGap = 8;
+        drawSegmentButton(guiGraphics, x, tabY, storyW, tabH, storyText, taskShowServerTasks,
+            virtualMouseX, virtualMouseY, 0xFF7AA8C7);
+        drawSegmentButton(guiGraphics, x + storyW + tabGap, tabY, personalW, tabH, personalText, !taskShowServerTasks,
+            virtualMouseX, virtualMouseY, 0xFF9CB7A8);
+
+        int[] taskTabArea = pageRenderer.getTaskTabArea();
+        taskTabArea[0] = x;
+        taskTabArea[1] = tabY;
+        taskTabArea[2] = x + storyW + tabGap + personalW;
+        taskTabArea[3] = tabY + tabH;
+
+        int contentY = y + 34;
+        int contentH = height - 34;
+        if (taskShowServerTasks) {
+            if (selectedStageId == null) {
+                renderStoryStageList(guiGraphics, virtualMouseX, virtualMouseY, x, contentY, width, contentH, storyStages);
+            } else {
+                renderStoryStageTasks(guiGraphics, virtualMouseX, virtualMouseY, x, contentY, width, contentH, storyStages);
+            }
+        } else {
+            renderPersonalTaskCards(guiGraphics, virtualMouseX, virtualMouseY, x, contentY, width, contentH, playerTasks);
+        }
+    }
+
+    private void drawSegmentButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text,
+                                   boolean active, float mouseX, float mouseY, int accentColor) {
+        boolean hovered = mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
+        int bg = active ? 0xFF2D4050 : (hovered ? TABLET_CARD_HOVER_COLOR : 0xFF202B36);
+        int border = active || hovered ? accentColor : TABLET_CARD_BORDER_COLOR;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, bg, border);
+        drawCenteredText(guiGraphics, text, x + width / 2, y + 7, active ? TABLET_TEXT_COLOR : TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void renderRespawnSummary(GuiGraphics guiGraphics, LocalPlayer player, int x, int y, int width) {
+        boolean infected = ClientCacheManager.isInfected(player.getUUID());
+        float respawnPoint = ClientCacheManager.getRespawnPoint(player.getUUID());
+        int deathCost = infected ? 20 : 5;
+        int respawnTimes = (int) (respawnPoint / deathCost);
+        int color = infected ? 0xFFFF6677 : (respawnTimes <= 0 ? 0xFFFF6677 : 0xFF50D890);
+        drawText(guiGraphics, infected ? "感染状态: 感染者" : "感染状态: 幸存者", x, y, color);
+        String respawnText = "分裂 " + String.format("%.1f/100", respawnPoint) + "  可重生 " + respawnTimes + " 次";
+        if (mc.font.width(respawnText) > width) {
+            respawnText = ServerScreenUI_RendererUtils.truncateText(mc.font, respawnText, width - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, respawnText, x, y + 14, TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void renderStoryStageList(GuiGraphics guiGraphics, float mouseX, float mouseY, int x, int y, int width, int height,
+                                      java.util.Map<Integer, com.mo.economy_system.core.story_system.StoryStageData> storyStages) {
+        int introW = Math.max(136, width / 3);
+        int listX = x + introW + 10;
+        int listW = width - introW - 10;
+        drawSoftRect(guiGraphics, x, y, introW, height, 2, 0xFF202B36, TABLET_CARD_BORDER_COLOR);
+        drawText(guiGraphics, "STORY LOG", x + 12, y + 12, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, "梦屿剧情进展", x + 12, y + 30, TABLET_TEXT_COLOR);
+        drawText(guiGraphics, "阶段由全服玩家共同推进", x + 12, y + 48, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, "当前阶段数", x + 12, y + height - 38, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, String.valueOf(storyStages.size()), x + 12, y + height - 22, TABLET_TEXT_COLOR);
+
+        java.util.List<Integer> sortedStageIds = new java.util.ArrayList<>(storyStages.keySet());
+        java.util.Collections.sort(sortedStageIds);
+        int cardH = 58;
+        int gap = 10;
+        int visible = Math.min(VISIBLE_TASKS, Math.max(0, sortedStageIds.size() - (int) stageScrollOffset));
+        int firstY = y;
+        int lastY = y;
+
+        for (int i = 0; i < visible; i++) {
+            int stageIndex = i + (int) stageScrollOffset;
+            if (stageIndex >= sortedStageIds.size()) break;
+            var stage = storyStages.get(sortedStageIds.get(stageIndex));
+            int cardY = y + i * (cardH + gap);
+            boolean hovered = mouseX >= listX && mouseX <= listX + listW && mouseY >= cardY && mouseY <= cardY + cardH;
+            renderStoryStageCard(guiGraphics, listX, cardY, listW, cardH, stage, hovered);
+            lastY = cardY + cardH;
+        }
+
+        int[] stageArea = pageRenderer.getStageClickArea();
+        stageArea[0] = listX;
+        stageArea[1] = firstY;
+        stageArea[2] = listX + listW;
+        stageArea[3] = lastY;
+
+        if (storyStages.isEmpty()) {
+            drawSoftRect(guiGraphics, listX, y, listW, 86, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+            drawCenteredText(guiGraphics, "暂无故事阶段", listX + listW / 2, y + 36, TABLET_MUTED_TEXT_COLOR);
+        }
+    }
+
+    private void renderStoryStageCard(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                      com.mo.economy_system.core.story_system.StoryStageData stage, boolean hovered) {
+        int bg = hovered ? TABLET_CARD_HOVER_COLOR : TABLET_CARD_COLOR;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, bg, hovered ? PANEL_BORDER_COLOR : TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, PANEL_BORDER_COLOR);
+
+        String name = stage.getStageName();
+        if (mc.font.width(name) > width - 24) {
+            name = ServerScreenUI_RendererUtils.truncateText(mc.font, name, width - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, name, x + 12, y + 8, TABLET_TEXT_COLOR);
+
+        String desc = stage.getStageDescription();
+        if (mc.font.width(desc) > width - 24) {
+            desc = ServerScreenUI_RendererUtils.truncateText(mc.font, desc, width - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, desc, x + 12, y + 24, TABLET_MUTED_TEXT_COLOR);
+
+        int finished = 0;
+        java.util.List<com.mo.economy_system.core.story_system.StoryTaskData> tasks = stage.getTasks();
+        if (tasks != null) {
+            for (var task : tasks) {
+                if (task.isClientPlayerFinished()) finished++;
+            }
+        }
+        int total = Math.max(1, stage.getTotalTaskCount());
+        float progress = stage.getProgressPercentage();
+        drawText(guiGraphics, finished + "/" + total, x + 12, y + 42, TABLET_MUTED_TEXT_COLOR);
+        drawProgressBar(guiGraphics, x + 48, y + 45, width - 72, 5, progress, PANEL_BORDER_COLOR);
+    }
+
+    private void renderStoryStageTasks(GuiGraphics guiGraphics, float mouseX, float mouseY, int x, int y, int width, int height,
+                                       java.util.Map<Integer, com.mo.economy_system.core.story_system.StoryStageData> storyStages) {
+        var selectedStage = storyStages.values().stream()
+            .filter(stage -> String.valueOf(stage.getStageId()).equals(selectedStageId))
+            .findFirst()
+            .orElse(null);
+        if (selectedStage == null) {
+            renderPlaceholderPage(guiGraphics, x, y, width, height, "阶段不存在", "返回故事列表后重新选择");
+            return;
+        }
+
+        int backW = 34;
+        drawSegmentButton(guiGraphics, x, y, backW, 22, "<", false, mouseX, mouseY, PANEL_BORDER_COLOR);
+        int[] backArea = pageRenderer.getBackButtonArea();
+        backArea[0] = x;
+        backArea[1] = y;
+        backArea[2] = x + backW;
+        backArea[3] = y + 22;
+
+        drawText(guiGraphics, selectedStage.getStageName(), x + 44, y + 7, TABLET_TEXT_COLOR);
+        java.util.List<com.mo.economy_system.core.story_system.StoryTaskData> tasks = selectedStage.getTasks();
+        if (tasks == null) tasks = new java.util.ArrayList<>();
+
+        int cardY = y + 34;
+        int gap = 8;
+        int visible = Math.min(VISIBLE_TASKS, Math.max(0, tasks.size() - (int) taskScrollOffset));
+        int firstY = cardY;
+        int lastY = cardY;
+        for (int i = 0; i < visible; i++) {
+            int taskIndex = i + (int) taskScrollOffset;
+            var task = tasks.get(taskIndex);
+            int currentY = cardY + i * (TASK_CARD_HEIGHT + gap);
+            boolean hovered = mouseX >= x && mouseX <= x + width && mouseY >= currentY && mouseY <= currentY + TASK_CARD_HEIGHT;
+            renderTaskTerminalCard(guiGraphics, x, currentY, width, TASK_CARD_HEIGHT, task.getTaskName(), task.getTaskContent(),
+                task.isClientPlayerFinished(), 0xFF7AA8C7, hovered, task.getFinishedPlayerCount());
+            lastY = currentY + TASK_CARD_HEIGHT;
+        }
+
+        int[] taskArea = pageRenderer.getTaskClickArea();
+        taskArea[0] = x;
+        taskArea[1] = firstY;
+        taskArea[2] = x + width;
+        taskArea[3] = lastY;
+    }
+
+    private void renderPersonalTaskCards(GuiGraphics guiGraphics, float mouseX, float mouseY, int x, int y, int width, int height,
+                                         java.util.Map<Integer, com.mo.economy_system.core.task_system.TaskPlayerData> playerTasks) {
+        drawText(guiGraphics, "个人任务队列", x + 4, y, TABLET_TEXT_COLOR);
+        int cardY = y + 20;
+        int gap = 8;
+        int visible = Math.min(VISIBLE_TASKS, Math.max(0, playerTasks.size() - (int) taskScrollOffset));
+        int firstY = cardY;
+        int lastY = cardY;
+        java.util.List<com.mo.economy_system.core.task_system.TaskPlayerData> tasks = new java.util.ArrayList<>(playerTasks.values());
+        for (int i = 0; i < visible; i++) {
+            int taskIndex = i + (int) taskScrollOffset;
+            var task = tasks.get(taskIndex);
+            int currentY = cardY + i * (TASK_CARD_HEIGHT + gap);
+            boolean hovered = mouseX >= x && mouseX <= x + width && mouseY >= currentY && mouseY <= currentY + TASK_CARD_HEIGHT;
+            renderTaskTerminalCard(guiGraphics, x, currentY, width, TASK_CARD_HEIGHT, task.getTaskName(), task.getTaskContent(),
+                task.isClientPlayerFinished(), 0xFF9CB7A8, hovered, 0);
+            lastY = currentY + TASK_CARD_HEIGHT;
+        }
+
+        int[] taskArea = pageRenderer.getTaskClickArea();
+        taskArea[0] = x;
+        taskArea[1] = firstY;
+        taskArea[2] = x + width;
+        taskArea[3] = lastY;
+
+        if (playerTasks.isEmpty()) {
+            drawSoftRect(guiGraphics, x, cardY, width, 86, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+            drawCenteredText(guiGraphics, "暂无个人任务", x + width / 2, cardY + 36, TABLET_MUTED_TEXT_COLOR);
+        }
+    }
+
+    private void renderTaskTerminalCard(GuiGraphics guiGraphics, int x, int y, int width, int height, String title, String content,
+                                        boolean finished, int accent, boolean hovered, int finishedPlayers) {
+        drawSoftRect(guiGraphics, x, y, width, height, 2, hovered ? TABLET_CARD_HOVER_COLOR : TABLET_CARD_COLOR,
+            hovered ? accent : TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, finished ? 0xFF50D890 : accent);
+        String state = finished ? "DONE" : "OPEN";
+        drawText(guiGraphics, state, x + 12, y + 8, finished ? 0xFF50D890 : accent);
+        String displayTitle = title;
+        if (mc.font.width(displayTitle) > width - 96) {
+            displayTitle = ServerScreenUI_RendererUtils.truncateText(mc.font, displayTitle, width - 96 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayTitle, x + 54, y + 8, TABLET_TEXT_COLOR);
+        String displayContent = content;
+        if (mc.font.width(displayContent) > width - 68) {
+            displayContent = ServerScreenUI_RendererUtils.truncateText(mc.font, displayContent, width - 68 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayContent, x + 12, y + 29, TABLET_MUTED_TEXT_COLOR);
+        if (finishedPlayers > 0) {
+            String doneText = finishedPlayers + "人完成";
+            drawText(guiGraphics, doneText, x + width - mc.font.width(doneText) - 12, y + height - 12, TABLET_MUTED_TEXT_COLOR);
+        }
+    }
+
+    private void renderNoticeFeedPage(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        drawText(guiGraphics, "梦屿广播", x + 4, y, TABLET_TEXT_COLOR);
+        drawText(guiGraphics, "服务器公告与事件消息", x + 4, y + 14, TABLET_MUTED_TEXT_COLOR);
+
+        int columns = width > 430 ? 2 : 1;
+        int gap = 8;
+        int cardW = (width - gap * (columns - 1)) / columns;
+        int cardH = 58;
+        int startY = y + 34;
+
+        if (cachedNotices.isEmpty()) {
+            drawSoftRect(guiGraphics, x, startY, width, 84, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+            drawCenteredText(guiGraphics, "暂无公告", x + width / 2, startY + 36, TABLET_MUTED_TEXT_COLOR);
+            int[] noticeClickArea = pageRenderer.getNoticeClickArea();
+            noticeClickArea[0] = noticeClickArea[1] = noticeClickArea[2] = noticeClickArea[3] = 0;
+            return;
+        }
+
+        int maxRows = Math.max(1, (height - 34 + gap) / (cardH + gap));
+        int maxCards = Math.max(1, maxRows * columns);
+        int visible = Math.min(cachedNotices.size() - (int) noticeScrollOffset, maxCards);
+        int firstY = startY;
+        int lastY = startY;
+        for (int i = 0; i < visible; i++) {
+            int index = i + (int) noticeScrollOffset;
+            NoticeData notice = cachedNotices.get(index);
+            boolean isRead = cachedReadNoticeIds.contains(notice.getNoticeId());
+            int col = i % columns;
+            int row = i / columns;
+            int cardX = x + col * (cardW + gap);
+            int cardY = startY + row * (cardH + gap);
+            renderNoticeFeedCard(guiGraphics, cardX, cardY, cardW, cardH, notice, isRead);
+            lastY = cardY + cardH;
+        }
+
+        int[] noticeClickArea = pageRenderer.getNoticeClickArea();
+        noticeClickArea[0] = x;
+        noticeClickArea[1] = firstY;
+        noticeClickArea[2] = x + width;
+        noticeClickArea[3] = lastY;
+    }
+
+    private void renderNoticeFeedCard(GuiGraphics guiGraphics, int x, int y, int width, int height, NoticeData notice, boolean isRead) {
+        int accent = isRead ? 0xFF9AA3B2 : 0xFF4FC3F7;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, isRead ? 0xFF202B36 : TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, accent);
+        drawText(guiGraphics, isRead ? "已读" : "新消息", x + 12, y + 7, accent);
+        drawText(guiGraphics, ServerScreenUI_RendererUtils.formatDateTime(notice.getPublishTime()), x + width - 88, y + 7, TABLET_MUTED_TEXT_COLOR);
+
+        String title = notice.getNoticeTitle();
+        if (mc.font.width(title) > width - 24) {
+            title = ServerScreenUI_RendererUtils.truncateText(mc.font, title, width - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, title, x + 12, y + 22, TABLET_TEXT_COLOR);
+
+        String content = notice.getNoticeContent();
+        if (mc.font.width(content) > width - 24) {
+            content = ServerScreenUI_RendererUtils.truncateText(mc.font, content, width - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, content, x + 12, y + 39, TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void renderHelpTerminalPage(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        int leftW = Math.max(146, width / 3);
+        int gap = 10;
+        int rightX = x + leftW + gap;
+        int rightW = width - leftW - gap;
+
+        drawSoftRect(guiGraphics, x, y, leftW, height, 2, 0xFF202B36, TABLET_CARD_BORDER_COLOR);
+        drawText(guiGraphics, "NEW USER GUIDE", x + 12, y + 12, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, "新玩家教程", x + 12, y + 30, TABLET_TEXT_COLOR);
+        drawText(guiGraphics, "先看机制，再看目标", x + 12, y + 48, TABLET_MUTED_TEXT_COLOR);
+
+        int chipY = y + 76;
+        drawHelpChip(guiGraphics, x + 12, chipY, leftW - 24, "生存", "血量 / 饥饿 / 体力");
+        drawHelpChip(guiGraphics, x + 12, chipY + 38, leftW - 24, "心理", "勇气过低会削弱行动");
+        drawHelpChip(guiGraphics, x + 12, chipY + 76, leftW - 24, "感染", "感染值满会改变状态");
+        drawHelpChip(guiGraphics, x + 12, chipY + 114, leftW - 24, "故事", "全服共同推进阶段");
+
+        int cardH = 56;
+        int rowGap = 8;
+        int colGap = 8;
+        int colW = (rightW - colGap) / 2;
+        String[][] cards = {
+            {"体力与血量", "等级会提升身体上限；绿色进度代表体力，受行动消耗影响。"},
+            {"勇气机制", "黑暗、怪物和附近死亡会压低勇气；光亮和同伴能帮助恢复。"},
+            {"等级成长", "探索群系、击杀怪物、完成原版挑战和隐藏成就可提升等级。"},
+            {"故事阶段", "剧情不是单人按钮，阶段推进取决于全服玩家的调查与选择。"},
+            {"感染与重生", "受到伤害或靠近感染者会增加感染；感染者死亡代价更高。"},
+            {"分裂次数", "分裂不足时无法正常重生，需要其他玩家救助你。"}
+        };
+        int[] colors = {0xFF50D890, 0xFFB58BFF, 0xFFFFB84D, 0xFF7AA8C7, 0xFF8B5CF6, 0xFFFF6677};
+        for (int i = 0; i < cards.length; i++) {
+            int col = i % 2;
+            int row = i / 2;
+            int cardX = rightX + col * (colW + colGap);
+            int cardY = y + row * (cardH + rowGap);
+            drawHelpCard(guiGraphics, cardX, cardY, colW, cardH, cards[i][0], cards[i][1], colors[i]);
+        }
+    }
+
+    private void drawHelpChip(GuiGraphics guiGraphics, int x, int y, int width, String title, String hint) {
+        drawSoftRect(guiGraphics, x, y, width, 30, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        drawText(guiGraphics, title, x + 8, y + 6, TABLET_TEXT_COLOR);
+        String text = hint;
+        if (mc.font.width(text) > width - 16) {
+            text = ServerScreenUI_RendererUtils.truncateText(mc.font, text, width - 16 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, text, x + 8, y + 18, TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void drawHelpCard(GuiGraphics guiGraphics, int x, int y, int width, int height, String title, String body, int accent) {
+        drawSoftRect(guiGraphics, x, y, width, height, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, accent);
+        drawText(guiGraphics, title, x + 12, y + 8, TABLET_TEXT_COLOR);
+        String line = body;
+        if (mc.font.width(line) > width - 24) {
+            line = ServerScreenUI_RendererUtils.truncateText(mc.font, line, width - 24 - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, line, x + 12, y + 28, TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void renderPlaceholderPage(GuiGraphics guiGraphics, int x, int y, int width, int height, String title, String hint) {
+        drawSoftRect(guiGraphics, x, y, width, height, 3, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        drawCenteredText(guiGraphics, title, x + width / 2, y + height / 2 - 12, TABLET_TEXT_COLOR);
+        drawCenteredText(guiGraphics, hint, x + width / 2, y + height / 2 + 6, TABLET_MUTED_TEXT_COLOR);
+    }
+
+    private void drawProfileTimeRow(GuiGraphics guiGraphics, int x, int y, int width, String label, String value, int accentColor) {
+        drawSoftRect(guiGraphics, x, y, width, 17, 2, 0x6624313E, 0x22344555);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 3, y + 17, accentColor);
+        drawText(guiGraphics, label, x + 8, y + 5, TABLET_MUTED_TEXT_COLOR);
+        int valueX = x + 38;
+        int valueMaxWidth = Math.max(16, width - 44);
+        String displayValue = value;
+        if (mc.font.width(displayValue) > valueMaxWidth) {
+            displayValue = ServerScreenUI_RendererUtils.truncateText(mc.font, displayValue, valueMaxWidth - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayValue, valueX, y + 5, TABLET_TEXT_COLOR);
+    }
+
+    private void drawIdentityLine(GuiGraphics guiGraphics, int x, int y, int width, String label, String value, int accentColor) {
+        drawSoftRect(guiGraphics, x, y, width, 16, 2, 0x3324313E, 0x22344555);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 3, y + 16, accentColor);
+        drawText(guiGraphics, label, x + 8, y + 5, TABLET_MUTED_TEXT_COLOR);
+        int valueX = x + 44;
+        int valueMaxWidth = Math.max(16, width - 50);
+        String displayValue = value;
+        if (mc.font.width(displayValue) > valueMaxWidth) {
+            displayValue = ServerScreenUI_RendererUtils.truncateText(mc.font, displayValue, valueMaxWidth - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayValue, valueX, y + 5, accentColor);
+    }
+
+    private String formatProfileDate(long epochMs) {
+        if (epochMs <= 0) {
+            return "--";
+        }
+        LocalDateTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMs), ZoneId.systemDefault());
+        return time.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"));
+    }
+
+    private String formatProfileDateTime(long epochMs) {
+        if (epochMs <= 0) {
+            return "--";
+        }
+        LocalDateTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMs), ZoneId.systemDefault());
+        return time.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"));
+    }
+
+    private String formatPlayDuration(long millis) {
+        if (millis <= 0) {
+            return "0分";
+        }
+        long totalMinutes = millis / 60000L;
+        long days = totalMinutes / 1440L;
+        long hours = (totalMinutes % 1440L) / 60L;
+        long minutes = totalMinutes % 60L;
+        if (days > 0) {
+            return days + "天" + hours + "时";
+        }
+        if (hours > 0) {
+            return hours + "时" + minutes + "分";
+        }
+        return Math.max(1, minutes) + "分";
+    }
+
+    private void drawStatTile(GuiGraphics guiGraphics, int x, int y, int width, int height, String label, String value, int accentColor) {
+        drawSoftRect(guiGraphics, x, y, width, height, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, accentColor);
+        drawText(guiGraphics, label, x + 12, y + 9, TABLET_MUTED_TEXT_COLOR);
+        int valueMaxWidth = Math.max(18, width - 24);
+        String displayValue = value;
+        if (mc.font.width(displayValue) > valueMaxWidth) {
+            displayValue = ServerScreenUI_RendererUtils.truncateText(mc.font, displayValue, valueMaxWidth - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayValue, x + 12, y + 27, TABLET_TEXT_COLOR);
+    }
+
+    private void drawMiniBar(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                             String label, float progress, String value, int color) {
+        int valueMaxWidth = Math.max(18, width - mc.font.width(label) - 10);
+        String displayValue = value;
+        if (mc.font.width(displayValue) > valueMaxWidth) {
+            displayValue = ServerScreenUI_RendererUtils.truncateText(mc.font, displayValue, valueMaxWidth - mc.font.width("...")) + "...";
+        }
+        int valueWidth = mc.font.width(displayValue);
+        drawText(guiGraphics, label, x, y, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, displayValue, x + width - valueWidth, y, TABLET_TEXT_COLOR);
+        drawProgressBar(guiGraphics, x, y + height - 6, width, 5, progress, color);
+    }
+
+    private void drawSoftRect(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int fillColor, int borderColor) {
+        if (width <= 0 || height <= 0) return;
+        int r = Math.max(0, Math.min(radius, Math.min(width / 2, height / 2)));
+        int right = x + width;
+        int bottom = y + height;
+
+        if (r <= 0) {
+            guiGraphics.fill(RenderType.gui(), x, y, right, bottom, fillColor);
+        } else {
+            guiGraphics.fill(RenderType.gui(), x + r, y, right - r, bottom, fillColor);
+            guiGraphics.fill(RenderType.gui(), x, y + r, right, bottom - r, fillColor);
+
+            if (r >= 1) {
+                guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + r, y + r, fillColor);
+                guiGraphics.fill(RenderType.gui(), right - r, y + 1, right - 1, y + r, fillColor);
+                guiGraphics.fill(RenderType.gui(), x + 1, bottom - r, x + r, bottom - 1, fillColor);
+                guiGraphics.fill(RenderType.gui(), right - r, bottom - r, right - 1, bottom - 1, fillColor);
+            }
+        }
+
+        if ((borderColor >>> 24) == 0) return;
+        if (r <= 0) {
+            guiGraphics.fill(RenderType.gui(), x, y, right, y + 1, borderColor);
+            guiGraphics.fill(RenderType.gui(), x, bottom - 1, right, bottom, borderColor);
+            guiGraphics.fill(RenderType.gui(), x, y, x + 1, bottom, borderColor);
+            guiGraphics.fill(RenderType.gui(), right - 1, y, right, bottom, borderColor);
+            return;
+        }
+
+        guiGraphics.fill(RenderType.gui(), x + r, y, right - r, y + 1, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + r, bottom - 1, right - r, bottom, borderColor);
+        guiGraphics.fill(RenderType.gui(), x, y + r, x + 1, bottom - r, borderColor);
+        guiGraphics.fill(RenderType.gui(), right - 1, y + r, right, bottom - r, borderColor);
+
+        guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + 2, y + 2, borderColor);
+        guiGraphics.fill(RenderType.gui(), right - 2, y + 1, right - 1, y + 2, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + 1, bottom - 2, x + 2, bottom - 1, borderColor);
+        guiGraphics.fill(RenderType.gui(), right - 2, bottom - 2, right - 1, bottom - 1, borderColor);
+    }
+
+    private void drawText(GuiGraphics guiGraphics, String text, int x, int y, int color) {
+        guiGraphics.drawString(mc.font, text, x, y, color, false);
+    }
+
+    private void drawBrandTitle(GuiGraphics guiGraphics, int x, int y) {
+        drawText(guiGraphics, "Dreaming", x, y, 0xFFB58BFF);
+        int fishX = x + mc.font.width("Dreaming");
+        drawText(guiGraphics, "Fish", fishX, y, 0xFF4FC3F7);
+        drawText(guiGraphics, " Terminal", fishX + mc.font.width("Fish"), y, 0xFFFFC857);
+    }
+
+    private void drawTopDateTime(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"));
+        int textWidth = mc.font.width(dateTime);
+        int centerX = x + width / 2;
+        int boxW = textWidth + 22;
+        drawSoftRect(guiGraphics, centerX - boxW / 2, y - 1, boxW, height + 2, 2, 0x221B2530, 0x22344555);
+        drawText(guiGraphics, dateTime, centerX - textWidth / 2, y + 4, TABLET_TEXT_COLOR);
+    }
+
+    private void drawCenteredText(GuiGraphics guiGraphics, String text, int centerX, int y, int color) {
+        drawText(guiGraphics, text, centerX - mc.font.width(text) / 2, y, color);
+    }
+
+    /**
+     * 绘制左侧按钮区域 + 服务器信息区域
+     */
+    private void renderModuleDashboard(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height) {
+        float virtualMouseX = mouseX / uiScale;
+        float virtualMouseY = mouseY / uiScale;
+
+        int bottomBarHeight = 34;
+        int bottomGap = 10;
+        int gridHeight = Math.max(120, height - bottomBarHeight - bottomGap);
+        int gridY = y;
+        int gap = 8;
+        int unitW = (width - gap * 5) / 6;
+        int unitH = Math.max(38, (gridHeight - gap * 3) / 4);
+        int[][] tileLayout = {
+            {0, 0, 2, 2}, {4, 0, 2, 1}, {2, 0, 2, 1},
+            {2, 1, 2, 2}, {4, 1, 2, 1}, {4, 2, 2, 1},
+            {0, 2, 2, 1}, {0, 3, 2, 1}, {2, 3, 2, 1}, {4, 3, 2, 1}
+        };
+
+        for (int i = 0; i < LEFT_BUTTON_ICONS.length; i++) {
+            int[] tile = tileLayout[i];
+            int cardX = x + tile[0] * (unitW + gap);
+            int cardY = gridY + tile[1] * (unitH + gap);
+            int cardWidth = unitW * tile[2] + gap * (tile[2] - 1);
+            int cardHeight = unitH * tile[3] + gap * (tile[3] - 1);
+
+            leftButtonX1[i] = cardX;
+            leftButtonY1[i] = cardY;
+            leftButtonX2[i] = cardX + cardWidth;
+            leftButtonY2[i] = cardY + cardHeight;
+
+            boolean isHovered = virtualMouseX >= cardX && virtualMouseX <= cardX + cardWidth &&
+                virtualMouseY >= cardY && virtualMouseY <= cardY + cardHeight;
+            boolean hasUnread = (i == 2 && hasUnreadNoticesGlobal) ||
+                (i == 3 && com.mo.economy_system.client.cache.ClientCacheManager.hasUnfinishedTasks());
+
+            float reveal = getDashboardTileReveal(cardX, x, width);
+            if (reveal <= 0.0f) continue;
+            if (reveal < 1.0f) {
+                guiGraphics.enableScissor(
+                    (int) (cardX * uiScale),
+                    (int) (cardY * uiScale),
+                    (int) ((cardX + cardWidth * reveal) * uiScale),
+                    (int) ((cardY + cardHeight) * uiScale)
+                );
+            }
+            drawDashboardModuleCard(guiGraphics, cardX, cardY, cardWidth, cardHeight,
+                LEFT_BUTTON_ICONS[i], LEFT_BUTTON_NAMES[i], LEFT_BUTTON_COLORS[i], isHovered, hasUnread);
+            if (reveal < 1.0f) {
+                guiGraphics.disableScissor();
+            }
+        }
+
+        drawDashboardPlayerBar(guiGraphics, x, y + height - bottomBarHeight, width, bottomBarHeight);
+    }
+
+    private float getDashboardTileReveal(int tileX, int dashboardX, int dashboardWidth) {
+        if (skipAnimation || isClosing) return 1.0f;
+        long elapsed = Util.getMillis() - openTime;
+        float positionDelay = (float) (tileX - dashboardX) / Math.max(1, dashboardWidth) * 180.0f;
+        float progress = (elapsed - positionDelay) / 360.0f;
+        progress = Math.max(0.0f, Math.min(1.0f, progress));
+        return 1.0f - (float) Math.pow(1.0f - progress, 3);
+    }
+
+    private void drawDashboardModuleCard(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                         String icon, String label, int accentColor, boolean isHovered, boolean hasUnread) {
+        int bgColor = isHovered ? TABLET_CARD_HOVER_COLOR : TABLET_CARD_COLOR;
+        int borderColor = isHovered ? (0xFF000000 | (accentColor & 0x00FFFFFF)) : TABLET_CARD_BORDER_COLOR;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, bgColor, borderColor);
+
+        int accent = 0xFF000000 | (accentColor & 0x00FFFFFF);
+        guiGraphics.fill(RenderType.gui(), x, y, x + 4, y + height, accent);
+        drawText(guiGraphics, icon, x + 14, y + 12, accent);
+
+        String displayLabel = label;
+        int maxLabelWidth = width - 28;
+        if (mc.font.width(displayLabel) > maxLabelWidth) {
+            displayLabel = ServerScreenUI_RendererUtils.truncateText(mc.font, displayLabel, maxLabelWidth - mc.font.width("...")) + "...";
+        }
+        drawText(guiGraphics, displayLabel, x + 14, y + height - 20, TABLET_TEXT_COLOR);
+
+        if (hasUnread) {
+            drawSoftRect(guiGraphics, x + width - 14, y + 10, 7, 7, 2, 0xFFFF7A88, 0xFFFFB8C0);
+        }
+    }
+
+    private void drawDashboardPlayerBar(GuiGraphics guiGraphics, int x, int y, int width, int height) {
+        LocalPlayer player = mc.player;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, 0xFF202B36, TABLET_CARD_BORDER_COLOR);
+        if (player == null) return;
+
+        int avatarSize = Math.max(18, height - 12);
+        int avatarX = x + 10;
+        int avatarY = y + (height - avatarSize) / 2;
+        PlayerInfo playerInfo = player.connection != null ? player.connection.getPlayerInfo(player.getUUID()) : null;
+        if (playerInfo != null) {
+            PlayerFaceRenderer.draw(guiGraphics, playerInfo.getSkin(), avatarX, avatarY, avatarSize);
+        } else {
+            drawSoftRect(guiGraphics, avatarX, avatarY, avatarSize, avatarSize, 2, TABLET_CARD_COLOR, TABLET_CARD_BORDER_COLOR);
+        }
+
+        PlayerData playerData = ClientCacheManager.getPlayerData(player.getUUID());
+        long registrationTime = 0L;
+        long totalPlayTime = 0L;
+        if (playerData != null) {
+            registrationTime = playerData.getRegistrationTime() > 0 ? playerData.getRegistrationTime() : playerData.getLastLoginTime();
+            totalPlayTime = playerData.getTotalPlayTime();
+        }
+
+        String playerText = player.getScoreboardName();
+        int textY = y + (height - mc.font.lineHeight) / 2;
+        int cursorX = avatarX + avatarSize + 10;
+        drawText(guiGraphics, playerText, cursorX, textY, TABLET_TEXT_COLOR);
+
+        int registerX = x + Math.max(width / 3, 170);
+        drawText(guiGraphics, "注册", registerX, textY, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, formatProfileDateTime(registrationTime), registerX + 32, textY, TABLET_TEXT_COLOR);
+
+        int playX = x + Math.max(width * 2 / 3, registerX + 128);
+        drawText(guiGraphics, "游玩时长", playX, textY, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, formatPlayDuration(totalPlayTime), playX + 56, textY, TABLET_TEXT_COLOR);
+    }
+
     /**
      * 绘制左侧按钮区域 + 服务器信息区域
      */
     private void renderLeftDynamicIsland(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // ==================== 布局参数 ====================
-        int buttonWidth = leftPanelWidth - 10;
-        int buttonHeight = 26;
-        int buttonSpacing = 1;
-        int sideMargin = (leftPanelWidth - buttonWidth) / 2;  // 左右边距
+        int sideMargin = 14;
+        int cardSpacing = 6;
+        int columnCount = 2;
+        int cardWidth = (leftPanelWidth - sideMargin * 2 - cardSpacing) / columnCount;
+        int cardHeight = 42;
 
         int totalButtons = LEFT_BUTTON_ICONS.length;
 
-        // 按钮位置：顶部和左右边距一致
-        int buttonX = sideMargin;
-        int buttonStartY = sideMargin;
+        // 按钮位置：位于平板内容区内，参考新闻流卡片排布
+        int headerY = Math.max(44, virtualHeight / 10);
+        int buttonStartY = headerY + 30;
 
         // 滑入动画
         int animOffsetY = 0;
@@ -717,18 +1572,25 @@ public class ServerScreenUI_Screen extends Screen {
         // ==================== 绘制按钮列表 ====================
         int currentButtonStartY = buttonStartY + animOffsetY;
 
+        String terminalTitle = "DreamingFish Terminal";
+        guiGraphics.drawString(mc.font, terminalTitle, sideMargin, headerY, 0xFF20242C);
+        guiGraphics.drawString(mc.font, "选择一个服务器模块", sideMargin, headerY + mc.font.lineHeight + 4, 0xFF687080);
+
         for (int i = 0; i < totalButtons; i++) {
-            int buttonY = currentButtonStartY + i * (buttonHeight + buttonSpacing);
+            int row = i / columnCount;
+            int column = i % columnCount;
+            int buttonX = sideMargin + column * (cardWidth + cardSpacing);
+            int buttonY = currentButtonStartY + row * (cardHeight + cardSpacing);
 
             // 存储点击区域
             leftButtonX1[i] = buttonX;
             leftButtonY1[i] = buttonY;
-            leftButtonX2[i] = buttonX + buttonWidth;
-            leftButtonY2[i] = buttonY + buttonHeight;
+            leftButtonX2[i] = buttonX + cardWidth;
+            leftButtonY2[i] = buttonY + cardHeight;
 
             boolean isSelected = (i == selectedLeftButtonIndex);
-            boolean isHovered = (virtualMouseX >= buttonX && virtualMouseX <= buttonX + buttonWidth &&
-                                virtualMouseY >= buttonY && virtualMouseY <= buttonY + buttonHeight);
+            boolean isHovered = (virtualMouseX >= buttonX && virtualMouseX <= buttonX + cardWidth &&
+                                virtualMouseY >= buttonY && virtualMouseY <= buttonY + cardHeight);
 
             // 检查是否有未读/未完成内容
             boolean hasUnread = false;
@@ -740,12 +1602,12 @@ public class ServerScreenUI_Screen extends Screen {
                 hasUnread = com.mo.economy_system.client.cache.ClientCacheManager.hasUnfinishedTasks();
             }
 
-            drawCleanButton(guiGraphics, mc.font, buttonX, buttonY, buttonWidth, buttonHeight,
-                isSelected, isHovered, LEFT_BUTTON_ICONS[i], LEFT_BUTTON_NAMES[i], hasUnread, arrowAnimTime);
+            drawTabletLauncherCard(guiGraphics, buttonX, buttonY, cardWidth, cardHeight,
+                isSelected, isHovered, LEFT_BUTTON_ICONS[i], LEFT_BUTTON_NAMES[i], LEFT_BUTTON_COLORS[i], hasUnread);
         }
 
         // ==================== 绘制服务器信息区域（版本号上方） ====================
-        int infoHeight = 55;
+        int infoHeight = 34;
         int versionBottomMargin = 8;  // 版本号和信息区之间的间距
         int versionHeight = mc.font.lineHeight + 10;
         int infoY = virtualHeight - versionHeight - infoHeight - versionBottomMargin;
@@ -765,7 +1627,71 @@ public class ServerScreenUI_Screen extends Screen {
         int maxPlayers = 20;
         float tps = 20.0f;
 
-        drawServerInfoArea(guiGraphics, mc.font, buttonX, infoY, buttonWidth, infoHeight, infoAnimOffsetY, onlinePlayers, maxPlayers, tps);
+        drawTabletServerInfo(guiGraphics, sideMargin, infoY, leftPanelWidth - sideMargin * 2, infoHeight,
+            infoAnimOffsetY, onlinePlayers, maxPlayers, tps);
+    }
+
+    /**
+     * 绘制平板首页功能卡片。
+     */
+    private void drawTabletLauncherCard(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                        boolean isSelected, boolean isHovered, String icon, String label,
+                                        int accentColor, boolean hasUnread) {
+        int bgColor = isSelected ? 0xFFFFFFFF : (isHovered ? 0xFFF8FAFF : 0xFFF1F3F8);
+        int borderColor = isSelected ? (0xFF000000 | (accentColor & 0x00FFFFFF)) : (isHovered ? 0xFFB8C3D6 : 0xFFE0E4EC);
+
+        drawSoftRect(guiGraphics, x, y, width, height, 2, bgColor, borderColor);
+        guiGraphics.fill(RenderType.gui(), x + 1, y + height - 3, x + width - 1, y + height - 1,
+            0xFF000000 | (accentColor & 0x00FFFFFF));
+
+        int iconColor = 0xFF000000 | (accentColor & 0x00FFFFFF);
+        guiGraphics.drawString(mc.font, icon, x + 8, y + 8, iconColor);
+
+        String displayLabel = label;
+        int maxLabelWidth = width - 14;
+        if (mc.font.width(displayLabel) > maxLabelWidth) {
+            displayLabel = ServerScreenUI_RendererUtils.truncateText(mc.font, displayLabel, maxLabelWidth - mc.font.width("...")) + "...";
+        }
+        guiGraphics.drawString(mc.font, displayLabel, x + 8, y + 24, isSelected ? 0xFF161A22 : 0xFF343946);
+
+        if (hasUnread) {
+            drawSoftRect(guiGraphics, x + width - 12, y + 6, 6, 6, 2, 0xFFFF7A88, 0xFFFFB8C0);
+        }
+    }
+
+    /**
+     * 绘制平板底部状态条。
+     */
+    private void drawTabletServerInfo(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                      int offsetY, int onlinePlayers, int maxPlayers, float tps) {
+        y += offsetY;
+        drawSoftRect(guiGraphics, x, y, width, height, 2, 0xFF202B36, TABLET_CARD_BORDER_COLOR);
+        drawText(guiGraphics, "ONLINE", x + 8, y + 6, TABLET_MUTED_TEXT_COLOR);
+        drawText(guiGraphics, onlinePlayers + "/" + maxPlayers, x + 8, y + 18, TABLET_TEXT_COLOR);
+
+        String tpsText = String.format("TPS %.1f", tps);
+        int tpsWidth = mc.font.width(tpsText);
+        drawText(guiGraphics, tpsText, x + width - tpsWidth - 8, y + 18, TABLET_TEXT_COLOR);
+    }
+
+    private void drawTabletStatusBar(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                     int onlinePlayers, int maxPlayers, float tps) {
+        drawSoftRect(guiGraphics, x, y, width, height, 2, 0x332E3C49, 0x224A5A68);
+        drawText(guiGraphics, "在线", x + 8, y + 4, TABLET_MUTED_TEXT_COLOR);
+        String onlineText = onlinePlayers + "/" + maxPlayers;
+        drawText(guiGraphics, onlineText, x + 38, y + 4, TABLET_TEXT_COLOR);
+        String tpsText = String.format("TPS %.1f", tps);
+        drawText(guiGraphics, tpsText, x + width - mc.font.width(tpsText) - 8, y + 4, TABLET_TEXT_COLOR);
+    }
+
+    private String formatWorldTime() {
+        if (mc.level == null) {
+            return "--:--";
+        }
+        long dayTime = mc.level.getDayTime() % 24000L;
+        int hour = (int) ((dayTime / 1000L + 6L) % 24L);
+        int minute = (int) ((dayTime % 1000L) * 60L / 1000L);
+        return String.format("%02d:%02d", hour, minute);
     }
 
     /**
@@ -877,8 +1803,15 @@ public class ServerScreenUI_Screen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // ESC 键（key code 256）关闭 UI
+        // ESC 键：二级界面返回终端主页，主页关闭 UI
         if (keyCode == 256) {
+            if (selectedLeftButtonIndex >= 0) {
+                selectedLeftButtonIndex = -1;
+                selectedStageId = null;
+                taskScrollOffset = 0;
+                stageScrollOffset = 0;
+                return true;
+            }
             if (isClosing) return true;  // 如果已经在关闭中，不再响应
             isClosing = true;
             closeTime = Util.getMillis();
@@ -886,7 +1819,7 @@ public class ServerScreenUI_Screen extends Screen {
         }
 
         // 任务页面：Q/E 键切换故事/个人任务
-        if (selectedLeftButtonIndex == 2) {
+        if (selectedLeftButtonIndex == 3) {
             // Q 键 (key code 16) -> 切换到故事任务
             if (keyCode == 16) {
                 taskShowServerTasks = true;
@@ -912,14 +1845,27 @@ public class ServerScreenUI_Screen extends Screen {
         double virtualMouseX = mouseX / uiScale;
         double virtualMouseY = mouseY / uiScale;
 
-        // ==================== 检查左侧按钮点击 ====================
-        for (int i = 0; i < LEFT_BUTTON_ICONS.length; i++) {
-            if (virtualMouseX >= leftButtonX1[i] && virtualMouseX <= leftButtonX2[i] &&
-                virtualMouseY >= leftButtonY1[i] && virtualMouseY <= leftButtonY2[i]) {
-                // 点击了左侧按钮，更新选中状态
-                selectedLeftButtonIndex = i;
-                handleLeftButtonClick(i);
-                return true;
+        int tabletMarginX = Math.max(12, virtualWidth / 28);
+        int tabletMarginY = Math.max(10, virtualHeight / 14);
+        if (selectedLeftButtonIndex >= 0 &&
+            virtualMouseX >= tabletMarginX + 12 && virtualMouseX <= tabletMarginX + 30 &&
+            virtualMouseY >= tabletMarginY + 10 && virtualMouseY <= tabletMarginY + 30) {
+            selectedLeftButtonIndex = -1;
+            selectedStageId = null;
+            taskScrollOffset = 0;
+            stageScrollOffset = 0;
+            return true;
+        }
+
+        // ==================== 检查一级模块按钮点击 ====================
+        if (selectedLeftButtonIndex < 0) {
+            for (int i = 0; i < LEFT_BUTTON_ICONS.length; i++) {
+                if (virtualMouseX >= leftButtonX1[i] && virtualMouseX <= leftButtonX2[i] &&
+                    virtualMouseY >= leftButtonY1[i] && virtualMouseY <= leftButtonY2[i]) {
+                    selectedLeftButtonIndex = i;
+                    handleLeftButtonClick(i);
+                    return true;
+                }
             }
         }
 
@@ -962,15 +1908,21 @@ public class ServerScreenUI_Screen extends Screen {
             if (virtualMouseX >= noticeArea[0] && virtualMouseX <= noticeArea[2] &&
                 virtualMouseY >= noticeArea[1] + rightOffsetY && virtualMouseY <= noticeArea[3] + rightOffsetY) {
                 // 计算点击的是哪个公告卡片
-                int cardMargin = 4;
-                int cardHeight = NOTICE_CARD_HEIGHT;
+                int cardMargin = 8;
+                int cardHeight = 58;
+                int areaWidth = noticeArea[2] - noticeArea[0];
+                int columns = areaWidth > 430 ? 2 : 1;
+                int cardWidth = (areaWidth - cardMargin * (columns - 1)) / columns;
+                int relativeX = (int) virtualMouseX - noticeArea[0];
                 int relativeY = (int) virtualMouseY - (noticeArea[1] + rightOffsetY);
-                int clickedCardIndex = relativeY / (cardHeight + cardMargin);
+                int clickedColumn = relativeX / (cardWidth + cardMargin);
+                int clickedRow = relativeY / (cardHeight + cardMargin);
+                int clickedCardIndex = clickedRow * columns + clickedColumn;
 
                 int totalNotices = cachedNotices.size();
-                int maxCards = Math.min(VISIBLE_NOTICES, totalNotices);
+                int maxCards = Math.min((noticeArea[3] - noticeArea[1] + cardMargin) / (cardHeight + cardMargin) * columns, totalNotices);
 
-                if (clickedCardIndex >= 0 && clickedCardIndex < maxCards) {
+                if (clickedColumn >= 0 && clickedColumn < columns && clickedCardIndex >= 0 && clickedCardIndex < maxCards) {
                     int noticeIndex = (int) (clickedCardIndex + noticeScrollOffset);
                     if (noticeIndex < cachedNotices.size()) {
                         NoticeData clickedNotice = cachedNotices.get(noticeIndex);
@@ -1042,7 +1994,7 @@ public class ServerScreenUI_Screen extends Screen {
                     java.util.List<Integer> sortedStageIds = new java.util.ArrayList<>(storyStages.keySet());
                     java.util.Collections.sort(sortedStageIds);
 
-                    int stageCardHeight = 80;
+                    int stageCardHeight = 58;
                     int cardSpacing = 10;
                     int relativeY = (int) virtualMouseY - stageArea[1];
                     int clickedStageIndex = relativeY / (stageCardHeight + cardSpacing);

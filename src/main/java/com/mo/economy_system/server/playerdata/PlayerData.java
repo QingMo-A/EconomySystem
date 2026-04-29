@@ -15,25 +15,30 @@ public class PlayerData {
     private Title title;
     private int level;
     private long currentExperience;
+    private long registrationTime;
     private long lastLoginTime;
     private long totalPlayTime;
 
     public PlayerData() {
+        long now = System.currentTimeMillis();
         this.rank = RankRegistry.NO_RANK;
         this.title = TitleRegistry.getDefaultTitle();
         this.level = 1;
         this.currentExperience = 0;
-        this.lastLoginTime = System.currentTimeMillis();
+        this.registrationTime = now;
+        this.lastLoginTime = now;
         this.totalPlayTime = 0;
     }
 
     public PlayerData(ServerPlayer player) {
+        long now = System.currentTimeMillis();
         this.uuid = player.getUUID();
         this.playerName = player.getScoreboardName();
         this.rank = RankRegistry.NO_RANK;
         this.title = TitleRegistry.getDefaultTitle();
         this.level = 1;
-        this.lastLoginTime = System.currentTimeMillis();  //登录时记录当前时间
+        this.registrationTime = now;
+        this.lastLoginTime = now;  //登录时记录当前时间
         this.totalPlayTime = 0;
     }
 
@@ -79,8 +84,11 @@ public class PlayerData {
 
 
 
+    public long getRegistrationTime() { return registrationTime; }
+    public void setRegistrationTime(long registrationTime) { this.registrationTime = registrationTime; }
     public long getLastLoginTime() { return lastLoginTime; }
     public void setLastLoginTime(long time) { this.lastLoginTime = time; }
     public long getTotalPlayTime() { return totalPlayTime; }
+    public void setTotalPlayTime(long totalPlayTime) { this.totalPlayTime = totalPlayTime; }
     public void addPlayTime(long time) { this.totalPlayTime += time; }
 }

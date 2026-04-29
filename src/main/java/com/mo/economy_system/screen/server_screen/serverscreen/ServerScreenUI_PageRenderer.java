@@ -426,19 +426,22 @@ public class ServerScreenUI_PageRenderer {
         float virtualMouseX = mouseX / uiScale;
         float virtualMouseY = mouseY / uiScale;
 
-        int relativeMouseX = (int) (virtualMouseX - centerCenterX);
-        int relativeMouseY = (int) ((virtualMouseY - modelFootY * 0.4) * 0.5);
+        int renderFootY = modelFootY + offsetY;
+        int halfWidth = Math.max(18, modelSize);
+        int topPadding = Math.max(12, modelSize / 2);
+        int bottomPadding = Math.max(28, modelSize);
+        int modelHeight = Math.max(72, (int) (modelSize * 2.9F));
 
         InventoryScreen.renderEntityInInventoryFollowsMouse(
             guiGraphics,
-            centerCenterX - modelSize,
-            modelFootY - modelSize * 2,
-            centerCenterX + modelSize,
-            modelFootY,
+            centerCenterX - halfWidth,
+            renderFootY - modelHeight - topPadding,
+            centerCenterX + halfWidth,
+            renderFootY + bottomPadding,
             modelSize,
             0.0625F,
-            -relativeMouseX,
-            -relativeMouseY,
+            virtualMouseX,
+            virtualMouseY,
             player
         );
     }

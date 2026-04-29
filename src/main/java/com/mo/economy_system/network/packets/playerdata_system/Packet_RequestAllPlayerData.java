@@ -72,7 +72,10 @@ public class Packet_RequestAllPlayerData implements net.minecraft.network.protoc
                             data.getTitle().getTitleName(),
                             data.getLevel(),
                             data.getCurrentExperience(), // 添加经验
-                            lastOnlineTime
+                            lastOnlineTime,
+                            data.getRegistrationTime() > 0 ? data.getRegistrationTime() : data.getLastLoginTime(),
+                            data.getLastLoginTime(),
+                            data.getTotalPlayTime()
                     );
                     EconomySystem_NetworkManager.sendToClient(
                             requester,
