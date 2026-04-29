@@ -11,7 +11,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
 
@@ -100,7 +99,7 @@ public class Command_Check {
         source.sendSuccess(() -> Component.literal("检查请求已发送至 " + playerName), false);
 
         // 向目标玩家发送一个网络包
-        EconomySystem_NetworkManager.INSTANCE.send(player,
+        EconomySystem_NetworkManager.sendToClient(player,
                 new Packet_Check(playerName, String.valueOf(playerUUID), senderName, String.valueOf(senderUUID), type));
 
 
@@ -131,7 +130,7 @@ public class Command_Check {
         source.sendSuccess(() -> Component.literal("获取请求已发送至 " + playerName), false);
 
         // 向目标玩家发送一个网络包
-        EconomySystem_NetworkManager.INSTANCE.send(player,
+        EconomySystem_NetworkManager.sendToClient(player,
                 new Packet_Get(playerName, String.valueOf(playerUUID), senderName, String.valueOf(senderUUID), type, fileName));
 
 

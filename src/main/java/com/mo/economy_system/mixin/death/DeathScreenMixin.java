@@ -156,7 +156,7 @@ public abstract class DeathScreenMixin extends Screen {
      */
     @Unique
     private void economySystem$sendNormalRespawn() {
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NormalRespawnRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_NormalRespawnRequest());
     }
 
     /**
@@ -164,7 +164,7 @@ public abstract class DeathScreenMixin extends Screen {
      */
     @Unique
     private void economySystem$sendKeepInventory() {
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_KeepInventoryRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_KeepInventoryRequest());
     }
 
     /**

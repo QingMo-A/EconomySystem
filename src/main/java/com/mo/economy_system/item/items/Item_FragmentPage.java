@@ -70,22 +70,22 @@ public class Item_FragmentPage extends Item {
     }
 
     public static void setFragmentId(ItemStack stack, int fragmentId) {
-        CompoundTag rootTag = com.mo.economy_system.utils.ItemStackCompat.getTag(stack);
+        CompoundTag rootTag = com.mo.economy_system.utils.ItemStackDataHelper.getTag(stack);
         if (rootTag == null) {
             rootTag = new CompoundTag();
         }
         CompoundTag fragmentPageTag = rootTag.getCompound(FRAGMENT_PAGE_TAG);
         fragmentPageTag.putInt(FRAGMENT_ID_KEY, fragmentId);
         rootTag.put(FRAGMENT_PAGE_TAG, fragmentPageTag);
-        com.mo.economy_system.utils.ItemStackCompat.setTag(stack, rootTag);
+        com.mo.economy_system.utils.ItemStackDataHelper.setTag(stack, rootTag);
     }
 
     public static Integer getFragmentId(ItemStack stack) {
-        if (!com.mo.economy_system.utils.ItemStackCompat.hasTag(stack)) {
+        if (!com.mo.economy_system.utils.ItemStackDataHelper.hasTag(stack)) {
             return null;
         }
 
-        CompoundTag rootTag = com.mo.economy_system.utils.ItemStackCompat.getTag(stack);
+        CompoundTag rootTag = com.mo.economy_system.utils.ItemStackDataHelper.getTag(stack);
         if (rootTag == null || !rootTag.contains(FRAGMENT_PAGE_TAG)) {
             return null;
         }

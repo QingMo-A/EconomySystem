@@ -285,7 +285,7 @@ public class Screen_BuyItem extends Screen {
             return;
         }
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(
+        EconomySystem_NetworkManager.sendToServer(
                 new Packet_ShopBuyItem(shopItem.getItemId(), shopItem.getNbt(), shopItem.getCurrentPrice(), count)
         );
 

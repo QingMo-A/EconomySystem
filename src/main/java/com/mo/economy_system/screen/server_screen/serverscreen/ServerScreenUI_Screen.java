@@ -196,11 +196,11 @@ public class ServerScreenUI_Screen extends Screen {
         // 计算缩放比例
         calculateVirtualSize();
         // 请求领地数据
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_TerritoryDataRequest());
         // 请求统计数据（群系 + 配方）
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RequestPlayerStats());
+        EconomySystem_NetworkManager.sendToServer(new Packet_RequestPlayerStats());
         // 请求公告数据（用于更新感叹号状态）
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NoticeListRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_NoticeListRequest());
     }
 
     /**
@@ -1110,7 +1110,7 @@ public class ServerScreenUI_Screen extends Screen {
                             if (virtualMouseX >= btnX) {
                                 if (!((com.mo.economy_system.core.task_system.TaskPlayerData) task).isClientPlayerFinished()) {
                                     // 发送完成任务请求
-                                    EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                                    EconomySystem_NetworkManager.sendToServer(
                                         new com.mo.economy_system.network.packets.task_system.Packet_SyncCompleteTask(taskId, false)
                                     );
                                     return true;
@@ -1139,7 +1139,7 @@ public class ServerScreenUI_Screen extends Screen {
                 break;
             case 2: // 梦屿广播
                 // 请求公告列表
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NoticeListRequest());
+                EconomySystem_NetworkManager.sendToServer(new Packet_NoticeListRequest());
                 break;
             case 3: // 故事进展
                 // TODO: 打开故事界面
@@ -1259,7 +1259,7 @@ public class ServerScreenUI_Screen extends Screen {
      */
     private void openNoticeDetail(NoticeData notice) {
         // 发送标记已读数据包
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarkNoticeReadRequest(notice.getNoticeId()));
+        EconomySystem_NetworkManager.sendToServer(new Packet_MarkNoticeReadRequest(notice.getNoticeId()));
         // 更新本地已读状态
         cachedReadNoticeIds.add(notice.getNoticeId());
 

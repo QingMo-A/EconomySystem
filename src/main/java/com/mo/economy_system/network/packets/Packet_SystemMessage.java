@@ -7,14 +7,20 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import java.util.function.Supplier;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * 通用系统消息数据包 - 将所有系统消息显示在右上角
  */
-public class Packet_SystemMessage {
+public class Packet_SystemMessage implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SystemMessage> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "packet_system_message"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SystemMessage> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SystemMessage.encode(packet, buf), Packet_SystemMessage::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final Component message;
     private final int borderColor; // 边框颜色
 
@@ -39,21 +45,19 @@ public class Packet_SystemMessage {
         return new Packet_SystemMessage(message, borderColor);
     }
 
-    public static void handle(Packet_SystemMessage packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SystemMessage packet, IPayloadContext context) {
         final Component safeMessage = packet.message;
         final int safeColor = packet.borderColor;
 
         context.enqueueWork(() -> processOnMainThread(safeMessage, safeColor));
-        context.setPacketHandled(true);
     }
 
     private static void processOnMainThread(Component message, int borderColor) {
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(message, borderColor));
+        new ClientRunnable(message, borderColor).run();
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ClientRunnable implements DistExecutor.SafeRunnable {
+    private static class ClientRunnable implements Runnable {
         private final Component message;
         private final int borderColor;
 

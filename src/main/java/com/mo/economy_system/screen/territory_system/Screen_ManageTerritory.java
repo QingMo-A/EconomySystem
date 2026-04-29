@@ -250,7 +250,7 @@ public class Screen_ManageTerritory extends Screen {
 
             UUID targetUuid = playerInfo.getUuid();
             kickButtons.add(new ButtonArea(kickX, kickY, KICK_BTN_WIDTH, ACTION_BTN_HEIGHT, () -> {
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemovePlayer(territory.getTerritoryID(), targetUuid));
+                EconomySystem_NetworkManager.sendToServer(new Packet_RemovePlayer(territory.getTerritoryID(), targetUuid));
                 if (this.minecraft != null) {
                     this.minecraft.setScreen(new Screen_Territory());
                 }
@@ -409,7 +409,7 @@ public class Screen_ManageTerritory extends Screen {
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_RESIZE_TERRITORY, actionPrimaryStyle, () -> {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ModifyMode(territory.getTerritoryID()));
+            EconomySystem_NetworkManager.sendToServer(new Packet_ModifyMode(territory.getTerritoryID()));
             if (this.minecraft != null) {
                 this.minecraft.setScreen(null);
             }
@@ -428,7 +428,7 @@ public class Screen_ManageTerritory extends Screen {
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY, actionDangerStyle, () -> {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveTerritory(territory.getTerritoryID()));
+            EconomySystem_NetworkManager.sendToServer(new Packet_RemoveTerritory(territory.getTerritoryID()));
             if (this.minecraft != null) {
                 this.minecraft.setScreen(null);
             }

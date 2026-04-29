@@ -1,6 +1,6 @@
 package com.mo.economy_system.core.economy_system.delivery_box;
 
-import com.mo.economy_system.utils.ItemStackCompat;
+import com.mo.economy_system.utils.ItemStackDataHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 
@@ -26,7 +26,7 @@ public class DeliveryItem {
         tag.putString("itemID", itemID);
 
         // 保存物品
-        tag.put("itemStack", ItemStackCompat.saveSimple(itemStack));
+        tag.put("itemStack", ItemStackDataHelper.saveSimple(itemStack));
 
         tag.putString("source", source);
 
@@ -37,7 +37,7 @@ public class DeliveryItem {
     public static DeliveryItem fromNBT(CompoundTag tag) {
         UUID dataID = tag.getUUID("dataID");
         String itemID = tag.getString("itemID");
-        ItemStack itemStack = ItemStackCompat.loadSimple(tag.getCompound("itemStack"));
+        ItemStack itemStack = ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"));
         String source = tag.getString("source");
 
         return new DeliveryItem(dataID, itemID, itemStack, source);

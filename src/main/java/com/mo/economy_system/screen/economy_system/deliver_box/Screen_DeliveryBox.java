@@ -93,7 +93,7 @@ public class Screen_DeliveryBox extends Screen {
 
     public Screen_DeliveryBox() {
         super(Component.translatable(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY));
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxDataRequest());
     }
 
     public void updateDeliveryItems(List<DeliveryItem> items) {
@@ -430,7 +430,7 @@ public class Screen_DeliveryBox extends Screen {
                     virtualMouseY >= claimBtnY && virtualMouseY <= claimBtnY + CLAIM_BTN_HEIGHT) {
 
                     DeliveryItem item = filteredItems.get(cardArea.itemIndex());
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxClaimItem(item.getDataID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxClaimItem(item.getDataID()));
                     return true;
                 }
             }

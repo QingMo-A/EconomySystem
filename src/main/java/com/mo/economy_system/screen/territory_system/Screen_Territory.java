@@ -86,7 +86,7 @@ public class Screen_Territory extends Screen {
 
     public Screen_Territory() {
         super(Component.translatable(Util_MessageKeys.TERRITORY_TITLE_KEY));
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_TerritoryDataRequest());
     }
 
     public void updateTerritoryData(List<Territory> owned, List<Territory> authorized) {
@@ -438,7 +438,7 @@ public class Screen_Territory extends Screen {
                 Territory territory = filteredTerritories.get(btnArea.territoryIndex());
 
                 if ("teleport".equals(btnArea.actionType())) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
                 } else if ("manage".equals(btnArea.actionType())) {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(new Screen_ManageTerritory(territory));

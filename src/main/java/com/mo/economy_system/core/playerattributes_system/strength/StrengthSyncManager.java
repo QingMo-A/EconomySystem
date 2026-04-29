@@ -5,7 +5,6 @@ import com.mo.economy_system.core.playerattributes_system.PlayerAttributesDataMa
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 服务端体力同步工具类（主动发送同步包给客户端）
@@ -27,10 +26,9 @@ public class StrengthSyncManager {
         boolean canSprint = currentStrength >= PlayerStrengthManager.MIN_RESPRINT_STRENGTH;
 
         // 3. 发送同步包（服务端→客户端）
-        EconomySystem_NetworkManager.INSTANCE.sendTo(
+        EconomySystem_NetworkManager.sendToClient(
                 new Packet_SyncStrengthData(currentStrength, maxStrength, canSprint),
-                serverPlayer,
-                NetworkDirection.PLAY_TO_CLIENT
+                serverPlayer
         );
 
         // 可选：打印日志，确认包已发送

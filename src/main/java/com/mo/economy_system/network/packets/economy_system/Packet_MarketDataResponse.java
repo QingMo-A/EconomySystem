@@ -5,13 +5,20 @@ import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_MarketDataResponse {
+public class Packet_MarketDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_MarketDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_market_data_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_MarketDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_MarketDataResponse.encode(packet, buf), Packet_MarketDataResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<MarketItem> items;
 
     public Packet_MarketDataResponse(List<MarketItem> items) {
@@ -34,8 +41,7 @@ public class Packet_MarketDataResponse {
         return new Packet_MarketDataResponse(items);
     }
 
-    public static void handle(Packet_MarketDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_MarketDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // 获取当前屏幕实例并更新市场商品
             if (Minecraft.getInstance().screen instanceof Screen_Market screenMarket) {
@@ -44,7 +50,6 @@ public class Packet_MarketDataResponse {
                 screen.updateMarketItems(msg.items);
             }
         });
-        context.setPacketHandled(true);
     }
 }
 

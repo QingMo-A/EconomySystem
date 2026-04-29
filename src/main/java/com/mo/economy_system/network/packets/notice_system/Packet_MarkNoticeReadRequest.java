@@ -3,14 +3,21 @@ package com.mo.economy_system.network.packets.notice_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 标记公告为已请求数据包（客户端 -> 服务端）
  */
-public class Packet_MarkNoticeReadRequest {
+public class Packet_MarkNoticeReadRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_MarkNoticeReadRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "notice_system/packet_mark_notice_read_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_MarkNoticeReadRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_MarkNoticeReadRequest.encode(packet, buf), Packet_MarkNoticeReadRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final int noticeId;
 
@@ -27,19 +34,14 @@ public class Packet_MarkNoticeReadRequest {
         return new Packet_MarkNoticeReadRequest(noticeId);
     }
 
-    public static void handle(Packet_MarkNoticeReadRequest msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_MarkNoticeReadRequest msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // 只在服务端处理
-            if (context.getDirection().getReceptionSide().isServer()) {
-                handleServer(msg, context);
-            }
+            handleServer(msg, context);
         });
-        context.setPacketHandled(true);
     }
 
-    private static void handleServer(Packet_MarkNoticeReadRequest msg, NetworkEvent.Context context) {
-        var serverPlayer = context.getSender();
+    private static void handleServer(Packet_MarkNoticeReadRequest msg, IPayloadContext context) {
+        var serverPlayer = context.player() instanceof net.minecraft.server.level.ServerPlayer player ? player : null;
         if (serverPlayer == null) {
             EconomySystem.LOGGER.warn("Packet_MarkNoticeReadRequest: serverPlayer is null");
             return;

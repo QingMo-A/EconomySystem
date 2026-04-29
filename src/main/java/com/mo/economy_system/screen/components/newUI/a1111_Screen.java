@@ -87,18 +87,18 @@ public class a1111_Screen extends EconomySystem_Screen {
 
     public a1111_Screen() {
         super(Component.literal("Test UI Screen"));
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
-        // EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        // EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
     }
 
     public a1111_Screen(String startPage) {
         super(Component.literal("Test UI Screen"));
         setStartPage(startPage);
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
         if (PAGE_ID_STORE.equals(startPage)) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopDataRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_ShopDataRequest());
         } else if (PAGE_ID_MARKET.equals(startPage)) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
         }
     }
 
@@ -443,7 +443,7 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_HOME;
         this.currentPage = PAGE_ID_HOME;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
     }
 
     private void buildStorePage() {
@@ -451,8 +451,8 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_STORE;
         this.currentPage = PAGE_ID_STORE;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_ShopDataRequest());
     }
 
     private void buildMarketPage() {
@@ -460,8 +460,8 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_MARKET;
         this.currentPage = PAGE_ID_MARKET;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
 
         // updateMarketItems();
     }
@@ -471,8 +471,8 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_DELIVERY_BOX;
         this.currentPage = PAGE_ID_DELIVERY_BOX;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliveryBoxDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxDataRequest());
     }
 
     private void buildTerritoriesPage() {
@@ -480,8 +480,8 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_TERRITORIES;
         this.currentPage = PAGE_ID_TERRITORIES;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_TerritoryDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_TerritoryDataRequest());
     }
 
     private void buildAboutPage() {
@@ -489,7 +489,7 @@ public class a1111_Screen extends EconomySystem_Screen {
         this.currentTitle = PAGE_NAME_ABOUT;
         this.currentPage = PAGE_ID_ABOUT;
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
     }
 
     private HBoxWidget buildItemRow(ItemStack stack, int rowHeight, int rowWidth, List<Component> tooltipLines) {

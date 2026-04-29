@@ -9,17 +9,23 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 死亡屏幕数据包
  * 服务端 → 客户端
  * 发送当前复活点数、消耗信息和死亡位置，用于显示自定义死亡屏幕
  */
-public class Packet_DeathScreenData {
+public class Packet_DeathScreenData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_DeathScreenData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_death_screen_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_DeathScreenData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_DeathScreenData.encode(packet, buf), Packet_DeathScreenData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final float respawnPoint;
     private final float normalCost;
@@ -79,12 +85,10 @@ public class Packet_DeathScreenData {
     /**
      * 处理（客户端）
      */
-    public static void handle(Packet_DeathScreenData packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_DeathScreenData packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandler.handle(packet));
+            ClientHandler.handle(packet);
         });
-        context.setPacketHandled(true);
     }
 
     /**

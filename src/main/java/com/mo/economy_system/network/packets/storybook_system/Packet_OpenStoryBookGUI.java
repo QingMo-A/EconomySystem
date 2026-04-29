@@ -7,13 +7,20 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLLoader;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_OpenStoryBookGUI {
+public class Packet_OpenStoryBookGUI implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_OpenStoryBookGUI> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "storybook_system/packet_open_story_book_gui"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_OpenStoryBookGUI> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_OpenStoryBookGUI.encode(packet, buf), Packet_OpenStoryBookGUI::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<StoryBookEntryViewData> entries;
 
     public Packet_OpenStoryBookGUI(List<StoryBookEntryViewData> entries) {
@@ -52,12 +59,10 @@ public class Packet_OpenStoryBookGUI {
         return new Packet_OpenStoryBookGUI(entries);
     }
 
-    public static void handle(Packet_OpenStoryBookGUI packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_OpenStoryBookGUI packet, IPayloadContext context) {
         if (FMLLoader.getDist().isClient()) {
             context.enqueueWork(() -> handleClient(packet));
         }
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

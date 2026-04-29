@@ -6,11 +6,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLLoader;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_SyncWorldWrapConfig {
+public class Packet_SyncWorldWrapConfig implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncWorldWrapConfig> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "world_wrap_system/packet_sync_world_wrap_config"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncWorldWrapConfig> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncWorldWrapConfig.encode(packet, buf), Packet_SyncWorldWrapConfig::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final boolean enabled;
     private final String dimension;
     private final double centerX;
@@ -61,12 +68,10 @@ public class Packet_SyncWorldWrapConfig {
         );
     }
 
-    public static void handle(Packet_SyncWorldWrapConfig packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SyncWorldWrapConfig packet, IPayloadContext context) {
         if (FMLLoader.getDist().isClient()) {
             context.enqueueWork(() -> handleClient(packet));
         }
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

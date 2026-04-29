@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
 /**
  * ChunkPacket 用于分块传输大文件或大字符串。
@@ -24,7 +23,15 @@ import java.util.function.Supplier;
  * - totalChunks: 总块数
  * - chunkData: 当前块的 Base64 文本或其他字符串数据
  */
-public class Packet_ChunkResponse {
+public class Packet_ChunkResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ChunkResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_chunk_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ChunkResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ChunkResponse.encode(packet, buf), Packet_ChunkResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     /**
      * 用于缓存所有正在接收的分块。
      * key = fileId (String)
@@ -88,8 +95,7 @@ public class Packet_ChunkResponse {
     }
 
     // 处理
-    public static void handle(Packet_ChunkResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_ChunkResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer localPlayer = mc.player;
@@ -140,7 +146,6 @@ public class Packet_ChunkResponse {
                 ACCUMULATOR_MAP.remove(msg.fileId);
             }
         });
-        context.setPacketHandled(true);
     }
 
     /**

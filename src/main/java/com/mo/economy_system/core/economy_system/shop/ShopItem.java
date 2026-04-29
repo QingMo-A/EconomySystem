@@ -99,7 +99,7 @@ public class ShopItem {
 
         // 应用NBT
         if (userNbt != null) {
-            com.mo.economy_system.utils.ItemStackCompat.setTag(itemStack, userNbt);
+            com.mo.economy_system.utils.ItemStackDataHelper.setTag(itemStack, userNbt);
         }
 
         return itemStack;

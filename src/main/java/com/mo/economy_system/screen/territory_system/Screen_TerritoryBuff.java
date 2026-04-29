@@ -507,17 +507,17 @@ public class Screen_TerritoryBuff extends Screen {
         switch (actionType) {
             case "unlock" -> {
                 if (canAffordUpgrade(buff, player)) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                    EconomySystem_NetworkManager.sendToServer(
                         new Packet_UnlockTerritoryBuff(territory.getTerritoryID(), buff.getId()));
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                    EconomySystem_NetworkManager.sendToServer(
                         new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
                 }
             }
             case "upgrade" -> {
                 if (canAffordUpgrade(buff, player)) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                    EconomySystem_NetworkManager.sendToServer(
                         new Packet_UpgradeTerritoryBuff(territory.getTerritoryID(), buff.getId()));
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(
+                    EconomySystem_NetworkManager.sendToServer(
                         new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
                 }
             }

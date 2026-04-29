@@ -4,13 +4,19 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_GetResultRequest {
+public class Packet_GetResultRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_GetResultRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_get_result_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_GetResultRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_GetResultRequest.encode(packet, buf), Packet_GetResultRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final String playerName;
     private final String playerUUID;
     private final String senderName;
@@ -43,14 +49,12 @@ public class Packet_GetResultRequest {
         return new Packet_GetResultRequest(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(Packet_GetResultRequest msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_GetResultRequest msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             MinecraftServer server = player.server;
             ServerPlayer target = server.getPlayerList().getPlayer(UUID.fromString(msg.senderUUID));
-            EconomySystem_NetworkManager.INSTANCE.send(target, new Packet_GetResultResponse(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, msg.base64));
+            EconomySystem_NetworkManager.sendToClient(target, new Packet_GetResultResponse(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, msg.base64));
         });
-        contextSupplier.get().setPacketHandled(true);
     }
 }

@@ -277,7 +277,7 @@ public class Screen_CreateSalesOrder extends Screen {
             System.currentTimeMillis()
         );
 
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_CreateSalesOrder(salesOrder));
+        EconomySystem_NetworkManager.sendToServer(new Packet_CreateSalesOrder(salesOrder));
         if (this.minecraft != null) {
             this.minecraft.setScreen(new Screen_Market());
         }

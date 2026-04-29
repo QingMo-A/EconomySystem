@@ -8,11 +8,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_CreateSalesOrder {
+public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_CreateSalesOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/sales_order/packet_create_sales_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_CreateSalesOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_CreateSalesOrder.encode(packet, buf), Packet_CreateSalesOrder::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final MarketItem marketItem;
 
@@ -28,10 +35,9 @@ public class Packet_CreateSalesOrder {
         return new Packet_CreateSalesOrder(MarketItem.fromNBT(buf.readNbt()));
     }
 
-    public static void handle(Packet_CreateSalesOrder msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_CreateSalesOrder msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender(); // 获取发送上架请求的玩家
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null; // 获取发送上架请求的玩家
 
             if (player == null) return;
 
@@ -69,7 +75,6 @@ public class Packet_CreateSalesOrder {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.LIST_ITEM_TAX_PAYMENT_FAILED_MESSAGE_KEY, tax));
             }
         });
-        context.setPacketHandled(true);
     }
 
 }

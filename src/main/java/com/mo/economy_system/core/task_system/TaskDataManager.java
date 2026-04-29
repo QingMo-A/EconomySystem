@@ -13,7 +13,6 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.io.File;
 import java.io.FileReader;
@@ -147,7 +146,7 @@ public class TaskDataManager {
                     TASK_PLAYER_DATA_CACHE,
                     StoryStageManager.getAllStages()
             );
-            EconomySystem_NetworkManager.INSTANCE.send(
+            EconomySystem_NetworkManager.sendToClient(
                     player,
                     packet
             );

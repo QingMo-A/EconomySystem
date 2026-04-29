@@ -1,6 +1,6 @@
 package com.mo.economy_system.core.economy_system.market;
 
-import com.mo.economy_system.utils.ItemStackCompat;
+import com.mo.economy_system.utils.ItemStackDataHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
@@ -23,7 +23,7 @@ public class DemandOrder extends MarketItem {
     public static DemandOrder fromNBT(CompoundTag tag) {
         UUID tradeID = tag.getUUID("tradeID");
         String itemID = tag.getString("itemID");
-        ItemStack itemStack = ItemStackCompat.loadSimple(tag.getCompound("itemStack"));
+        ItemStack itemStack = ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"));
         int basePrice = tag.getInt("basePrice");
         String sellerName = tag.getString("sellerName");
         UUID sellerID = tag.getUUID("sellerID");

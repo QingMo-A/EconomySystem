@@ -8,8 +8,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
-public final class ItemStackCompat {
-    private ItemStackCompat() {
+public final class ItemStackDataHelper {
+    private ItemStackDataHelper() {
     }
 
     public static boolean hasTag(ItemStack stack) {

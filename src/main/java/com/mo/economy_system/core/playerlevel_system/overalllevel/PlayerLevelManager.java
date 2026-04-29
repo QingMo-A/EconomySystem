@@ -157,10 +157,9 @@ public class PlayerLevelManager {
      */
     private static void sendLevelUpNotify(ServerPlayer serverPlayer, int newLevel) {
         if (serverPlayer == null) return;
-        EconomySystem_NetworkManager.INSTANCE.sendTo(
+        EconomySystem_NetworkManager.sendToClient(
                 new Packet_LevelUpNotify(newLevel),
-                serverPlayer,
-                com.mo.economy_system.compat.network.NetworkDirection.PLAY_TO_CLIENT
+                serverPlayer
         );
     }
 

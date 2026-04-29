@@ -6,12 +6,19 @@ import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.*;
-import java.util.function.Supplier;
 
-public class Packet_BalanceResponse {
+public class Packet_BalanceResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_BalanceResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_balance_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_BalanceResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_BalanceResponse.encode(packet, buf), Packet_BalanceResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final int balance;
     private final List<Map.Entry<String, Integer>> accounts; // 新增字段
 
@@ -51,8 +58,7 @@ public class Packet_BalanceResponse {
     }
 
 
-    public static void handle(Packet_BalanceResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_BalanceResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // 同步到ClientCacheManager
             Minecraft mc = Minecraft.getInstance();
@@ -66,7 +72,6 @@ public class Packet_BalanceResponse {
                 screenA.updateBalance(msg.balance, msg.accounts); // 更新界面余额
             }
         });
-        context.setPacketHandled(true);
     }
 
 

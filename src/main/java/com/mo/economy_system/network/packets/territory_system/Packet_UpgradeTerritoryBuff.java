@@ -10,13 +10,20 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_UpgradeTerritoryBuff {
+public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_UpgradeTerritoryBuff> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_upgrade_territory_buff"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_UpgradeTerritoryBuff> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_UpgradeTerritoryBuff.encode(packet, buf), Packet_UpgradeTerritoryBuff::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID territoryID;
     private final String buffID;
 
@@ -37,10 +44,9 @@ public class Packet_UpgradeTerritoryBuff {
     }
 
     // **处理服务器逻辑**
-    public static void handle(Packet_UpgradeTerritoryBuff msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_UpgradeTerritoryBuff msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             EconomySavedData economySavedData = EconomySavedData.getInstance(player.serverLevel());
@@ -109,8 +115,6 @@ public class Packet_UpgradeTerritoryBuff {
             TerritoryManager.upgradeBuff(territory.getTerritoryID(), msg.buffID);
             // TerritoryManager.markDirty();
             player.sendSystemMessage(Component.literal("你成功为你的领地升级了增益: " + buff.getDisplayText() + " 到等级 " + buff.getLevel() + "!"));
-
-            contextSupplier.get().setPacketHandled(true);
         });
     }
 

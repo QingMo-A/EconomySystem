@@ -58,7 +58,7 @@ public class Screen_InvitePlayer extends Screen {
     public Screen_InvitePlayer(Territory territory) {
         super(Component.translatable(Util_MessageKeys.INVITE_TITLE_KEY));
         this.territory = territory;
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ServerPlayerListRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_ServerPlayerListRequest());
         inviteStyle = createButtonStyle(CardRenderer.THEME_TERRITORY);
         backStyle = createButtonStyle(CardRenderer.THEME_ABOUT);
     }
@@ -254,7 +254,7 @@ public class Screen_InvitePlayer extends Screen {
         }
         String playerName = playerNameField == null ? "" : playerNameField.getValue();
         if (!playerName.isEmpty()) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(
+            EconomySystem_NetworkManager.sendToServer(
                 new Packet_InvitePlayer(territory.getTerritoryID(), playerName));
             this.minecraft.setScreen(null);
         } else {

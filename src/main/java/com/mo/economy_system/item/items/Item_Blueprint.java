@@ -130,21 +130,21 @@ public class Item_Blueprint extends Item {
         ItemStack stack = new ItemStack(EconomySystem_Items.BLUEPRINT_ITEM.get());
         CompoundTag tag = new CompoundTag();
         tag.putString("unlocks_item", itemId);
-        com.mo.economy_system.utils.ItemStackCompat.setTag(stack, tag);
+        com.mo.economy_system.utils.ItemStackDataHelper.setTag(stack, tag);
         return stack;
     }
 
     // 获取蓝图中要解锁的物品ID
     public static String getUnlockedItemId(ItemStack stack) {
-        if (com.mo.economy_system.utils.ItemStackCompat.hasTag(stack) && com.mo.economy_system.utils.ItemStackCompat.getTag(stack).contains("unlocks_item")) {
-            return com.mo.economy_system.utils.ItemStackCompat.getTag(stack).getString("unlocks_item");
+        if (com.mo.economy_system.utils.ItemStackDataHelper.hasTag(stack) && com.mo.economy_system.utils.ItemStackDataHelper.getTag(stack).contains("unlocks_item")) {
+            return com.mo.economy_system.utils.ItemStackDataHelper.getTag(stack).getString("unlocks_item");
         }
         return null;
     }
 
     // 设置要解锁的物品ID到蓝图中
     public static void setUnlockedItemId(ItemStack stack, String itemId) {
-        CompoundTag tag = com.mo.economy_system.utils.ItemStackCompat.getTag(stack);
+        CompoundTag tag = com.mo.economy_system.utils.ItemStackDataHelper.getTag(stack);
         if (tag == null) {
             tag = new CompoundTag();
         }
@@ -152,7 +152,7 @@ public class Item_Blueprint extends Item {
 
         // 可选：添加一些额外信息
         tag.putString("blueprint_name", "制作图纸");
-        com.mo.economy_system.utils.ItemStackCompat.setTag(stack, tag);
+        com.mo.economy_system.utils.ItemStackDataHelper.setTag(stack, tag);
         // tag.putInt("tier", getTierForItem(itemId));
     }
 

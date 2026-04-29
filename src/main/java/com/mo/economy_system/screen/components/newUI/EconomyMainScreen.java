@@ -268,13 +268,13 @@ public class EconomyMainScreen extends EconomySystem_Screen {
         // 根据页面请求数据
         switch (pageId) {
             case PAGE_HOME:
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+                EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
                 break;
             case PAGE_MARKET:
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+                EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
                 break;
             case PAGE_STORE:
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopDataRequest());
+                EconomySystem_NetworkManager.sendToServer(new Packet_ShopDataRequest());
                 break;
             // ... 其他页面
         }

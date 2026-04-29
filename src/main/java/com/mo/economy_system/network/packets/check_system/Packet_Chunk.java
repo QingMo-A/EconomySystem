@@ -4,15 +4,13 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
 /**
  * ChunkPacket 用于分块传输大文件或大字符串。
@@ -22,7 +20,15 @@ import java.util.function.Supplier;
  * - totalChunks: 总块数
  * - chunkData: 当前块的 Base64 文本或其他字符串数据
  */
-public class Packet_Chunk {
+public class Packet_Chunk implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Chunk> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_chunk"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Chunk> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Chunk.encode(packet, buf), Packet_Chunk::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     /**
      * 用于缓存所有正在接收的分块。
      * key = fileId (String)
@@ -86,10 +92,9 @@ public class Packet_Chunk {
     }
 
     // 处理
-    public static void handle(Packet_Chunk msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_Chunk msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             MinecraftServer server = player.server;
             ServerPlayer target = server.getPlayerList().getPlayer(UUID.fromString(msg.senderUUID));
             // 在服务器或者客户端都可执行分块接收逻辑。
@@ -119,13 +124,12 @@ public class Packet_Chunk {
                     String chunkData = fullData.substring(start, end);
 
                     // 发送 ChunkPacket
-                    EconomySystem_NetworkManager.INSTANCE.send(target, new Packet_ChunkResponse(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, uuid, i, totalChunks, chunkData));
+                    EconomySystem_NetworkManager.sendToClient(target, new Packet_ChunkResponse(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, uuid, i, totalChunks, chunkData));
                 }
 
                 ACCUMULATOR_MAP.remove(msg.fileId);
             }
         });
-        context.setPacketHandled(true);
     }
 
     /**

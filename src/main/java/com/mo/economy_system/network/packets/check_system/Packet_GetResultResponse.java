@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,9 +16,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
-public class Packet_GetResultResponse {
+public class Packet_GetResultResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_GetResultResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_get_result_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_GetResultResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_GetResultResponse.encode(packet, buf), Packet_GetResultResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final String playerName;
     private final String playerUUID;
@@ -52,8 +59,7 @@ public class Packet_GetResultResponse {
         return new Packet_GetResultResponse(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(Packet_GetResultResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_GetResultResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             executor.execute(() -> {
                 Minecraft mc = Minecraft.getInstance();
@@ -94,7 +100,6 @@ public class Packet_GetResultResponse {
 
             });
         });
-        contextSupplier.get().setPacketHandled(true);
     }
 
     private static String computeSHA256(Path path) throws IOException, NoSuchAlgorithmException {

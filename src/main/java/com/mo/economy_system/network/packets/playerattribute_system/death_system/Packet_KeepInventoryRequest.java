@@ -8,15 +8,22 @@ import com.mo.economy_system.core.playerattributes_system.death.DeathItemStorage
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 死亡不掉落请求包
  * 客户端点击"保留物品"按钮后发送到服务端
  */
-public class Packet_KeepInventoryRequest {
+public class Packet_KeepInventoryRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_KeepInventoryRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_keep_inventory_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_KeepInventoryRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_KeepInventoryRequest.encode(packet, buf), Packet_KeepInventoryRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public Packet_KeepInventoryRequest() {}
 
@@ -35,10 +42,9 @@ public class Packet_KeepInventoryRequest {
     /**
      * 处理（服务端）
      */
-    public static void handle(Packet_KeepInventoryRequest packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_KeepInventoryRequest packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             PlayerAttributesData data = PlayerAttributesDataManager.getPlayerAttributesData(player.getUUID());
@@ -73,7 +79,6 @@ public class Packet_KeepInventoryRequest {
             EconomySystem.LOGGER.info("玩家 {} 消耗 {} 复活点保留物品（剩余: {}）",
                     player.getScoreboardName(), cost, data.getRespawnPoint());
         });
-        context.setPacketHandled(true);
     }
 
     /**

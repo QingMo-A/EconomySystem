@@ -29,7 +29,7 @@ public class Util_Skull {
 
         // 将 "SkullOwner" 数据添加到 ItemStack 的 NBT
         tag.put("SkullOwner", skullOwnerTag);
-        com.mo.economy_system.utils.ItemStackCompat.setTag(playerHead, tag);
+        com.mo.economy_system.utils.ItemStackDataHelper.setTag(playerHead, tag);
 
         return playerHead;
     }

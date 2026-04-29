@@ -2,14 +2,21 @@ package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 独立的在线玩家数响应包（仅返回数量，轻量无依赖）
  */
-public class Packet_OnlinePlayerCountResponse {
+public class Packet_OnlinePlayerCountResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_OnlinePlayerCountResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "packet_online_player_count_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_OnlinePlayerCountResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_OnlinePlayerCountResponse.encode(packet, buf), Packet_OnlinePlayerCountResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final int playerCount; // 仅存储在线玩家数量
 
     // 构造方法：接收服务端传的玩家数
@@ -29,11 +36,9 @@ public class Packet_OnlinePlayerCountResponse {
     }
 
     // 客户端处理逻辑：直接更新UI的在线玩家数
-    public static void handle(Packet_OnlinePlayerCountResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_OnlinePlayerCountResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             ServerInformationDisplay.ONLINE_PLAYERS = msg.playerCount;
         });
-        context.setPacketHandled(true);
     }
 }

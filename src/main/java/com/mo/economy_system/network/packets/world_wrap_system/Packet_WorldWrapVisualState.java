@@ -5,11 +5,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLLoader;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_WorldWrapVisualState {
+public class Packet_WorldWrapVisualState implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_WorldWrapVisualState> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "world_wrap_system/packet_world_wrap_visual_state"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_WorldWrapVisualState> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_WorldWrapVisualState.encode(packet, buf), Packet_WorldWrapVisualState::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final boolean showBoundaryWarning;
     private final boolean playTransition;
 
@@ -27,12 +34,10 @@ public class Packet_WorldWrapVisualState {
         return new Packet_WorldWrapVisualState(buf.readBoolean(), buf.readBoolean());
     }
 
-    public static void handle(Packet_WorldWrapVisualState packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_WorldWrapVisualState packet, IPayloadContext context) {
         if (FMLLoader.getDist().isClient()) {
             context.enqueueWork(() -> handleClient(packet));
         }
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

@@ -7,12 +7,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_Transfer {
+public class Packet_Transfer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Transfer> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_transfer"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Transfer> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Transfer.encode(packet, buf), Packet_Transfer::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final UUID targetUUID;
     private final int amount;
@@ -31,10 +38,9 @@ public class Packet_Transfer {
         return new Packet_Transfer(buf.readUUID(), buf.readInt());
     }
 
-    public static void handle(Packet_Transfer msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_Transfer msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer sender = context.getSender(); // 获取发送请求的玩家
+            ServerPlayer sender = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null; // 获取发送请求的玩家
             if (sender != null) {
                 ServerLevel serverLevel = sender.serverLevel(); // 使用 sender.serverLevel() 获取 ServerLevel
                 if (serverLevel != null) {
@@ -51,6 +57,5 @@ public class Packet_Transfer {
                 }
             }
         });
-        context.setPacketHandled(true);
     }
 }

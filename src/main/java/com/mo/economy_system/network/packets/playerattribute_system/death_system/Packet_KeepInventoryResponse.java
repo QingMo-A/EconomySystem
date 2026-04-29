@@ -5,15 +5,22 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 死亡不掉落响应包
  * 服务端返回操作结果给客户端
  */
-public class Packet_KeepInventoryResponse {
+public class Packet_KeepInventoryResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_KeepInventoryResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_keep_inventory_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_KeepInventoryResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_KeepInventoryResponse.encode(packet, buf), Packet_KeepInventoryResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final boolean success;
     private final float respawnPoint;
@@ -43,12 +50,10 @@ public class Packet_KeepInventoryResponse {
     /**
      * 处理（客户端）
      */
-    public static void handle(Packet_KeepInventoryResponse packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_KeepInventoryResponse packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             handleClient(packet);
         });
-        context.setPacketHandled(true);
     }
 
     private static class Handler {

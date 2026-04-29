@@ -6,16 +6,23 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 正常复活响应包
  * 服务端 → 客户端
  * 通知客户端是否可以执行复活
  */
-public class Packet_NormalRespawnResponse {
+public class Packet_NormalRespawnResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_NormalRespawnResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_normal_respawn_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_NormalRespawnResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_NormalRespawnResponse.encode(packet, buf), Packet_NormalRespawnResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final boolean success;
     private final float respawnPoint;
@@ -45,12 +52,10 @@ public class Packet_NormalRespawnResponse {
     /**
      * 处理（客户端）
      */
-    public static void handle(Packet_NormalRespawnResponse packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_NormalRespawnResponse packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             handleClient(packet);
         });
-        context.setPacketHandled(true);
     }
 
     private static void handleClient(Packet_NormalRespawnResponse packet) {

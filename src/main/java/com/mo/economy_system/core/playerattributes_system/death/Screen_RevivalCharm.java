@@ -337,7 +337,7 @@ public class Screen_RevivalCharm extends Screen {
     private void confirmRevival() {
         String name = playerName.trim();
         if (!name.isEmpty()) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RevivalRequest(name));
+            EconomySystem_NetworkManager.sendToServer(new Packet_RevivalRequest(name));
             this.minecraft.setScreen(null);
         } else {
             this.minecraft.player.sendSystemMessage(Component.literal("§c请输入玩家名称！"));

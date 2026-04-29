@@ -13,19 +13,26 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.UserBanList;
 import net.minecraft.world.InteractionHand;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * 复活请求数据包
  * 客户端发送到服务端，请求复活指定玩家
  */
-public class Packet_RevivalRequest {
+public class Packet_RevivalRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_RevivalRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_revival_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_RevivalRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_RevivalRequest.encode(packet, buf), Packet_RevivalRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final String playerName;
 
@@ -51,10 +58,9 @@ public class Packet_RevivalRequest {
     /**
      * 处理（服务端）
      */
-    public static void handle(Packet_RevivalRequest packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_RevivalRequest packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer sender = context.getSender();
+            ServerPlayer sender = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (sender == null) return;
 
             String targetName = packet.playerName;
@@ -175,7 +181,6 @@ public class Packet_RevivalRequest {
                 sender.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c解封失败！"));
             }
         });
-        context.setPacketHandled(true);
     }
 
     /**

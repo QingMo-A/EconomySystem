@@ -14,12 +14,19 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_TeleportToTerritory {
+public class Packet_TeleportToTerritory implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_TeleportToTerritory> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_teleport_to_territory"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_TeleportToTerritory> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_TeleportToTerritory.encode(packet, buf), Packet_TeleportToTerritory::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final UUID territoryID;
 
@@ -35,10 +42,9 @@ public class Packet_TeleportToTerritory {
         return new Packet_TeleportToTerritory(buf.readUUID());
     }
 
-    public static void handle(Packet_TeleportToTerritory msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_TeleportToTerritory msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             var territory = TerritoryManager.getTerritoryByID(msg.territoryID);
@@ -124,7 +130,6 @@ public class Packet_TeleportToTerritory {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.TELEPORT_NO_POTION));
             }
         });
-        context.setPacketHandled(true);
     }
 
 }

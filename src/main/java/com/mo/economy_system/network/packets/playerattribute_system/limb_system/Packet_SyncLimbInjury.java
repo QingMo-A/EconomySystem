@@ -5,16 +5,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 肢体受伤同步包（服务端→客户端）
  * 同步玩家受伤部位信息
  */
-public class Packet_SyncLimbInjury {
+public class Packet_SyncLimbInjury implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncLimbInjury> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/limb_system/packet_sync_limb_injury"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncLimbInjury> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncLimbInjury.encode(packet, buf), Packet_SyncLimbInjury::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final String limbTypeName;  // 受伤部位名称
     private final long injuryTime;      // 受伤时间戳
 
@@ -34,21 +40,19 @@ public class Packet_SyncLimbInjury {
         return new Packet_SyncLimbInjury(limbTypeName, injuryTime);
     }
 
-    public static void handle(Packet_SyncLimbInjury packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SyncLimbInjury packet, IPayloadContext context) {
         final String safeLimbTypeName = packet.limbTypeName;
         final long safeInjuryTime = packet.injuryTime;
 
         context.enqueueWork(() -> processOnMainThread(safeLimbTypeName, safeInjuryTime));
-        context.setPacketHandled(true);
     }
 
     private static void processOnMainThread(String limbTypeName, long injuryTime) {
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(limbTypeName, injuryTime));
+        new ClientRunnable(limbTypeName, injuryTime).run();
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ClientRunnable implements DistExecutor.SafeRunnable {
+    private static class ClientRunnable implements Runnable {
         private final String limbTypeName;
         private final long injuryTime;
 

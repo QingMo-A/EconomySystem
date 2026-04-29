@@ -4,16 +4,22 @@ import com.mo.economy_system.client.cache.ClientCacheManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * 复活点数同步包（服务端→客户端）
  */
-public class Packet_SyncRespawnPointData {
+public class Packet_SyncRespawnPointData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncRespawnPointData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_sync_respawn_point_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncRespawnPointData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncRespawnPointData.encode(packet, buf), Packet_SyncRespawnPointData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final float respawnPoint;
     private final boolean isInfected;
 
@@ -33,21 +39,19 @@ public class Packet_SyncRespawnPointData {
         return new Packet_SyncRespawnPointData(respawnPoint, isInfected);
     }
 
-    public static void handle(Packet_SyncRespawnPointData packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SyncRespawnPointData packet, IPayloadContext context) {
         final float safeRespawnPoint = packet.respawnPoint;
         final boolean safeIsInfected = packet.isInfected;
 
         context.enqueueWork(() -> processOnMainThread(safeRespawnPoint, safeIsInfected));
-        context.setPacketHandled(true);
     }
 
     private static void processOnMainThread(float respawnPoint, boolean isInfected) {
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(respawnPoint, isInfected));
+        new ClientRunnable(respawnPoint, isInfected).run();
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ClientRunnable implements DistExecutor.SafeRunnable {
+    private static class ClientRunnable implements Runnable {
         private final float respawnPoint;
         private final boolean isInfected;
 

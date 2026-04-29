@@ -462,7 +462,7 @@ public class Screen_CreateDemandOrder extends EconomySystem_Screen {
             );
 
             // 发送上架请求到服务端
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_CreateDemandOrder(marketItem));
+            EconomySystem_NetworkManager.sendToServer(new Packet_CreateDemandOrder(marketItem));
 
             this.minecraft.setScreen(new Screen_Market()); // 关闭界面
         }

@@ -2,14 +2,21 @@ package com.mo.economy_system.network.packets.tip_system;
 
 import com.mo.economy_system.screen.server_screen.tips.TipDisplayManager;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 服务端向客户端发送 Tip 信息的数据包
  */
-public class Packet_SendTipToClient {
+public class Packet_SendTipToClient implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SendTipToClient> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "tip_system/packet_send_tip_to_client"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SendTipToClient> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SendTipToClient.encode(packet, buf), Packet_SendTipToClient::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     // Tip 文本内容
     private final String tipText;
     // Tip 显示时长（毫秒）
@@ -35,13 +42,11 @@ public class Packet_SendTipToClient {
     }
 
     // 数据包处理逻辑（客户端执行）
-    public static void handle(Packet_SendTipToClient packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SendTipToClient packet, IPayloadContext context) {
         // 确保在客户端主线程执行 UI 渲染相关操作
         context.enqueueWork(() -> {
             // 调用 TipDisplayManager 添加 Tip 信息，自动渲染
             TipDisplayManager.addMessage(packet.tipText, packet.displayDuration);
         });
-        context.setPacketHandled(true);
     }
 }

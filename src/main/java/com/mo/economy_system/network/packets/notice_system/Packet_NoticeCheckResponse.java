@@ -5,15 +5,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 新公告提醒数据包（服务端 -> 客户端）
  * 玩家登录时，如果有新公告则发送此包提醒玩家
  */
-public class Packet_NoticeCheckResponse {
+public class Packet_NoticeCheckResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_NoticeCheckResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "notice_system/packet_notice_check_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_NoticeCheckResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_NoticeCheckResponse.encode(packet, buf), Packet_NoticeCheckResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final boolean hasNewNotice;
     private final int latestNoticeId;
@@ -38,15 +45,10 @@ public class Packet_NoticeCheckResponse {
         return new Packet_NoticeCheckResponse(hasNewNotice, latestNoticeId, latestNoticeTitle);
     }
 
-    public static void handle(Packet_NoticeCheckResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_NoticeCheckResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // 只在客户端处理
-            if (context.getDirection().getReceptionSide().isClient()) {
-                handleClient(msg);
-            }
+            handleClient(msg);
         });
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

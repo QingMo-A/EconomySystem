@@ -5,12 +5,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_SyncInfectionData {
+public class Packet_SyncInfectionData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncInfectionData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/infection_system/packet_sync_infection_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncInfectionData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncInfectionData.encode(packet, buf), Packet_SyncInfectionData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final float currentInfection;
 
     public Packet_SyncInfectionData(float currentInfection) {
@@ -26,20 +32,18 @@ public class Packet_SyncInfectionData {
         return new Packet_SyncInfectionData(current);
     }
 
-    public static void handle(Packet_SyncInfectionData packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SyncInfectionData packet, IPayloadContext context) {
         final float safeCurrentInfection = packet.currentInfection;
 
         context.enqueueWork(() -> processOnMainThread(safeCurrentInfection));
-        context.setPacketHandled(true);
     }
 
     private static void processOnMainThread(float currentInfection) {
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientRunnable(currentInfection));
+        new ClientRunnable(currentInfection).run();
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ClientRunnable implements DistExecutor.SafeRunnable {
+    private static class ClientRunnable implements Runnable {
         private final float currentInfection;
 
         public ClientRunnable(float currentInfection) {

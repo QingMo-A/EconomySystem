@@ -13,13 +13,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_SyncPlayerData {
+public class Packet_SyncPlayerData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncPlayerData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerdata_system/packet_sync_player_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncPlayerData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncPlayerData.encode(packet, buf), Packet_SyncPlayerData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID playerUUID;
     private final String playerName;
     private final boolean isOnline;
@@ -93,10 +99,8 @@ public class Packet_SyncPlayerData {
     }
 
     //处理逻辑，无客户端类引用
-    public static void handle(Packet_SyncPlayerData packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SyncPlayerData packet, IPayloadContext context) {
         // 标记已处理（服务器/客户端通用）
-        context.setPacketHandled(true);
 
         // 传递不可变参数，避免lambda捕获导致的类引用
         final UUID safeUUID = packet.playerUUID;
@@ -115,12 +119,12 @@ public class Packet_SyncPlayerData {
     //分发方法，无客户端类引用
     private static void processOnMainThread(UUID playerUUID, String playerName, boolean isOnline, String rankName, String titleName, int level, long experience, String onlineTime) {
         //用SafeRunnable隔离客户端逻辑，服务器端仅加载接口，不加载实现
-        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> new ClientSyncRunnable(playerUUID, playerName, isOnline, rankName, titleName, level, experience, onlineTime));
+        new ClientSyncRunnable(playerUUID, playerName, isOnline, rankName, titleName, level, experience, onlineTime).run();
     }
 
     //纯客户端逻辑（@OnlyIn标记，服务器完全不加载）=
     @OnlyIn(Dist.CLIENT)
-    private static class ClientSyncRunnable implements DistExecutor.SafeRunnable {
+    private static class ClientSyncRunnable implements Runnable {
         private final UUID playerUUID;
         private final String playerName;
         private final boolean isOnline;

@@ -130,7 +130,7 @@ public class Screen_Market extends Screen {
 
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
         topListStyle = createTopButtonStyle(CardRenderer.THEME_DELIVERY);
         topRequestStyle = createTopButtonStyle(CardRenderer.THEME_SHOP);
         actionBuyStyle = createActionButtonStyle(CardRenderer.THEME_MARKET);
@@ -762,7 +762,7 @@ public class Screen_Market extends Screen {
             }
             case "deliver" -> {
                 if (item instanceof DemandOrder demandOrder) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
                     refresh();
                 }
             }
@@ -777,7 +777,7 @@ public class Screen_Market extends Screen {
             }
             case "confirm" -> {
                 if (item instanceof DemandOrder demandOrder) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
                     refresh();
                 }
             }
@@ -785,7 +785,7 @@ public class Screen_Market extends Screen {
     }
 
     public void refresh() {
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
     }
 
     @Override

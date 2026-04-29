@@ -4,7 +4,6 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkDirection;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Collection;
@@ -38,7 +37,7 @@ public class TipPushHelper {
         }
         // 构建数据包并发送给指定玩家
         Packet_SendTipToClient tipPacket = new Packet_SendTipToClient(tipText, displayDuration);
-        EconomySystem_NetworkManager.INSTANCE.sendTo(tipPacket, targetPlayer, NetworkDirection.PLAY_TO_CLIENT);
+        EconomySystem_NetworkManager.sendToClient(tipPacket, targetPlayer);
 //        EconomySystem.LOGGER.info("已给玩家 {} 推送 Tip：{}", targetPlayer.getScoreboardName(), tipText);
     }
 
@@ -75,7 +74,7 @@ public class TipPushHelper {
         // 构建数据包并批量发送
         Packet_SendTipToClient tipPacket = new Packet_SendTipToClient(tipText, displayDuration);
         for (ServerPlayer player : onlinePlayers) {
-            EconomySystem_NetworkManager.INSTANCE.sendTo(tipPacket, player, NetworkDirection.PLAY_TO_CLIENT);
+            EconomySystem_NetworkManager.sendToClient(tipPacket, player);
         }
 //        EconomySystem.LOGGER.info("已给全服 {} 名玩家推送 Tip：{}", onlinePlayers.size(), tipText);
     }

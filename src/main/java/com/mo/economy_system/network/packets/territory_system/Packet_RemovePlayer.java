@@ -5,12 +5,19 @@ import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_RemovePlayer {
+public class Packet_RemovePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_RemovePlayer> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_remove_player"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_RemovePlayer> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_RemovePlayer.encode(packet, buf), Packet_RemovePlayer::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID territoryID;
     private final UUID playerUUID;
 
@@ -28,10 +35,9 @@ public class Packet_RemovePlayer {
         return new Packet_RemovePlayer(buf.readUUID(), buf.readUUID());
     }
 
-    public static void handle(Packet_RemovePlayer msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_RemovePlayer msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer sender = context.getSender();
+            ServerPlayer sender = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (sender == null) return;
 
             var territory = TerritoryManager.getTerritoryByID(msg.territoryID);
@@ -57,6 +63,5 @@ public class Packet_RemovePlayer {
 
             sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_PLAYER_REMOVED));
         });
-        context.setPacketHandled(true);
     }
 }

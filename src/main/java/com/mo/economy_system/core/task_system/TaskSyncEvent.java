@@ -27,7 +27,7 @@ public class TaskSyncEvent {
             );
 
             //向当前登录玩家发送数据包
-            EconomySystem_NetworkManager.INSTANCE.send(
+            EconomySystem_NetworkManager.sendToClient(
                     player,
                     syncPacket
             );

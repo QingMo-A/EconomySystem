@@ -5,12 +5,19 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLLoader;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 //服务端发送登录请求，传一个布尔型，如果是true是注册，false是登录
-public class Packet_PlayerLoginRequest {
+public class Packet_PlayerLoginRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_PlayerLoginRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "login_system/packet_player_login_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_PlayerLoginRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_PlayerLoginRequest.encode(packet, buf), Packet_PlayerLoginRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     // true=注册, false=登录
     private final boolean loginOrRegister;
 
@@ -31,8 +38,7 @@ public class Packet_PlayerLoginRequest {
         return new Packet_PlayerLoginRequest(loginOrRegister);
     }
 
-    public static void handle(Packet_PlayerLoginRequest playerLoginRequest, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_PlayerLoginRequest playerLoginRequest, IPayloadContext context) {
 
         // 只在客户端执行UI逻辑
         if (FMLLoader.getDist().isClient()) {
@@ -40,8 +46,6 @@ public class Packet_PlayerLoginRequest {
                 handleClient(playerLoginRequest);
             });
         }
-
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

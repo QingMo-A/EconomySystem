@@ -8,11 +8,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_CreateDemandOrder {
+public class Packet_CreateDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_CreateDemandOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/demand_order/packet_create_demand_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_CreateDemandOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_CreateDemandOrder.encode(packet, buf), Packet_CreateDemandOrder::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private static final String LIST_SUCCESSFULLY_MESSAGE_KEY = "message.list.list_successfully";
 
@@ -30,10 +37,9 @@ public class Packet_CreateDemandOrder {
         return new Packet_CreateDemandOrder(MarketItem.fromNBT(buf.readNbt()));
     }
 
-    public static void handle(Packet_CreateDemandOrder msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_CreateDemandOrder msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender(); // 获取发送上架请求的玩家
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null; // 获取发送上架请求的玩家
             if (player == null) return;
 
             ServerLevel serverLevel = player.serverLevel();
@@ -53,7 +59,6 @@ public class Packet_CreateDemandOrder {
             // 发送成功消息给玩家
             player.sendSystemMessage(Component.translatable(LIST_SUCCESSFULLY_MESSAGE_KEY));
         });
-        context.setPacketHandled(true);
     }
 
 }

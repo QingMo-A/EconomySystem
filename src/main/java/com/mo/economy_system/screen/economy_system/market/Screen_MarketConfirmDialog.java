@@ -387,17 +387,17 @@ public class Screen_MarketConfirmDialog extends Screen {
         switch (confirmType) {
             case BUY_SALES -> {
                 if (salesOrder != null) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_PurchaseSalesOrder(salesOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_PurchaseSalesOrder(salesOrder.getTradeID()));
                 }
             }
             case REMOVE_SALES -> {
                 if (salesOrder != null) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveSalesOrder(salesOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_RemoveSalesOrder(salesOrder.getTradeID()));
                 }
             }
             case REMOVE_DEMAND -> {
                 if (demandOrder != null) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
                 }
             }
         }

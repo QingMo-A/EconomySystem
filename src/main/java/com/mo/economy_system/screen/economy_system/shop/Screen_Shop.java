@@ -96,7 +96,7 @@ public class Screen_Shop extends Screen {
 
     public Screen_Shop() {
         super(Component.translatable(Util_MessageKeys.SHOP_TITLE_KEY));
-        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_ShopDataRequest());
+        EconomySystem_NetworkManager.sendToServer(new Packet_ShopDataRequest());
     }
 
     public void updateShopItems(List<ShopItem> items) {

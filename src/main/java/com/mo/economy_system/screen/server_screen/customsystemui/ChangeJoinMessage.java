@@ -11,7 +11,6 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import com.mo.economy_system.compat.network.NetworkDirection;
 
 // 注册事件入口，只有注册了这个类才能执行后面的代码
 @EventBusSubscriber(modid = EconomySystem.MODID)
@@ -152,10 +151,9 @@ public class ChangeJoinMessage {
         Component content = Component.literal(formattedMsg);
         int borderColor = getRankBorderColor(playerRank);  // 获取该玩家Rank的边框颜色
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
-            EconomySystem_NetworkManager.INSTANCE.sendTo(
+            EconomySystem_NetworkManager.sendToClient(
                     new Packet_SystemMessage(content, borderColor),
-                    onlinePlayer,
-                    NetworkDirection.PLAY_TO_CLIENT
+                    onlinePlayer
             );
         }
     }
@@ -182,10 +180,9 @@ public class ChangeJoinMessage {
         Component content = Component.literal(formattedMsg);
         int borderColor = getRankBorderColor(playerRank);  // 获取该玩家Rank的边框颜色
         for (ServerPlayer onlinePlayer : serverPlayer.getServer().getPlayerList().getPlayers()) {
-            EconomySystem_NetworkManager.INSTANCE.sendTo(
+            EconomySystem_NetworkManager.sendToClient(
                     new Packet_SystemMessage(content, borderColor),
-                    onlinePlayer,
-                    NetworkDirection.PLAY_TO_CLIENT
+                    onlinePlayer
             );
         }
     }

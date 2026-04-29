@@ -6,13 +6,20 @@ import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_DeliveryBoxDataResponse {
+public class Packet_DeliveryBoxDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_DeliveryBoxDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_delivery_box_data_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_DeliveryBoxDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_DeliveryBoxDataResponse.encode(packet, buf), Packet_DeliveryBoxDataResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<DeliveryItem> deliveryItems;
 
     // 构造函数
@@ -40,14 +47,12 @@ public class Packet_DeliveryBoxDataResponse {
     }
 
     // 处理响应包
-    public static void handle(Packet_DeliveryBoxDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_DeliveryBoxDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // 获取当前屏幕实例并更新收货箱物品
             if (Minecraft.getInstance().screen instanceof Screen_DeliveryBox screenDeliveryBox) {
                 screenDeliveryBox.updateDeliveryItems(msg.deliveryItems);
             }
         });
-        context.setPacketHandled(true);  // 标记数据包已处理
     }
 }

@@ -1,6 +1,6 @@
 package com.mo.economy_system.core.economy_system.market;
 
-import com.mo.economy_system.utils.ItemStackCompat;
+import com.mo.economy_system.utils.ItemStackDataHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
@@ -39,7 +39,7 @@ public abstract class MarketItem {
         tag.putString("type", this.getClass().getName()); // 关键：保存子类类型
         tag.putUUID("tradeID", tradeID);
         tag.putString("itemID", itemID);
-        tag.put("itemStack", ItemStackCompat.saveSimple(itemStack));
+        tag.put("itemStack", ItemStackDataHelper.saveSimple(itemStack));
         tag.putInt("basePrice", basePrice);
         tag.putString("sellerName", sellerName);
         tag.putUUID("sellerID", sellerID);

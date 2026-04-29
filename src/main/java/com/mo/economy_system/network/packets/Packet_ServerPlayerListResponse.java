@@ -5,12 +5,19 @@ import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.*;
-import java.util.function.Supplier;
 
-public class Packet_ServerPlayerListResponse {
+public class Packet_ServerPlayerListResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ServerPlayerListResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "packet_server_player_list_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ServerPlayerListResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ServerPlayerListResponse.encode(packet, buf), Packet_ServerPlayerListResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<Map.Entry<UUID, String>> accounts; // 新增字段
 
     public Packet_ServerPlayerListResponse(List<Map.Entry<UUID, String>> accounts) {
@@ -38,8 +45,7 @@ public class Packet_ServerPlayerListResponse {
         return new Packet_ServerPlayerListResponse(accounts);
     }
 
-    public static void handle(Packet_ServerPlayerListResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_ServerPlayerListResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             Minecraft minecraft = Minecraft.getInstance();
             Screen screen = minecraft.screen;
@@ -49,6 +55,5 @@ public class Packet_ServerPlayerListResponse {
             // 更新服务器信息面板的在线玩家数
             ServerInformationDisplay.ONLINE_PLAYERS = msg.accounts.size();
         });
-        context.setPacketHandled(true);
     }
 }

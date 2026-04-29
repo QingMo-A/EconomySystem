@@ -17,7 +17,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import com.mo.economy_system.compat.network.NetworkDirection;
 
 /**
  * 系统消息事件处理器
@@ -188,10 +187,9 @@ public class SystemMessageEventHandler {
 
         // 发送到所有在线玩家的右上角
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            EconomySystem_NetworkManager.INSTANCE.sendTo(
+            EconomySystem_NetworkManager.sendToClient(
                     new Packet_SystemMessage(message, borderColor),
-                    player,
-                    NetworkDirection.PLAY_TO_CLIENT
+                    player
             );
         }
     }

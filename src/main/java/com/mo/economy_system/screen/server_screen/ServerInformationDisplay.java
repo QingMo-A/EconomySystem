@@ -140,13 +140,13 @@ public class ServerInformationDisplay {
 
         //请求在线玩家数
         if (currentTime - LAST_PLAYER_LIST_UPDATE > UPDATE_INTERVAL) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_OnlinePlayerCountRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_OnlinePlayerCountRequest());
             LAST_PLAYER_LIST_UPDATE = currentTime;
         }
 
         //余额请求
         if (currentTime - LAST_BALANCE_UPDATE > UPDATE_INTERVAL) {
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_BalanceRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
             LAST_BALANCE_UPDATE = currentTime;
         }
     }

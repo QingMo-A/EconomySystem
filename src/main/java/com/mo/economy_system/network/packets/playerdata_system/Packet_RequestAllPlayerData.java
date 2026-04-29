@@ -6,8 +6,7 @@ import com.mo.economy_system.server.playerdata.PlayerData;
 import com.mo.economy_system.server.playerdata.PlayerDataManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -15,9 +14,16 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_RequestAllPlayerData {
+public class Packet_RequestAllPlayerData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_RequestAllPlayerData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerdata_system/packet_request_all_player_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_RequestAllPlayerData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_RequestAllPlayerData.encode(packet, buf), Packet_RequestAllPlayerData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     public Packet_RequestAllPlayerData() {}
 
     // 编码（空包，仅用于触发请求）
@@ -29,10 +35,10 @@ public class Packet_RequestAllPlayerData {
     }
 
     // 服务端处理：遍历所有玩家，批量发送Packet_SyncPlayerData
-    public static void handle(Packet_RequestAllPlayerData msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            if (ctx.get().getSender() == null) return;
-            ServerPlayer requester = ctx.get().getSender();
+    public static void handle(Packet_RequestAllPlayerData msg, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            ServerPlayer requester = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
+            if (requester == null) return;
 
             // 1. 读取全服玩家数据（从你的PlayerDataManager）
             Map<UUID, PlayerData> allPlayerData = PlayerDataManager.loadAllPlayerDataFromFile();
@@ -46,7 +52,7 @@ public class Packet_RequestAllPlayerData {
                 ServerPlayer targetPlayer = requester.getServer().getPlayerList().getPlayer(playerUUID);
                 if (targetPlayer != null) {
                     // 在线玩家：直接用ServerPlayer构造Packet
-                    EconomySystem_NetworkManager.INSTANCE.send(
+                    EconomySystem_NetworkManager.sendToClient(
                             requester,
                             new Packet_SyncPlayerData(targetPlayer)
                     );
@@ -68,7 +74,7 @@ public class Packet_RequestAllPlayerData {
                             data.getCurrentExperience(), // 添加经验
                             lastOnlineTime
                     );
-                    EconomySystem_NetworkManager.INSTANCE.send(
+                    EconomySystem_NetworkManager.sendToClient(
                             requester,
                             offlinePacket
                     );
@@ -77,6 +83,5 @@ public class Packet_RequestAllPlayerData {
             EconomySystem.LOGGER.info("已向玩家{}发送全服{}名玩家的同步数据",
                     requester.getScoreboardName(), allPlayerData.size());
         });
-        ctx.get().setPacketHandled(true);
     }
 }

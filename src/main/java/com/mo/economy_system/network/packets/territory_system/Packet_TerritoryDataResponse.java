@@ -6,13 +6,20 @@ import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import com.mo.economy_system.screen.server_screen.serverscreen.ServerScreenUI_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_TerritoryDataResponse {
+public class Packet_TerritoryDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_TerritoryDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_territory_data_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_TerritoryDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_TerritoryDataResponse.encode(packet, buf), Packet_TerritoryDataResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<Territory> owned;
     private final List<Territory> authorized;
 
@@ -45,8 +52,7 @@ public class Packet_TerritoryDataResponse {
         return new Packet_TerritoryDataResponse(owned, authorized);
     }
 
-    public static void handle(Packet_TerritoryDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_TerritoryDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // 检查当前屏幕是否是 TerritoryScreen，避免不必要的处理
             if (Minecraft.getInstance().screen instanceof Screen_Territory screen) {
@@ -65,7 +71,6 @@ public class Packet_TerritoryDataResponse {
                 ClientCacheManager.setTerritories(mc.player.getUUID(), allTerritories);
             }
         });
-        context.setPacketHandled(true);
     }
 
 }

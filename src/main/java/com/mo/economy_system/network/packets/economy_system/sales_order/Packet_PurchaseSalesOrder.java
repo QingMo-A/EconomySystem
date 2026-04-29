@@ -11,12 +11,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_PurchaseSalesOrder {
+public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_PurchaseSalesOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/sales_order/packet_purchase_sales_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_PurchaseSalesOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_PurchaseSalesOrder.encode(packet, buf), Packet_PurchaseSalesOrder::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final UUID itemId; // 商品的唯一 ID
 
@@ -32,10 +39,9 @@ public class Packet_PurchaseSalesOrder {
         return new Packet_PurchaseSalesOrder(buf.readUUID());
     }
 
-    public static void handle(Packet_PurchaseSalesOrder msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_PurchaseSalesOrder msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer buyer = context.getSender();
+            ServerPlayer buyer = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (buyer == null) return;
 
             ServerLevel serverLevel = buyer.serverLevel();
@@ -84,12 +90,11 @@ public class Packet_PurchaseSalesOrder {
             MarketManager.removeMarketItem(item);
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
 
             // 打印日志
             System.out.println("Item sold: " + item.getItemStack().getHoverName().getString() +
                     ", Price: " + price + " coins, Buyer: " + buyer.getName().getString() + ", Seller: " + sellerID);
         });
-        context.setPacketHandled(true);
     }
 }

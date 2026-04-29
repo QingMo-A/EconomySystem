@@ -10,13 +10,20 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_UnlockTerritoryBuff {
+public class Packet_UnlockTerritoryBuff implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_UnlockTerritoryBuff> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_unlock_territory_buff"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_UnlockTerritoryBuff> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_UnlockTerritoryBuff.encode(packet, buf), Packet_UnlockTerritoryBuff::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID territoryID;
     private final String buffID;
 
@@ -34,10 +41,9 @@ public class Packet_UnlockTerritoryBuff {
         return new Packet_UnlockTerritoryBuff(buf.readUUID(), buf.readUtf());
     }
 
-    public static void handle(Packet_UnlockTerritoryBuff msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_UnlockTerritoryBuff msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             EconomySavedData economySavedData = EconomySavedData.getInstance(player.serverLevel());
@@ -106,8 +112,6 @@ public class Packet_UnlockTerritoryBuff {
             TerritoryManager.unlockBuff(territory.getTerritoryID(), msg.buffID);
             // TerritoryManager.markDirty();
             player.sendSystemMessage(Component.literal("你为你的领地解锁了增益: " + territory.getBuff(msg.buffID).getDisplayText()));
-
-            contextSupplier.get().setPacketHandled(true);
         });
     }
 

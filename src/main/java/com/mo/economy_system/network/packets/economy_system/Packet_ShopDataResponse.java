@@ -6,13 +6,20 @@ import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_ShopDataResponse {
+public class Packet_ShopDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ShopDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_shop_data_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ShopDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ShopDataResponse.encode(packet, buf), Packet_ShopDataResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<ShopItem> shopItems;
 
     public Packet_ShopDataResponse(List<ShopItem> shopItems) {
@@ -38,8 +45,7 @@ public class Packet_ShopDataResponse {
         return new Packet_ShopDataResponse(shopItems);
     }
 
-    public static void handle(Packet_ShopDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_ShopDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // Util_Message.sendDebugMessage("收到来自服务器的商品数据: " + msg.shopItems.size() + " 个");
             Minecraft minecraft = Minecraft.getInstance();
@@ -49,6 +55,5 @@ public class Packet_ShopDataResponse {
                 screen.updateShopItems(msg.shopItems);
             }
         });
-        context.setPacketHandled(true);
     }
 }

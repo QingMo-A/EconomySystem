@@ -8,15 +8,22 @@ import com.mo.economy_system.core.playerattributes_system.death.DeathItemStorage
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * 正常复活请求包
  * 客户端点击"正常复活"按钮后发送到服务端
  */
-public class Packet_NormalRespawnRequest {
+public class Packet_NormalRespawnRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_NormalRespawnRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "playerattribute_system/death_system/packet_normal_respawn_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_NormalRespawnRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_NormalRespawnRequest.encode(packet, buf), Packet_NormalRespawnRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public Packet_NormalRespawnRequest() {}
 
@@ -35,10 +42,9 @@ public class Packet_NormalRespawnRequest {
     /**
      * 处理（服务端）
      */
-    public static void handle(Packet_NormalRespawnRequest packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_NormalRespawnRequest packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             PlayerAttributesData data = PlayerAttributesDataManager.getPlayerAttributesData(player.getUUID());
@@ -73,7 +79,6 @@ public class Packet_NormalRespawnRequest {
             EconomySystem.LOGGER.info("玩家 {} 正常复活，消耗 {} 复活点（剩余: {}）",
                     player.getScoreboardName(), cost, data.getRespawnPoint());
         });
-        context.setPacketHandled(true);
     }
 
     /**

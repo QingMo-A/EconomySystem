@@ -3,7 +3,7 @@ package com.mo.economy_system.network.packets.check_system;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,9 +15,16 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
-public class Packet_Get {
+public class Packet_Get implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Get> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_get"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Get> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Get.encode(packet, buf), Packet_Get::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final String playerName;
     private final String playerUUID;
@@ -48,8 +55,7 @@ public class Packet_Get {
         return new Packet_Get(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(Packet_Get msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_Get msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             executor.execute(() -> {
                 Minecraft mc = Minecraft.getInstance();
@@ -74,7 +80,7 @@ public class Packet_Get {
                 // 构造一个 file 对象
                 File matchedFile = new File(targetFolder, msg.fileName);
                 if (!matchedFile.exists() || !matchedFile.isFile()) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_GetResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, "Not Found"));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_GetResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, "Not Found"));
                     // 你可以考虑发送一个错误提示包回服务器
                     return;
                 }
@@ -93,7 +99,7 @@ public class Packet_Get {
                 String uuid = UUID.randomUUID().toString();
 
                 if (base64Content.length() <= 30000) {
-                    EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_GetResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, base64Content));
+                    EconomySystem_NetworkManager.sendToServer(new Packet_GetResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, base64Content));
                 } else {
                     int totalChunks = (base64Content.length() + chunkSize - 1) / chunkSize;
                     for (int i = 0; i < totalChunks; i++) {
@@ -102,12 +108,11 @@ public class Packet_Get {
                         String chunkData = base64Content.substring(start, end);
 
                         // 发送 ChunkPacket
-                        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_Chunk(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, uuid, i, totalChunks, chunkData));
+                        EconomySystem_NetworkManager.sendToServer(new Packet_Chunk(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, msg.fileName, uuid, i, totalChunks, chunkData));
                     }
                 }
             });
         });
-        contextSupplier.get().setPacketHandled(true);
     }
 
     private static String computeSHA256(Path path) throws IOException, NoSuchAlgorithmException {

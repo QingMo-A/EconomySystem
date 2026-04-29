@@ -10,12 +10,19 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_InvitePlayer {
+public class Packet_InvitePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_InvitePlayer> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_invite_player"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_InvitePlayer> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_InvitePlayer.encode(packet, buf), Packet_InvitePlayer::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID territoryID;
     private final String playerName;
 
@@ -33,10 +40,9 @@ public class Packet_InvitePlayer {
         return new Packet_InvitePlayer(buf.readUUID(), buf.readUtf(256));
     }
 
-    public static void handle(Packet_InvitePlayer msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_InvitePlayer msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer inviter = context.getSender();
+            ServerPlayer inviter = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (inviter == null) return;
 
             // 获取领地信息
@@ -90,6 +96,5 @@ public class Packet_InvitePlayer {
             }
 
         });
-        context.setPacketHandled(true);
     }
 }

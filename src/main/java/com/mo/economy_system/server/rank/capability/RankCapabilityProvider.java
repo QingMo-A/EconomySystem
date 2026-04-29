@@ -158,7 +158,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 //
 //        // 新增：服务器端立即同步给所有能看到该玩家的客户端（包括自己）
 //        if (player instanceof ServerPlayer serverPlayer) {
-//            EconomySystem_NetworkManager.INSTANCE.send(
+//            EconomySystem_NetworkManager.sendToClient(
 //                    PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
 //                    new Packet_SyncRankTitle(serverPlayer)
 //            );

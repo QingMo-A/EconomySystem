@@ -3,15 +3,21 @@ package com.mo.economy_system.network.packets.territory_system;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_SingleTerritoryDataRequest {
+public class Packet_SingleTerritoryDataRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SingleTerritoryDataRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_single_territory_data_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SingleTerritoryDataRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SingleTerritoryDataRequest.encode(packet, buf), Packet_SingleTerritoryDataRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID territoryID;
 
     public Packet_SingleTerritoryDataRequest(UUID territoryID) {
@@ -26,10 +32,9 @@ public class Packet_SingleTerritoryDataRequest {
         return new Packet_SingleTerritoryDataRequest(buf.readUUID());
     }
 
-    public static void handle(Packet_SingleTerritoryDataRequest msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SingleTerritoryDataRequest msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             // 🔹 获取领地数据
@@ -41,9 +46,7 @@ public class Packet_SingleTerritoryDataRequest {
 
             // 🔹 发送数据回客户端
             Packet_SingleTerritoryDataResponse response = new Packet_SingleTerritoryDataResponse(territory);
-            EconomySystem_NetworkManager.INSTANCE.send(player, response);
+            EconomySystem_NetworkManager.sendToClient(player, response);
         });
-
-        context.setPacketHandled(true);
     }
 }

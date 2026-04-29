@@ -7,18 +7,24 @@ import com.mo.economy_system.core.task_system.TaskPlayerData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.DistExecutor;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 //全量包，进服申请一次
-public class Packet_SyncFullTaskData {
+public class Packet_SyncFullTaskData implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SyncFullTaskData> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "task_system/packet_sync_full_task_data"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SyncFullTaskData> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SyncFullTaskData.encode(packet, buf), Packet_SyncFullTaskData::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final UUID playerUUID;
     private Map<Integer, TaskPlayerData> taskPlayerData = new HashMap<>();
     private Map<Integer, StoryStageData> storyStageData = new HashMap<>();
@@ -174,22 +180,17 @@ public class Packet_SyncFullTaskData {
         return new Packet_SyncFullTaskData(playerUUID, playerTaskMap, stageMap);
     }
 
-    public static void handle(Packet_SyncFullTaskData packet, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.setPacketHandled(true);
-
-        ctx.enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                // 客户端更新缓存
-                ClientTaskCache.updateFullTaskData(
-                        packet.getPlayerUUID(),
-                        packet.getTaskPlayerData(),
-                        packet.getStoryStageData()
-                );
-                // 更新 ClientCacheManager
-                com.mo.economy_system.client.cache.ClientCacheManager.setPlayerTasks(packet.getTaskPlayerData());
-                com.mo.economy_system.client.cache.ClientCacheManager.setStoryStages(packet.getStoryStageData());
-            });
+    public static void handle(Packet_SyncFullTaskData packet, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // 客户端更新缓存
+            ClientTaskCache.updateFullTaskData(
+                    packet.getPlayerUUID(),
+                    packet.getTaskPlayerData(),
+                    packet.getStoryStageData()
+            );
+            // 更新 ClientCacheManager
+            com.mo.economy_system.client.cache.ClientCacheManager.setPlayerTasks(packet.getTaskPlayerData());
+            com.mo.economy_system.client.cache.ClientCacheManager.setStoryStages(packet.getStoryStageData());
         });
     }
 

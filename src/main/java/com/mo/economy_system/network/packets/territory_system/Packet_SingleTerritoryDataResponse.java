@@ -4,11 +4,18 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_SingleTerritoryDataResponse {
+public class Packet_SingleTerritoryDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SingleTerritoryDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_single_territory_data_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SingleTerritoryDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SingleTerritoryDataResponse.encode(packet, buf), Packet_SingleTerritoryDataResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final Territory territory;
 
     public Packet_SingleTerritoryDataResponse(Territory territory) {
@@ -23,8 +30,7 @@ public class Packet_SingleTerritoryDataResponse {
         return new Packet_SingleTerritoryDataResponse(Territory.fromNBT(buf.readNbt()));
     }
 
-    public static void handle(Packet_SingleTerritoryDataResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_SingleTerritoryDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             // 🔹 处理客户端数据
             Minecraft minecraft = Minecraft.getInstance();
@@ -32,7 +38,5 @@ public class Packet_SingleTerritoryDataResponse {
                 screen.updateTerritory(msg.territory);
             }
         });
-
-        context.setPacketHandled(true);
     }
 }

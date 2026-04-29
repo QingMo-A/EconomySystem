@@ -9,7 +9,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -22,9 +22,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
-public class Packet_CheckResultResponse {
+public class Packet_CheckResultResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_CheckResultResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_check_result_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_CheckResultResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_CheckResultResponse.encode(packet, buf), Packet_CheckResultResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final String playerName;
     private final String playerUUID;
@@ -55,8 +62,7 @@ public class Packet_CheckResultResponse {
         return new Packet_CheckResultResponse(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(Packet_CheckResultResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_CheckResultResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             executor.execute(() -> {
                 // ----------------------------------------
@@ -221,7 +227,6 @@ public class Packet_CheckResultResponse {
                 }
             });
         });
-        contextSupplier.get().setPacketHandled(true);
     }
 
     private static void sendDiffMessage(LocalPlayer localPlayer, String diffType, String fileName, Packet_CheckResultResponse msg) {

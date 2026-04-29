@@ -1,162 +1,154 @@
 package com.mo.economy_system.network;
 
-import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.network.packets.*;
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
+import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_CreateDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_CreateDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
+import com.mo.economy_system.network.packets.notice_system.Packet_MarkNoticeReadRequest;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
+import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListResponse;
+import com.mo.economy_system.network.packets.npc_system.Packet_NpcInteractionRequest;
+import com.mo.economy_system.network.packets.npc_system.Packet_OpenNpcDialogueGUI;
 import com.mo.economy_system.network.packets.playerattribute_system.courage_system.Packet_SyncCourageData;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_DeathScreenData;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_KeepInventoryRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_KeepInventoryResponse;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnRequest;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_NormalRespawnResponse;
-import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_SyncRespawnPointData;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_OpenRevivalCharmGUI;
 import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_RevivalRequest;
+import com.mo.economy_system.network.packets.playerattribute_system.death_system.Packet_SyncRespawnPointData;
 import com.mo.economy_system.network.packets.playerattribute_system.infection_system.Packet_SyncInfectionData;
+import com.mo.economy_system.network.packets.playerattribute_system.limb_system.Packet_SyncLimbInjury;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_CantRun;
 import com.mo.economy_system.network.packets.playerattribute_system.strength_system.Packet_SyncStrengthData;
-import com.mo.economy_system.network.packets.playerattribute_system.limb_system.Packet_SyncLimbInjury;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_LevelUpNotify;
-import com.mo.economy_system.network.packets.playerdata_system.Packet_VanillaAdvancementNotify;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestAllPlayerData;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_RequestPlayerStats;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerData;
 import com.mo.economy_system.network.packets.playerdata_system.Packet_SyncPlayerStats;
-import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
-import com.mo.economy_system.network.packets.task_system.Packet_SyncCompleteTask;
-import com.mo.economy_system.network.packets.territory_system.*;
-import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
-import com.mo.economy_system.network.packets.notice_system.Packet_NoticeCheckResponse;
-import com.mo.economy_system.network.packets.notice_system.Packet_MarkNoticeReadRequest;
-import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListRequest;
-import com.mo.economy_system.network.packets.notice_system.Packet_NoticeListResponse;
-import com.mo.economy_system.network.packets.npc_system.Packet_NpcInteractionRequest;
-import com.mo.economy_system.network.packets.npc_system.Packet_OpenNpcDialogueGUI;
+import com.mo.economy_system.network.packets.playerdata_system.Packet_VanillaAdvancementNotify;
 import com.mo.economy_system.network.packets.storybook_system.Packet_OpenStoryBookGUI;
 import com.mo.economy_system.network.packets.storybook_system.Packet_OpenStoryFragmentGUI;
 import com.mo.economy_system.network.packets.storybook_system.Packet_UpdateStoryBookOrder;
+import com.mo.economy_system.network.packets.task_system.Packet_SyncCompleteTask;
+import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
+import com.mo.economy_system.network.packets.territory_system.*;
+import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_SyncWorldWrapConfig;
 import com.mo.economy_system.network.packets.world_wrap_system.Packet_WorldWrapVisualState;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
-import com.mo.economy_system.compat.network.NetworkDirection;
-import com.mo.economy_system.compat.network.NetworkRegistry;
-import com.mo.economy_system.compat.network.simple.SimpleChannel;
-
-import java.util.Optional;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class EconomySystem_NetworkManager {
     private static final String PROTOCOL_VERSION = "1";
-    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "network"),
-            () -> PROTOCOL_VERSION,
-            PROTOCOL_VERSION::equals,
-            PROTOCOL_VERSION::equals
-    );
 
     public static void register(IEventBus modEventBus) {
-        modEventBus.addListener(INSTANCE::registerPayloadHandlers);
-
-        int packetId = 0;
-
-        // 注册数据包
-        INSTANCE.registerMessage(packetId++, Packet_BalanceRequest.class, Packet_BalanceRequest::encode, Packet_BalanceRequest::decode, Packet_BalanceRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_BalanceResponse.class, Packet_BalanceResponse::encode, Packet_BalanceResponse::decode, Packet_BalanceResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_Transfer.class, Packet_Transfer::encode, Packet_Transfer::decode, Packet_Transfer::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ShopDataRequest.class, Packet_ShopDataRequest::encode, Packet_ShopDataRequest::decode, Packet_ShopDataRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ShopDataResponse.class, Packet_ShopDataResponse::encode, Packet_ShopDataResponse::decode, Packet_ShopDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ShopBuyItem.class, Packet_ShopBuyItem::encode, Packet_ShopBuyItem::decode, Packet_ShopBuyItem::handle);
-        INSTANCE.registerMessage(packetId++, Packet_CreateSalesOrder.class, Packet_CreateSalesOrder::encode, Packet_CreateSalesOrder::decode, Packet_CreateSalesOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_CreateDemandOrder.class, Packet_CreateDemandOrder::encode, Packet_CreateDemandOrder::decode, Packet_CreateDemandOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_MarketDataRequest.class, Packet_MarketDataRequest::encode, Packet_MarketDataRequest::decode, Packet_MarketDataRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_MarketDataResponse.class, Packet_MarketDataResponse::encode, Packet_MarketDataResponse::decode, Packet_MarketDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_PurchaseSalesOrder.class, Packet_PurchaseSalesOrder::encode, Packet_PurchaseSalesOrder::decode, Packet_PurchaseSalesOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ConfirmDemandOrder.class, Packet_ConfirmDemandOrder::encode, Packet_ConfirmDemandOrder::decode, Packet_ConfirmDemandOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_DeliverDemandOrder.class, Packet_DeliverDemandOrder::encode, Packet_DeliverDemandOrder::decode, Packet_DeliverDemandOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_RemoveSalesOrder.class, Packet_RemoveSalesOrder::encode, Packet_RemoveSalesOrder::decode, Packet_RemoveSalesOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_RemoveDemandOrder.class, Packet_RemoveDemandOrder::encode, Packet_RemoveDemandOrder::decode, Packet_RemoveDemandOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_TerritoryDataRequest.class, Packet_TerritoryDataRequest::encode, Packet_TerritoryDataRequest::decode, Packet_TerritoryDataRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_TerritoryDataResponse.class, Packet_TerritoryDataResponse::encode, Packet_TerritoryDataResponse::decode, Packet_TerritoryDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_TeleportToTerritory.class, Packet_TeleportToTerritory::encode, Packet_TeleportToTerritory::decode, Packet_TeleportToTerritory::handle);
-        INSTANCE.registerMessage(packetId++, Packet_InvitePlayer.class, Packet_InvitePlayer::encode, Packet_InvitePlayer::decode, Packet_InvitePlayer::handle);
-        INSTANCE.registerMessage(packetId++, Packet_RemoveTerritory.class, Packet_RemoveTerritory::encode, Packet_RemoveTerritory::decode, Packet_RemoveTerritory::handle);
-        INSTANCE.registerMessage(packetId++, Packet_RemovePlayer.class, Packet_RemovePlayer::encode, Packet_RemovePlayer::decode, Packet_RemovePlayer::handle);
-        INSTANCE.registerMessage(packetId++, Packet_Check.class, Packet_Check::encode, Packet_Check::decode, Packet_Check::handle);
-        INSTANCE.registerMessage(packetId++, Packet_CheckResultRequest.class, Packet_CheckResultRequest::encode, Packet_CheckResultRequest::decode, Packet_CheckResultRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_CheckResultResponse.class, Packet_CheckResultResponse::encode, Packet_CheckResultResponse::decode, Packet_CheckResultResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_Get.class, Packet_Get::encode, Packet_Get::decode, Packet_Get::handle);
-        INSTANCE.registerMessage(packetId++, Packet_GetResultRequest.class, Packet_GetResultRequest::encode, Packet_GetResultRequest::decode, Packet_GetResultRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_GetResultResponse.class, Packet_GetResultResponse::encode, Packet_GetResultResponse::decode, Packet_GetResultResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_Chunk.class, Packet_Chunk::encode, Packet_Chunk::decode, Packet_Chunk::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ChunkResponse.class, Packet_ChunkResponse::encode, Packet_ChunkResponse::decode, Packet_ChunkResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_DeliveryBoxDataRequest.class, Packet_DeliveryBoxDataRequest::encode, Packet_DeliveryBoxDataRequest::decode, Packet_DeliveryBoxDataRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_DeliveryBoxDataResponse.class, Packet_DeliveryBoxDataResponse::encode, Packet_DeliveryBoxDataResponse::decode, Packet_DeliveryBoxDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_DeliveryBoxClaimItem.class, Packet_DeliveryBoxClaimItem::encode, Packet_DeliveryBoxClaimItem::decode, Packet_DeliveryBoxClaimItem::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ServerPlayerListRequest.class, Packet_ServerPlayerListRequest::encode, Packet_ServerPlayerListRequest::decode, Packet_ServerPlayerListRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ServerPlayerListResponse.class, Packet_ServerPlayerListResponse::encode, Packet_ServerPlayerListResponse::decode, Packet_ServerPlayerListResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_ModifyMode.class, Packet_ModifyMode::encode, Packet_ModifyMode::decode, Packet_ModifyMode::handle);
-        INSTANCE.registerMessage(packetId++, Packet_UnlockTerritoryBuff.class, Packet_UnlockTerritoryBuff::encode, Packet_UnlockTerritoryBuff::decode, Packet_UnlockTerritoryBuff::handle);
-        INSTANCE.registerMessage(packetId++, Packet_UpgradeTerritoryBuff.class, Packet_UpgradeTerritoryBuff::encode, Packet_UpgradeTerritoryBuff::decode, Packet_UpgradeTerritoryBuff::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataRequest.class, Packet_SingleTerritoryDataRequest::encode, Packet_SingleTerritoryDataRequest::decode, Packet_SingleTerritoryDataRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SingleTerritoryDataResponse.class, Packet_SingleTerritoryDataResponse::encode, Packet_SingleTerritoryDataResponse::decode, Packet_SingleTerritoryDataResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SystemMessage.class, Packet_SystemMessage::encode, Packet_SystemMessage::decode, Packet_SystemMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountRequest.class, Packet_OnlinePlayerCountRequest::encode, Packet_OnlinePlayerCountRequest::decode,Packet_OnlinePlayerCountRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_OnlinePlayerCountResponse.class, Packet_OnlinePlayerCountResponse::encode, Packet_OnlinePlayerCountResponse::decode, Packet_OnlinePlayerCountResponse::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncPlayerData.class, Packet_SyncPlayerData::encode, Packet_SyncPlayerData::decode, Packet_SyncPlayerData::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncFullTaskData.class, Packet_SyncFullTaskData::encode, Packet_SyncFullTaskData::decode, Packet_SyncFullTaskData::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncCompleteTask.class, Packet_SyncCompleteTask::encode, Packet_SyncCompleteTask::decode, Packet_SyncCompleteTask::handle);
-        INSTANCE.registerMessage(packetId++, Packet_CantRun.class, Packet_CantRun::encode, Packet_CantRun::decode, Packet_CantRun::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_LevelUpNotify.class, Packet_LevelUpNotify::encode, Packet_LevelUpNotify::decode, Packet_LevelUpNotify::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_VanillaAdvancementNotify.class, Packet_VanillaAdvancementNotify::encode, Packet_VanillaAdvancementNotify::decode, Packet_VanillaAdvancementNotify::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_SyncStrengthData.class, Packet_SyncStrengthData::encode, Packet_SyncStrengthData::decode, Packet_SyncStrengthData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_SendTipToClient.class, Packet_SendTipToClient::encode, Packet_SendTipToClient::decode, Packet_SendTipToClient::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_SyncCourageData.class, Packet_SyncCourageData::encode, Packet_SyncCourageData::decode, Packet_SyncCourageData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_SyncInfectionData.class, Packet_SyncInfectionData::encode, Packet_SyncInfectionData::decode, Packet_SyncInfectionData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_SyncRespawnPointData.class, Packet_SyncRespawnPointData::encode, Packet_SyncRespawnPointData::decode, Packet_SyncRespawnPointData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_KeepInventoryRequest.class, Packet_KeepInventoryRequest::encode, Packet_KeepInventoryRequest::decode, Packet_KeepInventoryRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_KeepInventoryResponse.class, Packet_KeepInventoryResponse::encode, Packet_KeepInventoryResponse::decode, Packet_KeepInventoryResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_NormalRespawnRequest.class, Packet_NormalRespawnRequest::encode, Packet_NormalRespawnRequest::decode, Packet_NormalRespawnRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_NormalRespawnResponse.class, Packet_NormalRespawnResponse::encode, Packet_NormalRespawnResponse::decode, Packet_NormalRespawnResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_DeathScreenData.class, Packet_DeathScreenData::encode, Packet_DeathScreenData::decode, Packet_DeathScreenData::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_RequestAllPlayerData.class, Packet_RequestAllPlayerData::encode, Packet_RequestAllPlayerData::decode, Packet_RequestAllPlayerData::handle);
-        INSTANCE.registerMessage(packetId++, Packet_RequestPlayerStats.class, Packet_RequestPlayerStats::encode, Packet_RequestPlayerStats::decode, Packet_RequestPlayerStats::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncPlayerStats.class, Packet_SyncPlayerStats::encode, Packet_SyncPlayerStats::decode, Packet_SyncPlayerStats::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        //登录系统
-        INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::handle);
-        INSTANCE.registerMessage(packetId++, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult.class, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::encode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::decode, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        //公告系统
-        INSTANCE.registerMessage(packetId++, Packet_NoticeCheckResponse.class, Packet_NoticeCheckResponse::encode, Packet_NoticeCheckResponse::decode, Packet_NoticeCheckResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_NoticeListRequest.class, Packet_NoticeListRequest::encode, Packet_NoticeListRequest::decode, Packet_NoticeListRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_NoticeListResponse.class, Packet_NoticeListResponse::encode, Packet_NoticeListResponse::decode, Packet_NoticeListResponse::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_MarkNoticeReadRequest.class, Packet_MarkNoticeReadRequest::encode, Packet_MarkNoticeReadRequest::decode, Packet_MarkNoticeReadRequest::handle);
-        //肢体受伤同步
-        INSTANCE.registerMessage(packetId++, Packet_SyncLimbInjury.class, Packet_SyncLimbInjury::encode, Packet_SyncLimbInjury::decode, Packet_SyncLimbInjury::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        //复活护符
-        INSTANCE.registerMessage(packetId++, Packet_OpenRevivalCharmGUI.class, Packet_OpenRevivalCharmGUI::encode, Packet_OpenRevivalCharmGUI::decode, Packet_OpenRevivalCharmGUI::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_RevivalRequest.class, Packet_RevivalRequest::encode, Packet_RevivalRequest::decode, Packet_RevivalRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_OpenStoryBookGUI.class, Packet_OpenStoryBookGUI::encode, Packet_OpenStoryBookGUI::decode, Packet_OpenStoryBookGUI::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_OpenStoryFragmentGUI.class, Packet_OpenStoryFragmentGUI::encode, Packet_OpenStoryFragmentGUI::decode, Packet_OpenStoryFragmentGUI::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_UpdateStoryBookOrder.class, Packet_UpdateStoryBookOrder::encode, Packet_UpdateStoryBookOrder::decode, Packet_UpdateStoryBookOrder::handle);
-        INSTANCE.registerMessage(packetId++, Packet_OpenNpcDialogueGUI.class, Packet_OpenNpcDialogueGUI::encode, Packet_OpenNpcDialogueGUI::decode, Packet_OpenNpcDialogueGUI::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_NpcInteractionRequest.class, Packet_NpcInteractionRequest::encode, Packet_NpcInteractionRequest::decode, Packet_NpcInteractionRequest::handle);
-        INSTANCE.registerMessage(packetId++, Packet_SyncWorldWrapConfig.class, Packet_SyncWorldWrapConfig::encode, Packet_SyncWorldWrapConfig::decode, Packet_SyncWorldWrapConfig::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        INSTANCE.registerMessage(packetId++, Packet_WorldWrapVisualState.class, Packet_WorldWrapVisualState::encode, Packet_WorldWrapVisualState::decode, Packet_WorldWrapVisualState::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        modEventBus.addListener(EconomySystem_NetworkManager::registerPayloadHandlers);
     }
 
-    public static void sendToClient(Object packet, net.minecraft.server.level.ServerPlayer player) {
-        INSTANCE.send(player, packet);
+    private static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToServer(Packet_BalanceRequest.TYPE, Packet_BalanceRequest.STREAM_CODEC, Packet_BalanceRequest::handle);
+        registrar.playToClient(Packet_BalanceResponse.TYPE, Packet_BalanceResponse.STREAM_CODEC, Packet_BalanceResponse::handle);
+        registrar.playToServer(Packet_Transfer.TYPE, Packet_Transfer.STREAM_CODEC, Packet_Transfer::handle);
+        registrar.playToServer(Packet_ShopDataRequest.TYPE, Packet_ShopDataRequest.STREAM_CODEC, Packet_ShopDataRequest::handle);
+        registrar.playToClient(Packet_ShopDataResponse.TYPE, Packet_ShopDataResponse.STREAM_CODEC, Packet_ShopDataResponse::handle);
+        registrar.playToServer(Packet_ShopBuyItem.TYPE, Packet_ShopBuyItem.STREAM_CODEC, Packet_ShopBuyItem::handle);
+        registrar.playToServer(Packet_CreateSalesOrder.TYPE, Packet_CreateSalesOrder.STREAM_CODEC, Packet_CreateSalesOrder::handle);
+        registrar.playToServer(Packet_CreateDemandOrder.TYPE, Packet_CreateDemandOrder.STREAM_CODEC, Packet_CreateDemandOrder::handle);
+        registrar.playToServer(Packet_MarketDataRequest.TYPE, Packet_MarketDataRequest.STREAM_CODEC, Packet_MarketDataRequest::handle);
+        registrar.playToClient(Packet_MarketDataResponse.TYPE, Packet_MarketDataResponse.STREAM_CODEC, Packet_MarketDataResponse::handle);
+        registrar.playToServer(Packet_PurchaseSalesOrder.TYPE, Packet_PurchaseSalesOrder.STREAM_CODEC, Packet_PurchaseSalesOrder::handle);
+        registrar.playToServer(Packet_ConfirmDemandOrder.TYPE, Packet_ConfirmDemandOrder.STREAM_CODEC, Packet_ConfirmDemandOrder::handle);
+        registrar.playToServer(Packet_DeliverDemandOrder.TYPE, Packet_DeliverDemandOrder.STREAM_CODEC, Packet_DeliverDemandOrder::handle);
+        registrar.playToServer(Packet_RemoveSalesOrder.TYPE, Packet_RemoveSalesOrder.STREAM_CODEC, Packet_RemoveSalesOrder::handle);
+        registrar.playToServer(Packet_RemoveDemandOrder.TYPE, Packet_RemoveDemandOrder.STREAM_CODEC, Packet_RemoveDemandOrder::handle);
+        registrar.playToServer(Packet_TerritoryDataRequest.TYPE, Packet_TerritoryDataRequest.STREAM_CODEC, Packet_TerritoryDataRequest::handle);
+        registrar.playToClient(Packet_TerritoryDataResponse.TYPE, Packet_TerritoryDataResponse.STREAM_CODEC, Packet_TerritoryDataResponse::handle);
+        registrar.playToServer(Packet_TeleportToTerritory.TYPE, Packet_TeleportToTerritory.STREAM_CODEC, Packet_TeleportToTerritory::handle);
+        registrar.playToServer(Packet_InvitePlayer.TYPE, Packet_InvitePlayer.STREAM_CODEC, Packet_InvitePlayer::handle);
+        registrar.playToServer(Packet_RemoveTerritory.TYPE, Packet_RemoveTerritory.STREAM_CODEC, Packet_RemoveTerritory::handle);
+        registrar.playToServer(Packet_RemovePlayer.TYPE, Packet_RemovePlayer.STREAM_CODEC, Packet_RemovePlayer::handle);
+        registrar.playToClient(Packet_Check.TYPE, Packet_Check.STREAM_CODEC, Packet_Check::handle);
+        registrar.playToServer(Packet_CheckResultRequest.TYPE, Packet_CheckResultRequest.STREAM_CODEC, Packet_CheckResultRequest::handle);
+        registrar.playToClient(Packet_CheckResultResponse.TYPE, Packet_CheckResultResponse.STREAM_CODEC, Packet_CheckResultResponse::handle);
+        registrar.playToClient(Packet_Get.TYPE, Packet_Get.STREAM_CODEC, Packet_Get::handle);
+        registrar.playToServer(Packet_GetResultRequest.TYPE, Packet_GetResultRequest.STREAM_CODEC, Packet_GetResultRequest::handle);
+        registrar.playToClient(Packet_GetResultResponse.TYPE, Packet_GetResultResponse.STREAM_CODEC, Packet_GetResultResponse::handle);
+        registrar.playToServer(Packet_Chunk.TYPE, Packet_Chunk.STREAM_CODEC, Packet_Chunk::handle);
+        registrar.playToClient(Packet_ChunkResponse.TYPE, Packet_ChunkResponse.STREAM_CODEC, Packet_ChunkResponse::handle);
+        registrar.playToServer(Packet_DeliveryBoxDataRequest.TYPE, Packet_DeliveryBoxDataRequest.STREAM_CODEC, Packet_DeliveryBoxDataRequest::handle);
+        registrar.playToClient(Packet_DeliveryBoxDataResponse.TYPE, Packet_DeliveryBoxDataResponse.STREAM_CODEC, Packet_DeliveryBoxDataResponse::handle);
+        registrar.playToServer(Packet_DeliveryBoxClaimItem.TYPE, Packet_DeliveryBoxClaimItem.STREAM_CODEC, Packet_DeliveryBoxClaimItem::handle);
+        registrar.playToServer(Packet_ServerPlayerListRequest.TYPE, Packet_ServerPlayerListRequest.STREAM_CODEC, Packet_ServerPlayerListRequest::handle);
+        registrar.playToClient(Packet_ServerPlayerListResponse.TYPE, Packet_ServerPlayerListResponse.STREAM_CODEC, Packet_ServerPlayerListResponse::handle);
+        registrar.playToServer(Packet_ModifyMode.TYPE, Packet_ModifyMode.STREAM_CODEC, Packet_ModifyMode::handle);
+        registrar.playToServer(Packet_UnlockTerritoryBuff.TYPE, Packet_UnlockTerritoryBuff.STREAM_CODEC, Packet_UnlockTerritoryBuff::handle);
+        registrar.playToServer(Packet_UpgradeTerritoryBuff.TYPE, Packet_UpgradeTerritoryBuff.STREAM_CODEC, Packet_UpgradeTerritoryBuff::handle);
+        registrar.playToServer(Packet_SingleTerritoryDataRequest.TYPE, Packet_SingleTerritoryDataRequest.STREAM_CODEC, Packet_SingleTerritoryDataRequest::handle);
+        registrar.playToClient(Packet_SingleTerritoryDataResponse.TYPE, Packet_SingleTerritoryDataResponse.STREAM_CODEC, Packet_SingleTerritoryDataResponse::handle);
+        registrar.playToClient(Packet_SystemMessage.TYPE, Packet_SystemMessage.STREAM_CODEC, Packet_SystemMessage::handle);
+        registrar.playToServer(Packet_OnlinePlayerCountRequest.TYPE, Packet_OnlinePlayerCountRequest.STREAM_CODEC, Packet_OnlinePlayerCountRequest::handle);
+        registrar.playToClient(Packet_OnlinePlayerCountResponse.TYPE, Packet_OnlinePlayerCountResponse.STREAM_CODEC, Packet_OnlinePlayerCountResponse::handle);
+        registrar.playToClient(Packet_SyncPlayerData.TYPE, Packet_SyncPlayerData.STREAM_CODEC, Packet_SyncPlayerData::handle);
+        registrar.playToClient(Packet_SyncFullTaskData.TYPE, Packet_SyncFullTaskData.STREAM_CODEC, Packet_SyncFullTaskData::handle);
+        registrar.playToServer(Packet_SyncCompleteTask.TYPE, Packet_SyncCompleteTask.STREAM_CODEC, Packet_SyncCompleteTask::handle);
+        registrar.playToClient(Packet_CantRun.TYPE, Packet_CantRun.STREAM_CODEC, Packet_CantRun::handle);
+        registrar.playToClient(Packet_LevelUpNotify.TYPE, Packet_LevelUpNotify.STREAM_CODEC, Packet_LevelUpNotify::handle);
+        registrar.playToClient(Packet_VanillaAdvancementNotify.TYPE, Packet_VanillaAdvancementNotify.STREAM_CODEC, Packet_VanillaAdvancementNotify::handle);
+        registrar.playToClient(Packet_SyncStrengthData.TYPE, Packet_SyncStrengthData.STREAM_CODEC, Packet_SyncStrengthData::handle);
+        registrar.playToClient(Packet_SendTipToClient.TYPE, Packet_SendTipToClient.STREAM_CODEC, Packet_SendTipToClient::handle);
+        registrar.playToClient(Packet_SyncCourageData.TYPE, Packet_SyncCourageData.STREAM_CODEC, Packet_SyncCourageData::handle);
+        registrar.playToClient(Packet_SyncInfectionData.TYPE, Packet_SyncInfectionData.STREAM_CODEC, Packet_SyncInfectionData::handle);
+        registrar.playToClient(Packet_SyncRespawnPointData.TYPE, Packet_SyncRespawnPointData.STREAM_CODEC, Packet_SyncRespawnPointData::handle);
+        registrar.playToServer(Packet_KeepInventoryRequest.TYPE, Packet_KeepInventoryRequest.STREAM_CODEC, Packet_KeepInventoryRequest::handle);
+        registrar.playToClient(Packet_KeepInventoryResponse.TYPE, Packet_KeepInventoryResponse.STREAM_CODEC, Packet_KeepInventoryResponse::handle);
+        registrar.playToServer(Packet_NormalRespawnRequest.TYPE, Packet_NormalRespawnRequest.STREAM_CODEC, Packet_NormalRespawnRequest::handle);
+        registrar.playToClient(Packet_NormalRespawnResponse.TYPE, Packet_NormalRespawnResponse.STREAM_CODEC, Packet_NormalRespawnResponse::handle);
+        registrar.playToClient(Packet_DeathScreenData.TYPE, Packet_DeathScreenData.STREAM_CODEC, Packet_DeathScreenData::handle);
+        registrar.playToServer(Packet_RequestAllPlayerData.TYPE, Packet_RequestAllPlayerData.STREAM_CODEC, Packet_RequestAllPlayerData::handle);
+        registrar.playToServer(Packet_RequestPlayerStats.TYPE, Packet_RequestPlayerStats.STREAM_CODEC, Packet_RequestPlayerStats::handle);
+        registrar.playToClient(Packet_SyncPlayerStats.TYPE, Packet_SyncPlayerStats.STREAM_CODEC, Packet_SyncPlayerStats::handle);
+        registrar.playToClient(com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest.TYPE, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest.STREAM_CODEC, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginRequest::handle);
+        registrar.playToServer(com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse.TYPE, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse.STREAM_CODEC, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResponse::handle);
+        registrar.playToClient(com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult.TYPE, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult.STREAM_CODEC, com.mo.economy_system.network.packets.login_system.Packet_PlayerLoginResult::handle);
+        registrar.playToClient(Packet_NoticeCheckResponse.TYPE, Packet_NoticeCheckResponse.STREAM_CODEC, Packet_NoticeCheckResponse::handle);
+        registrar.playToServer(Packet_NoticeListRequest.TYPE, Packet_NoticeListRequest.STREAM_CODEC, Packet_NoticeListRequest::handle);
+        registrar.playToClient(Packet_NoticeListResponse.TYPE, Packet_NoticeListResponse.STREAM_CODEC, Packet_NoticeListResponse::handle);
+        registrar.playToServer(Packet_MarkNoticeReadRequest.TYPE, Packet_MarkNoticeReadRequest.STREAM_CODEC, Packet_MarkNoticeReadRequest::handle);
+        registrar.playToClient(Packet_SyncLimbInjury.TYPE, Packet_SyncLimbInjury.STREAM_CODEC, Packet_SyncLimbInjury::handle);
+        registrar.playToClient(Packet_OpenRevivalCharmGUI.TYPE, Packet_OpenRevivalCharmGUI.STREAM_CODEC, Packet_OpenRevivalCharmGUI::handle);
+        registrar.playToServer(Packet_RevivalRequest.TYPE, Packet_RevivalRequest.STREAM_CODEC, Packet_RevivalRequest::handle);
+        registrar.playToClient(Packet_OpenStoryBookGUI.TYPE, Packet_OpenStoryBookGUI.STREAM_CODEC, Packet_OpenStoryBookGUI::handle);
+        registrar.playToClient(Packet_OpenStoryFragmentGUI.TYPE, Packet_OpenStoryFragmentGUI.STREAM_CODEC, Packet_OpenStoryFragmentGUI::handle);
+        registrar.playToServer(Packet_UpdateStoryBookOrder.TYPE, Packet_UpdateStoryBookOrder.STREAM_CODEC, Packet_UpdateStoryBookOrder::handle);
+        registrar.playToClient(Packet_OpenNpcDialogueGUI.TYPE, Packet_OpenNpcDialogueGUI.STREAM_CODEC, Packet_OpenNpcDialogueGUI::handle);
+        registrar.playToServer(Packet_NpcInteractionRequest.TYPE, Packet_NpcInteractionRequest.STREAM_CODEC, Packet_NpcInteractionRequest::handle);
+        registrar.playToClient(Packet_SyncWorldWrapConfig.TYPE, Packet_SyncWorldWrapConfig.STREAM_CODEC, Packet_SyncWorldWrapConfig::handle);
+        registrar.playToClient(Packet_WorldWrapVisualState.TYPE, Packet_WorldWrapVisualState.STREAM_CODEC, Packet_WorldWrapVisualState::handle);
     }
 
-    public static void sendToServer(Object packet) {
-        INSTANCE.send(null, packet);
+    public static void sendToClient(CustomPacketPayload packet, ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, packet);
+    }
+
+    public static void sendToClient(ServerPlayer player, CustomPacketPayload packet) {
+        sendToClient(packet, player);
+    }
+
+    public static void sendToServer(CustomPacketPayload packet) {
+        PacketDistributor.sendToServer(packet);
     }
 }

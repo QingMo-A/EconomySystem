@@ -6,19 +6,26 @@ import com.mo.economy_system.server.notice.NoticeData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * 公告列表响应数据包（服务端 -> 客户端）
  * 包含所有公告和玩家已读状态
  */
-public class Packet_NoticeListResponse {
+public class Packet_NoticeListResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_NoticeListResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "notice_system/packet_notice_list_response"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_NoticeListResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_NoticeListResponse.encode(packet, buf), Packet_NoticeListResponse::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final List<NoticeData> notices;
     private final Set<Integer> readNoticeIds;
@@ -68,15 +75,10 @@ public class Packet_NoticeListResponse {
         return new Packet_NoticeListResponse(notices, readNoticeIds);
     }
 
-    public static void handle(Packet_NoticeListResponse msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_NoticeListResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // 只在客户端处理
-            if (context.getDirection().getReceptionSide().isClient()) {
-                handleClient(msg);
-            }
+            handleClient(msg);
         });
-        context.setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)

@@ -76,7 +76,7 @@ public class Command_Info {
         ItemStack itemStack = requester.getItemInHand(InteractionHand.MAIN_HAND);
 
         // 获取物品的 NBT 数据
-        CompoundTag nbt = com.mo.economy_system.utils.ItemStackCompat.getTag(itemStack);
+        CompoundTag nbt = com.mo.economy_system.utils.ItemStackDataHelper.getTag(itemStack);
 
         if (nbt != null) {
             // 遍历 NBT 中的所有键并打印不同类型的数据

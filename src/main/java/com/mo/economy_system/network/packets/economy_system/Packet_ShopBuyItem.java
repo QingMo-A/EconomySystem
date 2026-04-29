@@ -13,11 +13,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class Packet_ShopBuyItem {
+public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ShopBuyItem> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_shop_buy_item"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ShopBuyItem> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ShopBuyItem.encode(packet, buf), Packet_ShopBuyItem::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final String itemID;
     private final String itemNbt;
@@ -46,10 +53,9 @@ public class Packet_ShopBuyItem {
         return new Packet_ShopBuyItem(itemID, itemNbt, price, quantity);
     }
 
-    public static void handle(Packet_ShopBuyItem msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_ShopBuyItem msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             EconomySavedData economyData = EconomySavedData.getInstance(player.serverLevel());
@@ -91,8 +97,8 @@ public class Packet_ShopBuyItem {
             // 5. 执行购买逻辑（扣除余额并添加物品）
             try {
                 economyData.minBalance(player.getUUID(), totalPrice);
-                if (com.mo.economy_system.utils.ItemStackCompat.getTag(itemStack) != null) {
-                    addItemsToInventory(player.getInventory(), item, msg.quantity, com.mo.economy_system.utils.ItemStackCompat.getTag(itemStack));
+                if (com.mo.economy_system.utils.ItemStackDataHelper.getTag(itemStack) != null) {
+                    addItemsToInventory(player.getInventory(), item, msg.quantity, com.mo.economy_system.utils.ItemStackDataHelper.getTag(itemStack));
                 } else {
                     addItemsToInventory(player.getInventory(), item, msg.quantity);
                 }
@@ -107,7 +113,6 @@ public class Packet_ShopBuyItem {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_ERROR_MESSAGE_KEY));
             }
         });
-        context.setPacketHandled(true);
     }
 
     // 辅助方法：计算需要的槽位
@@ -198,7 +203,7 @@ public class Packet_ShopBuyItem {
         while (remaining > 0) {
             int stackSize = Math.min(remaining, maxStackSize);
             ItemStack newStack = new ItemStack(item, stackSize);
-            com.mo.economy_system.utils.ItemStackCompat.setTag(newStack, tag);
+            com.mo.economy_system.utils.ItemStackDataHelper.setTag(newStack, tag);
             inventory.add(newStack); // 自动处理掉落逻辑
             remaining -= stackSize;
         }
@@ -239,7 +244,7 @@ public class Packet_ShopBuyItem {
 
         // 应用NBT
         if (userNbt != null) {
-            com.mo.economy_system.utils.ItemStackCompat.setTag(itemStack, userNbt);
+            com.mo.economy_system.utils.ItemStackDataHelper.setTag(itemStack, userNbt);
         }
 
         return itemStack;

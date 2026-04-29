@@ -6,13 +6,19 @@ import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.*;
-import java.util.function.Supplier;
 
-public class Packet_BalanceRequest {
+public class Packet_BalanceRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_BalanceRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_balance_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_BalanceRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_BalanceRequest.encode(packet, buf), Packet_BalanceRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     public Packet_BalanceRequest() {}
 
@@ -24,10 +30,9 @@ public class Packet_BalanceRequest {
         return new Packet_BalanceRequest();
     }
 
-    public static void handle(Packet_BalanceRequest msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_BalanceRequest msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player != null) {
                 ServerLevel serverLevel = player.serverLevel();
                 if (serverLevel != null) {
@@ -50,11 +55,10 @@ public class Packet_BalanceRequest {
                     }
 
                     // 发送响应包到客户端
-                    EconomySystem_NetworkManager.INSTANCE.send(player, new Packet_BalanceResponse(balance, accountNames));
+                    EconomySystem_NetworkManager.sendToClient(player, new Packet_BalanceResponse(balance, accountNames));
                 }
             }
         });
-        context.setPacketHandled(true);
     }
 
 }

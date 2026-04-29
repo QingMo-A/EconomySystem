@@ -32,7 +32,7 @@ public class ClientLoginHandler {
             Minecraft.getInstance().player.getUUID()
         );
 
-        EconomySystem_NetworkManager.INSTANCE.send(
+        EconomySystem_NetworkManager.sendToClient(
             null,
             packet
         );
@@ -59,7 +59,7 @@ public class ClientLoginHandler {
             Minecraft.getInstance().player.getUUID()
         );
 
-        EconomySystem_NetworkManager.INSTANCE.send(
+        EconomySystem_NetworkManager.sendToClient(
             null,
             packet
         );

@@ -3,7 +3,7 @@ package com.mo.economy_system.network.packets.check_system;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,12 +15,19 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class Packet_Check {
+public class Packet_Check implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Check> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_check"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Check> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Check.encode(packet, buf), Packet_Check::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final String playerName;
     private final String playerUUID;
@@ -48,8 +55,7 @@ public class Packet_Check {
         return new Packet_Check(buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(Packet_Check msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_Check msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             executor.execute(() -> {
                 Minecraft mc = Minecraft.getInstance();
@@ -97,11 +103,10 @@ public class Packet_Check {
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
                 String jsonContent = gson.toJson(jsonData);
 
-                EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_CheckResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, jsonContent));
+                EconomySystem_NetworkManager.sendToServer(new Packet_CheckResultRequest(msg.playerName, msg.playerUUID, msg.senderName, msg.senderUUID, msg.actionType, jsonContent));
 
             });
         });
-        contextSupplier.get().setPacketHandled(true);
     }
 
     private static String computeSHA256(Path path) throws IOException, NoSuchAlgorithmException {

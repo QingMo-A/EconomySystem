@@ -3,13 +3,20 @@ package com.mo.economy_system.network.packets.storybook_system;
 import com.mo.economy_system.core.storybook_system.StoryBookDataManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_UpdateStoryBookOrder {
+public class Packet_UpdateStoryBookOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_UpdateStoryBookOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "storybook_system/packet_update_story_book_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_UpdateStoryBookOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_UpdateStoryBookOrder.encode(packet, buf), Packet_UpdateStoryBookOrder::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     private final List<Integer> orderedFragmentIds;
 
     public Packet_UpdateStoryBookOrder(List<Integer> orderedFragmentIds) {
@@ -32,14 +39,12 @@ public class Packet_UpdateStoryBookOrder {
         return new Packet_UpdateStoryBookOrder(orderedIds);
     }
 
-    public static void handle(Packet_UpdateStoryBookOrder packet, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_UpdateStoryBookOrder packet, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player != null) {
                 StoryBookDataManager.updateFragmentOrderForPlayer(player.getUUID(), packet.orderedFragmentIds);
             }
         });
-        context.setPacketHandled(true);
     }
 }

@@ -5,13 +5,19 @@ import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import com.mo.economy_system.compat.network.NetworkEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.List;
-import java.util.function.Supplier;
 
-public class Packet_MarketDataRequest {
+public class Packet_MarketDataRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_MarketDataRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_market_data_request"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_MarketDataRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_MarketDataRequest.encode(packet, buf), Packet_MarketDataRequest::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
     public Packet_MarketDataRequest() {}
 
     public static void encode(Packet_MarketDataRequest msg, FriendlyByteBuf buf) {}
@@ -20,18 +26,16 @@ public class Packet_MarketDataRequest {
         return new Packet_MarketDataRequest();
     }
 
-    public static void handle(Packet_MarketDataRequest msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_MarketDataRequest msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player != null) {
                 // 获取市场数据
                 List<MarketItem> marketItems = MarketManager.getMarketItems();
                 // 发送响应数据包
-                EconomySystem_NetworkManager.INSTANCE.send(player, new Packet_MarketDataResponse(marketItems));
+                EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(marketItems));
             }
         });
-        context.setPacketHandled(true);
     }
 }
 

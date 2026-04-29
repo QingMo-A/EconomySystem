@@ -10,12 +10,19 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import com.mo.economy_system.compat.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class Packet_ConfirmDemandOrder {
+public class Packet_ConfirmDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+
+    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ConfirmDemandOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/demand_order/packet_confirm_demand_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ConfirmDemandOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ConfirmDemandOrder.encode(packet, buf), Packet_ConfirmDemandOrder::decode);
+
+    @Override
+    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
+        return TYPE;
+    }
 
     private final UUID itemId;
 
@@ -31,10 +38,9 @@ public class Packet_ConfirmDemandOrder {
         return new Packet_ConfirmDemandOrder(buf.readUUID());
     }
 
-    public static void handle(Packet_ConfirmDemandOrder msg, Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context context = contextSupplier.get();
+    public static void handle(Packet_ConfirmDemandOrder msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
             // 获取市场中的商品
@@ -62,11 +68,10 @@ public class Packet_ConfirmDemandOrder {
             }
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_SUCCESS_KEY, item.getItemStack().getHoverName(), item.getItemStack().getCount()));
         });
-        context.setPacketHandled(true);
     }
 }
 

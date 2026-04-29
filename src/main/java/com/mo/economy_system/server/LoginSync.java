@@ -9,7 +9,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Collection;
 
@@ -37,7 +36,7 @@ public class LoginSync {
     //给单个玩家发送指定玩家的同步包
     public static void sendSyncPacketToPlayer(ServerPlayer targetReceiver, ServerPlayer dataOwner) {
         Packet_SyncPlayerData syncPacket = new Packet_SyncPlayerData(dataOwner);
-        EconomySystem_NetworkManager.INSTANCE.send(
+        EconomySystem_NetworkManager.sendToClient(
                 targetReceiver,
                 syncPacket
         );

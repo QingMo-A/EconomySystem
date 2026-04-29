@@ -284,7 +284,7 @@ public class Screen_NpcDialogue extends Screen {
                             dialogueIndex++;
                             openTime = System.currentTimeMillis();
                         }
-                        EconomySystem_NetworkManager.INSTANCE.sendToServer(new Packet_NpcInteractionRequest(data.getNpcId(), data.getEntityId(), area.type));
+                        EconomySystem_NetworkManager.sendToServer(new Packet_NpcInteractionRequest(data.getNpcId(), data.getEntityId(), area.type));
                     }
                     return true;
                 }
