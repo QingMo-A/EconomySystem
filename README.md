@@ -10,8 +10,8 @@
 - [HanHanYu](https://github.com/hanhanyu666)
 
 详细请查看 
-[1.20.1 分支](https://github.com/QingMo-A/EconomySystem/tree/1.20.1)
-[1.21.1 分支](https://github.com/QingMo-A/EconomySystem/tree/1.21.1)
+- [1.20.1 分支](https://github.com/QingMo-A/EconomySystem/tree/1.20.1)
+- [1.21.1 分支](https://github.com/QingMo-A/EconomySystem/tree/1.21.1)
 
 ---
 
