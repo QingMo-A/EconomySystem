@@ -2,6 +2,7 @@ package com.mo.economy_system.network;
 
 import com.mo.economy_system.network.packets.*;
 import com.mo.economy_system.network.packets.check_system.*;
+import com.mo.economy_system.network.packets.cinematic_system.Packet_PlayJoinCinematic;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_CreateDemandOrder;
@@ -134,6 +135,7 @@ public class EconomySystem_NetworkManager {
         registrar.playToServer(Packet_UpdateStoryBookOrder.TYPE, Packet_UpdateStoryBookOrder.STREAM_CODEC, Packet_UpdateStoryBookOrder::handle);
         registrar.playToClient(Packet_OpenNpcDialogueGUI.TYPE, Packet_OpenNpcDialogueGUI.STREAM_CODEC, Packet_OpenNpcDialogueGUI::handle);
         registrar.playToServer(Packet_NpcInteractionRequest.TYPE, Packet_NpcInteractionRequest.STREAM_CODEC, Packet_NpcInteractionRequest::handle);
+        registrar.playToClient(Packet_PlayJoinCinematic.TYPE, Packet_PlayJoinCinematic.STREAM_CODEC, Packet_PlayJoinCinematic::handle);
     }
 
     public static void sendToClient(CustomPacketPayload packet, ServerPlayer player) {

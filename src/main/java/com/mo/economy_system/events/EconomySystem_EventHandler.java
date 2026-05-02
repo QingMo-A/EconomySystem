@@ -12,6 +12,8 @@ import com.mo.economy_system.commands.time_system.Command_Time;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.cinematic_system.Packet_PlayJoinCinematic;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
@@ -153,6 +155,7 @@ public class EconomySystem_EventHandler {
             for (String message : offlineMessages) {
                 serverPlayer.sendSystemMessage(Component.literal(message));
             }
+            EconomySystem_NetworkManager.sendToClient(new Packet_PlayJoinCinematic(), serverPlayer);
         }
     }
 

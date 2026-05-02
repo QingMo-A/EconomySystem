@@ -15,7 +15,10 @@
     "ui.GenericDirtMessageScreenMixin",
     "ui.GenericWaitingScreenMixin",
     "ui.ModScreenBackgroundMixin",
-    "ui.TitleScreenMixin"
+    "ui.TitleScreenMixin",
+    "cinematic_system.CameraJoinCinematicMixin",
+    "cinematic_system.MouseHandlerJoinCinematicMixin",
+    "cinematic_system.ItemInHandRendererJoinCinematicMixin"
   ],
   "server": [
 
