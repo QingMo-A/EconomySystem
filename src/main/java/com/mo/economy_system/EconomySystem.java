@@ -11,7 +11,6 @@ import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.core.npc_system.NpcManager;
 import com.mo.economy_system.core.playerattributes_system.limb_health_system.LimbDamageConfig;
-import com.mo.economy_system.core.world_wrap_system.WorldWrapConfig;
 import com.mo.economy_system.loot.EconomySystem_LootModifiers;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.server.notice.NoticeManager;
@@ -58,7 +57,6 @@ public class EconomySystem {
         NoticeManager.loadFromConfig();
         PlayerNoticeDataManager.init();
         NpcManager.init();
-        WorldWrapConfig.init();
 
         // 初始化肢体伤害系统
         LimbDamageConfig.init();

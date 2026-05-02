@@ -21,7 +21,6 @@ import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.core.update_checker_system.UpdateChecker;
-import com.mo.economy_system.core.world_wrap_system.WorldWrapManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -154,7 +153,6 @@ public class EconomySystem_EventHandler {
             for (String message : offlineMessages) {
                 serverPlayer.sendSystemMessage(Component.literal(message));
             }
-            WorldWrapManager.syncConfigTo(serverPlayer);
         }
     }
 

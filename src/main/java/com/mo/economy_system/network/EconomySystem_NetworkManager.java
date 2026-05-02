@@ -42,8 +42,6 @@ import com.mo.economy_system.network.packets.task_system.Packet_SyncCompleteTask
 import com.mo.economy_system.network.packets.task_system.Packet_SyncFullTaskData;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.network.packets.tip_system.Packet_SendTipToClient;
-import com.mo.economy_system.network.packets.world_wrap_system.Packet_SyncWorldWrapConfig;
-import com.mo.economy_system.network.packets.world_wrap_system.Packet_WorldWrapVisualState;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
@@ -136,8 +134,6 @@ public class EconomySystem_NetworkManager {
         registrar.playToServer(Packet_UpdateStoryBookOrder.TYPE, Packet_UpdateStoryBookOrder.STREAM_CODEC, Packet_UpdateStoryBookOrder::handle);
         registrar.playToClient(Packet_OpenNpcDialogueGUI.TYPE, Packet_OpenNpcDialogueGUI.STREAM_CODEC, Packet_OpenNpcDialogueGUI::handle);
         registrar.playToServer(Packet_NpcInteractionRequest.TYPE, Packet_NpcInteractionRequest.STREAM_CODEC, Packet_NpcInteractionRequest::handle);
-        registrar.playToClient(Packet_SyncWorldWrapConfig.TYPE, Packet_SyncWorldWrapConfig.STREAM_CODEC, Packet_SyncWorldWrapConfig::handle);
-        registrar.playToClient(Packet_WorldWrapVisualState.TYPE, Packet_WorldWrapVisualState.STREAM_CODEC, Packet_WorldWrapVisualState::handle);
     }
 
     public static void sendToClient(CustomPacketPayload packet, ServerPlayer player) {
