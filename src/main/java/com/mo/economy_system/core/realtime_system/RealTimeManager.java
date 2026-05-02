@@ -1,9 +1,13 @@
 package com.mo.economy_system.core.realtime_system;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * 实时时间管理器
@@ -12,6 +16,10 @@ import java.time.ZonedDateTime;
 public class RealTimeManager {
 
     private static final ZoneId EAST_8_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final long DAY_LENGTH = 24000L;
+    private static final float VANILLA_DAY_TICKS_PER_SERVER_TICK = 1.0F;
+    private static final float REAL_DAY_TICKS_PER_SERVER_TICK = (float) ((double) DAY_LENGTH / 86400.0D / 20.0D);
+    private static final Set<ServerLevel> INITIALIZED_LEVELS = Collections.newSetFromMap(new WeakHashMap<>());
 
     /**
      * 检查实时时间系统是否启用
@@ -31,6 +39,10 @@ public class RealTimeManager {
     public static void setEnabled(ServerLevel level, boolean enabled) {
         RealTimeSavedData data = RealTimeSavedData.getInstance(level);
         data.setEnabled(enabled);
+        applyDayTimeSpeed(level, enabled);
+        if (enabled) {
+            alignToRealTimeOnce(level);
+        }
     }
 
     /**
@@ -39,7 +51,45 @@ public class RealTimeManager {
     public static boolean toggle(ServerLevel level) {
         RealTimeSavedData data = RealTimeSavedData.getInstance(level);
         data.toggle();
+        applyDayTimeSpeed(level, data.isEnabled());
+        if (data.isEnabled()) {
+            alignToRealTimeOnce(level);
+        }
         return data.isEnabled();
+    }
+
+    /**
+     * Uses Minecraft's dayTimePerTick clock instead of repeatedly setting
+     * dayTime. This keeps gameTime and server tick logic vanilla, while the
+     * sky clock moves at real-world day speed without visual pullback.
+     */
+    public static void tickDayTime(ServerLevel level) {
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+
+        boolean enabled = isEnabled(level);
+        applyDayTimeSpeed(level, enabled);
+        if (enabled && INITIALIZED_LEVELS.add(level)) {
+            alignToRealTimeOnce(level);
+        }
+    }
+
+    private static void applyDayTimeSpeed(ServerLevel level, boolean realtimeEnabled) {
+        float desiredSpeed = realtimeEnabled ? REAL_DAY_TICKS_PER_SERVER_TICK : VANILLA_DAY_TICKS_PER_SERVER_TICK;
+        if (Math.abs(level.getDayTimePerTick() - desiredSpeed) > 0.000001F) {
+            level.setDayTimePerTick(desiredSpeed);
+        }
+        if (!realtimeEnabled) {
+            INITIALIZED_LEVELS.remove(level);
+        }
+    }
+
+    private static void alignToRealTimeOnce(ServerLevel level) {
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+        level.setDayTime(getRealWorldTimeInGameTicks());
     }
 
     /**
@@ -66,4 +116,5 @@ public class RealTimeManager {
 
         return gameTime;
     }
+
 }
