@@ -22,6 +22,8 @@ public final class JoinCinematicController {
 
     private static boolean pendingStart;
     private static boolean active;
+    private static boolean savedHideGui;
+    private static boolean hasSavedHideGui;
     private static int ageTicks;
     private static int delayTicks;
 
@@ -36,7 +38,7 @@ public final class JoinCinematicController {
     public static void clientTick() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) {
-            active = false;
+            stop(minecraft);
             ageTicks = 0;
             return;
         }
@@ -46,12 +48,12 @@ public final class JoinCinematicController {
                 return;
             }
             pendingStart = false;
-            active = true;
+            start(minecraft);
             ageTicks = 0;
         }
 
         if (active && ++ageTicks >= TOTAL_TICKS) {
-            active = false;
+            stop(minecraft);
         }
     }
 
@@ -144,6 +146,24 @@ public final class JoinCinematicController {
 
     private static float rotLerp(float from, float to, float delta) {
         return from + Mth.wrapDegrees(to - from) * delta;
+    }
+
+    private static void start(Minecraft minecraft) {
+        if (!hasSavedHideGui) {
+            savedHideGui = minecraft.options.hideGui;
+            hasSavedHideGui = true;
+        }
+        minecraft.options.hideGui = true;
+        active = true;
+    }
+
+    private static void stop(Minecraft minecraft) {
+        if (hasSavedHideGui) {
+            minecraft.options.hideGui = savedHideGui;
+            hasSavedHideGui = false;
+        }
+        active = false;
+        pendingStart = false;
     }
 
     public record CameraFrame(Vec3 position, float yaw, float pitch) {
