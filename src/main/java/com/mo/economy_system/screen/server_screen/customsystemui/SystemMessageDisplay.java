@@ -25,13 +25,18 @@ import java.util.List;
 @EventBusSubscriber(modid = "economy_system", value = Dist.CLIENT)
 public class SystemMessageDisplay {
     // 消息显示配置
-    private static final int MAX_MESSAGES = 10;              // 最多显示5条消息
-    private static final int MESSAGE_DISPLAY_TIME = 8000;   // 每条消息显示8秒
-    private static final int MESSAGE_FADE_TIME = 1000;      // 消失前1秒淡出
-    private static final int BOX_PADDING = 4;               // 框内边距
-    private static final int BOX_SPACING = 2;               // 消息之间间距
-    private static final int RIGHT_OFFSET = 2;              // 右侧偏移
-    private static final float MESSAGE_TEXT_SCALE = 0.85f;  // 文字缩放比例
+    private static final int MAX_MESSAGES = 10;
+    private static final int MESSAGE_DISPLAY_TIME = 8000;
+    private static final int MESSAGE_FADE_TIME = 1000;
+    private static final int BOX_PADDING = 5;
+    private static final int BOX_SPACING = 3;
+    private static final int RIGHT_OFFSET = 2;
+    private static final float MESSAGE_TEXT_SCALE = 0.85f;
+    private static final int CORNER_RADIUS = 2;
+    private static final int ACCENT_WIDTH = 2;
+    private static final int LEFT_PAD = 5;
+    private static final int RIGHT_PAD = 6;
+    private static final int GAP_AFTER_ACCENT = 3;
 
     // 颜色定义
     private static final int COLOR_TASK = 0x55FF55;         // 普通进度 - 绿色
@@ -155,10 +160,10 @@ public class SystemMessageDisplay {
         for (int i = messages.size() - 1; i >= 0; i--) {
             SystemMessage message = messages.get(i);
 
-            // 计算消息框宽度
+            // 计算消息框宽度：左内边距 + 强调条 + 间距 + 缩放后文字宽 + 右内边距
             int textWidth = font.width(message.text);
             int scaledTextWidth = (int)(textWidth * MESSAGE_TEXT_SCALE);
-            int boxWidth = scaledTextWidth + BOX_PADDING * 2;
+            int boxWidth = LEFT_PAD + ACCENT_WIDTH + GAP_AFTER_ACCENT + scaledTextWidth + RIGHT_PAD;
 
             // 框的位置（右上角对齐玩家信息框）
             int boxX = screenWidth - boxWidth - RIGHT_OFFSET;
@@ -177,44 +182,118 @@ public class SystemMessageDisplay {
     }
 
     /**
-     * 渲染单个消息框
+     * 渲染单个消息框（圆角 + 左侧细强调条 + 柔和边框）
      */
     private static void renderMessageBox(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
                                         SystemMessage message, int borderColor) {
         float alpha = message.getAlpha();
-
-        // 如果完全透明，不渲染
         if (alpha <= 0.0f) return;
 
-        // 计算带透明度的颜色
-        int bgColor = ((int)(0xD0 * alpha) & 0xFF) << 24 | 0x181818;
-        int glowColor = ((int)(0x40 * alpha) & 0xFF) << 24 | (borderColor & 0x00FFFFFF);
-        int finalBorderColor = ((int)(0xFF * alpha) & 0xFF) << 24 | (borderColor & 0x00FFFFFF);
+        int aBg = Math.min(0xD8, (int)(0xD8 * alpha));
+        int aGlow = Math.min(0x38, (int)(0x38 * alpha));
+        int aBorder = Math.min(0xCC, (int)(0xCC * alpha));
 
-        // 背景和发光效果
-        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, bgColor);
-        guiGraphics.fill(RenderType.gui(), x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
+        int bgColor = (aBg << 24) | 0x151A22;
+        int glowColor = (aGlow << 24) | (borderColor & 0x00FFFFFF);
+        int borderColorFinal = (aBorder << 24) | (borderColor & 0x00FFFFFF);
+        int accentColor = (aBorder << 24) | (borderColor & 0x00FFFFFF);
 
-        // 边框（上、下、左、右）
-        guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, finalBorderColor);
-        guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, finalBorderColor);
-        guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, finalBorderColor);
-        guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + height, finalBorderColor);
+        // 柔和外发光
+        drawRoundedRect(guiGraphics, x - 1, y - 1, width + 2, height + 2, CORNER_RADIUS + 1, glowColor);
 
-        // 渲染文本（应用缩放）- 保持原版颜色
+        // 主体背景（圆角）
+        drawRoundedRect(guiGraphics, x, y, width, height, CORNER_RADIUS, bgColor);
+
+        // 圆角边框
+        drawRoundedBorder(guiGraphics, x, y, width, height, CORNER_RADIUS, borderColorFinal);
+
+        // 左侧细强调条
+        int accentX = x + LEFT_PAD - 2;
+        int accentY = y + BOX_PADDING;
+        int accentH = height - BOX_PADDING * 2;
+        guiGraphics.fill(RenderType.gui(), accentX, accentY, accentX + ACCENT_WIDTH, accentY + accentH, accentColor);
+
+        // 渲染文本
         PoseStack poseStack = guiGraphics.pose();
         poseStack.pushPose();
 
-        int textX = x + BOX_PADDING;
-        int textY = y + BOX_PADDING;
+        int textX = x + LEFT_PAD + ACCENT_WIDTH + GAP_AFTER_ACCENT;
+        int scaledTextH = (int)(font.lineHeight * MESSAGE_TEXT_SCALE);
+        int textY = y + (height - scaledTextH) / 2;
 
         poseStack.translate(textX, textY, 0);
         poseStack.scale(MESSAGE_TEXT_SCALE, MESSAGE_TEXT_SCALE, 1.0f);
 
-        // 直接绘制Component，保持原版颜色
         guiGraphics.drawString(font, message.text, 0, 0, 0xFFFFFFFF, false);
 
         poseStack.popPose();
+    }
+
+    // ==================== 圆角绘制辅助 ====================
+
+    private static void drawRoundedRect(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int color) {
+        if (radius <= 0 || (color >>> 24) == 0) {
+            if ((color >>> 24) != 0) {
+                guiGraphics.fill(RenderType.gui(), x, y, x + width, y + height, color);
+            }
+            return;
+        }
+        int r = Math.min(radius, Math.min(width / 2, height / 2));
+        int right = x + width;
+        int bottom = y + height;
+
+        guiGraphics.fill(RenderType.gui(), x + r, y, right - r, bottom, color);
+        guiGraphics.fill(RenderType.gui(), x, y + r, right, bottom - r, color);
+
+        if (r >= 2) {
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + r, y + r, color);
+            guiGraphics.fill(RenderType.gui(), right - r, y + 1, right - 1, y + r, color);
+            guiGraphics.fill(RenderType.gui(), x + 1, bottom - r, x + r, bottom - 1, color);
+            guiGraphics.fill(RenderType.gui(), right - r, bottom - r, right - 1, bottom - 1, color);
+        }
+        if (r >= 3) {
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 2, x + 2, bottom - 2, color);
+            guiGraphics.fill(RenderType.gui(), right - 2, y + 2, right - 1, bottom - 2, color);
+            guiGraphics.fill(RenderType.gui(), x + 2, y + 1, right - 2, y + 2, color);
+            guiGraphics.fill(RenderType.gui(), x + 2, bottom - 2, right - 2, bottom - 1, color);
+        }
+    }
+
+    private static void drawRoundedBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int radius, int color) {
+        int a = color >>> 24;
+        if (a == 0) return;
+        if (radius <= 0) {
+            guiGraphics.fill(RenderType.gui(), x, y, x + width, y + 1, color);
+            guiGraphics.fill(RenderType.gui(), x, y + height - 1, x + width, y + height, color);
+            guiGraphics.fill(RenderType.gui(), x, y, x + 1, y + height, color);
+            guiGraphics.fill(RenderType.gui(), x + width - 1, y, x + width, y + height, color);
+            return;
+        }
+        int r = Math.min(radius, Math.min(width / 2, height / 2));
+        int right = x + width;
+        int bottom = y + height;
+
+        guiGraphics.fill(RenderType.gui(), x + r, y, right - r, y + 1, color);
+        guiGraphics.fill(RenderType.gui(), x + r, bottom - 1, right - r, bottom, color);
+        guiGraphics.fill(RenderType.gui(), x, y + r, x + 1, bottom - r, color);
+        guiGraphics.fill(RenderType.gui(), right - 1, y + r, right, bottom - r, color);
+
+        if (r >= 2) {
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 1, x + 2, y + 2, color);
+            guiGraphics.fill(RenderType.gui(), right - 2, y + 1, right - 1, y + 2, color);
+            guiGraphics.fill(RenderType.gui(), x + 1, bottom - 2, x + 2, bottom - 1, color);
+            guiGraphics.fill(RenderType.gui(), right - 2, bottom - 2, right - 1, bottom - 1, color);
+        }
+        if (r >= 3) {
+            guiGraphics.fill(RenderType.gui(), x + 1, y + 2, x + 2, y + 3, color);
+            guiGraphics.fill(RenderType.gui(), x + 2, y + 1, x + 3, y + 2, color);
+            guiGraphics.fill(RenderType.gui(), right - 2, y + 2, right - 1, y + 3, color);
+            guiGraphics.fill(RenderType.gui(), right - 3, y + 1, right - 2, y + 2, color);
+            guiGraphics.fill(RenderType.gui(), x + 1, bottom - 3, x + 2, bottom - 2, color);
+            guiGraphics.fill(RenderType.gui(), x + 2, bottom - 2, x + 3, bottom - 1, color);
+            guiGraphics.fill(RenderType.gui(), right - 2, bottom - 3, right - 1, bottom - 2, color);
+            guiGraphics.fill(RenderType.gui(), right - 3, bottom - 2, right - 2, bottom - 1, color);
+        }
     }
 
     /**
