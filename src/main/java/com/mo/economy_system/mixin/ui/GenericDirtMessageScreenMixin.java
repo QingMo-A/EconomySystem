@@ -1,42 +1,27 @@
 package com.mo.economy_system.mixin.ui;
 
+import com.mo.economy_system.client.util.LoadingTips;
 import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * GenericDirtMessageScreen Mixin
- * Modern glass-style loading message screen.
- */
 @Mixin(GenericMessageScreen.class)
 public abstract class GenericDirtMessageScreenMixin extends Screen {
 
-    private static final int ACCENT_BLUE = 0xFF0088FF;
-    private static final int TEXT_WHITE = 0xFFFFFFFF;
-    private static final int TEXT_GRAY = 0xFFAAAAAA;
-    private static final int GLASS_TOP = 0x66FFFFFF;
-    private static final int GLASS_BOTTOM = 0x33000000;
-    private static final int GLASS_BORDER = 0x55FFFFFF;
-    private static final int GLASS_SHADOW = 0x33000000;
-    private static final int GLASS_HIGHLIGHT = 0x66FFFFFF;
-    private static final int GLASS_INNER = 0x22FFFFFF;
-    private static final int PADDING = 12;
+    @Unique private static final int ACCENT_BLUE = 0xFF0088FF;
+    @Unique private static final int BAR_BG = 0x66000000;
+    @Unique private static final int BAR_HIGHLIGHT = 0xFF55AAFF;
 
-    @Unique
-    private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
-
-    @Unique
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-        ResourceLocation.fromNamespaceAndPath("economy_system", "background.png");
+    @Unique private final VirtualCoordinateHelper.VirtualSizeResult vs = new VirtualCoordinateHelper.VirtualSizeResult();
+    @Unique private String tip = "";
 
     protected GenericDirtMessageScreenMixin(Component title) {
         super(title);
@@ -45,109 +30,75 @@ public abstract class GenericDirtMessageScreenMixin extends Screen {
     @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
     private void economySystem$renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         ci.cancel();
-        renderCustomScreen(guiGraphics);
-    }
 
-    @Unique
-    private void renderCustomScreen(GuiGraphics guiGraphics) {
-        VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
+        VirtualCoordinateHelper.calculateVirtualSize(this, vs);
+        if (tip.isEmpty()) {
+            tip = LoadingTips.getRandomTip();
+        }
 
-        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
+        UiBackgroundRenderer.renderCyclingBackground(guiGraphics, this.width, this.height);
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().scale(virtualSize.uiScale, virtualSize.uiScale, 1.0f);
+        guiGraphics.pose().scale(vs.uiScale, vs.uiScale, 1.0f);
 
-        int centerX = virtualSize.virtualWidth / 2;
-        int centerY = virtualSize.virtualHeight / 2;
+        int vw = vs.virtualWidth;
+        int vh = vs.virtualHeight;
 
-        int boxWidth = 400;
-        int boxHeight = 140;
-        int boxX = centerX - boxWidth / 2;
-        int boxY = centerY - boxHeight / 2;
+        // 左上角提示
+        renderTip(guiGraphics);
 
-        economySystem$renderGlassPanel(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0xAAFFFFFF);
-
-        String titleText = this.title != null ? this.title.getString() : "Loading...";
-        if (!titleText.contains("§")) {
-            titleText = "§l" + titleText;
+        // 中间显示标题文字
+        String titleText = this.title != null ? this.title.getString() : "";
+        if (!titleText.isEmpty()) {
+            int centerX = vw / 2;
+            int centerY = vh / 2;
+            guiGraphics.drawCenteredString(this.font, titleText, centerX, centerY - 6, 0xFFFFFFFF);
         }
-        guiGraphics.drawCenteredString(this.font, titleText, centerX, boxY + 16, TEXT_WHITE);
-        guiGraphics.fill(boxX + PADDING, boxY + 34, boxX + boxWidth - PADDING, boxY + 35, ACCENT_BLUE);
 
-        String message = this.title != null ? this.title.getString() : "";
-        guiGraphics.drawCenteredString(this.font, "§7" + message, centerX, boxY + 58, TEXT_GRAY);
+        // 底部进度条（循环动画）
+        int barMargin = 32;
+        int barHeight = 6;
+        int barX = barMargin;
+        int barW = vw - barMargin * 2;
+        int barY = vh - 28;
 
-        // No progress bars for this screen.
+        long now = System.currentTimeMillis();
+        int fakeProgress = (int) ((now % 5000) * 100 / 5000);
+
+        String label = "处理中... " + fakeProgress + "%";
+        int labelW = this.font.width(label);
+        guiGraphics.drawString(this.font, label, barX + barW - labelW, barY - 12, 0xFFFFFFFF, true);
+
+        renderRoundedBar(guiGraphics, barX, barY, barW, barHeight, BAR_BG);
+        int fillW = barW * fakeProgress / 100;
+        if (fillW > 0) {
+            renderRoundedBar(guiGraphics, barX, barY, fillW, barHeight, ACCENT_BLUE);
+            if (fillW > 2) {
+                guiGraphics.fill(barX + 2, barY, barX + fillW - 2, barY + 1, BAR_HIGHLIGHT);
+            }
+        }
 
         guiGraphics.pose().popPose();
     }
 
     @Unique
-    private void economySystem$renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, int tint) {
-        guiGraphics.fillGradient(x, y, x + width, y + height, GLASS_TOP, GLASS_BOTTOM);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, economySystem$withAlpha(tint, 0x12));
-        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, GLASS_HIGHLIGHT);
-        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, GLASS_SHADOW);
-        economySystem$renderGlassNoise(guiGraphics, x, y, width, height);
+    private void renderTip(GuiGraphics guiGraphics) {
+        int tipX = 8;
+        int tipY = 8;
+        guiGraphics.drawString(this.font, "§e💡 提示", tipX, tipY, 0xFFFFFFFF, true);
+        guiGraphics.drawString(this.font, "§7" + tip, tipX, tipY + 13, 0xFFAAAAAA, true);
     }
 
     @Unique
-    private void economySystem$renderGlassNoise(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        if (width < 20 || height < 20) {
-            return;
-        }
-        int maxX = x + width - 6;
-        int maxY = y + height - 6;
-        for (int i = 0; i < 6; i++) {
-            int nx = x + 6 + (i * 23 + x) % (maxX - x);
-            int ny = y + 6 + (i * 17 + y) % (maxY - y);
-            guiGraphics.fill(nx, ny, nx + 1, ny + 1, 0x22FFFFFF);
-        }
-    }
-
-    @Unique
-    private void economySystem$renderRoundedBar(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
-        if (width <= 0 || height <= 0) {
-            return;
-        }
-        int radius = height >= 6 ? 2 : 1;
-        int innerHeight = Math.max(1, height - 2);
-        int left = x + radius;
-        int right = x + width - radius;
-        if (right > left) {
-            guiGraphics.fill(left, y, right, y + height, color);
-        }
-        guiGraphics.fill(x, y + 1, x + radius, y + 1 + innerHeight, color);
-        guiGraphics.fill(x + width - radius, y + 1, x + width, y + 1 + innerHeight, color);
-    }
-
-    @Unique
-    private void economySystem$renderStarSparkles(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        if (width <= 0 || height <= 0) {
-            return;
-        }
-        long time = System.currentTimeMillis();
-        int sparkleCount = Math.min(8, Math.max(4, width / 50));
-        int y1 = y + 1;
-        int y2 = y + height - 1;
-        for (int i = 0; i < sparkleCount; i++) {
-            int offset = (int) ((time / 260 + i * 17) % 1000);
-            int sx = x + (offset * 41 + i * 57) % Math.max(1, width);
-            int sy = y1 + (i * 3 + (int) (time / 380)) % Math.max(1, (y2 - y1));
-            guiGraphics.fill(sx, sy, sx + 1, sy + 1, 0x33FFFFFF);
-            if ((time / 800 + i) % 2 == 0) {
-                guiGraphics.fill(sx - 1, sy, sx, sy + 1, 0x2200FFFF);
-            }
-        }
-    }
-
-    @Unique
-    private int economySystem$withAlpha(int color, int alpha) {
-        return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24);
+    private static void renderRoundedBar(GuiGraphics g, int x, int y, int w, int h, int color) {
+        if (w <= 0 || h <= 0) return;
+        int r = h >= 6 ? h / 3 : 1;
+        int ih = Math.max(1, h - 2);
+        int left = x + r;
+        int right = x + w - r;
+        if (right > left) g.fill(left, y, right, y + h, color);
+        g.fill(x, y + 1, x + r, y + 1 + ih, color);
+        g.fill(x + w - r, y + 1, x + w, y + 1 + ih, color);
     }
 }

@@ -46,10 +46,6 @@ public abstract class DisconnectedScreenMixin extends Screen {
     private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
 
     @Unique
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("economy_system", "background.png");
-
-    @Unique
     private Button economySystem$returnButton;
 
     @Shadow
@@ -176,7 +172,6 @@ public abstract class DisconnectedScreenMixin extends Screen {
         VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
 
         // ========== 背景（使用屏幕坐标） ==========
-        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
         // ========== 应用虚拟坐标缩放 ==========

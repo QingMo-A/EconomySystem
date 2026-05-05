@@ -1,42 +1,27 @@
 package com.mo.economy_system.mixin.ui;
 
+import com.mo.economy_system.client.util.LoadingTips;
 import com.mo.economy_system.client.util.UiBackgroundRenderer;
 import com.mo.economy_system.client.util.VirtualCoordinateHelper;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * ReceivingLevelScreen Mixin
- * Modern glass-style loading screen without progress bar.
- */
 @Mixin(ReceivingLevelScreen.class)
 public abstract class ReceivingLevelScreenMixin extends Screen {
 
-    private static final int ACCENT_BLUE = 0xFF0088FF;
-    private static final int TEXT_WHITE = 0xFFFFFFFF;
-    private static final int TEXT_GRAY = 0xFFAAAAAA;
-    private static final int GLASS_TOP = 0x66FFFFFF;
-    private static final int GLASS_BOTTOM = 0x33000000;
-    private static final int GLASS_BORDER = 0x55FFFFFF;
-    private static final int GLASS_SHADOW = 0x33000000;
-    private static final int GLASS_HIGHLIGHT = 0x66FFFFFF;
-    private static final int GLASS_INNER = 0x22FFFFFF;
-    private static final int PADDING = 12;
+    @Unique private static final int ACCENT_BLUE = 0xFF0088FF;
+    @Unique private static final int BAR_BG = 0x66000000;
+    @Unique private static final int BAR_HIGHLIGHT = 0xFF55AAFF;
 
-    @Unique
-    private final VirtualCoordinateHelper.VirtualSizeResult virtualSize = new VirtualCoordinateHelper.VirtualSizeResult();
-
-    @Unique
-    private static final ResourceLocation BACKGROUND_TEXTURE =
-        ResourceLocation.fromNamespaceAndPath("economy_system", "background.png");
+    @Unique private final VirtualCoordinateHelper.VirtualSizeResult vs = new VirtualCoordinateHelper.VirtualSizeResult();
+    @Unique private String tip = "";
 
     protected ReceivingLevelScreenMixin(Component title) {
         super(title);
@@ -45,82 +30,67 @@ public abstract class ReceivingLevelScreenMixin extends Screen {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void economySystem$render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         ci.cancel();
-        renderCustomScreen(guiGraphics);
-    }
 
-    @Unique
-    private void renderCustomScreen(GuiGraphics guiGraphics) {
-        VirtualCoordinateHelper.calculateVirtualSize(this, virtualSize);
+        VirtualCoordinateHelper.calculateVirtualSize(this, vs);
+        if (tip.isEmpty()) {
+            tip = LoadingTips.getRandomTip();
+        }
 
-        UiBackgroundRenderer.renderCover(guiGraphics, BACKGROUND_TEXTURE, this.width, this.height);
+        UiBackgroundRenderer.renderCyclingBackground(guiGraphics, this.width, this.height);
         guiGraphics.fillGradient(0, 0, this.width, this.height, 0x88000000, 0xCC000000);
 
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().scale(virtualSize.uiScale, virtualSize.uiScale, 1.0f);
+        guiGraphics.pose().scale(vs.uiScale, vs.uiScale, 1.0f);
 
-        int centerX = virtualSize.virtualWidth / 2;
-        int centerY = virtualSize.virtualHeight / 2;
+        int vw = vs.virtualWidth;
+        int vh = vs.virtualHeight;
 
-        int boxWidth = 420;
-        int boxHeight = 150;
-        int boxX = centerX - boxWidth / 2;
-        int boxY = centerY - boxHeight / 2;
+        // 左上角提示
+        renderTip(guiGraphics);
 
-        economySystem$renderGlassPanel(guiGraphics, boxX, boxY, boxWidth, boxHeight, 0xAAFFFFFF);
+        // 底部进度条（循环动画）
+        int barMargin = 32;
+        int barHeight = 6;
+        int barX = barMargin;
+        int barW = vw - barMargin * 2;
+        int barY = vh - 28;
 
-        String titleText = "§lReceiving world...";
-        guiGraphics.drawCenteredString(this.font, titleText, centerX, boxY + 16, TEXT_WHITE);
-        guiGraphics.fill(boxX + PADDING, boxY + 34, boxX + boxWidth - PADDING, boxY + 35, ACCENT_BLUE);
+        long now = System.currentTimeMillis();
+        int fakeProgress = (int) ((now % 5000) * 100 / 5000);
 
-        String[] tips = {
-            "§7Syncing chunks...",
-            "§7Preparing terrain...",
-            "§7Loading entities...",
-            "§7Finalizing world..."
-        };
-        long time = System.currentTimeMillis();
-        int tipIndex = (int) ((time / 3000) % tips.length);
-        guiGraphics.drawCenteredString(this.font, tips[tipIndex], centerX, boxY + 60, TEXT_GRAY);
+        String label = "正在接收世界数据... " + fakeProgress + "%";
+        int labelW = this.font.width(label);
+        guiGraphics.drawString(this.font, label, barX + barW - labelW, barY - 12, 0xFFFFFFFF, true);
 
-        int dots = (int) ((time / 500) % 4);
-        String loadingDots = "";
-        for (int i = 0; i < dots; i++) {
-            loadingDots += ".";
+        renderRoundedBar(guiGraphics, barX, barY, barW, barHeight, BAR_BG);
+        int fillW = barW * fakeProgress / 100;
+        if (fillW > 0) {
+            renderRoundedBar(guiGraphics, barX, barY, fillW, barHeight, ACCENT_BLUE);
+            if (fillW > 2) {
+                guiGraphics.fill(barX + 2, barY, barX + fillW - 2, barY + 1, BAR_HIGHLIGHT);
+            }
         }
-        guiGraphics.drawCenteredString(this.font, "§9Entering world" + loadingDots, centerX, boxY + 88, TEXT_WHITE);
 
         guiGraphics.pose().popPose();
     }
 
     @Unique
-    private void economySystem$renderGlassPanel(GuiGraphics guiGraphics, int x, int y, int width, int height, int tint) {
-        guiGraphics.fillGradient(x, y, x + width, y + height, GLASS_TOP, GLASS_BOTTOM);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, economySystem$withAlpha(tint, 0x12));
-        guiGraphics.fill(x, y, x + width, y + 1, GLASS_BORDER);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x, y, x + 1, y + height, GLASS_BORDER);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, GLASS_SHADOW);
-        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 2, GLASS_HIGHLIGHT);
-        guiGraphics.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, GLASS_SHADOW);
-        economySystem$renderGlassNoise(guiGraphics, x, y, width, height);
+    private void renderTip(GuiGraphics guiGraphics) {
+        int tipX = 8;
+        int tipY = 8;
+        guiGraphics.drawString(this.font, "§e💡 提示", tipX, tipY, 0xFFFFFFFF, true);
+        guiGraphics.drawString(this.font, "§7" + tip, tipX, tipY + 13, 0xFFAAAAAA, true);
     }
 
     @Unique
-    private void economySystem$renderGlassNoise(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        if (width < 20 || height < 20) {
-            return;
-        }
-        int maxX = x + width - 6;
-        int maxY = y + height - 6;
-        for (int i = 0; i < 6; i++) {
-            int nx = x + 6 + (i * 23 + x) % (maxX - x);
-            int ny = y + 6 + (i * 17 + y) % (maxY - y);
-            guiGraphics.fill(nx, ny, nx + 1, ny + 1, 0x22FFFFFF);
-        }
-    }
-
-    @Unique
-    private int economySystem$withAlpha(int color, int alpha) {
-        return (color & 0x00FFFFFF) | ((alpha & 0xFF) << 24);
+    private static void renderRoundedBar(GuiGraphics g, int x, int y, int w, int h, int color) {
+        if (w <= 0 || h <= 0) return;
+        int r = h >= 6 ? h / 3 : 1;
+        int ih = Math.max(1, h - 2);
+        int left = x + r;
+        int right = x + w - r;
+        if (right > left) g.fill(left, y, right, y + h, color);
+        g.fill(x, y + 1, x + r, y + 1 + ih, color);
+        g.fill(x + w - r, y + 1, x + w, y + 1 + ih, color);
     }
 }

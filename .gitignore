@@ -32,6 +32,9 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### Minecraft Source ###
+minecraft_src/
+
 ### Minecraft Modding ###
 run/
 !**/src/**/run/

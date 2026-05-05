@@ -33,9 +33,6 @@ public abstract class LoadingOverlayMixin extends Overlay {
     @Unique private static final int ACCENT_BLUE = 0xFF0088FF;
     @Unique private static final int BAR_BACKGROUND = 0x66000000;
 
-    @Unique private static final ResourceLocation ECONOMY_SYSTEM_BACKGROUND =
-        ResourceLocation.fromNamespaceAndPath("economy_system", "background.png");
-
     @Shadow @Final private Minecraft minecraft;
     @Shadow @Final private ReloadInstance reload;
     @Shadow @Final private Consumer<Optional<Throwable>> onFinish;
@@ -60,7 +57,7 @@ public abstract class LoadingOverlayMixin extends Overlay {
 
         // Draw full-screen background
         RenderSystem.enableBlend();
-        UiBackgroundRenderer.renderCover(guiGraphics, ECONOMY_SYSTEM_BACKGROUND, width, height);
+        UiBackgroundRenderer.renderCyclingBackground(guiGraphics, width, height);
 
         // Update progress
         float actualProgress = this.reload.getActualProgress();
