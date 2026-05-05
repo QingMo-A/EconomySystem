@@ -136,6 +136,9 @@ public class SystemMessageDisplay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return;
 
+        // Follow vanilla HUD visibility: F1 hides custom system messages too.
+        if (mc.options.hideGui) return;
+
         // F3 调试菜单打开时隐藏系统消息
         if (mc.getDebugOverlay().showDebugScreen()) return;
 

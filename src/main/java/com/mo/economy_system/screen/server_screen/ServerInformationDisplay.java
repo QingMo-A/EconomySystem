@@ -156,7 +156,7 @@ public class ServerInformationDisplay {
     public static void onRenderGuiPost(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
 
-        if (!SHOW_UI || mc.isPaused() || mc.screen != null || mc.player == null) return;
+        if (!SHOW_UI || mc.isPaused() || mc.screen != null || mc.player == null || mc.options.hideGui) return;
 
         // F3 调试菜单打开时隐藏所有信息栏
         if (mc.getDebugOverlay().showDebugScreen()) return;

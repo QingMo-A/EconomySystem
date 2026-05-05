@@ -146,6 +146,7 @@ public class CustomStatueGUI {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null || mc.screen != null || player.isDeadOrDying()
+                || mc.options.hideGui || mc.getDebugOverlay().showDebugScreen()
                 || mc.gameMode != null && mc.gameMode.getPlayerMode() == GameType.CREATIVE) {
             return;
         }
