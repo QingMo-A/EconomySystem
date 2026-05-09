@@ -1,9 +1,10 @@
 package com.mo.economy_system.network.packets.economy_system.sales_order;
 
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
+import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
@@ -45,13 +46,11 @@ public class Packet_RemoveSalesOrder implements net.minecraft.network.protocol.c
 
             // 获取市场中的商品
             MarketItem item = MarketManager.getMarketItemById(msg.itemId);
-            if (item == null) {
+            if (!(item instanceof SalesOrder)) {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_REMOVE_FAILED_MESSAGE_KEY));
                 return;
             }
 
-            System.out.println(!item.getSellerID().equals(player.getUUID()));
-            System.out.println(player.hasPermissions(2));
             // 验证是否是卖家
             if (!item.getSellerID().equals(player.getUUID())) {
                 if (!Util_Player.isOP(player)) {
@@ -61,16 +60,24 @@ public class Packet_RemoveSalesOrder implements net.minecraft.network.protocol.c
             }
 
             // 从市场中移除商品
-            MarketManager.removeMarketItem(item);
+            if (!MarketManager.removeMarketItemById(msg.itemId)) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_REMOVE_FAILED_MESSAGE_KEY));
+                return;
+            }
+            MarketManager.saveTo(player.serverLevel());
 
             // 将物品返回给卖家
             ItemStack removedItem = item.getItemStack().copy();
-            if (!player.getInventory().add(removedItem)) {
-                player.drop(removedItem, false);
+            ServerPlayer itemReceiver = player.server.getPlayerList().getPlayer(item.getSellerID());
+            if (itemReceiver == null) {
+                itemReceiver = player;
+            }
+            if (!itemReceiver.getInventory().add(removedItem)) {
+                itemReceiver.drop(removedItem, false);
             }
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY));
         });

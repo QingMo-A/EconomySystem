@@ -47,14 +47,24 @@ public class Packet_CreateDemandOrder implements net.minecraft.network.protocol.
 
             // 验证买家是否有足够货币
             int price = msg.marketItem.getBasePrice();
+            if (price <= 0 || msg.marketItem.getItemStack().isEmpty() || msg.marketItem.getItemStack().getCount() <= 0
+                    || !msg.marketItem.getSellerID().equals(player.getUUID())
+                    || MarketManager.getMarketItemById(msg.marketItem.getTradeID()) != null) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
+                return;
+            }
             if (!savedData.hasEnoughBalance(player.getUUID(), price)) {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
                 return;
             }
 
-            savedData.minBalance(player.getUUID(), price);
+            if (!savedData.minBalance(player.getUUID(), price)) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
+                return;
+            }
             // 将商品加入市场管理器
             MarketManager.addMarketItem(msg.marketItem);
+            MarketManager.saveTo(serverLevel);
 
             // 发送成功消息给玩家
             player.sendSystemMessage(Component.translatable(LIST_SUCCESSFULLY_MESSAGE_KEY));

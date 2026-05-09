@@ -112,7 +112,7 @@ public class Command_Info {
         int x = (int) Math.floor(senderPos.x);
         int z = (int) Math.floor(senderPos.z);
 
-        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(x, z);
+        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(sender.serverLevel().dimension(), x, z);
         if (territory == null) {
             sender.sendSystemMessage(Component.literal("你未处于领地中"));
             return 0;

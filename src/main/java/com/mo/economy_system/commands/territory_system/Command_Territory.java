@@ -43,7 +43,7 @@ public class Command_Territory {
                                     int x = (int) Math.floor(senderPos.x);
                                     int z = (int) Math.floor(senderPos.z);
 
-                                    Territory territory = TerritoryManager.getTerritoryAtIgnoreY(x, z);
+                                    Territory territory = TerritoryManager.getTerritoryAtIgnoreY(sender.serverLevel().dimension(), x, z);
                                     if (territory == null || !territory.isOwner(sender.getUUID())) {
                                         sender.sendSystemMessage(Component.translatable(Util_MessageKeys.INVITE_NOT_IN_TERRITORY));
                                         return 0;
@@ -90,7 +90,7 @@ public class Command_Territory {
         int z = (int) Math.floor(playerPos.z);
 
         // 检查玩家是否在自己的领地
-        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(x, z);
+        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(player.serverLevel().dimension(), x, z);
         if (territory == null || !territory.isOwner(player.getUUID())) {
             source.sendFailure(Component.translatable(Util_MessageKeys.TERRITORY_SETBACKPOINT_NO_PERMISSION));
             return 0;

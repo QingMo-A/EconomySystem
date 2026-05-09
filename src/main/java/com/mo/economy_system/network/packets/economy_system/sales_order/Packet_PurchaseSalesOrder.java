@@ -1,10 +1,11 @@
 package com.mo.economy_system.network.packets.economy_system.sales_order;
 
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
+import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -49,20 +50,33 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
 
             // 查找市场中的商品
             MarketItem item = MarketManager.getMarketItemById(msg.itemId);
-            if (item == null) {
+            if (!(item instanceof SalesOrder)) {
                 buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
                 return;
             }
 
             // 验证买家是否有足够货币
             int price = item.getBasePrice();
+            if (price <= 0 || item.getSellerID().equals(buyer.getUUID())) {
+                buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
+                return;
+            }
             if (!savedData.hasEnoughBalance(buyer.getUUID(), price)) {
                 buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
                 return;
             }
 
             // 扣除买家货币并将物品发放给买家
-            savedData.minBalance(buyer.getUUID(), price);
+            if (!savedData.minBalance(buyer.getUUID(), price)) {
+                buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
+                return;
+            }
+            if (!MarketManager.removeMarketItemById(msg.itemId)) {
+                savedData.addBalance(buyer.getUUID(), price);
+                buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
+                return;
+            }
+            MarketManager.saveTo(serverLevel);
             ItemStack purchasedItem = item.getItemStack().copy();
             if (!buyer.getInventory().add(purchasedItem)) {
                 buyer.drop(purchasedItem, false); // 如果背包满了，直接丢在地上
@@ -86,11 +100,8 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
                 savedData.storeOfflineMessage(sellerID, text);
             }
 
-            // 从市场中移除商品
-            MarketManager.removeMarketItem(item);
-
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToClient(buyer, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
 
             // 打印日志
             System.out.println("Item sold: " + item.getItemStack().getHoverName().getString() +

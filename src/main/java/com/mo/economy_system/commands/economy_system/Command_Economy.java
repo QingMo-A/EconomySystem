@@ -89,7 +89,7 @@ public class Command_Economy {
                                                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
                                                     Player target = serverLevel.getPlayerByUUID(receiverUUID); // 根据 UUID 获取目标玩家
 
-                                                    if (target != null && data.minBalance(sender.getUUID(), amount) && target.getUUID() != sender.getUUID()) {
+                                                    if (target != null && !target.getUUID().equals(sender.getUUID()) && data.minBalance(sender.getUUID(), amount)) {
                                                         data.addBalance(target.getUUID(), amount);
                                                         sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_SUCCESSFULLY_MESSAGE_KEY, amount, target.getName().getString()));
                                                         target.sendSystemMessage(Component.translatable(Util_MessageKeys.RECEIVE_SUCCESSFULLY_MESSAGE_KEY, sender.getName().getString(), amount));

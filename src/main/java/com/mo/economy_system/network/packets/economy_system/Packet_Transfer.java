@@ -42,12 +42,16 @@ public class Packet_Transfer implements net.minecraft.network.protocol.common.cu
         context.enqueueWork(() -> {
             ServerPlayer sender = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null; // 获取发送请求的玩家
             if (sender != null) {
+                if (msg.amount <= 0 || msg.targetUUID.equals(sender.getUUID())) {
+                    sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_FAILED_MESSAGE_KEY));
+                    return;
+                }
                 ServerLevel serverLevel = sender.serverLevel(); // 使用 sender.serverLevel() 获取 ServerLevel
                 if (serverLevel != null) {
                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
                     Player target = serverLevel.getPlayerByUUID(msg.targetUUID); // 根据 UUID 获取目标玩家
 
-                    if (target != null && data.minBalance(sender.getUUID(), msg.amount) && target.getUUID() != sender.getUUID()) {
+                    if (target != null && data.minBalance(sender.getUUID(), msg.amount)) {
                         data.addBalance(target.getUUID(), msg.amount);
                         sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_SUCCESSFULLY_MESSAGE_KEY, msg.amount, target.getName().getString()));
                         target.sendSystemMessage(Component.translatable(Util_MessageKeys.RECEIVE_SUCCESSFULLY_MESSAGE_KEY, sender.getName().getString(), msg.amount));

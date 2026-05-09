@@ -81,8 +81,11 @@ public class ShopItem {
         ItemStack stack = new ItemStack(item);
 
         // 如果有自定义 NBT，则解析并写入
-        if (nbt != null && !nbt.isEmpty() && nbt != "null") {
+        if (nbt != null && !nbt.isEmpty() && !"null".equals(nbt)) {
             stack = applyEnchantmentNBT(stack, nbt);
+            if (stack == null) {
+                return ItemStack.EMPTY;
+            }
         }
         return stack;
     }

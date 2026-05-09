@@ -35,22 +35,26 @@ public class Command_TerritoryClaim {
                             BlockPos secondPos = Item_ClaimWand.getSecondPosition(playerUUID);
 
                             // 计算价格
-                            int volume = calculateVolume(firstPos, secondPos);
-                            int price = volume * 20;
+                            long volume = calculateVolume(firstPos, secondPos);
+                            long price = calculatePrice(volume);
 
                             // 检查余额
                             EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
-                            if (data.getBalance(playerUUID) < price) {
+                            if (price > EconomySavedData.MAX_BALANCE || !data.hasEnoughBalance(playerUUID, (int) price)) {
                                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_INSUFFICIENT_BALANCE, price));
                                 return 0;
                             }
 
-                            // 扣除金额并创建领地
+                            // 先扣费再创建领地，避免扣费失败时留下免费领地。
+                            if (!data.minBalance(playerUUID, (int) price)) {
+                                player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_INSUFFICIENT_BALANCE, price));
+                                return 0;
+                            }
+
                             String name = StringArgumentType.getString(context, "name");
                             Territory territory = new Territory(name, playerUUID, player.getName().getString(), firstPos.getX(), firstPos.getY(), firstPos.getZ(), secondPos.getX(), secondPos.getY(), secondPos.getZ(), firstPos, player.level().dimension());
                             territory.setBackpoint(firstPos);
                             TerritoryManager.addTerritory(territory);
-                            data.minBalance(playerUUID, price);
 
                             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_SUCCESS, name, price));
                             Item_ClaimWand.clearPositions(playerUUID); // 清除点位记录
@@ -62,7 +66,7 @@ public class Command_TerritoryClaim {
                     UUID playerUUID = player.getUUID();
 
                     // 检查玩家是否有两个选定点
-                    if (Item_ClaimWand.isResizing(playerUUID) == false || Item_ClaimWand.getFirstModifyPosition(playerUUID) == null || Item_ClaimWand.getSecondModifyPosition(playerUUID) == null || Item_ClaimWand.getModifyVolume(playerUUID) == 0) {
+                    if (!Item_ClaimWand.isResizing(playerUUID) || Item_ClaimWand.getFirstModifyPosition(playerUUID) == null || Item_ClaimWand.getSecondModifyPosition(playerUUID) == null || Item_ClaimWand.getModifyVolume(playerUUID) == 0L) {
                         player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_FAILED));
                         return 0;
                     }
@@ -71,16 +75,21 @@ public class Command_TerritoryClaim {
                     BlockPos firstPos = Item_ClaimWand.getFirstModifyPosition(playerUUID);
                     BlockPos secondPos = Item_ClaimWand.getSecondModifyPosition(playerUUID);
                     Territory t = TerritoryManager.getTerritoryByID(Item_ClaimWand.getResizingTerritoryID(player));
-                    TerritoryManager.removeTerritory(t.getTerritoryID());
+                    if (t == null || !t.isOwner(playerUUID) || !player.serverLevel().dimension().equals(t.getDimension())) {
+                        player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_FAILED));
+                        Item_ClaimWand.clearPositions(playerUUID);
+                        return 0;
+                    }
 
                     // 检查余额
                     EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
 
-                    int volume = Item_ClaimWand.getModifyVolume(playerUUID);
+                    long volume = Item_ClaimWand.getModifyVolume(playerUUID);
                     if (volume > 0) {
-                        int price = Item_ClaimWand.getModifyVolume(playerUUID) * 20;
+                        long price = calculatePrice(volume);
 
-                        if (data.minBalance(playerUUID, price)) {
+                        if (price <= EconomySavedData.MAX_BALANCE && data.minBalance(playerUUID, (int) price)) {
+                            TerritoryManager.removeTerritory(t.getTerritoryID());
                             t.setBackpoint(firstPos);
                             t.setX1(firstPos.getX());
                             t.setY1(firstPos.getY());
@@ -88,6 +97,7 @@ public class Command_TerritoryClaim {
                             t.setX2(secondPos.getX());
                             t.setY2(secondPos.getY());
                             t.setZ2(secondPos.getZ());
+                            TerritoryManager.addTerritory(t);
 
                             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_SUCCESS));
                             Item_ClaimWand.clearPositions(playerUUID);
@@ -95,6 +105,7 @@ public class Command_TerritoryClaim {
                             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_INSUFFICIENT_BALANCE));
                         }
                     } else {
+                        TerritoryManager.removeTerritory(t.getTerritoryID());
                         t.setBackpoint(firstPos);
                         t.setX1(firstPos.getX());
                         t.setY1(firstPos.getY());
@@ -102,19 +113,26 @@ public class Command_TerritoryClaim {
                         t.setX2(secondPos.getX());
                         t.setY2(secondPos.getY());
                         t.setZ2(secondPos.getZ());
+                        TerritoryManager.addTerritory(t);
 
                         player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_SUCCESS));
                         Item_ClaimWand.clearPositions(playerUUID);
                     }
-                    TerritoryManager.addTerritory(t);
                     return 1;
                 })
         );
     }
 
-    private static int calculateVolume(BlockPos pos1, BlockPos pos2) {
-        int xSize = Math.abs(pos2.getX() - pos1.getX()) + 1;
-        int zSize = Math.abs(pos2.getZ() - pos1.getZ()) + 1;
+    private static long calculateVolume(BlockPos pos1, BlockPos pos2) {
+        long xSize = Math.abs((long) pos2.getX() - pos1.getX()) + 1L;
+        long zSize = Math.abs((long) pos2.getZ() - pos1.getZ()) + 1L;
         return xSize * zSize; // 计算体积
+    }
+
+    private static long calculatePrice(long volume) {
+        if (volume > Long.MAX_VALUE / 20L) {
+            return Long.MAX_VALUE;
+        }
+        return volume * 20L;
     }
 }

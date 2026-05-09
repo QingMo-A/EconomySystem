@@ -20,14 +20,22 @@ public class Packet_BalanceRequest implements net.minecraft.network.protocol.com
         return TYPE;
     }
 
-    public Packet_BalanceRequest() {}
+    private final boolean includeAccountList;
+
+    public Packet_BalanceRequest() {
+        this(true);
+    }
+
+    public Packet_BalanceRequest(boolean includeAccountList) {
+        this.includeAccountList = includeAccountList;
+    }
 
     public static void encode(Packet_BalanceRequest msg, FriendlyByteBuf buf) {
-        // 无需数据
+        buf.writeBoolean(msg.includeAccountList);
     }
 
     public static Packet_BalanceRequest decode(FriendlyByteBuf buf) {
-        return new Packet_BalanceRequest();
+        return new Packet_BalanceRequest(buf.readBoolean());
     }
 
     public static void handle(Packet_BalanceRequest msg, IPayloadContext context) {
@@ -37,21 +45,23 @@ public class Packet_BalanceRequest implements net.minecraft.network.protocol.com
                 ServerLevel serverLevel = player.serverLevel();
                 if (serverLevel != null) {
                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                    List<Map.Entry<UUID, Integer>> accounts = data.getAllAccounts();
                     int balance = data.getBalance(player.getUUID());
 
                     // 创建一个新的列表来存储 <String, Integer> 类型的数据
                     List<Map.Entry<String, Integer>> accountNames = new ArrayList<>();
 
-                    for (Map.Entry<UUID, Integer> entry : accounts) {
-                        UUID uuid = entry.getKey();
-                        Integer accountBalance = entry.getValue();
+                    if (msg.includeAccountList) {
+                        List<Map.Entry<UUID, Integer>> accounts = data.getAllAccounts();
+                        for (Map.Entry<UUID, Integer> entry : accounts) {
+                            UUID uuid = entry.getKey();
+                            Integer accountBalance = entry.getValue();
 
-                        // 获取玩家名称
-                        String playerName = Util_Player.getPlayerNameFromUUID(player.server, uuid); // 获取离线玩家名称
+                            // 获取玩家名称
+                            String playerName = Util_Player.getPlayerNameFromUUID(player.server, uuid); // 获取离线玩家名称
 
-                        // 将玩家名称和余额加入到新的列表中
-                        accountNames.add(new AbstractMap.SimpleEntry<>(playerName, accountBalance));
+                            // 将玩家名称和余额加入到新的列表中
+                            accountNames.add(new AbstractMap.SimpleEntry<>(playerName, accountBalance));
+                        }
                     }
 
                     // 发送响应包到客户端

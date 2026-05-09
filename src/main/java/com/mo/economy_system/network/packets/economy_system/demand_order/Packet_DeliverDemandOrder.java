@@ -1,11 +1,11 @@
 package com.mo.economy_system.network.packets.economy_system.demand_order;
 
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
+import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
@@ -43,49 +43,51 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
 
     public static void handle(Packet_DeliverDemandOrder msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer buyer = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
-            if (buyer == null) return;
+            ServerPlayer supplier = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
+            if (supplier == null) return;
 
-            ServerLevel serverLevel = buyer.serverLevel();
+            ServerLevel serverLevel = supplier.serverLevel();
             EconomySavedData savedData = EconomySavedData.getInstance(serverLevel);
 
             // 查找市场中的商品
             MarketItem item = MarketManager.getMarketItemById(msg.itemId);
-            if (item == null) {
-                buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
+            if (!(item instanceof DemandOrder demandOrder) || demandOrder.isDelivered()) {
+                supplier.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
                 return;
             }
 
             // 验证买家是否有足够资源
             // 检测并移除物品
             int price = item.getBasePrice();
-            if (consumeItem(buyer, item.getItemStack(), item.getItemStack().getCount())) {
-                if (item instanceof DemandOrder demandOrder) {
-                    // 扣除供货者资源并将货币发放给供货者
-                    savedData.addBalance(buyer.getUUID(), price);
+            if (price <= 0 || item.getSellerID().equals(supplier.getUUID())) {
+                supplier.sendSystemMessage(Component.translatable(Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY));
+                return;
+            }
+            ItemStack requestedStack = item.getItemStack();
+            if (consumeItem(supplier, requestedStack, requestedStack.getCount())) {
+                // 扣除供货者资源并将货币发放给供货者
+                savedData.addBalance(supplier.getUUID(), price);
 
-                    demandOrder.setDelivered(true);
-                    // 通知买家成功购买
-                    buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.DELIVERY_SUCCESS_KEY, item.getItemStack().getHoverName().getString(), item.getItemStack().getCount()));
+                demandOrder.setDelivered(true);
+                // 通知供货者成功交付
+                supplier.sendSystemMessage(Component.translatable(Util_MessageKeys.DELIVERY_SUCCESS_KEY, requestedStack.getHoverName().getString(), requestedStack.getCount()));
+                MarketManager.saveTo(serverLevel);
 
-                    UUID sellerID = item.getSellerID();
-                    // 通知卖家（如果在线）
-                    ServerPlayer seller = serverLevel.getServer().getPlayerList().getPlayer(sellerID);
-                    if (seller != null) {
-                        // 卖家在线，直接发送消息
-                        seller.sendSystemMessage(Component.translatable(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, item.getItemStack().getHoverName().getString(), item.getItemStack().getCount(), buyer.getName().getString()));
-                    } else {
-                        // 卖家不在线，将通知存储到离线消息中
-                        String text = Component.translatable(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, item.getItemStack().getHoverName().getString(), item.getItemStack().getCount(), buyer.getName().getString()).getString();
-                        savedData.storeOfflineMessage(sellerID, text);
-                    }
+                UUID requesterID = item.getSellerID();
+                // 通知求购者（如果在线）
+                ServerPlayer requester = serverLevel.getServer().getPlayerList().getPlayer(requesterID);
+                if (requester != null) {
+                    requester.sendSystemMessage(Component.translatable(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, requestedStack.getHoverName().getString(), requestedStack.getCount(), supplier.getName().getString()));
+                } else {
+                    String text = Component.translatable(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, requestedStack.getHoverName().getString(), requestedStack.getCount(), supplier.getName().getString()).getString();
+                    savedData.storeOfflineMessage(requesterID, text);
                 }
             } else {
-                buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY));
+                supplier.sendSystemMessage(Component.translatable(Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY));
             }
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
+            EconomySystem_NetworkManager.sendToClient(supplier, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
         });
     }
 

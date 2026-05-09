@@ -3,8 +3,6 @@ package com.mo.economy_system.network.packets.economy_system;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
-import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -64,7 +62,7 @@ public class Packet_DeliveryBoxClaimItem implements net.minecraft.network.protoc
             // 通知玩家成功购买
             player.sendSystemMessage(Component.literal("领取成功"));
             // 通知客户端刷新市场界�?
-            EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxDataRequest());
+            EconomySystem_NetworkManager.sendToClient(player, new Packet_DeliveryBoxDataResponse(deliveryBoxSavedData.getItems(player.getUUID())));
         });
     }
 

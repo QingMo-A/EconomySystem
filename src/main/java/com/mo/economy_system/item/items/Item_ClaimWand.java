@@ -25,8 +25,7 @@ public class Item_ClaimWand extends Item {
     private static final Map<UUID, BlockPos> secondPositions = new HashMap<>();
     private static final Map<UUID, BlockPos> firstModifyPositions = new HashMap<>();
     private static final Map<UUID, BlockPos> secondModifyPositions = new HashMap<>();
-    private static final Map<UUID, Integer> modifyVolume = new HashMap<>();
-    private static final Map<UUID, ScheduledExecutorService> particleTasks = new HashMap<>(); // 记录每个玩家的粒子任务
+    private static final Map<UUID, Long> modifyVolume = new HashMap<>();
     private static final Map<UUID, ScheduledExecutorService> timeoutTasks = new HashMap<>(); // 记录每个玩家的超时任务
 
     private static final Map<UUID, UUID> playerModify = new HashMap<>(); // 玩家UUID -> 领地ID
@@ -75,8 +74,8 @@ public class Item_ClaimWand extends Item {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_SECOND_POSITION_SET, clickedPos.getX(), clickedPos.getY(), clickedPos.getZ()));
 
                 // 计算范围和价格
-                int volume = calculateVolume(firstPos, clickedPos);
-                int price = volume * 20;
+                long volume = calculateVolume(firstPos, clickedPos);
+                long price = volume * 20L;
 
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_VOLUME, volume));
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_PRICE, price));
@@ -128,12 +127,17 @@ public class Item_ClaimWand extends Item {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_SECOND_POSITION_SET, clickedPos.getX(), clickedPos.getY(), clickedPos.getZ()));
 
                 Territory territory = TerritoryManager.getTerritoryByID(playerModify.get(playerUUID));
+                if (territory == null || !territory.isOwner(playerUUID) || !territory.getDimension().equals(player.serverLevel().dimension())) {
+                    player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_FAILED));
+                    clearPositions(playerUUID);
+                    return InteractionResult.FAIL;
+                }
 
                 // 计算范围和价格
-                int volume = calculateVolume(firstPos, clickedPos);
-                int oldVolume = calculateVolume(territory.getPos1(), territory.getPos2());
+                long volume = calculateVolume(firstPos, clickedPos);
+                long oldVolume = calculateVolume(territory.getPos1(), territory.getPos2());
                 // 计算新旧面积差值
-                int areaDiff = volume - oldVolume;
+                long areaDiff = volume - oldVolume;
 
                 firstModifyPositions.put(playerUUID, firstPos);
                 secondModifyPositions.put(playerUUID, secondPos);
@@ -141,7 +145,7 @@ public class Item_ClaimWand extends Item {
 
                 if (areaDiff > 0){
                     player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_CONFIRM_EXPAND));
-                    int newPrice = areaDiff * 20;
+                    long newPrice = areaDiff * 20L;
                     player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_RESIZE_COST_DETAILS, oldVolume, volume, newPrice));
                 } else if (areaDiff < 0) {
                     player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_CONFIRM_SHRINK));
@@ -195,54 +199,18 @@ public class Item_ClaimWand extends Item {
     }
 
 
-    private int calculateVolume(BlockPos pos1, BlockPos pos2) {
-        int xSize = Math.abs(pos2.getX() - pos1.getX()) + 1;
-        int zSize = Math.abs(pos2.getZ() - pos1.getZ()) + 1;
+    private long calculateVolume(BlockPos pos1, BlockPos pos2) {
+        long xSize = Math.abs((long) pos2.getX() - pos1.getX()) + 1L;
+        long zSize = Math.abs((long) pos2.getZ() - pos1.getZ()) + 1L;
         return xSize * zSize; // 计算体积
     }
 
     private void showParticleEffect(ServerLevel level, BlockPos pos1, BlockPos pos2, ServerPlayer player) {
-        UUID playerUUID = player.getUUID();
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-
-        executorService.scheduleAtFixedRate(() -> {
-            // 计算边界范围
-            int minX = Math.min(pos1.getX(), pos2.getX());
-            int maxX = Math.max(pos1.getX(), pos2.getX());
-            int minY = Math.min(pos1.getY(), pos2.getY());
-            int maxY = Math.max(pos1.getY(), pos2.getY());
-            int minZ = Math.min(pos1.getZ(), pos2.getZ());
-            int maxZ = Math.max(pos1.getZ(), pos2.getZ());
-
-            // 在X-Z平面四条边上生成粒子
-            for (int x = minX; x <= maxX; x++) {
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + 1.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + 1.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + 1.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + 1.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-            }
-            for (int z = minZ; z <= maxZ; z++) {
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, minY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, minY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, maxY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, maxY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
-            }
-            for (int y = minY; y <= maxY; y++) {
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, y + 1.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, y + 1.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, y + 1.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, y + 1.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-            }
-        }, 0, 2, TimeUnit.SECONDS); // 每秒生成一次粒子效果
-
-        particleTasks.put(playerUUID, executorService);
+        spawnNearestBoundaryParticles(level, pos1, pos2, player.blockPosition(), 16);
     }
 
     private static void stopParticleEffect(UUID playerUUID) {
-        ScheduledExecutorService executorService = particleTasks.remove(playerUUID);
-        if (executorService != null) {
-            executorService.shutdownNow();
-        }
+        // 粒子现在只在服务端主线程按需生成最近边界片段，不再保留后台粒子任务。
     }
 
     private static void startTimeoutTask(ServerPlayer player) {
@@ -290,8 +258,8 @@ public class Item_ClaimWand extends Item {
         return secondModifyPositions.get(playerUUID);
     }
 
-    public static int getModifyVolume(UUID playerUUID) {
-        return modifyVolume.get(playerUUID);
+    public static long getModifyVolume(UUID playerUUID) {
+        return modifyVolume.getOrDefault(playerUUID, 0L);
     }
 
     public static void clearPositions(UUID playerUUID) {
@@ -302,13 +270,46 @@ public class Item_ClaimWand extends Item {
         modifyVolume.remove(playerUUID);
         playerModify.remove(playerUUID);
 
-        ScheduledExecutorService executorService = particleTasks.remove(playerUUID);
-        if (executorService != null) {
-            executorService.shutdownNow();
-        }
-
         // 停止超时任务
         stopTimeoutTask(playerUUID);
+    }
+
+    private static void spawnNearestBoundaryParticles(ServerLevel level, BlockPos pos1, BlockPos pos2, BlockPos playerPos, int radius) {
+        int minX = Math.min(pos1.getX(), pos2.getX());
+        int maxX = Math.max(pos1.getX(), pos2.getX());
+        int minY = Math.min(pos1.getY(), pos2.getY());
+        int maxY = Math.max(pos1.getY(), pos2.getY());
+        int minZ = Math.min(pos1.getZ(), pos2.getZ());
+        int maxZ = Math.max(pos1.getZ(), pos2.getZ());
+
+        int distanceToWest = Math.abs(playerPos.getX() - minX);
+        int distanceToEast = Math.abs(playerPos.getX() - maxX);
+        int distanceToNorth = Math.abs(playerPos.getZ() - minZ);
+        int distanceToSouth = Math.abs(playerPos.getZ() - maxZ);
+        int nearest = Math.min(Math.min(distanceToWest, distanceToEast), Math.min(distanceToNorth, distanceToSouth));
+
+        if (nearest == distanceToWest || nearest == distanceToEast) {
+            int x = nearest == distanceToWest ? minX : maxX;
+            int fromZ = Math.max(minZ, playerPos.getZ() - radius);
+            int toZ = Math.min(maxZ, playerPos.getZ() + radius);
+            for (int z = fromZ; z <= toZ; z++) {
+                spawnVerticalParticleColumn(level, x, z, minY, maxY);
+            }
+        } else {
+            int z = nearest == distanceToNorth ? minZ : maxZ;
+            int fromX = Math.max(minX, playerPos.getX() - radius);
+            int toX = Math.min(maxX, playerPos.getX() + radius);
+            for (int x = fromX; x <= toX; x++) {
+                spawnVerticalParticleColumn(level, x, z, minY, maxY);
+            }
+        }
+    }
+
+    private static void spawnVerticalParticleColumn(ServerLevel level, int x, int z, int minY, int maxY) {
+        level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
+        if (maxY != minY) {
+            level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + 1.5, z + 0.5, 1, 0, 0, 0, 0);
+        }
     }
 
     private boolean isOverlappingExistingTerritory(ServerPlayer player, BlockPos pos1, BlockPos pos2) {

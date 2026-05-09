@@ -53,10 +53,18 @@ public class Packet_UnlockTerritoryBuff implements net.minecraft.network.protoco
                 player.sendSystemMessage(Component.literal("❌ 领地不存在！"));
                 return;
             }
+            if (!territory.isOwner(player.getUUID()) || !territory.getDimension().equals(player.serverLevel().dimension())) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.TERRITORY_NO_OWNER_PERMISSION));
+                return;
+            }
 
             TerritoryBuff buff = territory.getBuff(msg.buffID);
             if (buff == null) {
                 player.sendSystemMessage(Component.literal("❌ Buff 不存在！"));
+                return;
+            }
+            if (buff.isUnlocked()) {
+                player.sendSystemMessage(Component.literal("❌ Buff 已经解锁！"));
                 return;
             }
 
@@ -67,15 +75,21 @@ public class Packet_UnlockTerritoryBuff implements net.minecraft.network.protoco
             }
 
             // 🔹 **计算所需资源**
-            int requiredDfCoins = 0;
-            int requiredXp = 0;
+            long requiredDfCoinsLong = 0L;
+            long requiredXpLong = 0L;
             for (TerritoryBuffConfig.BuffUpgradeCost cost : config.getUpgradeCost()) {
-                if (cost.df_coin > 0) requiredDfCoins += cost.df_coin;
-                if (cost.xp > 0) requiredXp += cost.xp;
+                if (cost.df_coin > 0) requiredDfCoinsLong += cost.df_coin;
+                if (cost.xp > 0) requiredXpLong += cost.xp;
             }
+            if (requiredDfCoinsLong > EconomySavedData.MAX_BALANCE || requiredXpLong > Integer.MAX_VALUE) {
+                player.sendSystemMessage(Component.literal("❌ Buff 消耗配置过大！"));
+                return;
+            }
+            int requiredDfCoins = (int) requiredDfCoinsLong;
+            int requiredXp = (int) requiredXpLong;
 
             // 🔹 **检查 df_coin**
-            if (!economySavedData.minBalance(player.getUUID(), requiredDfCoins)) {
+            if (requiredDfCoins > 0 && !economySavedData.hasEnoughBalance(player.getUUID(), requiredDfCoins)) {
                 player.sendSystemMessage(Component.literal("❌ 梦鱼币不足!"));
                 return;
             }
@@ -96,8 +110,15 @@ public class Packet_UnlockTerritoryBuff implements net.minecraft.network.protoco
                 }
             }
 
+            if (requiredDfCoins > 0 && !economySavedData.minBalance(player.getUUID(), requiredDfCoins)) {
+                player.sendSystemMessage(Component.literal("❌ 梦鱼币不足!"));
+                return;
+            }
+
             // 🔹 **扣除经验**
-            player.giveExperienceLevels(-requiredXp);
+            if (requiredXp > 0) {
+                player.giveExperienceLevels(-requiredXp);
+            }
 
             // 🔹 **扣除物品**
             for (TerritoryBuffConfig.BuffUpgradeCost cost : config.getUpgradeCost()) {
@@ -109,9 +130,11 @@ public class Packet_UnlockTerritoryBuff implements net.minecraft.network.protoco
             }
 
             // 执行 Buff 解锁逻辑
-            TerritoryManager.unlockBuff(territory.getTerritoryID(), msg.buffID);
-            // TerritoryManager.markDirty();
-            player.sendSystemMessage(Component.literal("你为你的领地解锁了增益: " + territory.getBuff(msg.buffID).getDisplayText()));
+            if (TerritoryManager.unlockBuff(territory.getTerritoryID(), msg.buffID)) {
+                player.sendSystemMessage(Component.literal("你为你的领地解锁了增益: " + territory.getBuff(msg.buffID).getDisplayText()));
+            } else {
+                player.sendSystemMessage(Component.literal("❌ Buff 解锁失败！"));
+            }
         });
     }
 

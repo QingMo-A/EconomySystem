@@ -24,7 +24,7 @@ public abstract class MarketItem {
     public MarketItem(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID, long listingTime) {
         this.tradeID = tradeID;
         this.itemID = itemID;
-        this.itemStack = itemStack;
+        this.itemStack = itemStack.copy();
         this.basePrice = basePrice;
         this.sellerName = sellerName;
         this.sellerID = sellerID;
@@ -69,7 +69,7 @@ public abstract class MarketItem {
     // Getters...
     public UUID getTradeID() { return tradeID; }
     public String getItemID() { return itemID; }
-    public ItemStack getItemStack() { return itemStack; }
+    public ItemStack getItemStack() { return itemStack.copy(); }
     public int getBasePrice() { return basePrice; }
     public String getSellerName() { return sellerName; }
     public UUID getSellerID() { return sellerID; }

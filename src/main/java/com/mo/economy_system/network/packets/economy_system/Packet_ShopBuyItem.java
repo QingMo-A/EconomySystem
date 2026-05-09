@@ -1,6 +1,8 @@
 package com.mo.economy_system.network.packets.economy_system;
 
+import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -58,21 +60,36 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
             ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
+            if (msg.quantity <= 0 || msg.quantity > 2304) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_NO_ITEM_MESSAGE_KEY));
+                return;
+            }
+
+            ShopItem shopItem = findServerShopItem(msg.itemID, msg.itemNbt);
+            if (shopItem == null || shopItem.getCurrentPrice() <= 0) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_INVALID_ITEM_MESSAGE_KEY));
+                return;
+            }
+
             EconomySavedData economyData = EconomySavedData.getInstance(player.serverLevel());
-            int totalPrice = msg.price * msg.quantity;
+            long totalPriceLong = (long) shopItem.getCurrentPrice() * (long) msg.quantity;
+            if (totalPriceLong > Integer.MAX_VALUE) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_FAILED_MESSAGE_KEY));
+                return;
+            }
+            int totalPrice = (int) totalPriceLong;
 
             // 1. 检查余额是否足够
-            if (economyData.getBalance(player.getUUID()) < totalPrice) {
+            if (!economyData.hasEnoughBalance(player.getUUID(), totalPrice)) {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_FAILED_MESSAGE_KEY));
                 return;
             }
 
             // 2. 检查物品是否有效
-            ItemStack itemStack = null;
-            if (msg.itemNbt != null || msg.itemNbt != "null") {
-                itemStack = getItemStack(msg.itemID, msg.itemNbt);
-            } else {
-                itemStack = getItemStack(msg.itemID);
+            ItemStack itemStack = shopItem.getItemStack();
+            if (itemStack == null || itemStack.isEmpty()) {
+                player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_INVALID_ITEM_MESSAGE_KEY));
+                return;
             }
 
             Item item = itemStack.getItem();
@@ -96,7 +113,10 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
 
             // 5. 执行购买逻辑（扣除余额并添加物品）
             try {
-                economyData.minBalance(player.getUUID(), totalPrice);
+                if (!economyData.minBalance(player.getUUID(), totalPrice)) {
+                    player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_FAILED_MESSAGE_KEY));
+                    return;
+                }
                 if (com.mo.economy_system.utils.ItemStackDataHelper.getTag(itemStack) != null) {
                     addItemsToInventory(player.getInventory(), item, msg.quantity, com.mo.economy_system.utils.ItemStackDataHelper.getTag(itemStack));
                 } else {
@@ -113,6 +133,20 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_ERROR_MESSAGE_KEY));
             }
         });
+    }
+
+    private static ShopItem findServerShopItem(String itemID, String itemNbt) {
+        String requestedNbt = normalizeNbt(itemNbt);
+        for (ShopItem item : EconomySystem.SHOP_MANAGER.getItems()) {
+            if (item.getItemId().equals(itemID) && normalizeNbt(item.getNbt()).equals(requestedNbt)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeNbt(String nbt) {
+        return nbt == null || nbt.isBlank() || "null".equals(nbt) ? "" : nbt;
     }
 
     // 辅助方法：计算需要的槽位
@@ -218,7 +252,7 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
         ItemStack stack = new ItemStack(item);
 
         // 如果有自定义 NBT，则解析并写入
-        if (nbt != null && !nbt.isEmpty()) {
+        if (nbt != null && !nbt.isEmpty() && !"null".equals(nbt)) {
             stack = applyEnchantmentNBT(stack, nbt);
         }
         return stack;

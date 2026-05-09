@@ -3,6 +3,8 @@ package com.mo.economy_system.core.territory_system;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.File;
@@ -202,7 +204,7 @@ public class TerritoryManager {
         }
 
         if (buff.getLevel() < config.getMaxLevel()) {
-            buff.setLevel(buff.getLevel() + config.getSingleUpgradeLevel()); // 直接升级
+            buff.setLevel(Math.min(config.getMaxLevel(), buff.getLevel() + config.getSingleUpgradeLevel())); // 直接升级
             markDirty();
             return true; // 成功升级
         }
@@ -230,6 +232,16 @@ public class TerritoryManager {
     public static Territory getTerritoryAtIgnoreY(int x, int z) {
         List<Territory> candidates = quadTree.query(x, z);
         return candidates.stream()
+                .filter(territory -> territory.isWithinBoundsIgnoreY(x, z))
+                .findFirst()
+                .orElse(null);
+    }
+
+    // 查询指定维度和 X/Z 位置的领地。领地保护必须带维度判断，否则不同维度同坐标会互相误判。
+    public static Territory getTerritoryAtIgnoreY(ResourceKey<Level> dimension, int x, int z) {
+        List<Territory> candidates = quadTree.query(x, z);
+        return candidates.stream()
+                .filter(territory -> territory.getDimension().equals(dimension))
                 .filter(territory -> territory.isWithinBoundsIgnoreY(x, z))
                 .findFirst()
                 .orElse(null);

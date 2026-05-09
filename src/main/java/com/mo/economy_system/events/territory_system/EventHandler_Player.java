@@ -27,9 +27,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * EventHandler_Player 类用于处理与领地系统相关的玩家事件。
@@ -56,19 +53,9 @@ public class EventHandler_Player {
     private static final Map<UUID, Long> lastBuffApplyTime = new HashMap<>();
 
     /**
-     * 记录每个玩家的粒子任务，用于在进入领地时生成粒子效果。
-     */
-    private static final Map<UUID, ScheduledExecutorService> particleTasks = new HashMap<>();
-
-    /**
      * 检测间隔，默认 200ms。
      */
     private static long CHECK_INTERVAL = 200L;
-
-    /**
-     * Buff检测间隔，默认 200ms。
-     */
-    private static long CHECK_BUFF_INTERVAL = 5000L;
 
     /**
      * 处理玩家移动事件，检测玩家是否进入了新的领地或离开了当前领地。
@@ -101,14 +88,13 @@ public class EventHandler_Player {
         lastPositions.put(playerUUID, playerPos);
 
         // 查询当前所在领地
-        Territory currentTerritory = TerritoryManager.getTerritoryAtIgnoreY(playerPos.getX(), playerPos.getZ());
+        Territory currentTerritory = TerritoryManager.getTerritoryAtIgnoreY(player.serverLevel().dimension(), playerPos.getX(), playerPos.getZ());
         Territory previousTerritory = playerCurrentTerritory.get(playerUUID);
 
         // 处理领地进入和离开事件
         if (!Objects.equals(previousTerritory, currentTerritory)) {
             if (previousTerritory != null && player.serverLevel().dimension().equals(previousTerritory.getDimension())) {
                 NeoForge.EVENT_BUS.post(new Event_PlayerLeaveTerritory(player, previousTerritory));
-                stopParticleEffect(playerUUID);
             }
             if (currentTerritory != null && player.serverLevel().dimension().equals(currentTerritory.getDimension())) {
                 NeoForge.EVENT_BUS.post(new Event_PlayerEnterTerritory(player, currentTerritory));
@@ -132,7 +118,7 @@ public class EventHandler_Player {
         Territory currentTerritory = playerCurrentTerritory.get(playerUUID);
 
         // 确保玩家仍然在领地中
-        if (currentTerritory != null && TerritoryManager.getTerritoryAtIgnoreY(playerPos.getX(), playerPos.getZ()) == currentTerritory) {
+        if (currentTerritory != null && TerritoryManager.getTerritoryAtIgnoreY(player.serverLevel().dimension(), playerPos.getX(), playerPos.getZ()) == currentTerritory) {
             long currentTime = player.getServer().getTickCount(); // 获取当前 tick 数
 
             // 获取上次施加 Buff 的时间
@@ -222,8 +208,8 @@ public class EventHandler_Player {
      * @return 如果有权限返回 true，否则返回 false
      */
     private static boolean hasPermission(ServerPlayer player, BlockPos pos) {
-        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(pos.getX(), pos.getZ());
-        if (territory == null || !player.serverLevel().dimension().equals(territory.getDimension())) return true; // 如果不在领地内，允许操作
+        Territory territory = TerritoryManager.getTerritoryAtIgnoreY(player.serverLevel().dimension(), pos.getX(), pos.getZ());
+        if (territory == null) return true; // 如果不在领地内，允许操作
 
         // 检查是否是领地所有者或被授权的玩家
         return territory.isOwner(player.getUUID()) || territory.hasPermission(player.getUUID()) || player.hasPermissions(2);
@@ -247,52 +233,44 @@ public class EventHandler_Player {
      * @param player  玩家实例
      */
     private static void showParticleEffect(ServerLevel level, BlockPos pos1, BlockPos pos2, ServerPlayer player) {
-        UUID playerUUID = player.getUUID();
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-
-        executorService.scheduleAtFixedRate(() -> {
-            // 计算边界范围
-            int minX = Math.min(pos1.getX(), pos2.getX());
-            int maxX = Math.max(pos1.getX(), pos2.getX());
-            int minY = Math.min(pos1.getY(), pos2.getY());
-            int maxY = Math.max(pos1.getY(), pos2.getY());
-            int minZ = Math.min(pos1.getZ(), pos2.getZ());
-            int maxZ = Math.max(pos1.getZ(), pos2.getZ());
-
-            // 在X-Z平面四条边上生成粒子
-            for (int x = minX; x <= maxX; x++) {
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + 2.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + 2.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + 2.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + 2.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-            }
-            for (int z = minZ; z <= maxZ; z++) {
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, minY + 2.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, minY + 2.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, maxY + 2.5, z + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, maxY + 2.5, z + 0.5, 1, 0, 0, 0, 0);
-            }
-            for (int y = minY; y <= maxY; y++) {
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, y + 2.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, y + 2.5, minZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, minX + 0.5, y + 2.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-                level.sendParticles(ParticleTypes.END_ROD, maxX + 0.5, y + 2.5, maxZ + 0.5, 1, 0, 0, 0, 0);
-            }
-            stopParticleEffect(playerUUID);
-        }, 0, 2, TimeUnit.SECONDS); // 每秒生成一次粒子效果
-
-        particleTasks.put(playerUUID, executorService);
+        spawnNearestBoundaryParticles(level, pos1, pos2, player.blockPosition(), 16, 2.5);
     }
 
-    /**
-     * 停止指定玩家的粒子效果任务。
-     *
-     * @param playerUUID 玩家 UUID
-     */
-    public static void stopParticleEffect(UUID playerUUID) {
-        ScheduledExecutorService executorService = particleTasks.remove(playerUUID);
-        if (executorService != null) {
-            executorService.shutdownNow();
+    private static void spawnNearestBoundaryParticles(ServerLevel level, BlockPos pos1, BlockPos pos2, BlockPos playerPos, int radius, double yOffset) {
+        int minX = Math.min(pos1.getX(), pos2.getX());
+        int maxX = Math.max(pos1.getX(), pos2.getX());
+        int minY = Math.min(pos1.getY(), pos2.getY());
+        int maxY = Math.max(pos1.getY(), pos2.getY());
+        int minZ = Math.min(pos1.getZ(), pos2.getZ());
+        int maxZ = Math.max(pos1.getZ(), pos2.getZ());
+
+        int distanceToWest = Math.abs(playerPos.getX() - minX);
+        int distanceToEast = Math.abs(playerPos.getX() - maxX);
+        int distanceToNorth = Math.abs(playerPos.getZ() - minZ);
+        int distanceToSouth = Math.abs(playerPos.getZ() - maxZ);
+        int nearest = Math.min(Math.min(distanceToWest, distanceToEast), Math.min(distanceToNorth, distanceToSouth));
+
+        if (nearest == distanceToWest || nearest == distanceToEast) {
+            int x = nearest == distanceToWest ? minX : maxX;
+            int fromZ = Math.max(minZ, playerPos.getZ() - radius);
+            int toZ = Math.min(maxZ, playerPos.getZ() + radius);
+            for (int z = fromZ; z <= toZ; z++) {
+                spawnVerticalParticleColumn(level, x, z, minY, maxY, yOffset);
+            }
+        } else {
+            int z = nearest == distanceToNorth ? minZ : maxZ;
+            int fromX = Math.max(minX, playerPos.getX() - radius);
+            int toX = Math.min(maxX, playerPos.getX() + radius);
+            for (int x = fromX; x <= toX; x++) {
+                spawnVerticalParticleColumn(level, x, z, minY, maxY, yOffset);
+            }
+        }
+    }
+
+    private static void spawnVerticalParticleColumn(ServerLevel level, int x, int z, int minY, int maxY, double yOffset) {
+        level.sendParticles(ParticleTypes.END_ROD, x + 0.5, minY + yOffset, z + 0.5, 1, 0, 0, 0, 0);
+        if (maxY != minY) {
+            level.sendParticles(ParticleTypes.END_ROD, x + 0.5, maxY + yOffset, z + 0.5, 1, 0, 0, 0, 0);
         }
     }
 

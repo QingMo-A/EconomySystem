@@ -14,6 +14,7 @@ import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.cinematic_system.Packet_PlayJoinCinematic;
+import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
@@ -116,17 +117,34 @@ public class EconomySystem_EventHandler {
             marketData.clearMarketItems(); // 清空原有数据
             for (MarketItem item : MarketManager.getMarketItems()) {
                 if (item.isExpired()) {
-                    // 通知卖家（如果在线）
-                    ServerPlayer seller = event.getServer().getPlayerList().getPlayer(item.getSellerID());
-                    deliveryBoxSavedData.addItem(item.getSellerID(), new DeliveryItem(UUID.randomUUID(), item.getItemID(), item.getItemStack(), "Market"));
-                    if (seller != null) {
-                        // 卖家在线，直接发送消息
-                        seller.sendSystemMessage(Component.literal("你的物品 " + item.getItemStack().getHoverName().getString() + " 已经过期, 请前往收货箱领取"));
+                    ServerPlayer owner = event.getServer().getPlayerList().getPlayer(item.getSellerID());
+                    if (item instanceof DemandOrder demandOrder) {
+                        if (demandOrder.isDelivered()) {
+                            deliveryBoxSavedData.addItem(item.getSellerID(), new DeliveryItem(UUID.randomUUID(), item.getItemID(), item.getItemStack(), "Market"));
+                            if (owner != null) {
+                                owner.sendSystemMessage(Component.literal("你的求购物品 " + item.getItemStack().getHoverName().getString() + " 已交付并过期确认, 请前往收货箱领取"));
+                            } else {
+                                String text = Component.literal("你的求购物品 " + item.getItemStack().getHoverName().getString() + " 已交付并过期确认, 请前往收货箱领取").getString();
+                                economySavedData.storeOfflineMessage(item.getSellerID(), text);
+                            }
+                        } else {
+                            economySavedData.addBalance(item.getSellerID(), item.getBasePrice());
+                            if (owner != null) {
+                                owner.sendSystemMessage(Component.literal("你的求购单 " + item.getItemStack().getHoverName().getString() + " 已过期, 货币已退回"));
+                            } else {
+                                String text = Component.literal("你的求购单 " + item.getItemStack().getHoverName().getString() + " 已过期, 货币已退回").getString();
+                                economySavedData.storeOfflineMessage(item.getSellerID(), text);
+                            }
+                        }
                     } else {
-                        // 卖家不在线，将通知存储到离线消息中
-                        String text = Component.literal("你的物品 " + item.getItemStack().getHoverName().getString() + " 已经过期, 请前往收货箱领取").getString();
-
-                        economySavedData.storeOfflineMessage(item.getSellerID(), text);
+                        // 出售单过期时返还商品。
+                        deliveryBoxSavedData.addItem(item.getSellerID(), new DeliveryItem(UUID.randomUUID(), item.getItemID(), item.getItemStack(), "Market"));
+                        if (owner != null) {
+                            owner.sendSystemMessage(Component.literal("你的物品 " + item.getItemStack().getHoverName().getString() + " 已经过期, 请前往收货箱领取"));
+                        } else {
+                            String text = Component.literal("你的物品 " + item.getItemStack().getHoverName().getString() + " 已经过期, 请前往收货箱领取").getString();
+                            economySavedData.storeOfflineMessage(item.getSellerID(), text);
+                        }
                     }
                 } else {
                     marketData.addMarketItem(item); // 保存当前市场商品

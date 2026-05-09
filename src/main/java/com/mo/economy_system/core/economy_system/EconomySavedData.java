@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 public class EconomySavedData extends SavedData {
     private static final String DATA_NAME = "economy_data";
+    public static final int MAX_BALANCE = Integer.MAX_VALUE;
     private final Map<UUID, Integer> accounts = new HashMap<>();
     private final Map<UUID, List<String>> offlineMessages = new HashMap<>(); // 用于存储离线消息
 
@@ -21,17 +22,29 @@ public class EconomySavedData extends SavedData {
 
     // 设置玩家余额
     public void setBalance(UUID playerUUID, int amount) {
-        accounts.put(playerUUID, amount);
+        accounts.put(playerUUID, Math.max(0, amount));
         this.setDirty(); // 标记数据已更改，确保保存到文件
     }
 
     // 增加余额
-    public void addBalance(UUID playerUUID, int amount) {
-        setBalance(playerUUID, getBalance(playerUUID) + amount);
+    public boolean addBalance(UUID playerUUID, int amount) {
+        if (amount <= 0) {
+            return false;
+        }
+        int balance = getBalance(playerUUID);
+        if (balance > MAX_BALANCE - amount) {
+            setBalance(playerUUID, MAX_BALANCE);
+            return true;
+        }
+        setBalance(playerUUID, balance + amount);
+        return true;
     }
 
     // 减少余额
     public boolean minBalance(UUID playerUUID, int amount) {
+        if (amount <= 0) {
+            return false;
+        }
         int balance = getBalance(playerUUID);
         if (balance >= amount) {
             setBalance(playerUUID, balance - amount);
@@ -42,6 +55,9 @@ public class EconomySavedData extends SavedData {
 
     // 检查是否有足够余额
     public boolean hasEnoughBalance(UUID playerUUID, int amount) {
+        if (amount <= 0) {
+            return false;
+        }
         return getBalance(playerUUID) >= amount;
     }
 

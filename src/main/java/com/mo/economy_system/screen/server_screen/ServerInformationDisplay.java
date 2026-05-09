@@ -146,7 +146,7 @@ public class ServerInformationDisplay {
 
         //余额请求
         if (currentTime - LAST_BALANCE_UPDATE > UPDATE_INTERVAL) {
-            EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+            EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest(false));
             LAST_BALANCE_UPDATE = currentTime;
         }
     }
