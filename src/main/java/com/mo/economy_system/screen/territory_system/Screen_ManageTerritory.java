@@ -434,5 +434,8 @@ public class Screen_ManageTerritory extends Screen {
             }
         }));
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }
 

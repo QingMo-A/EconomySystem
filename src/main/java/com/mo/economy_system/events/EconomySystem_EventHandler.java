@@ -8,12 +8,9 @@ import com.mo.economy_system.commands.economy_system.Command_RedPacket;
 import com.mo.economy_system.commands.territory_system.Command_Territory;
 import com.mo.economy_system.commands.territory_system.Command_TerritoryClaim;
 import com.mo.economy_system.commands.tpa_system.Command_Tpa;
-import com.mo.economy_system.commands.time_system.Command_Time;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.cinematic_system.Packet_PlayJoinCinematic;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
@@ -32,9 +29,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
@@ -68,7 +63,6 @@ public class EconomySystem_EventHandler {
         Command_Info.register(event.getServer().getCommands().getDispatcher());
         // StarterKitCommand.register(event.getServer().getCommands().getDispatcher());
         Command_Check.register(event.getServer().getCommands().getDispatcher());
-        Command_Time.register(event.getServer().getCommands().getDispatcher());
 
         // 初始化 经济系统
         EconomySavedData.getInstance(overworld);
@@ -173,7 +167,6 @@ public class EconomySystem_EventHandler {
             for (String message : offlineMessages) {
                 serverPlayer.sendSystemMessage(Component.literal(message));
             }
-            EconomySystem_NetworkManager.sendToClient(new Packet_PlayJoinCinematic(), serverPlayer);
         }
     }
 

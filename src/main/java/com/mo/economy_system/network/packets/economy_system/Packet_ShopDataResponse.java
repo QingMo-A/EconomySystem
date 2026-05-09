@@ -2,7 +2,6 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
-import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -51,8 +50,6 @@ public class Packet_ShopDataResponse implements net.minecraft.network.protocol.c
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen instanceof Screen_Shop screenShop) {
                 screenShop.updateShopItems(msg.shopItems);
-            } else if (Minecraft.getInstance().screen instanceof a1111_Screen screen){
-                screen.updateShopItems(msg.shopItems);
             }
         });
     }

@@ -1,7 +1,0 @@
-{
-  "type": "economy_system:blueprint_loot",
-  "chance": 0.25,
-  "only_chests": false,
-  "only_hostile": true,
-  "conditions": []
-}

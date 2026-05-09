@@ -6,12 +6,12 @@ import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.components.ItemIconAnimation;
 import com.mo.economy_system.screen.components.TextAnimation;
-import com.mo.economy_system.screen.components.newUI.ItemIconWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +23,6 @@ public class EconomySystem_Screen extends Screen {
 
     protected List<ShopItem> shopItems = new ArrayList<>(); // 商品列表
     protected List<ShopItem> shopItemsSnapshot = new ArrayList<>();
-
-    protected final List<ItemIconWidget> itemWidgets = new ArrayList<>();
 
     protected List<DeliveryItem> deliveryItems = new ArrayList<>(); // 物品列表
     protected List<DeliveryItem> deliveryItemsSnapshot = new ArrayList<>();
@@ -179,4 +177,7 @@ public class EconomySystem_Screen extends Screen {
         return mouseX >= widget.getX() && mouseX <= widget.getX() + widget.getWidth() &&
                 mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight();
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }

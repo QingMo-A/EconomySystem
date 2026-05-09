@@ -40,20 +40,9 @@ public class ModItemModelProvider extends ItemModelProvider {
     @Override
     protected void registerModels() {
         simpleTool(EconomySystem_Items.CLAIM_WAND);
-        // simpleItem(EconomySystem_Items.SUPPORTER_HAT);
+        simpleItem(EconomySystem_Items.GUITAR);
         simpleItem(EconomySystem_Items.RECALL_POTION);
         simpleItem(EconomySystem_Items.WORMHOLE_POTION);
-        simpleItem(EconomySystem_Items.BLUEPRINT_ITEM);
-        simpleItem(EconomySystem_Items.FRAGMENT_PAGE);
-        simpleItem(EconomySystem_Items.STORY_BOOK);
-        simpleItem(EconomySystem_Items.EASY_AID_KIT);
-        simpleItem(EconomySystem_Items.ADVANCED_AID_KIT);
-        simpleItem(EconomySystem_Items.PROFESSIONAL_AID_KIT);
-        simpleItem(EconomySystem_Items.DREAMINGFISH);
-        // 重生锦鲤使用原版不死图腾纹理
-        simpleItem(EconomySystem_Items.REVIVAL_CHARM);
-        // 基因复苏药剂
-        simpleItem(EconomySystem_Items.GENE_RESURGENCE_POTION);
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
 

@@ -4,34 +4,9 @@
   "package": "com.mo.economy_system.mixin",
   "compatibilityLevel": "JAVA_21",
   "refmap": "economy_system.refmap.json",
-  "client": [
-    "death.DeathScreenMixin",
-    "ui.DisconnectedScreenMixin",
-    "ui.SelectWorldScreenMixin",
-    "ui.JoinMultiplayerScreenMixin",
-    "ui.ConnectScreenMixin",
-    "ui.ReceivingLevelScreenMixin",
-    "ui.LevelLoadingScreenMixin",
-    "ui.LoadingOverlayMixin",
-    "ui.ForgeLoadingOverlayMixin",
-    "ui.GenericDirtMessageScreenMixin",
-    "ui.GenericWaitingScreenMixin",
-    "ui.ModScreenBackgroundMixin",
-    "ui.VanillaScreenBackgroundMixin",
-    "ui.TitleScreenMixin"
-  ],
-  "server": [
-
-  ],
-  "mixins": [
-    "death.RespawnMixin",
-    "BedBlockMixin",
-    "ServerLevelMixin",
-    "AnvilBlockMixin",
-    "SystemMessageMixin",
-    "CraftingMenuMixin",
-    "RecipeManagerMixin"
-  ],
+  "client": [],
+  "server": [],
+  "mixins": [],
   "injectors": {
     "defaultRequire": 1
   }

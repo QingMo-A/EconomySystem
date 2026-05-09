@@ -1,9 +1,7 @@
 package com.mo.economy_system.network.packets.territory_system;
 
-import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
-import com.mo.economy_system.screen.server_screen.serverscreen.ServerScreenUI_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -58,17 +56,6 @@ public class Packet_TerritoryDataResponse implements net.minecraft.network.proto
             if (Minecraft.getInstance().screen instanceof Screen_Territory screen) {
                 // 更新领地数据
                 screen.updateTerritoryData(msg.owned, msg.authorized);
-            } else if (Minecraft.getInstance().screen instanceof ServerScreenUI_Screen screen) {
-                // ServerScreenUI 现在使用 ClientCacheManager
-            }
-
-            // 同步到ClientCacheManager
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                List<Territory> allTerritories = new ArrayList<>();
-                allTerritories.addAll(msg.owned);
-                allTerritories.addAll(msg.authorized);
-                ClientCacheManager.setTerritories(mc.player.getUUID(), allTerritories);
             }
         });
     }

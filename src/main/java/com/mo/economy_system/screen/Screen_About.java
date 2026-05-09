@@ -264,6 +264,9 @@ public class Screen_About extends Screen {
             .setBorderAlphaHover(0x40)
             .setTextShadow(false);
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }
 
 

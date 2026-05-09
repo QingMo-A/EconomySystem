@@ -703,4 +703,7 @@ public class Screen_TerritoryBuff extends Screen {
         }
         return false;
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }

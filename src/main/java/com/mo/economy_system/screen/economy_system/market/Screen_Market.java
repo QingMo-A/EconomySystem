@@ -846,6 +846,9 @@ public class Screen_Market extends Screen {
             .setBorderAlphaHover(0x20)
             .setTextShadow(false);
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }
 
 

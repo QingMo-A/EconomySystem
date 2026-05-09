@@ -1,7 +1,0 @@
-{
-  "replace": false,
-  "entries": [
-    "economy_system:blueprint_chest_loot",
-    "economy_system:blueprint_hostile_drop"
-  ]
-}

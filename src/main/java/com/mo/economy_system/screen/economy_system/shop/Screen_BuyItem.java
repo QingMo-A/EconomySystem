@@ -359,4 +359,7 @@ public class Screen_BuyItem extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }

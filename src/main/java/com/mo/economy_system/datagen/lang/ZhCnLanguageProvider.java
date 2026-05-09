@@ -14,28 +14,13 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         // Tab | 创造页标题
         add("itemGroup.economy_system.tab", "EconomySystem");
-        add("itemGroup.blueprint.tab", "蓝图");
 
         // Item | 物品
         add("item.economy_system.guitar", "吉他");
-        add("item.economy_system.blueprint", "蓝图");
         add("item.economy_system.wormhole_potion", "虫洞药水");
         add("item.economy_system.recall_potion", "回忆药水");
         add("item.economy_system.claim_wand", "圈地杖");
-        add("item.economy_system.fragment_page", "片段残页");
-        add("item.economy_system.story_book", "随记本");
         add("item.economy_system.supporter_hat", "赞助者帽子");
-        add("item.economy_system.dreamingfish", "启程锦鲤");
-        add("item.economy_system.easy_aid_kit", "简易急救包");
-        add("item.economy_system.advanced_aid_kit", "高级急救包");
-        add("item.economy_system.professional_aid_kit", "专业急救包");
-        add("item.economy_system.revival_charm", "重生锦鲤");
-        add("item.economy_system.restore_uninfected_potion", "基因复苏药剂");
-
-        // ToolTips | 物品描述
-        add("item.economy_system.dreamingfish.tooltip", "§6为什么一条破鱼叫锦鲤....\n纪念一下添加了一个物品花了10多个小时的笨笨的hhy");
-        add("advancement.economy_system.storybook.journey_started.title", "远旅开端");
-        add("advancement.economy_system.storybook.journey_started.description", "人是具有好奇心的生物，既然知晓了，就会想知晓更多……");
 
         // Enchantment | 附魔
         add("enchantment.economy_system.carefully", "细心");
@@ -44,7 +29,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("enchantment.economy_system.bounty_hunter.desc", "增加从尸体中搜寻到货币的概率");
 
         // Key Setting | 按键设置
-        add("key.economy_system.open_screen", "打开菜单");
+        add("key.economy_system.open_screen", "打开经济系统菜单");
         add("key.categories.economy_system", "Economy System");
 
         // EconomySystem Command | 经济指令

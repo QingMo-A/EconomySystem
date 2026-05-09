@@ -1,7 +1,6 @@
 package com.mo.economy_system;
 
 import com.mo.economy_system.enchant.EconomySystem_Enchants;
-import com.mo.economy_system.entity.EconomySystem_Entities;
 import com.mo.economy_system.init.Init;
 import com.mo.economy_system.item.EconomySystem_CreativeTabs;
 import com.mo.economy_system.item.EconomySystem_Items;
@@ -9,12 +8,7 @@ import com.mo.economy_system.core.economy_system.reward.RewardConfigWatcher;
 import com.mo.economy_system.core.economy_system.reward.RewardManager;
 import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
-import com.mo.economy_system.core.npc_system.NpcManager;
-import com.mo.economy_system.core.playerattributes_system.limb_health_system.LimbDamageConfig;
-import com.mo.economy_system.loot.EconomySystem_LootModifiers;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.server.notice.NoticeManager;
-import com.mo.economy_system.server.notice.PlayerNoticeDataManager;
 import com.mo.economy_system.sound.EconomySystem_Sounds;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -43,25 +37,12 @@ public class EconomySystem {
         EconomySystem_NetworkManager.register(modEventBus);
         // 注册创造物品栏
         EconomySystem_CreativeTabs.CREATIVE_TABS.register(modEventBus);
-        // 注册实体
-        EconomySystem_Entities.ENTITIES.register(modEventBus);
-        EconomySystem_LootModifiers.register(modEventBus);
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         new Init();
         // 启动文件监听器
         new ShopConfigWatcher(SHOP_MANAGER).watchConfigFile();
         new RewardConfigWatcher(REWARD_MANAGER).watchConfigFile();
-
-        // 初始化公告系统
-        NoticeManager.loadFromConfig();
-        PlayerNoticeDataManager.init();
-        NpcManager.init();
-
-        // 初始化肢体伤害系统
-        LimbDamageConfig.init();
-
-        // GeckoLib.initialize();
 
         // 日志信息
         LOGGER.info("Economy System Mod Initialized!");

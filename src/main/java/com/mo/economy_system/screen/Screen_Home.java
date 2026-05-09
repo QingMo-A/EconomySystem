@@ -147,6 +147,9 @@ public class Screen_Home extends Screen {
         guiGraphics.fill(0, 0, this.width, this.height, BACKGROUND_COLOR);
     }
 
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
+
     private void renderPanels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         float animProgress = openAnimation.value();
         float virtualMouseX = mouseX / uiScale;

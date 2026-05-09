@@ -13,28 +13,13 @@ public class EnUsLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         // Tab | 创造页标题
         add("itemGroup.economy_system.tab", "EconomySystem");
-        add("itemGroup.blueprint.tab", "Blueprints");
 
         // Item
         add("item.economy_system.guitar", "Guitar");
-        add("item.economy_system.blueprint", "Blueprint");
         add("item.economy_system.wormhole_potion", "Wormhole Potion");
         add("item.economy_system.recall_potion", "Recall Potion");
         add("item.economy_system.claim_wand", "Claim Wand");
-        add("item.economy_system.fragment_page", "Fragment Page");
-        add("item.economy_system.story_book", "Storybook");
         add("item.economy_system.supporter_hat", "Supporter Hat");
-        add("item.economy_system.dreamingfish", "Dreaming Fish");
-        add("item.economy_system.easy_aid_kit", "Basic Aid Kit");
-        add("item.economy_system.advanced_aid_kit", "Advanced Aid Kit");
-        add("item.economy_system.professional_aid_kit", "Professional Aid Kit");
-        add("item.economy_system.revival_charm", "Revival Charm");
-        add("item.economy_system.restore_uninfected_potion", "Gene Resurgence Potion");
-
-        // Tooltips
-        add("item.economy_system.dreamingfish.tooltip", "Why is this fish called Dreaming Fish...?\nA small memorial for hhy.'s many hours of work.");
-        add("advancement.economy_system.storybook.journey_started.title", "Journey Begins");
-        add("advancement.economy_system.storybook.journey_started.description", "Curiosity is where every long journey starts.");
 
         // Enchantment
         add("enchantment.economy_system.carefully", "Careful");
@@ -43,7 +28,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("enchantment.economy_system.bounty_hunter.desc", "Increases the chance to find currency on bodies");
 
         // Key Setting
-        add("key.economy_system.open_screen", "Open Menu");
+        add("key.economy_system.open_screen", "Open Economy Menu");
         add("key.categories.economy_system", "Economy System");
 
         // EconomySystem Command | 经济指令

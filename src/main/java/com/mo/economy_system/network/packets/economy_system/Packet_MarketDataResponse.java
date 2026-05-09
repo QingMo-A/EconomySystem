@@ -2,7 +2,6 @@ package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
-import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -46,8 +45,6 @@ public class Packet_MarketDataResponse implements net.minecraft.network.protocol
             // 获取当前屏幕实例并更新市场商品
             if (Minecraft.getInstance().screen instanceof Screen_Market screenMarket) {
                 screenMarket.updateMarketItems(msg.items);
-            } else if (Minecraft.getInstance().screen instanceof a1111_Screen screen){
-                screen.updateMarketItems(msg.items);
             }
         });
     }

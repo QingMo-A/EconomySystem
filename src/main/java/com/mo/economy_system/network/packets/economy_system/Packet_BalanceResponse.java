@@ -1,8 +1,6 @@
 package com.mo.economy_system.network.packets.economy_system;
 
-import com.mo.economy_system.client.cache.ClientCacheManager;
 import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.screen.components.newUI.a1111_Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
@@ -62,14 +60,9 @@ public class Packet_BalanceResponse implements net.minecraft.network.protocol.co
         context.enqueueWork(() -> {
             // 同步到ClientCacheManager
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null) {
-                ClientCacheManager.setPlayerBalance(mc.player.getUUID(), msg.getBalance());
-            }
             Screen screen = mc.screen;
             if (screen instanceof Screen_Home screenHome) {
                 screenHome.updateBalance(msg.balance, msg.accounts); // 更新界面余额
-            } else if (Minecraft.getInstance().screen instanceof a1111_Screen screenA){
-                screenA.updateBalance(msg.balance, msg.accounts); // 更新界面余额
             }
         });
     }

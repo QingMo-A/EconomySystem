@@ -1,36 +1,37 @@
 {
-  "entity.hive_zombie.ambient": {
-    "subtitle": "subtitles.economy_system.hive_zombie_ambient",
+  "note.c": {
     "sounds": [
-      {"name": "economy_system:hive_zombie_ambient_1", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_2", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_3", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_4", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_5", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_6", "volume": 0.8},
-      {"name": "economy_system:hive_zombie_ambient_7", "volume": 0.8}
-    ],
-    "stream": false
+      "economy_system:note_c"
+    ]
   },
-  "entity.hive_zombie.death": {
-    "subtitle": "subtitles.economy_system.hive_zombie_death",
+  "note.dm": {
     "sounds": [
-      "economy_system:hive_zombie_death"
-    ],
-    "stream": false
+      "economy_system:note_dm"
+    ]
   },
-  "entity.hive_zombie.hive_call": {
-    "subtitle": "subtitles.economy_system.hive_call",
+  "note.em": {
     "sounds": [
-      "economy_system:hive_zombie_hive_call"
-    ],
-    "stream": false
+      "economy_system:note_em"
+    ]
   },
-  "entity.hive_zombie.hurt": {
-    "subtitle": "subtitles.economy_system.hurt",
+  "note.f": {
     "sounds": [
-      "economy_system:hive_zombie_hurt"
-    ],
-    "stream": false
+      "economy_system:note_f"
+    ]
+  },
+  "note.g": {
+    "sounds": [
+      "economy_system:note_g"
+    ]
+  },
+  "note.am": {
+    "sounds": [
+      "economy_system:note_am"
+    ]
+  },
+  "note.bm": {
+    "sounds": [
+      "economy_system:note_bm"
+    ]
   }
 }

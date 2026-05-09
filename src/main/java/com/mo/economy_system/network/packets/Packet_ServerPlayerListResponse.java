@@ -1,7 +1,6 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.screen.territory_system.Screen_InvitePlayer;
-import com.mo.economy_system.screen.server_screen.ServerInformationDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
@@ -52,8 +51,6 @@ public class Packet_ServerPlayerListResponse implements net.minecraft.network.pr
             if (screen instanceof Screen_InvitePlayer invitePlayer) {
                 invitePlayer.update(msg.accounts);
             }
-            // 更新服务器信息面板的在线玩家数
-            ServerInformationDisplay.ONLINE_PLAYERS = msg.accounts.size();
         });
     }
 }

@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * 市场操作确认弹窗 - 绿色神圣风格（参考重生锦鲤界面）
@@ -555,4 +556,7 @@ public class Screen_MarketConfirmDialog extends Screen {
             guiGraphics.drawString(mc.font, text, textX, textY, 0xFFFFFF, false);
         }
     }
+
+    @Override
+    public void renderBackground(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {}
 }
