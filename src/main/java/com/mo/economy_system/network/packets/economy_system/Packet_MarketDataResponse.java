@@ -1,6 +1,9 @@
 package com.mo.economy_system.network.packets.economy_system;
 
 import com.mo.economy_system.core.economy_system.market.MarketItem;
+import com.mo.economy_system.core.economy_system.market.DemandOrder;
+import com.mo.economy_system.core.economy_system.market.SalesOrder;
+import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -45,6 +48,17 @@ public class Packet_MarketDataResponse implements net.minecraft.network.protocol
             // 获取当前屏幕实例并更新市场商品
             if (Minecraft.getInstance().screen instanceof Screen_Market screenMarket) {
                 screenMarket.updateMarketItems(msg.items);
+            } else if (Minecraft.getInstance().screen instanceof Screen_Home screenHome) {
+                int sellCount = 0;
+                int buyCount = 0;
+                for (MarketItem item : msg.items) {
+                    if (item instanceof SalesOrder) {
+                        sellCount++;
+                    } else if (item instanceof DemandOrder) {
+                        buyCount++;
+                    }
+                }
+                screenHome.updateTradeInfo(sellCount, buyCount);
             }
         });
     }
