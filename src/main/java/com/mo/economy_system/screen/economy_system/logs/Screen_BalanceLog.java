@@ -25,25 +25,48 @@ public class Screen_BalanceLog extends Screen {
     private static final int PADDING = 12;
     private static final int TAB_HEIGHT = 22;
     private static final int ROW_HEIGHT = 24;
+    private static final int PAGE_SIZE = 50;
     private static final String[] TABS = {"全部", "指令", "红包", "领地", "市场", "转账", "税费", "系统"};
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
     private final List<EconomySavedData.BalanceLogEntry> logs = new ArrayList<>();
     private int selectedTab = 0;
     private int scrollOffset = 0;
+    private int pageOffset = 0;
+    private int pageLimit = PAGE_SIZE;
+    private int totalLogs = 0;
+    private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
+    private int nextBtnX1, nextBtnY1, nextBtnX2, nextBtnY2;
     private float uiScale;
     private int virtualWidth;
     private int virtualHeight;
 
     public Screen_BalanceLog() {
         super(Component.literal("货币日志"));
-        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceLogRequest());
+        requestPage(0);
     }
 
     public void updateLogs(List<EconomySavedData.BalanceLogEntry> entries) {
+        updateLogs(entries, TABS[selectedTab], pageOffset, pageLimit, entries.size());
+    }
+
+    public void updateLogs(List<EconomySavedData.BalanceLogEntry> entries, String category, int offset, int limit, int total) {
         logs.clear();
         logs.addAll(entries);
+        pageOffset = Math.max(0, offset);
+        pageLimit = Math.max(1, limit);
+        totalLogs = Math.max(0, total);
+        for (int i = 0; i < TABS.length; i++) {
+            if (TABS[i].equals(category)) {
+                selectedTab = i;
+                break;
+            }
+        }
         scrollOffset = 0;
+    }
+
+    private void requestPage(int offset) {
+        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceLogRequest(TABS[selectedTab], offset, PAGE_SIZE));
     }
 
     private void calculateVirtualSize() {
@@ -82,7 +105,8 @@ public class Screen_BalanceLog extends Screen {
         guiGraphics.drawString(font, hint, x + w - 10 - font.width(hint), y + 8, 0x90FFFFFF);
 
         renderTabs(guiGraphics, mouseX, mouseY, x + 10, y + 28, w - 20);
-        renderRows(guiGraphics, x + 10, y + 58, w - 20, h - 68);
+        renderRows(guiGraphics, x + 10, y + 58, w - 20, h - 96);
+        renderPageControls(guiGraphics, mouseX, mouseY, x + 10, y + h - 30, w - 20);
     }
 
     private void renderTabs(GuiGraphics guiGraphics, float mouseX, float mouseY, int x, int y, int width) {
@@ -101,7 +125,7 @@ public class Screen_BalanceLog extends Screen {
     }
 
     private void renderRows(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        List<EconomySavedData.BalanceLogEntry> filtered = filteredLogs();
+        List<EconomySavedData.BalanceLogEntry> filtered = logs;
         int visibleRows = Math.max(1, height / ROW_HEIGHT);
         scrollOffset = Mth.clamp(scrollOffset, 0, Math.max(0, filtered.size() - visibleRows));
 
@@ -131,12 +155,33 @@ public class Screen_BalanceLog extends Screen {
         }
     }
 
-    private List<EconomySavedData.BalanceLogEntry> filteredLogs() {
-        if (selectedTab == 0) {
-            return logs;
-        }
-        String tab = TABS[selectedTab];
-        return logs.stream().filter(entry -> tab.equals(entry.category())).toList();
+    private void renderPageControls(GuiGraphics guiGraphics, float mouseX, float mouseY, int x, int y, int width) {
+        int btnWidth = 58;
+        int btnHeight = 20;
+        prevBtnX1 = x;
+        prevBtnY1 = y;
+        prevBtnX2 = x + btnWidth;
+        prevBtnY2 = y + btnHeight;
+        nextBtnX1 = x + width - btnWidth;
+        nextBtnY1 = y;
+        nextBtnX2 = x + width;
+        nextBtnY2 = y + btnHeight;
+
+        boolean hasPrev = pageOffset > 0;
+        boolean hasNext = pageOffset + pageLimit < totalLogs;
+        UiButtonStyle prevStyle = UiButtonStyle.accent(hasPrev ? CardRenderer.THEME_BALANCE : 0xFF6F7F8C).setTextShadow(false);
+        UiButtonStyle nextStyle = UiButtonStyle.accent(hasNext ? CardRenderer.THEME_BALANCE : 0xFF6F7F8C).setTextShadow(false);
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, prevBtnX1, prevBtnY1, btnWidth, btnHeight, "上一页", "", prevStyle,
+                hasPrev && mouseX >= prevBtnX1 && mouseX <= prevBtnX2 && mouseY >= prevBtnY1 && mouseY <= prevBtnY2,
+                UiButtonRenderer.TextAlign.CENTER, false);
+        UiButtonRenderer.drawStripedButton(guiGraphics, font, nextBtnX1, nextBtnY1, btnWidth, btnHeight, "下一页", "", nextStyle,
+                hasNext && mouseX >= nextBtnX1 && mouseX <= nextBtnX2 && mouseY >= nextBtnY1 && mouseY <= nextBtnY2,
+                UiButtonRenderer.TextAlign.CENTER, false);
+
+        int currentPage = totalLogs == 0 ? 0 : pageOffset / pageLimit + 1;
+        int totalPages = totalLogs == 0 ? 0 : (totalLogs + pageLimit - 1) / pageLimit;
+        String pageText = currentPage + " / " + totalPages + "  共 " + totalLogs + " 条";
+        guiGraphics.drawString(font, pageText, x + (width - font.width(pageText)) / 2, y + 6, 0xB8FFFFFF);
     }
 
     @Override
@@ -152,16 +197,25 @@ public class Screen_BalanceLog extends Screen {
             if (vx >= tabX && vx <= tabX + tabWidth - 4 && vy >= y && vy <= y + TAB_HEIGHT) {
                 selectedTab = i;
                 scrollOffset = 0;
+                requestPage(0);
                 return true;
             }
+        }
+        if (vx >= prevBtnX1 && vx <= prevBtnX2 && vy >= prevBtnY1 && vy <= prevBtnY2 && pageOffset > 0) {
+            requestPage(Math.max(0, pageOffset - pageLimit));
+            return true;
+        }
+        if (vx >= nextBtnX1 && vx <= nextBtnX2 && vy >= nextBtnY1 && vy <= nextBtnY2 && pageOffset + pageLimit < totalLogs) {
+            requestPage(pageOffset + pageLimit);
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int visibleRows = Math.max(1, (virtualHeight - PADDING * 2 - 68) / ROW_HEIGHT);
-        int maxScroll = Math.max(0, filteredLogs().size() - visibleRows);
+        int visibleRows = Math.max(1, (virtualHeight - PADDING * 2 - 96) / ROW_HEIGHT);
+        int maxScroll = Math.max(0, logs.size() - visibleRows);
         scrollOffset = Mth.clamp(scrollOffset - (int) Math.signum(scrollY), 0, maxScroll);
         return true;
     }

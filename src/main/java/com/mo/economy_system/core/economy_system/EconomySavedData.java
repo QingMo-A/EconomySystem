@@ -87,6 +87,19 @@ public class EconomySavedData extends SavedData {
         return new ArrayList<>(balanceLogs.getOrDefault(playerUUID, new ArrayDeque<>()));
     }
 
+    public BalanceLogPage getBalanceLogs(UUID playerUUID, String category, int offset, int limit) {
+        String normalizedCategory = category == null ? "全部" : category;
+        int safeOffset = Math.max(0, offset);
+        int safeLimit = Math.max(1, Math.min(100, limit));
+        List<BalanceLogEntry> filtered = getBalanceLogs(playerUUID).stream()
+                .filter(entry -> "全部".equals(normalizedCategory) || normalizedCategory.equals(entry.category()))
+                .toList();
+        int total = filtered.size();
+        int fromIndex = Math.min(safeOffset, total);
+        int toIndex = Math.min(fromIndex + safeLimit, total);
+        return new BalanceLogPage(filtered.subList(fromIndex, toIndex), normalizedCategory, safeOffset, safeLimit, total);
+    }
+
     // 检查是否有足够余额
     public boolean hasEnoughBalance(UUID playerUUID, int amount) {
         if (amount <= 0) {
@@ -230,6 +243,9 @@ public class EconomySavedData extends SavedData {
                     tag.getInt("afterBalance")
             );
         }
+    }
+
+    public record BalanceLogPage(List<BalanceLogEntry> logs, String category, int offset, int limit, int total) {
     }
 
 }

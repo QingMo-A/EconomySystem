@@ -15,9 +15,21 @@ public class Packet_BalanceLogResponse implements net.minecraft.network.protocol
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_BalanceLogResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_BalanceLogResponse.encode(packet, buf), Packet_BalanceLogResponse::decode);
 
     private final List<EconomySavedData.BalanceLogEntry> logs;
+    private final String category;
+    private final int offset;
+    private final int limit;
+    private final int total;
 
     public Packet_BalanceLogResponse(List<EconomySavedData.BalanceLogEntry> logs) {
+        this(logs, "全部", 0, 50, logs.size());
+    }
+
+    public Packet_BalanceLogResponse(List<EconomySavedData.BalanceLogEntry> logs, String category, int offset, int limit, int total) {
         this.logs = logs;
+        this.category = category;
+        this.offset = offset;
+        this.limit = limit;
+        this.total = total;
     }
 
     @Override
@@ -26,6 +38,10 @@ public class Packet_BalanceLogResponse implements net.minecraft.network.protocol
     }
 
     public static void encode(Packet_BalanceLogResponse msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.category);
+        buf.writeInt(msg.offset);
+        buf.writeInt(msg.limit);
+        buf.writeInt(msg.total);
         buf.writeInt(msg.logs.size());
         for (EconomySavedData.BalanceLogEntry log : msg.logs) {
             buf.writeNbt(log.toNBT());
@@ -33,6 +49,10 @@ public class Packet_BalanceLogResponse implements net.minecraft.network.protocol
     }
 
     public static Packet_BalanceLogResponse decode(FriendlyByteBuf buf) {
+        String category = buf.readUtf();
+        int offset = buf.readInt();
+        int limit = buf.readInt();
+        int total = buf.readInt();
         int size = buf.readInt();
         List<EconomySavedData.BalanceLogEntry> logs = new ArrayList<>();
         for (int i = 0; i < size; i++) {
@@ -41,13 +61,13 @@ public class Packet_BalanceLogResponse implements net.minecraft.network.protocol
                 logs.add(EconomySavedData.BalanceLogEntry.fromNBT(tag));
             }
         }
-        return new Packet_BalanceLogResponse(logs);
+        return new Packet_BalanceLogResponse(logs, category, offset, limit, total);
     }
 
     public static void handle(Packet_BalanceLogResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (Minecraft.getInstance().screen instanceof Screen_BalanceLog screen) {
-                screen.updateLogs(msg.logs);
+                screen.updateLogs(msg.logs, msg.category, msg.offset, msg.limit, msg.total);
             }
         });
     }
