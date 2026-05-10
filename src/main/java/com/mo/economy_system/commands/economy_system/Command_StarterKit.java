@@ -37,7 +37,7 @@ public class Command_StarterKit {
                 broadcastClaimResultMessage(player, false);
             } else {
                 EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
-                data.addBalance(player.getUUID(), 10000);
+        data.addBalance(player.getUUID(), 10000, "系统", "新手礼包");
 
                 // 成功领取，记录状态
                 persistentData.putBoolean(TAG_KEY, true);

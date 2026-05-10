@@ -46,7 +46,7 @@ public class Command_TerritoryClaim {
                             }
 
                             // 先扣费再创建领地，避免扣费失败时留下免费领地。
-                            if (!data.minBalance(playerUUID, (int) price)) {
+        if (!data.minBalance(playerUUID, (int) price, "领地", "购买领地")) {
                                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_INSUFFICIENT_BALANCE, price));
                                 return 0;
                             }
@@ -88,7 +88,7 @@ public class Command_TerritoryClaim {
                     if (volume > 0) {
                         long price = calculatePrice(volume);
 
-                        if (price <= EconomySavedData.MAX_BALANCE && data.minBalance(playerUUID, (int) price)) {
+            if (price <= EconomySavedData.MAX_BALANCE && data.minBalance(playerUUID, (int) price, "领地", "调整领地大小")) {
                             TerritoryManager.removeTerritory(t.getTerritoryID());
                             t.setBackpoint(firstPos);
                             t.setX1(firstPos.getX());

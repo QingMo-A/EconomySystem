@@ -81,7 +81,7 @@ public class RedPacketManager {
         if (sender != null && redPacket.totalAmount > redPacket.claimedAmount) {
             int remainingAmount = redPacket.totalAmount - redPacket.claimedAmount;
             EconomySavedData data = EconomySavedData.getInstance(sender.serverLevel());
-            data.addBalance(redPacket.senderUUID, remainingAmount);
+            data.addBalance(redPacket.senderUUID, remainingAmount, "红包", "红包过期退款");
 
             sender.sendSystemMessage(Component.translatable(Util_MessageKeys.RED_PACKET_EXPIRED_REFUNDED, remainingAmount));
         }

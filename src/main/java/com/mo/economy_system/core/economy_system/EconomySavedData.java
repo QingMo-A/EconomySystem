@@ -1,6 +1,8 @@
 package com.mo.economy_system.core.economy_system;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -12,8 +14,10 @@ import java.util.stream.Collectors;
 public class EconomySavedData extends SavedData {
     private static final String DATA_NAME = "economy_data";
     public static final int MAX_BALANCE = Integer.MAX_VALUE;
+    public static final int MAX_LOGS_PER_PLAYER = 1000;
     private final Map<UUID, Integer> accounts = new HashMap<>();
     private final Map<UUID, List<String>> offlineMessages = new HashMap<>(); // 用于存储离线消息
+    private final Map<UUID, Deque<BalanceLogEntry>> balanceLogs = new HashMap<>();
 
     // 获取玩家余额
     public int getBalance(UUID playerUUID) {
@@ -22,35 +26,65 @@ public class EconomySavedData extends SavedData {
 
     // 设置玩家余额
     public void setBalance(UUID playerUUID, int amount) {
-        accounts.put(playerUUID, Math.max(0, amount));
+        setBalance(playerUUID, amount, "系统", "余额设置");
+    }
+
+    public void setBalance(UUID playerUUID, int amount, String category, String reason) {
+        int before = getBalance(playerUUID);
+        int after = Math.max(0, amount);
+        accounts.put(playerUUID, after);
+        recordBalanceLog(playerUUID, category, reason, after - before, before, after);
         this.setDirty(); // 标记数据已更改，确保保存到文件
     }
 
     // 增加余额
     public boolean addBalance(UUID playerUUID, int amount) {
+        return addBalance(playerUUID, amount, "系统", "余额增加");
+    }
+
+    public boolean addBalance(UUID playerUUID, int amount, String category, String reason) {
         if (amount <= 0) {
             return false;
         }
         int balance = getBalance(playerUUID);
         if (balance > MAX_BALANCE - amount) {
-            setBalance(playerUUID, MAX_BALANCE);
+            setBalance(playerUUID, MAX_BALANCE, category, reason);
             return true;
         }
-        setBalance(playerUUID, balance + amount);
+        setBalance(playerUUID, balance + amount, category, reason);
         return true;
     }
 
     // 减少余额
     public boolean minBalance(UUID playerUUID, int amount) {
+        return minBalance(playerUUID, amount, "系统", "余额减少");
+    }
+
+    public boolean minBalance(UUID playerUUID, int amount, String category, String reason) {
         if (amount <= 0) {
             return false;
         }
         int balance = getBalance(playerUUID);
         if (balance >= amount) {
-            setBalance(playerUUID, balance - amount);
+            setBalance(playerUUID, balance - amount, category, reason);
             return true;
         }
         return false; // 余额不足
+    }
+
+    private void recordBalanceLog(UUID playerUUID, String category, String reason, int delta, int before, int after) {
+        if (delta == 0) {
+            return;
+        }
+        Deque<BalanceLogEntry> logs = balanceLogs.computeIfAbsent(playerUUID, key -> new ArrayDeque<>());
+        logs.addFirst(new BalanceLogEntry(System.currentTimeMillis(), category, reason, delta, before, after));
+        while (logs.size() > MAX_LOGS_PER_PLAYER) {
+            logs.removeLast();
+        }
+    }
+
+    public List<BalanceLogEntry> getBalanceLogs(UUID playerUUID) {
+        return new ArrayList<>(balanceLogs.getOrDefault(playerUUID, new ArrayDeque<>()));
     }
 
     // 检查是否有足够余额
@@ -108,6 +142,16 @@ public class EconomySavedData extends SavedData {
         });
         tag.put("offlineMessages", offlineMessagesTag);
 
+        CompoundTag balanceLogsTag = new CompoundTag();
+        balanceLogs.forEach((uuid, logs) -> {
+            ListTag listTag = new ListTag();
+            for (BalanceLogEntry entry : logs) {
+                listTag.add(entry.toNBT());
+            }
+            balanceLogsTag.put(uuid.toString(), listTag);
+        });
+        tag.put("balanceLogs", balanceLogsTag);
+
         return tag;
     }
 
@@ -139,6 +183,19 @@ public class EconomySavedData extends SavedData {
             }
         }
 
+        if (tag.contains("balanceLogs")) {
+            CompoundTag balanceLogsTag = tag.getCompound("balanceLogs");
+            for (String key : balanceLogsTag.getAllKeys()) {
+                UUID uuid = UUID.fromString(key);
+                ListTag listTag = balanceLogsTag.getList(key, Tag.TAG_COMPOUND);
+                Deque<BalanceLogEntry> logs = new ArrayDeque<>();
+                for (int i = 0; i < listTag.size() && i < MAX_LOGS_PER_PLAYER; i++) {
+                    logs.add(BalanceLogEntry.fromNBT(listTag.getCompound(i)));
+                }
+                data.balanceLogs.put(uuid, logs);
+            }
+        }
+
         return data;
     }
 
@@ -149,6 +206,30 @@ public class EconomySavedData extends SavedData {
             throw new IllegalStateException("Overworld is not loaded!");
         }
         return overworld.getDataStorage().computeIfAbsent(new SavedData.Factory<>(EconomySavedData::new, EconomySavedData::load), DATA_NAME);
+    }
+
+    public record BalanceLogEntry(long timeMillis, String category, String reason, int delta, int beforeBalance, int afterBalance) {
+        public CompoundTag toNBT() {
+            CompoundTag tag = new CompoundTag();
+            tag.putLong("timeMillis", timeMillis);
+            tag.putString("category", category == null ? "系统" : category);
+            tag.putString("reason", reason == null ? "" : reason);
+            tag.putInt("delta", delta);
+            tag.putInt("beforeBalance", beforeBalance);
+            tag.putInt("afterBalance", afterBalance);
+            return tag;
+        }
+
+        public static BalanceLogEntry fromNBT(CompoundTag tag) {
+            return new BalanceLogEntry(
+                    tag.getLong("timeMillis"),
+                    tag.getString("category"),
+                    tag.getString("reason"),
+                    tag.getInt("delta"),
+                    tag.getInt("beforeBalance"),
+                    tag.getInt("afterBalance")
+            );
+        }
     }
 
 }

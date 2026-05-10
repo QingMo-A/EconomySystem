@@ -117,7 +117,7 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
                 }
             }
 
-            if (requiredDfCoins > 0 && !economySavedData.minBalance(player.getUUID(), requiredDfCoins)) {
+        if (requiredDfCoins > 0 && !economySavedData.minBalance(player.getUUID(), requiredDfCoins, "领地", "升级领地增益")) {
                 player.sendSystemMessage(Component.literal("❌ 梦鱼币不足!"));
                 return;
             }

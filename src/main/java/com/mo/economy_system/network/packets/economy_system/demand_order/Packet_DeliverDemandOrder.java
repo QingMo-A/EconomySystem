@@ -66,7 +66,7 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
             ItemStack requestedStack = item.getItemStack();
             if (consumeItem(supplier, requestedStack, requestedStack.getCount())) {
                 // 扣除供货者资源并将货币发放给供货者
-                savedData.addBalance(supplier.getUUID(), price);
+                savedData.addBalance(supplier.getUUID(), price, "市场", "交付求购单 " + item.getItemStack().getHoverName().getString());
 
                 demandOrder.setDelivered(true);
                 // 通知供货者成功交付

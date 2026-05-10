@@ -30,6 +30,8 @@ public class EconomySystem_NetworkManager {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
         registrar.playToServer(Packet_BalanceRequest.TYPE, Packet_BalanceRequest.STREAM_CODEC, Packet_BalanceRequest::handle);
         registrar.playToClient(Packet_BalanceResponse.TYPE, Packet_BalanceResponse.STREAM_CODEC, Packet_BalanceResponse::handle);
+        registrar.playToServer(Packet_BalanceLogRequest.TYPE, Packet_BalanceLogRequest.STREAM_CODEC, Packet_BalanceLogRequest::handle);
+        registrar.playToClient(Packet_BalanceLogResponse.TYPE, Packet_BalanceLogResponse.STREAM_CODEC, Packet_BalanceLogResponse::handle);
         registrar.playToServer(Packet_Transfer.TYPE, Packet_Transfer.STREAM_CODEC, Packet_Transfer::handle);
         registrar.playToServer(Packet_ShopDataRequest.TYPE, Packet_ShopDataRequest.STREAM_CODEC, Packet_ShopDataRequest::handle);
         registrar.playToClient(Packet_ShopDataResponse.TYPE, Packet_ShopDataResponse.STREAM_CODEC, Packet_ShopDataResponse::handle);

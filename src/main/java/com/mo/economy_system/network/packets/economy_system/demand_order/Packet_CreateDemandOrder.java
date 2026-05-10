@@ -58,7 +58,7 @@ public class Packet_CreateDemandOrder implements net.minecraft.network.protocol.
                 return;
             }
 
-            if (!savedData.minBalance(player.getUUID(), price)) {
+            if (!savedData.minBalance(player.getUUID(), price, "市场", "创建求购单 " + msg.marketItem.getItemStack().getHoverName().getString())) {
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
                 return;
             }

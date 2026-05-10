@@ -123,7 +123,7 @@ public class EconomySystem_EventHandler {
                                 economySavedData.storeOfflineMessage(item.getSellerID(), text);
                             }
                         } else {
-                            economySavedData.addBalance(item.getSellerID(), item.getBasePrice());
+                            economySavedData.addBalance(item.getSellerID(), item.getBasePrice(), "市场", "求购单过期退款");
                             if (owner != null) {
                                 owner.sendSystemMessage(Component.literal("你的求购单 " + item.getItemStack().getHoverName().getString() + " 已过期, 货币已退回"));
                             } else {
@@ -192,7 +192,7 @@ public class EconomySystem_EventHandler {
 
             if (reward > 0) {
                 EconomySavedData economy = EconomySavedData.getInstance(player.serverLevel());
-                economy.addBalance(player.getUUID(), reward);
+                economy.addBalance(player.getUUID(), reward, "系统", "击杀奖励: " + event.getEntity().getName().getString());
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.MOB_REWARD_MESSAGE_KEY, event.getEntity().getName().getString(), reward));
             }
         }

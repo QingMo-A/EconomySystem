@@ -71,7 +71,7 @@ public class Packet_RemoveDemandOrder implements net.minecraft.network.protocol.
             ServerLevel serverLevel = player.serverLevel();
             EconomySavedData savedData = EconomySavedData.getInstance(serverLevel);
 
-            savedData.addBalance(item.getSellerID(), item.getBasePrice());
+                savedData.addBalance(item.getSellerID(), item.getBasePrice(), "市场", "取消求购单退款");
 
             // 通知客户端刷新市场界面
             EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));

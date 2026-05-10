@@ -209,8 +209,13 @@ public class CardRenderer {
      */
     public static void drawBalanceCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
                                        int balance, int playerRank) {
+        drawBalanceCard(guiGraphics, font, x, y, width, height, balance, playerRank, false);
+    }
+
+    public static void drawBalanceCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                       int balance, int playerRank, boolean isHovered) {
         // 绘制卡片背景
-        drawCard(guiGraphics, x, y, width, height, THEME_BALANCE, false);
+        drawCard(guiGraphics, x, y, width, height, THEME_BALANCE, isHovered);
 
         int padding = 8;
 
@@ -223,9 +228,9 @@ public class CardRenderer {
         guiGraphics.drawString(font, titleText, x + padding + iconWidth + 3, titleY, TEXT_TITLE);
 
         // 右侧排名
-        String rankText = playerRank > 0 ? "#" + playerRank : "--";
-        int rankTextWidth = font.width(rankText);
-        guiGraphics.drawString(font, rankText, x + width - padding - rankTextWidth, titleY, 0xFFAAFFAA);
+        String rightText = isHovered ? "日志 >>" : (playerRank > 0 ? "#" + playerRank : "--");
+        int rightTextWidth = font.width(rightText);
+        guiGraphics.drawString(font, rightText, x + width - padding - rightTextWidth, titleY, isHovered ? 0xFF4FC3F7 : 0xFFAAFFAA);
 
         // 分隔线
         int separatorY = titleY + font.lineHeight + 3;

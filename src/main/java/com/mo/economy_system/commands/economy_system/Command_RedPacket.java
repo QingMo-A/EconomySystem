@@ -51,7 +51,7 @@ public class Command_RedPacket {
         // 将未被领取的金额返还给玩家
         if (remainingAmount > 0) {
             EconomySavedData data = EconomySavedData.getInstance(sender.serverLevel());
-            data.addBalance(sender.getUUID(), remainingAmount);
+            data.addBalance(sender.getUUID(), remainingAmount, "红包", "取消红包退款");
         }
 
         // 从红包管理器中移除该红包
@@ -83,7 +83,7 @@ public class Command_RedPacket {
             return 0;
         }
 
-        data.minBalance(sender.getUUID(), amount);
+        data.minBalance(sender.getUUID(), amount, "红包", "创建红包");
 
         Component claimButton = Component.translatable(Util_MessageKeys.RED_PACKET_CLAIM_BUTTON)
                 .withStyle(style -> style
@@ -151,7 +151,7 @@ public class Command_RedPacket {
 
         // 更新玩家余额
         EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
-        data.addBalance(player.getUUID(), amount);
+        data.addBalance(player.getUUID(), amount, "红包", "领取红包");
 
         // 通知领取者
         player.sendSystemMessage(Component.translatable(Util_MessageKeys.RED_PACKET_CLAIM_SUCCESS, redPacket.senderName, amount));

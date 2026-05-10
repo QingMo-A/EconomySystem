@@ -61,7 +61,7 @@ public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.c
 
                 if (heldItem.getCount() >= requiredAmount) {
                     int tax = Math.max(1, (int) Math.min(Integer.MAX_VALUE, Math.ceil(price * 0.1D)));
-                    if (!economySavedData.minBalance(player.getUUID(), tax)) {
+                    if (!economySavedData.minBalance(player.getUUID(), tax, "税费", "上架商品税: " + listedStack.getHoverName().getString())) {
                         player.sendSystemMessage(Component.translatable(Util_MessageKeys.LIST_ITEM_TAX_PAYMENT_FAILED_MESSAGE_KEY, tax));
                         return;
                     }

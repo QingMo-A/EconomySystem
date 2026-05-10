@@ -51,8 +51,8 @@ public class Packet_Transfer implements net.minecraft.network.protocol.common.cu
                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
                     Player target = serverLevel.getPlayerByUUID(msg.targetUUID); // 根据 UUID 获取目标玩家
 
-                    if (target != null && data.minBalance(sender.getUUID(), msg.amount)) {
-                        data.addBalance(target.getUUID(), msg.amount);
+            if (target != null && data.minBalance(sender.getUUID(), msg.amount, "转账", "赠与 " + target.getName().getString())) {
+                data.addBalance(target.getUUID(), msg.amount, "转账", "来自 " + sender.getName().getString() + " 的赠与");
                         sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_SUCCESSFULLY_MESSAGE_KEY, msg.amount, target.getName().getString()));
                         target.sendSystemMessage(Component.translatable(Util_MessageKeys.RECEIVE_SUCCESSFULLY_MESSAGE_KEY, sender.getName().getString(), msg.amount));
                     } else {

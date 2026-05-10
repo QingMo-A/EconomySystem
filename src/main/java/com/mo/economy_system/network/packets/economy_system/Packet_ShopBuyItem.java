@@ -96,7 +96,7 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
 
             // 5. 执行购买逻辑（扣除余额并添加物品）
             try {
-                if (!economyData.minBalance(player.getUUID(), totalPrice)) {
+                if (!economyData.minBalance(player.getUUID(), totalPrice, "市场", "系统商店购买 " + template.getHoverName().getString() + " x" + msg.quantity)) {
                     player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_FAILED_MESSAGE_KEY));
                     return;
                 }
@@ -108,7 +108,7 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
                         template.getHoverName().getString()
                 ));
             } catch (Exception e) {
-                economyData.addBalance(player.getUUID(), totalPrice); // 回滚余额
+                economyData.addBalance(player.getUUID(), totalPrice, "系统", "系统商店购买失败退款"); // 回滚余额
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.SHOP_BUY_ERROR_MESSAGE_KEY));
             }
         });

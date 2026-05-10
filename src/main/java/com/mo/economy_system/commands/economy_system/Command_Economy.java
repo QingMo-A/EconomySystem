@@ -74,7 +74,7 @@ public class Command_Economy {
                                             int amount = IntegerArgumentType.getInteger(context, "amount");
                                             ServerLevel serverLevel = player.serverLevel(); // 获取服务器世界实例
                                             EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                                            data.addBalance(player.getUUID(), amount);
+                                            data.addBalance(player.getUUID(), amount, "指令", "管理员增加余额");
                                             context.getSource().sendSuccess(() -> Component.translatable(Util_MessageKeys.COIN_COMMAND_ADD, amount), false);
                                             return 1;
                                         }))))
@@ -88,7 +88,7 @@ public class Command_Economy {
                                     int amount = IntegerArgumentType.getInteger(context, "amount");
                                     ServerLevel serverLevel = player.serverLevel(); // 获取服务器世界实例
                                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                                    if (data.minBalance(player.getUUID(), amount)) {
+                                    if (data.minBalance(player.getUUID(), amount, "指令", "管理员减少余额")) {
                                         context.getSource().sendSuccess(() -> Component.translatable(Util_MessageKeys.COIN_COMMAND_MIN, amount), false);
                                     } else {
                                         context.getSource().sendFailure(Component.translatable(Util_MessageKeys.COIN_COMMAND_INSUFFICIENT_BALANCE));
@@ -105,7 +105,7 @@ public class Command_Economy {
                                     int amount = IntegerArgumentType.getInteger(context, "amount");
                                     ServerLevel serverLevel = player.serverLevel(); // 获取服务器世界实例
                                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                                    data.setBalance(player.getUUID(), amount);
+                                    data.setBalance(player.getUUID(), amount, "指令", "管理员设置余额");
                                     context.getSource().sendSuccess(() -> Component.translatable(Util_MessageKeys.COIN_COMMAND_SET, amount), false);
                                     return 1;
                                 }))))
@@ -125,8 +125,8 @@ public class Command_Economy {
                                                     EconomySavedData data = EconomySavedData.getInstance(serverLevel);
                                                     Player target = serverLevel.getPlayerByUUID(receiverUUID); // 根据 UUID 获取目标玩家
 
-                                                    if (target != null && !target.getUUID().equals(sender.getUUID()) && data.minBalance(sender.getUUID(), amount)) {
-                                                        data.addBalance(target.getUUID(), amount);
+                                                    if (target != null && !target.getUUID().equals(sender.getUUID()) && data.minBalance(sender.getUUID(), amount, "转账", "赠与 " + target.getName().getString())) {
+                                                        data.addBalance(target.getUUID(), amount, "转账", "来自 " + sender.getName().getString() + " 的赠与");
                                                         sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_SUCCESSFULLY_MESSAGE_KEY, amount, target.getName().getString()));
                                                         target.sendSystemMessage(Component.translatable(Util_MessageKeys.RECEIVE_SUCCESSFULLY_MESSAGE_KEY, sender.getName().getString(), amount));
                                                     } else {

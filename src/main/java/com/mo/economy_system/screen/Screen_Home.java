@@ -8,6 +8,7 @@ import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
+import com.mo.economy_system.screen.economy_system.logs.Screen_BalanceLog;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
 import com.mo.economy_system.screen.territory_system.Screen_Territory;
@@ -93,6 +94,7 @@ public class Screen_Home extends Screen {
 
     // ==================== 交易信息卡片点击区域 ====================
     private int tradeCardX1, tradeCardY1, tradeCardX2, tradeCardY2;
+    private int balanceCardX1, balanceCardY1, balanceCardX2, balanceCardY2;
 
     // ==================== 富豪榜滚�?====================
     private int leaderboardScrollOffset = 0;
@@ -219,9 +221,15 @@ public class Screen_Home extends Screen {
         // 左侧：余额卡�?
         int balanceCardX = rightPanelStartX;
         int balanceCardY = startY;
+        balanceCardX1 = balanceCardX;
+        balanceCardY1 = balanceCardY;
+        balanceCardX2 = balanceCardX + halfWidth;
+        balanceCardY2 = balanceCardY + topRowHeight;
+        boolean isBalanceHovered = (mouseX >= balanceCardX1 && mouseX <= balanceCardX2 &&
+                                    mouseY >= balanceCardY1 && mouseY <= balanceCardY2);
         CardRenderer.drawBalanceCard(guiGraphics, font,
             balanceCardX, balanceCardY, halfWidth, topRowHeight,
-            balance >= 0 ? balance : 0, playerRank);
+            balance >= 0 ? balance : 0, playerRank, isBalanceHovered);
 
         // 右侧：交易信息卡�?
         int tradeCardX = balanceCardX + halfWidth + CARD_SPACING;
@@ -256,6 +264,15 @@ public class Screen_Home extends Screen {
                 handleNavClick(i);
                 return true;
             }
+        }
+
+        // 检查交易信息卡片点�?
+        if (virtualMouseX >= balanceCardX1 && virtualMouseX <= balanceCardX2 &&
+            virtualMouseY >= balanceCardY1 && virtualMouseY <= balanceCardY2) {
+            if (this.minecraft != null) {
+                this.minecraft.setScreen(new Screen_BalanceLog());
+            }
+            return true;
         }
 
         // 检查交易信息卡片点�?

@@ -67,12 +67,12 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
             }
 
             // 扣除买家货币并将物品发放给买家
-            if (!savedData.minBalance(buyer.getUUID(), price)) {
+            if (!savedData.minBalance(buyer.getUUID(), price, "市场", "购买玩家商品 " + item.getItemStack().getHoverName().getString())) {
                 buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_FAILED_MESSAGE_KEY));
                 return;
             }
             if (!MarketManager.removeMarketItemById(msg.itemId)) {
-                savedData.addBalance(buyer.getUUID(), price);
+                savedData.addBalance(buyer.getUUID(), price, "系统", "购买玩家商品失败退款");
                 buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
                 return;
             }
@@ -84,7 +84,7 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
 
             // 直接通过 SellerUUID 增加余额
             UUID sellerID = item.getSellerID();
-            savedData.addBalance(sellerID, price);
+            savedData.addBalance(sellerID, price, "市场", "卖出商品 " + item.getItemStack().getHoverName().getString());
 
             // 通知买家成功购买
             buyer.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_PURCHASE_SUCCESSFULLY_MESSAGE_KEY, price, item.getItemStack().getHoverName().getString(), item.getItemStack().getCount()));
