@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.economy_system.market;
 
 import com.mo.economy_system.utils.ItemStackDataHelper;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
@@ -35,11 +36,15 @@ public abstract class MarketItem {
     // 公共方法（Getters）...
 
     public CompoundTag toNBT() {
+        return toNBT(null);
+    }
+
+    public CompoundTag toNBT(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
         tag.putString("type", this.getClass().getName()); // 关键：保存子类类型
         tag.putUUID("tradeID", tradeID);
         tag.putString("itemID", itemID);
-        tag.put("itemStack", ItemStackDataHelper.saveSimple(itemStack));
+        tag.put("itemStack", registries == null ? ItemStackDataHelper.saveSimple(itemStack) : ItemStackDataHelper.saveFullTag(itemStack, registries));
         tag.putInt("basePrice", basePrice);
         tag.putString("sellerName", sellerName);
         tag.putUUID("sellerID", sellerID);
@@ -49,11 +54,15 @@ public abstract class MarketItem {
     }
 
     public static MarketItem fromNBT(CompoundTag tag) {
+        return fromNBT(tag, null);
+    }
+
+    public static MarketItem fromNBT(CompoundTag tag, HolderLookup.Provider registries) {
         String type = tag.getString("type");
         try {
             return switch (type) { // 根据类型分发到子类
-                case "com.mo.economy_system.core.economy_system.market.SalesOrder" -> SalesOrder.fromNBT(tag);
-                case "com.mo.economy_system.core.economy_system.market.DemandOrder" -> DemandOrder.fromNBT(tag);
+                case "com.mo.economy_system.core.economy_system.market.SalesOrder" -> SalesOrder.fromNBT(tag, registries);
+                case "com.mo.economy_system.core.economy_system.market.DemandOrder" -> DemandOrder.fromNBT(tag, registries);
                 default -> throw new IllegalArgumentException("未知的 MarketItem 类型: " + type);
             };
         } catch (Exception e) {

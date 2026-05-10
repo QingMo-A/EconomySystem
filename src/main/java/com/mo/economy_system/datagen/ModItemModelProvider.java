@@ -74,7 +74,7 @@ public class ModItemModelProvider extends ItemModelProvider {
                     default -> "";
                 };
 
-                String armorItemPath = "item/" + armorItem;
+                String armorItemPath = "item/" + itemRegistryObject.getId().getPath();
                 String trimPath = "trims/items/" + armorType + "_trim_" + trimMaterialResourceKey.location().getPath();
                 String currentTrimName = armorItemPath + "_" + trimMaterialResourceKey.location().getPath() + "_trim";
                 ResourceLocation armorItemResLoc = ResourceLocation.fromNamespaceAndPath(MOD_ID, armorItemPath);

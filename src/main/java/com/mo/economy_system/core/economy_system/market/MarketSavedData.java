@@ -33,7 +33,7 @@ public class MarketSavedData extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag listTag = new ListTag();
         for (MarketItem item : marketItems) {
-            listTag.add(item.toNBT());
+            listTag.add(item.toNBT(registries));
         }
         tag.put("marketItems", listTag);
         return tag;
@@ -45,7 +45,7 @@ public class MarketSavedData extends SavedData {
             ListTag listTag = tag.getList("marketItems", CompoundTag.TAG_COMPOUND);
             for (int i = 0; i < listTag.size(); i++) {
                 CompoundTag itemTag = listTag.getCompound(i);
-                MarketItem item = MarketItem.fromNBT(itemTag); // 动态创建子类对象
+                MarketItem item = MarketItem.fromNBT(itemTag, registries); // 动态创建子类对象
                 data.marketItems.add(item);
             }
         }

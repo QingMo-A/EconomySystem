@@ -4,7 +4,7 @@ import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -27,12 +27,12 @@ public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.c
         this.marketItem = marketItem;
     }
 
-    public static void encode(Packet_CreateSalesOrder msg, FriendlyByteBuf buf) {
-        buf.writeNbt(msg.marketItem.toNBT());
+    public static void encode(Packet_CreateSalesOrder msg, RegistryFriendlyByteBuf buf) {
+        buf.writeNbt(msg.marketItem.toNBT(buf.registryAccess()));
     }
 
-    public static Packet_CreateSalesOrder decode(FriendlyByteBuf buf) {
-        return new Packet_CreateSalesOrder(MarketItem.fromNBT(buf.readNbt()));
+    public static Packet_CreateSalesOrder decode(RegistryFriendlyByteBuf buf) {
+        return new Packet_CreateSalesOrder(MarketItem.fromNBT(buf.readNbt(), buf.registryAccess()));
     }
 
     public static void handle(Packet_CreateSalesOrder msg, IPayloadContext context) {

@@ -3,7 +3,7 @@ package com.mo.economy_system.network.packets.economy_system;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.screen.economy_system.market.Screen_Market;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
@@ -24,18 +24,18 @@ public class Packet_MarketDataResponse implements net.minecraft.network.protocol
         this.items = items;
     }
 
-    public static void encode(Packet_MarketDataResponse msg, FriendlyByteBuf buf) {
+    public static void encode(Packet_MarketDataResponse msg, RegistryFriendlyByteBuf buf) {
         buf.writeInt(msg.items.size());
         for (MarketItem item : msg.items) {
-            buf.writeNbt(item.toNBT());
+            buf.writeNbt(item.toNBT(buf.registryAccess()));
         }
     }
 
-    public static Packet_MarketDataResponse decode(FriendlyByteBuf buf) {
+    public static Packet_MarketDataResponse decode(RegistryFriendlyByteBuf buf) {
         int size = buf.readInt();
         List<MarketItem> items = new ArrayList<>();
         for (int i = 0; i < size; i++) {
-            items.add(MarketItem.fromNBT(buf.readNbt()));
+            items.add(MarketItem.fromNBT(buf.readNbt(), buf.registryAccess()));
         }
         return new Packet_MarketDataResponse(items);
     }

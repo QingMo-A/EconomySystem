@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.economy_system.market;
 
 import com.mo.economy_system.utils.ItemStackDataHelper;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
@@ -16,9 +17,15 @@ public class SalesOrder extends MarketItem {
     }
 
     public static SalesOrder fromNBT(CompoundTag tag) {
+        return fromNBT(tag, null);
+    }
+
+    public static SalesOrder fromNBT(CompoundTag tag, HolderLookup.Provider registries) {
         UUID tradeID = tag.getUUID("tradeID");
         String itemID = tag.getString("itemID");
-        ItemStack itemStack = ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"));
+        ItemStack itemStack = registries == null
+                ? ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"))
+                : ItemStackDataHelper.loadFullTag(tag.getCompound("itemStack"), registries);
         int basePrice = tag.getInt("basePrice");
         String sellerName = tag.getString("sellerName");
         UUID sellerID = tag.getUUID("sellerID");

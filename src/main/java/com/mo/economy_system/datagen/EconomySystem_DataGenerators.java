@@ -26,5 +26,6 @@ public class EconomySystem_DataGenerators {
         dataGenerator.addProvider(event.includeServer(), new ModItemModelProvider(packOutput, existingFileHelper));
         dataGenerator.addProvider(event.includeServer(), new ZhCnLanguageProvider(dataGenerator, EconomySystem.MODID));
         dataGenerator.addProvider(event.includeServer(), new EnUsLanguageProvider(dataGenerator, EconomySystem.MODID));
+        dataGenerator.addProvider(event.includeServer(), new ModRecipeProvider(packOutput, providerCompletableFuture));
     }
 }

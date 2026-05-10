@@ -1,7 +1,8 @@
 package com.mo.economy_system.utils;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
@@ -53,11 +54,19 @@ public final class ItemStackDataHelper {
     }
 
     public static String saveFull(ItemStack stack, RegistryAccess registryAccess) {
-        return stack.save(registryAccess).toString();
+        return saveFullTag(stack, registryAccess).toString();
     }
 
     public static ItemStack loadFull(String itemData, RegistryAccess registryAccess) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         CompoundTag tag = TagParser.parseTag(itemData);
-        return ItemStack.parseOptional(registryAccess, tag);
+        return loadFullTag(tag, registryAccess);
+    }
+
+    public static CompoundTag saveFullTag(ItemStack stack, HolderLookup.Provider registries) {
+        return (CompoundTag) stack.save(registries);
+    }
+
+    public static ItemStack loadFullTag(CompoundTag tag, HolderLookup.Provider registries) {
+        return ItemStack.parseOptional(registries, tag);
     }
 }
