@@ -1,8 +1,10 @@
 package com.mo.economy_system.utils;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -48,5 +50,14 @@ public final class ItemStackDataHelper {
             setTag(stack, tag.getCompound("customData"));
         }
         return stack;
+    }
+
+    public static String saveFull(ItemStack stack, RegistryAccess registryAccess) {
+        return stack.save(registryAccess).toString();
+    }
+
+    public static ItemStack loadFull(String itemData, RegistryAccess registryAccess) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        CompoundTag tag = TagParser.parseTag(itemData);
+        return ItemStack.parseOptional(registryAccess, tag);
     }
 }

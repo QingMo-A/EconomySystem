@@ -1,9 +1,12 @@
 package com.mo.economy_system.commands.economy_system;
 
+import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -11,12 +14,45 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
 
 public class Command_Economy {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal("economy_system")
+                .then(Commands.literal("shop")
+                        .then(Commands.literal("addhand")
+                                .requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("basePrice", IntegerArgumentType.integer(1))
+                                        .then(Commands.argument("description", StringArgumentType.greedyString())
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    int basePrice = IntegerArgumentType.getInteger(context, "basePrice");
+                                                    String description = StringArgumentType.getString(context, "description");
+                                                    ItemStack handStack = player.getMainHandItem();
+                                                    if (handStack.isEmpty()) {
+                                                        context.getSource().sendFailure(Component.literal("请先将要添加的商品拿在主手"));
+                                                        return 0;
+                                                    }
+
+                                                    ItemStack savedStack = handStack.copy();
+                                                    savedStack.setCount(1);
+                                                    ShopItem shopItem = EconomySystem.SHOP_MANAGER.addItemFromStack(
+                                                            savedStack,
+                                                            basePrice,
+                                                            description,
+                                                            player.serverLevel().registryAccess()
+                                                    );
+                                                    context.getSource().sendSuccess(() -> Component.literal(
+                                                            "已将 " + savedStack.getHoverName().getString()
+                                                                    + " 添加到系统商店，基础价格：" + shopItem.getBasePrice()
+                                                                    + " 梦鱼币，描述：" + shopItem.getDescription()
+                                                    ), false);
+                                                    return 1;
+                                                }))))));
+
         dispatcher.register(Commands.literal("coin")
                 // 查询余额
                 .then(Commands.literal("balance")

@@ -55,7 +55,9 @@ public class Screen_BuyItem extends Screen {
     public Screen_BuyItem(ShopItem shopItem) {
         super(Component.translatable(Util_MessageKeys.SHOP_BUY_TITLE_KEY));
         this.shopItem = shopItem;
-        this.itemStack = shopItem.getItemStack();
+        this.itemStack = Minecraft.getInstance().level == null
+                ? shopItem.getItemStack()
+                : shopItem.getItemStack(Minecraft.getInstance().level.registryAccess());
     }
 
     @Override
@@ -286,7 +288,7 @@ public class Screen_BuyItem extends Screen {
         }
 
         EconomySystem_NetworkManager.sendToServer(
-                new Packet_ShopBuyItem(shopItem.getItemId(), shopItem.getNbt(), shopItem.getCurrentPrice(), count)
+                new Packet_ShopBuyItem(shopItem.getShopItemId(), count)
         );
 
         if (this.minecraft != null) {

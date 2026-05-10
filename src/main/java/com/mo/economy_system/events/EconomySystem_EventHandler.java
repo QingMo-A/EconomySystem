@@ -21,6 +21,8 @@ import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.core.update_checker_system.UpdateChecker;
+import com.mo.economy_system.enchant.enchants.BountyHunterEnchantment;
+import com.mo.economy_system.enchant.enchants.CarefullyEnchantment;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -28,7 +30,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -178,8 +179,8 @@ public class EconomySystem_EventHandler {
         if (!(source.getEntity() instanceof ServerPlayer player)) return;
 
         ItemStack weapon = player.getMainHandItem();
-        int levelCarefully = 0;
-        int levelBountyHunter = 0;
+        int levelCarefully = CarefullyEnchantment.getLevel(player.serverLevel(), weapon);
+        int levelBountyHunter = BountyHunterEnchantment.getLevel(player.serverLevel(), weapon);
 
         RewardManager.RewardEntry rewardEntry = EconomySystem.REWARD_MANAGER
                 .getRewardForEntity(mob.getType().builtInRegistryHolder().key().location())
@@ -210,44 +211,15 @@ public class EconomySystem_EventHandler {
         double chance = rewardEntry.dropChance;
 
         // 如果携带“赏金猎人”附魔 -> 增加掉落概率
-        chance = applyBountyHunterEnchantment(chance, levelBountyHunter);
+        chance = BountyHunterEnchantment.applyDropChanceBonus(chance, levelBountyHunter);
 
         // 判断是否掉落
         if (RANDOM.nextDouble() < chance) {
             int reward = RANDOM.nextInt(rewardEntry.dropMax - rewardEntry.dropMin + 1) + rewardEntry.dropMin;
             // 如果携带“精心”附魔 -> 增加奖励
-            reward = applyCarefullyEnchantment(reward, levelCarefully);
+            reward = CarefullyEnchantment.applyRewardBonus(reward, levelCarefully);
             return reward;
         }
         return 0; // 如果不掉落，返回 0
-    }
-
-    /**
-     * 应用“赏金猎人”附魔效果，增加掉落概率
-     *
-     * @param chance 当前掉落概率
-     * @param levelBountyHunter 赏金猎人附魔等级
-     * @return 新的掉落概率
-     */
-    private static double applyBountyHunterEnchantment(double chance, int levelBountyHunter) {
-        if (levelBountyHunter > 0) {
-            double bonus = 0.25 * levelBountyHunter;  // 每级 +5%
-            chance = Math.min(1.0, chance + bonus);   // 不超过 100% (1.0)
-        }
-        return chance;
-    }
-
-    /**
-     * 应用“精心”附魔效果，增加奖励数量
-     *
-     * @param reward 当前奖励
-     * @param levelCarefully 精心附魔等级
-     * @return 新的奖励数值
-     */
-    private static int applyCarefullyEnchantment(int reward, int levelCarefully) {
-        if (levelCarefully > 0) {
-            reward = (int) Math.round(reward * (0.3 * levelCarefully + 1));
-        }
-        return reward;
     }
 }

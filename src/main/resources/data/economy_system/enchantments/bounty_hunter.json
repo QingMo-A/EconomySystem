@@ -1,9 +1,0 @@
-{
-  "type": "economy_system:bounty_hunter",
-  "conditions": [
-    {
-      "condition": "minecraft:enchantable_item",
-      "item": "minecraft:diamond_sword"
-    }
-  ]
-}

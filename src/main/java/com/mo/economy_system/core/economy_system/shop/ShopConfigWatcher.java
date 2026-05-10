@@ -1,10 +1,13 @@
 package com.mo.economy_system.core.economy_system.shop;
 
+import com.mo.economy_system.EconomySystem;
+
 import java.io.IOException;
 import java.nio.file.*;
 
 public class ShopConfigWatcher {
     private final ShopManager shopManager;
+    private volatile long lastReloadTime = 0L;
 
     public ShopConfigWatcher(ShopManager shopManager) {
         this.shopManager = shopManager;
@@ -20,15 +23,27 @@ public class ShopConfigWatcher {
                 while (true) {
                     WatchKey key = watchService.take();
                     for (WatchEvent<?> event : key.pollEvents()) {
+                        if (event.kind() != StandardWatchEventKinds.ENTRY_MODIFY) {
+                            continue;
+                        }
                         if (event.context().toString().equals(ShopManager.CONFIG_FILE.getName())) {
-                            System.out.println("Config file updated. Reloading...");
+                            long now = System.currentTimeMillis();
+                            if (now - lastReloadTime < 500L) {
+                                continue;
+                            }
+                            lastReloadTime = now;
+                            Thread.sleep(400L);
+                            EconomySystem.LOGGER.info("Shop config file updated. Reloading...");
                             shopManager.loadFromConfig();
                         }
                     }
-                    key.reset();
+                    if (!key.reset()) {
+                        break;
+                    }
                 }
             } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+                EconomySystem.LOGGER.error("Shop config watcher stopped", e);
+                Thread.currentThread().interrupt();
             }
         });
         watcherThread.setDaemon(true);

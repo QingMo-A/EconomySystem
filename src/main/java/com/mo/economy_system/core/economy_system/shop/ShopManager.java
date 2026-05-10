@@ -5,6 +5,10 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mo.economy_system.EconomySystem;
 import net.neoforged.fml.loading.FMLPaths;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -33,6 +37,30 @@ public class ShopManager {
         return new ArrayList<>(items); // 返回副本以保护内部列表
     }
 
+    public synchronized ShopItem findByShopItemId(String shopItemId) {
+        for (ShopItem item : items) {
+            if (item.getShopItemId().equals(shopItemId)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public synchronized void addItem(ShopItem item) {
+        items.add(item);
+        saveToConfig();
+    }
+
+    public synchronized ShopItem addItemFromStack(ItemStack stack, int basePrice, String description, RegistryAccess registryAccess) {
+        ItemStack savedStack = stack.copy();
+        savedStack.setCount(1);
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(savedStack.getItem());
+        String itemData = com.mo.economy_system.utils.ItemStackDataHelper.saveFull(savedStack, registryAccess);
+        ShopItem shopItem = new ShopItem(itemId.toString(), basePrice, description, null, itemData);
+        addItem(shopItem);
+        return shopItem;
+    }
+
     public synchronized void loadFromConfig() {
         if (!CONFIG_FILE.exists()) {
             saveDefaultConfig();
@@ -42,12 +70,14 @@ public class ShopManager {
              InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8)) {
             Type listType = new TypeToken<List<ShopItem>>() {}.getType();
             List<ShopItem> loadedItems = GSON.fromJson(isr, listType);
-            items.clear();
             if (loadedItems != null) {
+                items.clear();
                 items.addAll(loadedItems);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            EconomySystem.LOGGER.error("Failed to load shop config {}", CONFIG_FILE, e);
+        } catch (RuntimeException e) {
+            EconomySystem.LOGGER.error("Failed to parse shop config {}, keeping previous shop items", CONFIG_FILE, e);
         }
     }
 
@@ -57,7 +87,7 @@ public class ShopManager {
              OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
             GSON.toJson(items, osw);
         } catch (IOException e) {
-            e.printStackTrace();
+            EconomySystem.LOGGER.error("Failed to save shop config {}", CONFIG_FILE, e);
         }
     }
 
@@ -70,6 +100,7 @@ public class ShopManager {
 
 
     private void saveDefaultConfig() {
+        items.clear();
         items.add(new ShopItem("economy_system:recall_potion", 5, "回忆药水"));
         items.add(new ShopItem("economy_system:wormhole_potion", 10, "虫洞药水"));
 
@@ -173,6 +204,10 @@ public class ShopManager {
     public void adjustPrices() {
         for (ShopItem item : items) {
             int basePrice = item.getBasePrice(); // 基础价格应为整数
+            if (basePrice <= 0) {
+                EconomySystem.LOGGER.warn("Skip price adjustment for {} because basePrice is {}", item.getItemId(), basePrice);
+                continue;
+            }
             int currentPrice = item.getCurrentPrice();
 
             // 计算价格偏离比例（使用浮点计算，最终结果转为int）

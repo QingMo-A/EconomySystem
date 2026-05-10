@@ -173,7 +173,7 @@ public class Screen_Shop extends Screen {
     private boolean itemMatchesSearch(ShopItem item, String searchText) {
         return item.getItemId().toLowerCase().contains(searchText) ||
                 item.getDescription().toLowerCase().contains(searchText) ||
-                item.getItemStack().getHoverName().getString().toLowerCase().contains(searchText);
+                getPreviewStack(item).getHoverName().getString().toLowerCase().contains(searchText);
     }
 
     @Override
@@ -245,7 +245,7 @@ public class Screen_Shop extends Screen {
                 virtualMouseY >= cardArea.y() && virtualMouseY <= cardArea.y() + cardArea.height()) {
 
                 ShopItem item = filteredItems.get(cardArea.itemIndex());
-                ItemStack itemStack = item.getItemStack();
+                ItemStack itemStack = getPreviewStack(item);
 
                 List<Component> tooltipLines = itemStack.getTooltipLines(net.minecraft.world.item.Item.TooltipContext.of(player.level()), player,
                         Minecraft.getInstance().options.advancedItemTooltips ?
@@ -368,7 +368,7 @@ public class Screen_Shop extends Screen {
             int cardY = gridStartY + row * (CARD_HEIGHT + CARD_SPACING);
 
             ShopItem item = filteredItems.get(i);
-            ItemStack itemStack = item.getItemStack();
+            ItemStack itemStack = getPreviewStack(item);
             String itemName = itemStack.getHoverName().getString();
             int price = item.getCurrentPrice();
 
@@ -440,6 +440,11 @@ public class Screen_Shop extends Screen {
             return Component.translatable(Util_MessageKeys.SHOP_NO_MATCHING_ITEMS_TEXT_KEY).getString();
         }
         return Component.translatable(Util_MessageKeys.SHOP_NO_ITEMS_AVAILABLE_TEXT_KEY).getString();
+    }
+
+    private ItemStack getPreviewStack(ShopItem item) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player == null ? item.getItemStack() : item.getItemStack(player.level().registryAccess());
     }
 
     @Override
