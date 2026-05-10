@@ -38,17 +38,30 @@ public class HighLevelTextField extends EditBox {
     public void setSuggestions(List<String> suggestions) {
         this.suggestions.clear();
         this.suggestions.addAll(suggestions);
+        updateSuggestions(this.getValue());
     }
 
     private void updateSuggestions(String input) {
         currentMatches.clear();
-        if (!input.isEmpty()) {
+        String normalizedInput = input.trim().toLowerCase();
+        if (!normalizedInput.isEmpty()) {
             currentMatches = suggestions.stream()
-                    .filter(s -> s.toLowerCase().startsWith(input.toLowerCase()))
+                    .filter(s -> matchesSuggestion(s, normalizedInput))
                     .collect(Collectors.toList());
         }
         selectedSuggestion = -1; // 重置选择
         startIndex = 0; // 每次更新时将显示从头开始
+    }
+
+    private boolean matchesSuggestion(String suggestion, String input) {
+        String normalizedSuggestion = suggestion.toLowerCase();
+        int namespaceSeparator = normalizedSuggestion.indexOf(':');
+        String path = namespaceSeparator >= 0 ? normalizedSuggestion.substring(namespaceSeparator + 1) : normalizedSuggestion;
+        String namespace = namespaceSeparator >= 0 ? normalizedSuggestion.substring(0, namespaceSeparator) : "";
+
+        return normalizedSuggestion.contains(input)
+                || path.contains(input)
+                || namespace.contains(input);
     }
 
     @Override
@@ -101,18 +114,25 @@ public class HighLevelTextField extends EditBox {
             // 设置透明背景色，0xAARRGGBB 格式，A（Alpha）为透明度，FF 是不透明，80 是半透明
             int backgroundColor = 0x80202020; // 半透明的背景色（50%透明）
 
+            gui.pose().pushPose();
+            gui.pose().translate(0, 0, 400);
+
             // 绘制背景
             gui.fill(this.getX(), listY,
                     this.getX() + this.width,
                     listY + listHeight,
                     backgroundColor);
+            gui.fill(this.getX(), listY, this.getX() + this.width, listY + 1, 0xFF4FC3F7);
+            gui.fill(this.getX(), listY + listHeight - 1, this.getX() + this.width, listY + listHeight, 0xFF4FC3F7);
 
             // 绘制建议条目
             for (int i = 0; i < itemsToShow; i++) {
                 String s = currentMatches.get(startIndex + i);
-                int color = (i == selectedSuggestion - startIndex) ? 0xFF00FF00 : 0xFFFFFFFF;
+                int color = (i == selectedSuggestion - startIndex) ? 0xFF7CFFB2 : 0xFFFFFFFF;
                 gui.drawString(this.font, s, this.getX() + 4, listY + 2 + 10 * i, color);
             }
+
+            gui.pose().popPose();
         }
     }
 }

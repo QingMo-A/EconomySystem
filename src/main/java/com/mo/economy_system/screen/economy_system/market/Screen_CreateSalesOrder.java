@@ -212,6 +212,11 @@ public class Screen_CreateSalesOrder extends Screen {
         String priceLabel = Component.translatable(Util_MessageKeys.LIST_PRICE_TEXT_KEY).getString();
         guiGraphics.drawString(font, priceLabel, textX, labelY, CardRenderer.TEXT_DESC);
 
+        int tax = calculateTax();
+        int taxY = labelY + font.lineHeight + 17;
+        String taxText = tax > 0 ? "商品税: " + tax + " 梦鱼币" : "商品税: -";
+        guiGraphics.drawString(font, taxText, textX, taxY, tax > 0 ? 0xFFFFD166 : 0x80FFFFFF);
+
         boolean listHovered = mouseX >= listBtnX1 && mouseX <= listBtnX2 &&
                               mouseY >= listBtnY1 && mouseY <= listBtnY2;
         boolean enabled = !heldItem.isEmpty();
@@ -289,6 +294,17 @@ public class Screen_CreateSalesOrder extends Screen {
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
+    }
+
+    private int calculateTax() {
+        if (priceInput == null) {
+            return 0;
+        }
+        Optional<Integer> price = parsePrice(priceInput.getValue());
+        if (price.isEmpty() || price.get() <= 0) {
+            return 0;
+        }
+        return Math.max(1, (int) Math.min(Integer.MAX_VALUE, Math.ceil(price.get() * 0.1D)));
     }
 
     @Override
