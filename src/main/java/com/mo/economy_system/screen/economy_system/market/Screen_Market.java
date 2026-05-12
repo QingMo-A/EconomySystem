@@ -27,6 +27,9 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,6 +71,7 @@ public class Screen_Market extends Screen {
     private static final int ICON_SIZE = 32;
     private static final int ICON_OFFSET_Y = 26;
     private static final int COLOR_DANGER = 0xFFE05D5D;
+    private static final DateTimeFormatter EXPIRATION_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
     // ==================== 数据 ====================
     private List<MarketItem> allItems = new ArrayList<>();
@@ -94,6 +98,7 @@ public class Screen_Market extends Screen {
 
     // ==================== 物品图标区域（用于tooltip） ====================
     private final List<ItemIconArea> itemIconAreas = new ArrayList<>();
+    private final List<OrderInfoArea> orderInfoAreas = new ArrayList<>();
 
     // ==================== 翻页按钮区域 ====================
     private int prevBtnX1, prevBtnY1, prevBtnX2, prevBtnY2;
@@ -127,6 +132,7 @@ public class Screen_Market extends Screen {
     private record OrderCardArea(int x, int y, int width, int height, int itemIndex, String actionType) {}
     private record OrderCardArea2(int x, int y, int width, int height, int itemIndex, String actionType) {}
     private record ItemIconArea(int x, int y, int width, int height, ItemStack itemStack) {}
+    private record OrderInfoArea(int x, int y, int width, int height, MarketItem item) {}
 
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
@@ -384,6 +390,7 @@ public class Screen_Market extends Screen {
         cardAreas.clear();
         cardAreas2.clear();
         itemIconAreas.clear();
+        orderInfoAreas.clear();
 
         if (filteredItems.isEmpty()) {
             String emptyText = "暂无订单";
@@ -440,6 +447,7 @@ public class Screen_Market extends Screen {
             int iconY = cardY + ICON_OFFSET_Y;
             int actualIconSize = ICON_SIZE; // 2倍缩放后的实际大小为32
             itemIconAreas.add(new ItemIconArea(iconX, iconY, actualIconSize, actualIconSize, itemStack));
+            orderInfoAreas.add(new OrderInfoArea(cardX, cardY, CARD_WIDTH, CARD_HEIGHT, item));
 
             // 存储卡片和操作按钮区域
             int actionBtnX = cardX + CARD_WIDTH - CARD_PADDING - ACTION_BTN_WIDTH;
@@ -487,7 +495,8 @@ public class Screen_Market extends Screen {
         guiGraphics.drawString(font, priceText, x + width - CARD_PADDING - priceWidth, headerY, CardRenderer.THEME_BALANCE);
 
         String itemName = itemStack.getHoverName().getString();
-        String displayName = CardRenderer.truncateText(font, itemName, width - CARD_PADDING * 2);
+        String countText = " x" + itemStack.getCount();
+        String displayName = CardRenderer.truncateText(font, itemName + countText, width - CARD_PADDING * 2);
         guiGraphics.drawString(font, displayName, x + CARD_PADDING, headerY + font.lineHeight + 2, CardRenderer.TEXT_TITLE);
 
         int iconX = x + (width - ICON_SIZE) / 2;
@@ -632,15 +641,61 @@ public class Screen_Market extends Screen {
                 ItemStack itemStack = iconArea.itemStack();
                 if (itemStack != null && !itemStack.isEmpty() && this.minecraft != null && this.minecraft.player != null) {
                     // 获取tooltip行
-                    List<Component> tooltipLines = itemStack.getTooltipLines(net.minecraft.world.item.Item.TooltipContext.of(this.minecraft.player.level()), this.minecraft.player, this.minecraft.options.advancedItemTooltips ?
-                            net.minecraft.world.item.TooltipFlag.ADVANCED : net.minecraft.world.item.TooltipFlag.NORMAL);
+                    List<Component> tooltipLines = new ArrayList<>(itemStack.getTooltipLines(net.minecraft.world.item.Item.TooltipContext.of(this.minecraft.player.level()), this.minecraft.player, this.minecraft.options.advancedItemTooltips ?
+                            net.minecraft.world.item.TooltipFlag.ADVANCED : net.minecraft.world.item.TooltipFlag.NORMAL));
+                    appendOrderInfoTooltip(tooltipLines, findOrderForIcon(iconArea));
 
                     // 渲染tooltip，跟随鼠标位置
                     guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
                 }
-                break; // 只显示第一个匹配的tooltip
+                return; // 只显示第一个匹配的tooltip
             }
         }
+
+        for (OrderInfoArea infoArea : orderInfoAreas) {
+            if (virtualMouseX >= infoArea.x() && virtualMouseX <= infoArea.x() + infoArea.width() &&
+                virtualMouseY >= infoArea.y() && virtualMouseY <= infoArea.y() + infoArea.height()) {
+                List<Component> tooltipLines = new ArrayList<>();
+                appendOrderInfoTooltip(tooltipLines, infoArea.item());
+                guiGraphics.renderTooltip(this.font, tooltipLines, Optional.empty(), mouseX, mouseY);
+                return;
+            }
+        }
+    }
+
+    private MarketItem findOrderForIcon(ItemIconArea iconArea) {
+        for (OrderInfoArea infoArea : orderInfoAreas) {
+            if (iconArea.x() >= infoArea.x() && iconArea.x() < infoArea.x() + infoArea.width() &&
+                iconArea.y() >= infoArea.y() && iconArea.y() < infoArea.y() + infoArea.height()) {
+                return infoArea.item();
+            }
+        }
+        return null;
+    }
+
+    private void appendOrderInfoTooltip(List<Component> tooltipLines, MarketItem item) {
+        if (item == null) {
+            return;
+        }
+        tooltipLines.add(Component.literal("物品ID: " + item.getItemID()).withStyle(ChatFormatting.GRAY));
+        tooltipLines.add(Component.literal("商品ID: " + item.getTradeID()).withStyle(ChatFormatting.DARK_GRAY));
+        tooltipLines.add(Component.literal("过期时间: " + EXPIRATION_FORMATTER.format(Instant.ofEpochMilli(item.getExpirationTime()))).withStyle(ChatFormatting.GOLD));
+        long remainingMillis = Math.max(0L, item.getExpirationTime() - System.currentTimeMillis());
+        tooltipLines.add(Component.literal("剩余时间: " + formatDuration(remainingMillis)).withStyle(ChatFormatting.YELLOW));
+    }
+
+    private String formatDuration(long millis) {
+        long totalSeconds = millis / 1000L;
+        long days = totalSeconds / 86400L;
+        long hours = (totalSeconds % 86400L) / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        if (days > 0) {
+            return days + "天 " + hours + "小时";
+        }
+        if (hours > 0) {
+            return hours + "小时 " + minutes + "分钟";
+        }
+        return minutes + "分钟";
     }
 
     private int getTotalPages() {
