@@ -67,16 +67,28 @@ public class Packet_ConfirmDemandOrder implements net.minecraft.network.protocol
             MarketManager.saveTo(player.serverLevel());
 
             // 将物品返回给卖家
-            ItemStack removedItem = item.getItemStack().copy();
-            if (!player.getInventory().add(removedItem)) {
-                player.drop(removedItem, false);
-            }
+            giveOrDropSplit(player, item.getItemStack());
 
             // 通知客户端刷新市场界面
             EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_SUCCESS_KEY, item.getItemStack().getHoverName(), item.getItemStack().getCount()));
         });
+    }
+
+    private static void giveOrDropSplit(ServerPlayer player, ItemStack stack) {
+        ItemStack template = stack.copy();
+        int remaining = Math.max(1, stack.getCount());
+        int maxStackSize = Math.max(1, template.getMaxStackSize());
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            ItemStack split = template.copy();
+            split.setCount(stackSize);
+            if (!player.getInventory().add(split)) {
+                player.drop(split, false);
+            }
+            remaining -= stackSize;
+        }
     }
 }
 

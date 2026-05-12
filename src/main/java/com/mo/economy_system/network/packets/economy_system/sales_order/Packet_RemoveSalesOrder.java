@@ -67,20 +67,32 @@ public class Packet_RemoveSalesOrder implements net.minecraft.network.protocol.c
             MarketManager.saveTo(player.serverLevel());
 
             // 将物品返回给卖家
-            ItemStack removedItem = item.getItemStack().copy();
             ServerPlayer itemReceiver = player.server.getPlayerList().getPlayer(item.getSellerID());
             if (itemReceiver == null) {
                 itemReceiver = player;
             }
-            if (!itemReceiver.getInventory().add(removedItem)) {
-                itemReceiver.drop(removedItem, false);
-            }
+            giveOrDropSplit(itemReceiver, item.getItemStack());
 
             // 通知客户端刷新市场界面
             EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY));
         });
+    }
+
+    private static void giveOrDropSplit(ServerPlayer player, ItemStack stack) {
+        ItemStack template = stack.copy();
+        int remaining = Math.max(1, stack.getCount());
+        int maxStackSize = Math.max(1, template.getMaxStackSize());
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            ItemStack split = template.copy();
+            split.setCount(stackSize);
+            if (!player.getInventory().add(split)) {
+                player.drop(split, false);
+            }
+            remaining -= stackSize;
+        }
     }
 }
 

@@ -26,6 +26,9 @@ public class SalesOrder extends MarketItem {
         ItemStack itemStack = registries == null
                 ? ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"))
                 : ItemStackDataHelper.loadFullTag(tag.getCompound("itemStack"), registries);
+        if (tag.contains("listedCount")) {
+            itemStack.setCount(Math.max(1, tag.getInt("listedCount")));
+        }
         int basePrice = tag.getInt("basePrice");
         String sellerName = tag.getString("sellerName");
         UUID sellerID = tag.getUUID("sellerID");

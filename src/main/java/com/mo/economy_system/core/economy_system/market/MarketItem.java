@@ -44,7 +44,10 @@ public abstract class MarketItem {
         tag.putString("type", this.getClass().getName()); // 关键：保存子类类型
         tag.putUUID("tradeID", tradeID);
         tag.putString("itemID", itemID);
-        tag.put("itemStack", registries == null ? ItemStackDataHelper.saveSimple(itemStack) : ItemStackDataHelper.saveFullTag(itemStack, registries));
+        tag.putInt("listedCount", Math.max(1, itemStack.getCount()));
+        ItemStack serializableStack = itemStack.copy();
+        serializableStack.setCount(Math.max(1, Math.min(itemStack.getCount(), serializableStack.getMaxStackSize())));
+        tag.put("itemStack", registries == null ? ItemStackDataHelper.saveSimple(serializableStack) : ItemStackDataHelper.saveFullTag(serializableStack, registries));
         tag.putInt("basePrice", basePrice);
         tag.putString("sellerName", sellerName);
         tag.putUUID("sellerID", sellerID);

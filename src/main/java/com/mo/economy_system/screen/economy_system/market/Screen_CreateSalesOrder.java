@@ -26,7 +26,6 @@ public class Screen_CreateSalesOrder extends Screen {
     private static final int BASE_HEIGHT = 360;
     private static final int PADDING = 12;
     private static final int SLOT_SIZE = 24;
-    private static final int SLOT_GAP = 4;
     private static final int LEFT_WIDTH = 292;
     private static final int RIGHT_WIDTH = 300;
     private static final int INPUT_HEIGHT = 20;
@@ -197,18 +196,21 @@ public class Screen_CreateSalesOrder extends Screen {
     private void renderInventoryPanel(GuiGraphics guiGraphics, float mouseX, float mouseY) {
         CardRenderer.drawCard(guiGraphics, leftX, leftY, LEFT_WIDTH, leftH, CardRenderer.THEME_MARKET, false);
         guiGraphics.drawString(font, "选择背包物品", leftX + PADDING, leftY + 10, CardRenderer.TEXT_TITLE);
-        guiGraphics.drawString(font, "仅主背包和快捷栏参与聚合", leftX + PADDING, leftY + 24, CardRenderer.TEXT_DESC);
 
         slotAreas.clear();
-        int gridX = leftX + PADDING;
-        int gridY = leftY + 44;
+        int gridColumns = 9;
+        int availableWidth = LEFT_WIDTH - PADDING * 2;
+        int slotGap = Math.max(4, (availableWidth - gridColumns * SLOT_SIZE) / Math.max(1, gridColumns - 1));
+        int gridWidth = gridColumns * SLOT_SIZE + (gridColumns - 1) * slotGap;
+        int gridX = leftX + (LEFT_WIDTH - gridWidth) / 2;
+        int gridY = leftY + 34;
         Inventory inventory = player.getInventory();
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 9; col++) {
                 int slot = row == 3 ? col : 9 + row * 9 + col;
                 ItemStack stack = inventory.items.get(slot);
-                int x = gridX + col * (SLOT_SIZE + SLOT_GAP);
-                int y = gridY + row * (SLOT_SIZE + SLOT_GAP);
+                int x = gridX + col * (SLOT_SIZE + slotGap);
+                int y = gridY + row * (SLOT_SIZE + slotGap);
                 boolean filled = !stack.isEmpty();
                 boolean selected = slot == selectedSlot;
                 boolean hovered = mouseX >= x && mouseX <= x + SLOT_SIZE && mouseY >= y && mouseY <= y + SLOT_SIZE;

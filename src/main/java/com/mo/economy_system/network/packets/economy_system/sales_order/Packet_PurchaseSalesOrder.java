@@ -77,10 +77,7 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
                 return;
             }
             MarketManager.saveTo(serverLevel);
-            ItemStack purchasedItem = item.getItemStack().copy();
-            if (!buyer.getInventory().add(purchasedItem)) {
-                buyer.drop(purchasedItem, false); // 如果背包满了，直接丢在地上
-            }
+            giveOrDropSplit(buyer, item.getItemStack());
 
             // 直接通过 SellerUUID 增加余额
             UUID sellerID = item.getSellerID();
@@ -107,5 +104,20 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
             System.out.println("Item sold: " + item.getItemStack().getHoverName().getString() +
                     ", Price: " + price + " coins, Buyer: " + buyer.getName().getString() + ", Seller: " + sellerID);
         });
+    }
+
+    private static void giveOrDropSplit(ServerPlayer player, ItemStack stack) {
+        ItemStack template = stack.copy();
+        int remaining = Math.max(1, stack.getCount());
+        int maxStackSize = Math.max(1, template.getMaxStackSize());
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            ItemStack split = template.copy();
+            split.setCount(stackSize);
+            if (!player.getInventory().add(split)) {
+                player.drop(split, false);
+            }
+            remaining -= stackSize;
+        }
     }
 }
