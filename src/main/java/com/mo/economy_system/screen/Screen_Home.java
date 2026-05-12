@@ -28,11 +28,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 经济系统主页屏幕 - 现代化卡片风�?
+ * 经济系统主页屏幕 - 现代化卡片风格?
  *
  * 布局�?
  * - 左侧：导航卡片按钮组
- * - 右侧：余额卡�?+ 交易信息卡片（并排） + 富豪榜卡�?
+ * - 右侧：余额卡片?+ 交易信息卡片（并排） + 富豪榜卡片?
  * - 左下角：版本信息
  */
 public class Screen_Home extends Screen {
@@ -96,7 +96,7 @@ public class Screen_Home extends Screen {
     private int tradeCardX1, tradeCardY1, tradeCardX2, tradeCardY2;
     private int balanceCardX1, balanceCardY1, balanceCardX2, balanceCardY2;
 
-    // ==================== 富豪榜滚�?====================
+    // ==================== 富豪榜滚动?====================
     private int leaderboardScrollOffset = 0;
     private final UiButtonStyle[] navButtonStyles = new UiButtonStyle[NAV_COLORS.length];
 
@@ -135,7 +135,7 @@ public class Screen_Home extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // 先绘制全屏背景（在缩放之前，确保填满整个屏幕�?
+        // 先绘制全屏背景（在缩放之前，确保填满整个屏幕)?
         renderFullScreenBackground(guiGraphics);
 
         calculateVirtualSize();
@@ -173,7 +173,7 @@ public class Screen_Home extends Screen {
         renderContentPanel(guiGraphics, virtualMouseX, virtualMouseY);
         guiGraphics.pose().popPose();
 
-        // 左下角版本信�?
+        // 左下角版本信息?
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(leftOffsetX, 0, 0);
         int versionY = virtualHeight - PANEL_PADDING;
@@ -218,7 +218,7 @@ public class Screen_Home extends Screen {
         // 顶部一排两个卡片：余额 + 交易信息
         int halfWidth = (rightPanelWidth - CARD_SPACING) / 2;
 
-        // 左侧：余额卡�?
+        // 左侧：余额卡片?
         int balanceCardX = rightPanelStartX;
         int balanceCardY = startY;
         balanceCardX1 = balanceCardX;

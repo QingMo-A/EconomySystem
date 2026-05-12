@@ -230,7 +230,7 @@ public class CardRenderer {
         // 右侧排名
         String rightText = isHovered ? "日志 >>" : (playerRank > 0 ? "#" + playerRank : "--");
         int rightTextWidth = font.width(rightText);
-        guiGraphics.drawString(font, rightText, x + width - padding - rightTextWidth, titleY, isHovered ? 0xFF4FC3F7 : 0xFFAAFFAA);
+        guiGraphics.drawString(font, rightText, x + width - padding - rightTextWidth, titleY, isHovered ? THEME_BALANCE : 0xFFAAFFAA);
 
         // 分隔线
         int separatorY = titleY + font.lineHeight + 3;
