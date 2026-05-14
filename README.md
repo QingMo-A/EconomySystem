@@ -1,48 +1,86 @@
 <p align="center">
-  <img src="docs/images/economysystem-hero.png" alt="EconomySystem Banner" width="100%" />
+  <img src="docs/images/economysystem-cover.png" alt="EconomySystem 封面图" width="100%" />
 </p>
 
 <h1 align="center">EconomySystem · 经济系统</h1>
 
 <p align="center">
-  为 Minecraft / 梦鱼服打造的多功能服务器经济与玩法基础模组。
+  为 Minecraft / 梦鱼服打造的服务器经济、商店、玩家市场与交易基础模组。
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/QingMo-A/EconomySystem?style=flat-square&label=release" alt="Release" />
   <img src="https://img.shields.io/github/license/QingMo-A/EconomySystem?style=flat-square" alt="License" />
   <img src="https://img.shields.io/github/stars/QingMo-A/EconomySystem?style=flat-square" alt="Stars" />
+  <img src="https://img.shields.io/badge/Minecraft-1.21.1-green?style=flat-square" alt="Minecraft 1.21.1" />
+  <img src="https://img.shields.io/badge/NeoForge-21.1-blue?style=flat-square" alt="NeoForge" />
 </p>
 
 ---
 
 ## 项目介绍
 
-**EconomySystem（经济系统）** 是一款面向 Minecraft 多人服务器的经济系统模组，围绕服务器内的统一货币、玩家账户、商店交易、玩家市场、领地与传送玩法进行设计。
+**EconomySystem（经济系统）** 是一款面向 Minecraft 多人服务器的经济系统模组，围绕服务器内的统一货币、玩家账户、系统商店、玩家市场、交易记录、领地与传送玩法进行设计。
 
 在梦鱼服中，经济系统只使用一种官方货币：**梦鱼币**。所有玩家余额、商品价格、交易金额、领地花费与经济玩法，均围绕梦鱼币展开，避免多货币体系带来的理解成本和数值混乱。
 
 <p align="center">
-  <img src="docs/images/economysystem-why.png" alt="Why EconomySystem" width="100%" />
+  <img src="docs/images/mengyu-coin.png" alt="梦鱼币：服务器唯一货币" width="100%" />
 </p>
 
 ---
 
-## 核心特点
+## 功能总览
+
+<p align="center">
+  <img src="docs/images/feature-overview.png" alt="EconomySystem 功能总览" width="100%" />
+</p>
 
 | 功能 | 说明 |
 | --- | --- |
+| **梦鱼币** | 服务器唯一官方货币，用于商店、市场、交易、领地等经济玩法。 |
 | **玩家账户** | 记录并管理玩家的梦鱼币余额。 |
-| **梦鱼币** | 服务器唯一货币，用于商店、交易、领地与其他经济玩法。 |
-| **系统商店** | 提供服务器商店，商品价格会随游戏时间刷新并产生浮动。 |
-| **玩家市场** | 支持玩家出售物品，并查看卖家等物品信息。 |
+| **系统商店** | 由服务器提供商品，支持价格配置与价格浮动。 |
+| **玩家市场** | 玩家可以上架物品，由其他玩家使用梦鱼币购买。 |
 | **玩家交易** | 围绕梦鱼币构建玩家间交易与资源流通。 |
+| **交易记录** | 保存并展示交易行为，强调可靠、安全、公平。 |
 | **领地系统** | 使用梦鱼币创建 2D 领地，支持管理与传送。 |
 | **传送药水** | 虫洞药水与回忆药水提供更丰富的服务器玩法。 |
-| **管理扩展** | 为后续订单、权限、UI 重构等功能预留扩展空间。 |
+
+---
+
+## 核心玩法展示
+
+### 1. 服务器商店
+
+系统商店由服务器统一配置商品，玩家可以使用梦鱼币购买建筑材料、工具、装备、药水等物品。商店价格可配置，也可以根据服务器玩法进行动态调整。
 
 <p align="center">
-  <img src="docs/images/economysystem-features.png" alt="EconomySystem Features" width="70%" />
+  <img src="docs/images/server-shop.png" alt="服务器商店系统" width="100%" />
+</p>
+
+### 2. 玩家市场上架
+
+玩家可以把自己的物品上架到市场中出售。适合服务器内的自由交易、资源流通、装备流转与玩家经营玩法。
+
+<p align="center">
+  <img src="docs/images/player-market-listing.png" alt="玩家市场上架物品" width="100%" />
+</p>
+
+### 3. 购买与交易
+
+玩家之间的交易围绕梦鱼币展开，统一货币可以让交易价格更直观，也方便服务器管理者观察经济流向。
+
+<p align="center">
+  <img src="docs/images/player-market-trade.png" alt="玩家购买与交易" width="100%" />
+</p>
+
+### 4. 交易记录
+
+交易记录用于体现服务器经济系统的可靠性。后续可以继续扩展为订单查询、交易审计、异常交易追踪等功能。
+
+<p align="center">
+  <img src="docs/images/transaction-records.png" alt="交易记录：可靠、安全、公平" width="100%" />
 </p>
 
 ---
@@ -51,10 +89,6 @@
 
 EconomySystem 的整体逻辑可以理解为：玩家或管理员通过 **命令 / GUI** 进行操作，经济系统核心负责账户、商店、交易、日志等业务处理，并通过配置文件和数据存储保持服务器经济数据稳定。
 
-<p align="center">
-  <img src="docs/images/economysystem-architecture.png" alt="EconomySystem Architecture" width="100%" />
-</p>
-
 ```mermaid
 flowchart LR
     Player[玩家] --> GUI[命令 / GUI]
@@ -62,15 +96,17 @@ flowchart LR
     GUI --> Core[EconomySystem Core\n核心业务逻辑]
 
     Core --> Account[账户管理]
-    Core --> Shop[商店管理]
-    Core --> Trade[交易管理]
-    Core --> Log[交易日志]
+    Core --> Shop[系统商店]
+    Core --> Market[玩家市场]
+    Core --> Trade[交易逻辑]
+    Core --> Log[交易记录]
 
-    Core --> Config[配置 YAML]
-    Core --> Storage[数据存储 SQLite]
+    Core --> Config[配置文件]
+    Core --> Storage[数据存储]
 
     Account --> Gameplay[服务器经济玩法]
     Shop --> Gameplay
+    Market --> Gameplay
     Trade --> Gameplay
 
     Currency[单一货币：梦鱼币] --> Core
@@ -90,7 +126,7 @@ flowchart LR
 
 - 系统商店会出售一些服务器内物品。
 - 商品价格会根据游戏时间刷新，例如正午或午夜。
-- 商品价格存在浮动，当前价格浮动范围为 **0.5 ~ 1.5**。
+- 商品价格存在浮动，可根据服务器配置调整。
 - 将鼠标移动到物品图标上，可以查看物品详细信息。
 
 ### 3. 玩家市场
@@ -164,6 +200,8 @@ flowchart LR
 - 订单查询
 - 订单逻辑
 - 领地权限
+- 交易记录与订单审计增强
+- 管理员商店配置工具
 - ~~拍卖订单~~
 - 赞助者玩偶 / 雕塑 / 名单
 
