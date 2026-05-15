@@ -18,7 +18,10 @@ public class PlayerDollHatItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float GUI_SCALE = 0.62F;
     private static final float GROUND_SCALE = 0.42F;
     private static final float FIXED_SCALE = 0.54F;
-    private static final double ITEM_DISPLAY_Y_OFFSET = -0.65D;
+    private static final double GUI_Y_OFFSET = -1.25D;
+    private static final double GROUND_Y_OFFSET = -0.65D;
+    private static final double FIXED_Y_OFFSET = -1.0D;
+    private static final double HAND_Y_OFFSET = -0.65D;
 
     private static PlayerDollHatItemRenderer instance;
 
@@ -53,24 +56,24 @@ public class PlayerDollHatItemRenderer extends BlockEntityWithoutLevelRenderer {
     private void applyDisplayTransform(ItemDisplayContext displayContext, PoseStack poseStack) {
         switch (displayContext) {
             case GUI -> {
-                poseStack.translate(0.5D, 1.3D + ITEM_DISPLAY_Y_OFFSET, 0.5D);
+                poseStack.translate(0.5D, 1.3D + GUI_Y_OFFSET, 0.5D);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
                 poseStack.mulPose(Axis.YP.rotationDegrees(25.0F));
                 poseStack.scale(GUI_SCALE, GUI_SCALE, GUI_SCALE);
             }
             case GROUND -> {
-                poseStack.translate(0.5D, 0.95D + ITEM_DISPLAY_Y_OFFSET, 0.5D);
+                poseStack.translate(0.5D, 0.95D + GROUND_Y_OFFSET, 0.5D);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
                 poseStack.scale(GROUND_SCALE, GROUND_SCALE, GROUND_SCALE);
             }
             case FIXED -> {
-                poseStack.translate(0.5D, 1.1D + ITEM_DISPLAY_Y_OFFSET, 0.5D);
+                poseStack.translate(0.5D, 1.1D + FIXED_Y_OFFSET, 0.5D);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
                 poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
                 poseStack.scale(FIXED_SCALE, FIXED_SCALE, FIXED_SCALE);
             }
             default -> {
-                poseStack.translate(0.5D, 1.0D + ITEM_DISPLAY_Y_OFFSET, 0.5D);
+                poseStack.translate(0.5D, 1.0D + HAND_Y_OFFSET, 0.5D);
                 poseStack.mulPose(Axis.XP.rotationDegrees(180.0F));
                 poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
                 poseStack.scale(0.36F, 0.36F, 0.36F);
