@@ -9,12 +9,13 @@ import com.mo.economy_system.item.items.PlayerDollHatItem;
 import com.mo.economy_system.item.items.Potion_Recall;
 import com.mo.economy_system.item.items.Potion_Wormhole;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.UUID;
 
 public class EconomySystem_Items {
 
@@ -42,15 +43,31 @@ public class EconomySystem_Items {
     public static final DeferredHolder<Item, ? extends Item> SUPPORTER_HAT = ITEMS.register("supporter_hat",
             () -> new SupporterHat(EconomySystem_ArmorMaterials.SUPPORTER, ArmorItem.Type.HELMET, new Item.Properties()));
 
-    public static final DeferredHolder<Item, ? extends Item> PLAYER_DOLL_HAT = ITEMS.register("player_doll_hat",
-            () -> new PlayerDollHatItem(
-                    EconomySystem_ArmorMaterials.SUPPORTER,
-                    ArmorItem.Type.HELMET,
-                    new Item.Properties().stacksTo(1),
-                    "___QingMo___",
-                    ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "textures/entity/player_doll/qingmo.png"),
-                    false
-            ));
+    public static final DeferredHolder<Item, ? extends Item> PLAYER_DOLL_HAT = registerPlayerDollHat(
+            "player_doll_hat",
+            "dc5eb054-afdc-44d2-9062-9d18dbe3d30c",
+            "___QingMo___",
+            false
+    );
+
+    public static final DeferredHolder<Item, ? extends Item> POXIAOJIN_DOLL_HAT = registerPlayerDollHat(
+            "poxiaojin_doll_hat",
+            "a08caa8a-2e6a-418d-8bae-4980ddaba41d",
+            "poxiaojin",
+            false
+    );
+
+    private static DeferredHolder<Item, ? extends Item> registerPlayerDollHat(String id, String playerUuid, String playerName, boolean slimModel) {
+        return ITEMS.register(id,
+                () -> new PlayerDollHatItem(
+                        EconomySystem_ArmorMaterials.SUPPORTER,
+                        ArmorItem.Type.HELMET,
+                        new Item.Properties().stacksTo(1),
+                        UUID.fromString(playerUuid),
+                        playerName,
+                        slimModel
+                ));
+    }
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

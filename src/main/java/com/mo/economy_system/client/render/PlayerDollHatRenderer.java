@@ -3,7 +3,7 @@ package com.mo.economy_system.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mo.economy_system.EconomySystem;
-import com.mo.economy_system.item.EconomySystem_Items;
+import com.mo.economy_system.item.items.PlayerDollHatItem;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
@@ -54,7 +54,7 @@ public final class PlayerDollHatRenderer {
     @SubscribeEvent
     public static void renderPlayerDollHat(RenderPlayerEvent.Post event) {
         ItemStack hatStack = event.getEntity().getItemBySlot(EquipmentSlot.HEAD);
-        if (!hatStack.is(EconomySystem_Items.PLAYER_DOLL_HAT.get())) {
+        if (!(hatStack.getItem() instanceof PlayerDollHatItem)) {
             return;
         }
 

@@ -22,6 +22,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("item.economy_system.claim_wand", "圈地杖");
         add("item.economy_system.supporter_hat", "赞助者帽子");
         add("item.economy_system.player_doll_hat", "玩家玩偶帽子");
+        add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
 
         // Enchantment | 附魔
         add("enchantment.economy_system.carefully", "细心");

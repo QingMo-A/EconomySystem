@@ -44,6 +44,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.RECALL_POTION);
         simpleItem(EconomySystem_Items.WORMHOLE_POTION);
         builtinEntityItem(EconomySystem_Items.PLAYER_DOLL_HAT);
+        builtinEntityItem(EconomySystem_Items.POXIAOJIN_DOLL_HAT);
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
 
