@@ -1,6 +1,7 @@
 package com.mo.economy_system.commands.economy_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.utils.Util_MessageKeys;
@@ -10,6 +11,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.UuidArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,6 +53,25 @@ public class Command_Economy {
                                                                     + " 梦鱼币，描述：" + shopItem.getDescription()
                                                     ), false);
                                                     return 1;
+                                                }))))));
+
+        dispatcher.register(Commands.literal("economy_system")
+                .then(Commands.literal("supporter_hat")
+                        .then(Commands.literal("bind")
+                                .requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("supporter", EntityArgument.player())
+                                        .executes(context -> {
+                                            ServerPlayer executor = context.getSource().getPlayerOrException();
+                                            ServerPlayer supporter = EntityArgument.getPlayer(context, "supporter");
+                                            return bindSupporterHat(context.getSource(), executor, supporter.getUUID(), supporter.getGameProfile().getName());
+                                        }))
+                                .then(Commands.argument("uuid", UuidArgument.uuid())
+                                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                                .executes(context -> {
+                                                    ServerPlayer executor = context.getSource().getPlayerOrException();
+                                                    UUID uuid = UuidArgument.getUuid(context, "uuid");
+                                                    String name = StringArgumentType.getString(context, "name");
+                                                    return bindSupporterHat(context.getSource(), executor, uuid, name);
                                                 }))))));
 
         dispatcher.register(Commands.literal("coin")
@@ -138,5 +159,16 @@ public class Command_Economy {
                                             return 1;
                                         }))))
         );
+    }
+
+    private static int bindSupporterHat(CommandSourceStack source, ServerPlayer executor, UUID supporterUuid, String supporterName) {
+        ItemStack stack = executor.getMainHandItem();
+        if (!(stack.getItem() instanceof SupporterHat)) {
+            source.sendFailure(Component.literal("请先将赞助者帽子拿在主手"));
+            return 0;
+        }
+        SupporterHat.setSupporter(stack, supporterUuid, supporterName);
+        source.sendSuccess(() -> Component.literal("已将赞助者帽子绑定到 " + supporterName + " (" + supporterUuid + ")"), false);
+        return 1;
     }
 }

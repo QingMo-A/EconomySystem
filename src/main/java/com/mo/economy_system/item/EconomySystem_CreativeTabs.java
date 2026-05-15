@@ -23,6 +23,7 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.RECALL_POTION.get());
                         output.accept(EconomySystem_Items.GUITAR.get());
                         output.accept(EconomySystem_Items.SUPPORTER_HAT.get());
+                        output.accept(EconomySystem_Items.PLAYER_DOLL_HAT.get());
                     })
                     .build()
     );

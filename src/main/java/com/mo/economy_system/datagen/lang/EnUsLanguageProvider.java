@@ -20,6 +20,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("item.economy_system.recall_potion", "Recall Potion");
         add("item.economy_system.claim_wand", "Claim Wand");
         add("item.economy_system.supporter_hat", "Supporter Hat");
+        add("item.economy_system.player_doll_hat", "Player Doll Hat");
 
         // Enchantment
         add("enchantment.economy_system.carefully", "Careful");

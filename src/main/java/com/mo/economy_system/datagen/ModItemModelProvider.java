@@ -43,6 +43,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(EconomySystem_Items.GUITAR);
         simpleItem(EconomySystem_Items.RECALL_POTION);
         simpleItem(EconomySystem_Items.WORMHOLE_POTION);
+        builtinEntityItem(EconomySystem_Items.PLAYER_DOLL_HAT);
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
 
@@ -56,6 +57,11 @@ public class ModItemModelProvider extends ItemModelProvider {
         return withExistingParent(itemRegistryObject.getId().getPath(),
                 mcLoc("item/handheld")).texture("layer0",
                 ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "item/" + itemRegistryObject.getId().getPath()));
+    }
+
+    private ItemModelBuilder builtinEntityItem(DeferredHolder<Item, ? extends Item> itemRegistryObject) {
+        return getBuilder(itemRegistryObject.getId().getPath())
+                .parent(new ModelFile.UncheckedModelFile(mcLoc("builtin/entity")));
     }
 
     private void trimmedArmorItem(DeferredHolder<Item, ? extends Item> itemRegistryObject) {

@@ -5,9 +5,11 @@ import com.mo.economy_system.armor.EconomySystem_ArmorMaterials;
 import com.mo.economy_system.armor.armors.SupporterHat;
 import com.mo.economy_system.item.items.Item_ClaimWand;
 import com.mo.economy_system.item.items.Item_Guitar;
+import com.mo.economy_system.item.items.PlayerDollHatItem;
 import com.mo.economy_system.item.items.Potion_Recall;
 import com.mo.economy_system.item.items.Potion_Wormhole;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
@@ -39,6 +41,16 @@ public class EconomySystem_Items {
 
     public static final DeferredHolder<Item, ? extends Item> SUPPORTER_HAT = ITEMS.register("supporter_hat",
             () -> new SupporterHat(EconomySystem_ArmorMaterials.SUPPORTER, ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final DeferredHolder<Item, ? extends Item> PLAYER_DOLL_HAT = ITEMS.register("player_doll_hat",
+            () -> new PlayerDollHatItem(
+                    EconomySystem_ArmorMaterials.SUPPORTER,
+                    ArmorItem.Type.HELMET,
+                    new Item.Properties().stacksTo(1),
+                    "___QingMo___",
+                    ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "textures/entity/player_doll/qingmo.png"),
+                    false
+            ));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
