@@ -37,14 +37,14 @@ public class Packet_SingleTerritoryDataRequest implements net.minecraft.network.
             ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
             if (player == null) return;
 
-            // 🔹 获取领地数据
+            // 获取领地数据
             Territory territory = TerritoryManager.getTerritoryByID(msg.territoryID);
             if (territory == null) {
-                System.out.println("❌ 领地数据请求失败：该 ID 不存在！");
+                System.out.println("领地数据请求失败：该 ID 不存在！");
                 return;
             }
 
-            // 🔹 发送数据回客户端
+            // 发送数据回客户端
             Packet_SingleTerritoryDataResponse response = new Packet_SingleTerritoryDataResponse(territory);
             EconomySystem_NetworkManager.sendToClient(player, response);
         });

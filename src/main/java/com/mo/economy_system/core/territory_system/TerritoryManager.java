@@ -74,10 +74,10 @@ public class TerritoryManager {
     private static void updateTerritoryBuffs(Territory territory) {
         System.out.println("------init territory Buff-------");
 
-        // 🔹 读取配置文件中的 Buff ID
+        // 读取配置文件中的 Buff ID
         Set<String> configBuffs = TerritoryBuffManager.getAllBuffIDs();
 
-        // 🔹 获取当前领地已有的 Buff ID（从 List 生成 Set）
+        // 获取当前领地已有的 Buff ID（从 List 生成 Set）
         Set<String> existingBuffs = new HashSet<>();
         for (TerritoryBuff buff : territory.getTerritoryBuffs()) {
             existingBuffs.add(buff.getId());
@@ -165,7 +165,7 @@ public class TerritoryManager {
         autoSave(); // 自动保存
     }
 
-    // **🔹 解锁 Buff**
+    // 解锁 Buff
     public static boolean unlockBuff(UUID territoryID, String buffID) {
         Territory territory = getTerritoryByID(territoryID);
         if (territory == null) {
@@ -186,7 +186,7 @@ public class TerritoryManager {
         return false; // 已解锁，返回 false
     }
 
-    // **🔹 升级 Buff**
+    // 升级 Buff
     public static boolean upgradeBuff(UUID territoryID, String buffID) {
         Territory territory = getTerritoryByID(territoryID);
         if (territory == null) {

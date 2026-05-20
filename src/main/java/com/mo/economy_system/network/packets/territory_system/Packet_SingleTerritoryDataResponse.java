@@ -32,7 +32,7 @@ public class Packet_SingleTerritoryDataResponse implements net.minecraft.network
 
     public static void handle(Packet_SingleTerritoryDataResponse msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // 🔹 处理客户端数据
+            // 处理客户端数据
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.screen instanceof Screen_TerritoryBuff screen) {
                 screen.updateTerritory(msg.territory);

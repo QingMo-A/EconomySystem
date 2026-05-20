@@ -249,10 +249,10 @@ public class Screen_TerritoryBuff extends Screen {
 
     private void drawTitle(GuiGraphics guiGraphics) {
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
-        String title = "🏰 领地增益";
+        String title = "领地增益";
         String name = territory != null ? territory.getName() : "";
         String text = name.isEmpty() ? title : (title + " · " + name);
-        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 240, text);
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 240, CardRenderer.UiIcon.TERRITORY, text);
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {

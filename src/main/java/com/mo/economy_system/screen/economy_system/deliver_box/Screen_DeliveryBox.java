@@ -238,7 +238,7 @@ public class Screen_DeliveryBox extends Screen {
     private void drawTitle(GuiGraphics guiGraphics) {
         int x = PANEL_PADDING;
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
-        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 140, "📦 收货箱");
+        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 140, CardRenderer.UiIcon.DELIVERY, "收货箱");
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {

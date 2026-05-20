@@ -50,7 +50,13 @@ public class Screen_Home extends Screen {
     private static final int BACKGROUND_COLOR = 0x400A0A14;
 
     // ==================== 导航卡片配置 ====================
-    private static final String[] NAV_ICONS = {"🛒", "📈", "📦", "🏰", "ℹ️"};
+    private static final CardRenderer.UiIcon[] NAV_ICONS = {
+        CardRenderer.UiIcon.SHOP,
+        CardRenderer.UiIcon.MARKET,
+        CardRenderer.UiIcon.DELIVERY,
+        CardRenderer.UiIcon.TERRITORY,
+        CardRenderer.UiIcon.ABOUT
+    };
     private static final String[] NAV_NAME_KEYS = {
         Util_MessageKeys.HOME_SHOP_BUTTON_KEY,
         Util_MessageKeys.HOME_MARKET_BUTTON_KEY,

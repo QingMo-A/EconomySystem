@@ -283,7 +283,7 @@ public class EventHandler_Player {
     private static void applyTerritoryBuffs(ServerPlayer player, Territory territory) {
         // Util_Message.sendDebugMessage("buff数量: " + territory.getTerritoryBuffs().size());
         for (TerritoryBuff buff : territory.getTerritoryBuffs()) {
-            if (buff.isUnlocked()) { // **🔹 只有解锁的 Buff 才生效**
+            if (buff.isUnlocked()) { // 只有解锁的 Buff 才生效
                 var effect = BuiltInRegistries.MOB_EFFECT.getHolder(ResourceLocation.parse(buff.getEffectId())).orElse(null);
 
                 if (effect != null) {
@@ -291,9 +291,9 @@ public class EventHandler_Player {
                     int duration = 20 * 10; // 10秒（单位：tick）
 
                     player.addEffect(new MobEffectInstance(effect, duration, amplifier, false, true));
-                    // Util_Message.sendDebugMessage("✅ 给予玩家 Buff: " + buff.getDisplayText() + " | 等级: " + amplifier);
+                    // Util_Message.sendDebugMessage("给予玩家 Buff: " + buff.getDisplayText() + " | 等级: " + amplifier);
                 } else {
-                    Util_Message.sendDebugMessage("❌ Buff ID 无效: " + buff.getEffectId());
+                    Util_Message.sendDebugMessage("Buff ID 无效: " + buff.getEffectId());
                 }
             }
         }

@@ -67,15 +67,15 @@ public class TerritoryBuffManager {
 
             BUFF_CONFIGS.clear();
 
-            System.out.println("📥 正在加载 Buff 配置...");
+            System.out.println("正在加载 Buff 配置...");
             for (TerritoryBuffConfig buff : buffs) {
                 BUFF_CONFIGS.put(buff.getId(), buff);
-                System.out.println("✅ 已加载 Buff: " + buff.getId() + "（" + buff.getDisplayText() + "）");
-                System.out.println("   ➡ 效果 ID: " + buff.getEffectId());
-                System.out.println("   🔹 初始解锁状态: " + buff.isInitialUnlockState());
-                System.out.println("   🔹 初始等级: " + buff.getInitialLevel() + "/" + buff.getMaxLevel());
-                System.out.println("   🔹 单次升级增加: " + buff.getSingleUpgradeLevel());
-                System.out.println("   🔹 升级成本:");
+                System.out.println("已加载 Buff: " + buff.getId() + "（" + buff.getDisplayText() + "）");
+                System.out.println("   效果 ID: " + buff.getEffectId());
+                System.out.println("   初始解锁状态: " + buff.isInitialUnlockState());
+                System.out.println("   初始等级: " + buff.getInitialLevel() + "/" + buff.getMaxLevel());
+                System.out.println("   单次升级增加: " + buff.getSingleUpgradeLevel());
+                System.out.println("   升级成本:");
 
                 for (TerritoryBuffConfig.BuffUpgradeCost cost : buff.getUpgradeCost()) {
                     for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemReq : cost.items) {
@@ -87,7 +87,7 @@ public class TerritoryBuffManager {
                 System.out.println("-----------------------------");
             }
         } catch (Exception e) {
-            System.err.println("❌ 读取 Buff 配置文件失败！");
+            System.err.println("读取 Buff 配置文件失败！");
             e.printStackTrace();
         }
     }

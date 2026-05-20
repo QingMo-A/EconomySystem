@@ -22,6 +22,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add("item.economy_system.supporter_hat", "Supporter Hat");
         add("item.economy_system.player_doll_hat", "Player Doll Hat");
         add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
+        add("item.economy_system.hanhanyu_doll_hat", "__HanHanYu__");
 
         // Enchantment
         add("enchantment.economy_system.carefully", "Careful");

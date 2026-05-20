@@ -137,10 +137,10 @@ public class Screen_ManageTerritory extends Screen {
 
     private void drawTitle(GuiGraphics guiGraphics) {
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
-        String title = "🏰 领地管理";
+        String title = "领地管理";
         String name = territory.getName();
         String titleText = title + " · " + name;
-        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 240, titleText);
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y + font.lineHeight, 240, CardRenderer.UiIcon.TERRITORY, titleText);
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {

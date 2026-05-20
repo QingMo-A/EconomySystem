@@ -53,7 +53,7 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
 
             Territory territory = TerritoryManager.getTerritoryByID(msg.territoryID);
             if (territory == null) {
-                player.sendSystemMessage(Component.literal("❌ 领地不存在！"));
+                player.sendSystemMessage(Component.literal("领地不存在！"));
                 return;
             }
             if (!territory.isOwner(player.getUUID()) || !territory.getDimension().equals(player.serverLevel().dimension())) {
@@ -63,17 +63,17 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
 
             TerritoryBuff buff = territory.getBuff(msg.buffID);
             if (buff == null) {
-                player.sendSystemMessage(Component.literal("❌ Buff 不存在！"));
+                player.sendSystemMessage(Component.literal("Buff 不存在！"));
                 return;
             }
             if (!buff.isUnlocked()) {
-                player.sendSystemMessage(Component.literal("❌ Buff 尚未解锁！"));
+                player.sendSystemMessage(Component.literal("Buff 尚未解锁！"));
                 return;
             }
 
             TerritoryBuffConfig config = TerritoryBuffManager.getBuffConfig(msg.buffID);
             if (config == null) {
-                player.sendSystemMessage(Component.literal("❌ Buff 配置错误！"));
+                player.sendSystemMessage(Component.literal("Buff 配置错误！"));
                 return;
             }
             if (buff.getLevel() >= config.getMaxLevel()) {
@@ -81,7 +81,7 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
                 return;
             }
 
-            // 🔹 **计算所需资源**
+            // 计算所需资源
             long requiredDfCoinsLong = 0L;
             long requiredXpLong = 0L;
             for (TerritoryBuffConfig.BuffUpgradeCost cost : config.getUpgradeCost()) {
@@ -89,45 +89,45 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
                 if (cost.xp > 0) requiredXpLong += cost.xp;
             }
             if (requiredDfCoinsLong > EconomySavedData.MAX_BALANCE || requiredXpLong > Integer.MAX_VALUE) {
-                player.sendSystemMessage(Component.literal("❌ Buff 消耗配置过大！"));
+                player.sendSystemMessage(Component.literal("Buff 消耗配置过大！"));
                 return;
             }
             int requiredDfCoins = (int) requiredDfCoinsLong;
             int requiredXp = (int) requiredXpLong;
 
-            // 🔹 **检查 df_coin**
+            // 检查梦鱼币
             if (requiredDfCoins > 0 && !economySavedData.hasEnoughBalance(player.getUUID(), requiredDfCoins)) {
-                player.sendSystemMessage(Component.literal("❌ 梦鱼币不足!"));
+                player.sendSystemMessage(Component.literal("梦鱼币不足!"));
                 return;
             }
 
-            // 🔹 **检查经验**
+            // 检查经验
             if (player.experienceLevel < requiredXp) {
-                player.sendSystemMessage(Component.literal("❌ 经验不足!"));
+                player.sendSystemMessage(Component.literal("经验不足!"));
                 return;
             }
 
-            // 🔹 **检查物品**
+            // 检查物品
             for (TerritoryBuffConfig.BuffUpgradeCost cost : config.getUpgradeCost()) {
                 for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemCost : cost.items) {
                     if (!hasEnoughItems(player, itemCost.item, itemCost.count)) {
-                        player.sendSystemMessage(Component.literal("❌ 你缺少 " + itemCost.count + " 个 " + itemCost.item));
+                        player.sendSystemMessage(Component.literal("你缺少 " + itemCost.count + " 个 " + itemCost.item));
                         return;
                     }
                 }
             }
 
         if (requiredDfCoins > 0 && !economySavedData.minBalance(player.getUUID(), requiredDfCoins, "领地", "升级领地增益")) {
-                player.sendSystemMessage(Component.literal("❌ 梦鱼币不足!"));
+                player.sendSystemMessage(Component.literal("梦鱼币不足!"));
                 return;
             }
 
-            // 🔹 **扣除经验**
+            // 扣除经验
             if (requiredXp > 0) {
                 player.giveExperienceLevels(-requiredXp);
             }
 
-            // 🔹 **扣除物品**
+            // 扣除物品
             for (TerritoryBuffConfig.BuffUpgradeCost cost : config.getUpgradeCost()) {
                 for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemCost : cost.items) {
                     if (itemCost.item != null && itemCost.count > 0) {
@@ -140,7 +140,7 @@ public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protoc
             if (TerritoryManager.upgradeBuff(territory.getTerritoryID(), msg.buffID)) {
                 player.sendSystemMessage(Component.literal("你成功为你的领地升级了增益: " + buff.getDisplayText() + " 到等级 " + buff.getLevel() + "!"));
             } else {
-                player.sendSystemMessage(Component.literal("❌ Buff 升级失败！"));
+                player.sendSystemMessage(Component.literal("Buff 升级失败！"));
             }
         });
     }

@@ -1,10 +1,10 @@
 package com.mo.economy_system.screen.components;
 
+import com.mo.economy_system.EconomySystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderType;
-import com.mo.economy_system.screen.components.UiButtonRenderer;
-import com.mo.economy_system.screen.components.UiButtonStyle;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * 卡片渲染工具类
@@ -65,6 +65,44 @@ public class CardRenderer {
     public static final int VERSION_TEXT = 0xFFFFFFFF;
     /** 版本装饰色 */
     public static final int VERSION_ACCENT = 0xFF4FC3F7;
+
+    public enum UiIcon {
+        SHOP("shop"),
+        MARKET("market"),
+        DELIVERY("delivery"),
+        TERRITORY("territory"),
+        ABOUT("about"),
+        BALANCE("balance"),
+        TRADE("trade"),
+        LEADERBOARD("leaderboard"),
+        HOME("home"),
+        OVERWORLD("overworld"),
+        NETHER("nether"),
+        END("end"),
+        AUTHORIZED("authorized"),
+        OWNER("owner"),
+        KEY("key"),
+        TELEPORT("teleport"),
+        MANAGE("manage");
+
+        private final ResourceLocation texture;
+
+        UiIcon(String fileName) {
+            this.texture = ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "textures/gui/icons/" + fileName + ".png");
+        }
+
+        public ResourceLocation texture() {
+            return texture;
+        }
+    }
+
+    public static void drawUiIcon(GuiGraphics guiGraphics, UiIcon icon, int x, int y, int color) {
+        drawUiIconTexture(guiGraphics, icon, x, y, 10);
+    }
+
+    private static void drawUiIconTexture(GuiGraphics guiGraphics, UiIcon icon, int x, int y, int size) {
+        guiGraphics.blit(icon.texture(), x, y, size, size, 0, 0, 64, 64, 64, 64);
+    }
 
     // ==================== 基础图形绘制 ====================
 
@@ -156,6 +194,16 @@ public class CardRenderer {
      */
     public static void drawNavCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
                                     String icon, String name, int themeColor, boolean isHovered) {
+        drawNavCard(guiGraphics, font, x, y, width, height, null, icon, name, themeColor, isHovered);
+    }
+
+    public static void drawNavCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                    UiIcon icon, String name, int themeColor, boolean isHovered) {
+        drawNavCard(guiGraphics, font, x, y, width, height, icon, "", name, themeColor, isHovered);
+    }
+
+    private static void drawNavCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                    UiIcon icon, String fallbackIcon, String name, int themeColor, boolean isHovered) {
         // 绘制卡片背景
         drawCard(guiGraphics, x, y, width, height, themeColor, isHovered);
 
@@ -167,10 +215,16 @@ public class CardRenderer {
 
         // 图标
         int iconColor = isHovered ? TEXT_VALUE : TEXT_DESC;
-        guiGraphics.drawString(font, icon, x + padding, textY, iconColor);
+        int iconWidth;
+        if (icon != null) {
+            drawUiIcon(guiGraphics, icon, x + padding, textY - 1, iconColor);
+            iconWidth = 10;
+        } else {
+            guiGraphics.drawString(font, fallbackIcon, x + padding, textY, iconColor);
+            iconWidth = font.width(fallbackIcon);
+        }
 
         // 名称
-        int iconWidth = font.width(icon);
         int nameColor = isHovered ? TEXT_VALUE : TEXT_DESC;
         guiGraphics.drawString(font, name, x + padding + iconWidth + 4, textY, nameColor);
 
@@ -189,6 +243,16 @@ public class CardRenderer {
      */
     public static void drawContentCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
                                        String title, String icon, int themeColor) {
+        drawContentCard(guiGraphics, font, x, y, width, height, title, null, icon, themeColor);
+    }
+
+    public static void drawContentCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                       String title, UiIcon icon, int themeColor) {
+        drawContentCard(guiGraphics, font, x, y, width, height, title, icon, "", themeColor);
+    }
+
+    private static void drawContentCard(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
+                                       String title, UiIcon icon, String fallbackIcon, int themeColor) {
         // 绘制卡片背景
         drawCard(guiGraphics, x, y, width, height, themeColor, false);
 
@@ -199,8 +263,14 @@ public class CardRenderer {
         // 标题
         int padding = 8;
         int titleY = y + padding;
-        int iconWidth = font.width(icon);
-        guiGraphics.drawString(font, icon, x + padding, titleY, themeColor);
+        int iconWidth;
+        if (icon != null) {
+            drawUiIcon(guiGraphics, icon, x + padding, titleY - 1, themeColor);
+            iconWidth = 10;
+        } else {
+            iconWidth = font.width(fallbackIcon);
+            guiGraphics.drawString(font, fallbackIcon, x + padding, titleY, themeColor);
+        }
         guiGraphics.drawString(font, title, x + padding + iconWidth + 4, titleY, TEXT_TITLE);
     }
 
@@ -220,11 +290,10 @@ public class CardRenderer {
         int padding = 8;
 
         // 标题
-        String titleIcon = "💰";
         String titleText = "你的余额";
         int titleY = y + padding;
-        int iconWidth = font.width(titleIcon);
-        guiGraphics.drawString(font, titleIcon, x + padding, titleY, THEME_BALANCE);
+        int iconWidth = 10;
+        drawUiIcon(guiGraphics, UiIcon.BALANCE, x + padding, titleY - 1, THEME_BALANCE);
         guiGraphics.drawString(font, titleText, x + padding + iconWidth + 3, titleY, TEXT_TITLE);
 
         // 右侧排名
@@ -263,11 +332,10 @@ public class CardRenderer {
         int padding = 8;
 
         // 标题
-        String titleIcon = "📋";
         String titleText = "交易信息";
         int titleY = y + padding;
-        int iconWidth = font.width(titleIcon);
-        guiGraphics.drawString(font, titleIcon, x + padding, titleY, THEME_MARKET);
+        int iconWidth = 10;
+        drawUiIcon(guiGraphics, UiIcon.TRADE, x + padding, titleY - 1, THEME_MARKET);
         guiGraphics.drawString(font, titleText, x + padding + iconWidth + 3, titleY, TEXT_TITLE);
 
         // 右侧点击提示
@@ -318,11 +386,10 @@ public class CardRenderer {
         int lineHeight = font.lineHeight + 4;
 
         // 标题
-        String titleIcon = "🏆";
         String titleText = "富豪榜";
         int titleY = y + padding;
-        int iconWidth = font.width(titleIcon);
-        guiGraphics.drawString(font, titleIcon, x + padding, titleY, THEME_LEADERBOARD);
+        int iconWidth = 10;
+        drawUiIcon(guiGraphics, UiIcon.LEADERBOARD, x + padding, titleY - 1, THEME_LEADERBOARD);
         guiGraphics.drawString(font, titleText, x + padding + iconWidth + 4, titleY, TEXT_TITLE);
 
         // 分隔线
@@ -352,22 +419,18 @@ public class CardRenderer {
                 String entryName = entry.getKey();
                 int entryBalance = entry.getValue();
 
-                // 排名图标
-                String rankIcon = getRankIcon(actualIndex + 1);
                 int rankColor = getRankColor(actualIndex + 1);
 
                 // 判断是否是自己
                 boolean isSelf = entryName.equals(playerName);
 
                 // 条目文字
-                String entryText = String.format("[%d] %s", actualIndex + 1, entryName);
+                String entryText = String.format("#%d %s", actualIndex + 1, entryName);
                 String balanceText = formatNumber(entryBalance);
 
                 // 绘制条目
                 int textX = x + padding;
-                int iconWidth2 = font.width(rankIcon);
-                guiGraphics.drawString(font, rankIcon, textX, entryY, rankColor);
-                guiGraphics.drawString(font, entryText, textX + iconWidth2 + 4, entryY, isSelf ? THEME_BALANCE : TEXT_DESC);
+                guiGraphics.drawString(font, entryText, textX, entryY, isSelf ? THEME_BALANCE : rankColor);
 
                 // 余额（右对齐）
                 int balanceTextWidth = font.width(balanceText);
@@ -386,8 +449,13 @@ public class CardRenderer {
      * 绘制版本信息（左下角）- 自定义文字
      */
     public static void drawVersionInfo(GuiGraphics guiGraphics, Font font, int x, int y, int maxWidth, String titleText) {
+        drawVersionInfo(guiGraphics, font, x, y, maxWidth, null, titleText);
+    }
+
+    public static void drawVersionInfo(GuiGraphics guiGraphics, Font font, int x, int y, int maxWidth, UiIcon icon, String titleText) {
         // 计算缩放
-        int textWidth = font.width(titleText);
+        int iconWidth = icon == null ? 0 : 14;
+        int textWidth = iconWidth + font.width(titleText);
         float scale = Math.min(1.0f, (float) maxWidth / textWidth);
 
         // 背景卡片
@@ -402,7 +470,12 @@ public class CardRenderer {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().translate(bgX + 8, bgY + 5, 0);
         guiGraphics.pose().scale(scale, scale, 1.0f);
-        guiGraphics.drawString(font, titleText, 0, 0, VERSION_TEXT);
+        int textX = 0;
+        if (icon != null) {
+            drawUiIcon(guiGraphics, icon, 0, -1, VERSION_ACCENT);
+            textX = iconWidth;
+        }
+        guiGraphics.drawString(font, titleText, textX, 0, VERSION_TEXT);
         guiGraphics.pose().popPose();
 
         // 装饰线
@@ -414,7 +487,7 @@ public class CardRenderer {
      * 绘制版本信息（左下角）- 默认 EconomySystem
      */
     public static void drawVersionInfo(GuiGraphics guiGraphics, Font font, int x, int y, int maxWidth) {
-        drawVersionInfo(guiGraphics, font, x, y, maxWidth, "🏠 §bEconomy§dSystem");
+        drawVersionInfo(guiGraphics, font, x, y, maxWidth, UiIcon.HOME, "§bEconomy§dSystem");
     }
 
     // ==================== 工具方法 ====================
@@ -431,9 +504,9 @@ public class CardRenderer {
      */
     public static String getRankIcon(int rank) {
         return switch (rank) {
-            case 1 -> "🥇";
-            case 2 -> "🥈";
-            case 3 -> "🥉";
+            case 1 -> "#1";
+            case 2 -> "#2";
+            case 3 -> "#3";
             default -> "  ";
         };
     }
@@ -507,11 +580,12 @@ public class CardRenderer {
         guiGraphics.pose().popPose();
 
         // 价格（右下角）
-        String priceText = "💰 " + formatNumber(price);
+        String priceText = formatNumber(price);
         int priceWidth = font.width(priceText);
         int priceX = x + width - padding - priceWidth;
         int priceY = y + height - padding - font.lineHeight;
 
+        drawUiIcon(guiGraphics, UiIcon.BALANCE, priceX - 13, priceY - 1, 0xFFFFD700);
         // 价格阴影
         guiGraphics.drawString(font, priceText, priceX + 1, priceY + 1, 0x40000000);
         // 价格本体（金色）
@@ -548,22 +622,22 @@ public class CardRenderer {
      * 领地类型枚举
      */
     public enum TerritoryType {
-        OVERWORLD("🏠", "主世界", 0xFF4CAF50),
-        NETHER("🔥", "下界", 0xFFFF5722),
-        END("🌙", "末地", 0xFF9C27B0),
-        AUTHORIZED("🚪", "有权限", 0xFF78909C);
+        OVERWORLD(UiIcon.OVERWORLD, "主世界", 0xFF4CAF50),
+        NETHER(UiIcon.NETHER, "下界", 0xFFFF5722),
+        END(UiIcon.END, "末地", 0xFF9C27B0),
+        AUTHORIZED(UiIcon.AUTHORIZED, "有权限", 0xFF78909C);
 
-        private final String icon;
+        private final UiIcon icon;
         private final String name;
         private final int color;
 
-        TerritoryType(String icon, String name, int color) {
+        TerritoryType(UiIcon icon, String name, int color) {
             this.icon = icon;
             this.name = name;
             this.color = color;
         }
 
-        public String getIcon() { return icon; }
+        public UiIcon getIcon() { return icon; }
         public String getName() { return name; }
         public int getColor() { return color; }
     }
@@ -610,11 +684,12 @@ public class CardRenderer {
         guiGraphics.drawString(font, displayName, nameX, contentY, 0xFFFFFFFF);
 
         // 维度标签（名称下方，居中）
-        String typeLabel = type.getIcon() + " " + type.getName();
-        int typeLabelWidth = font.width(typeLabel);
+        String typeLabel = type.getName();
+        int typeLabelWidth = 13 + font.width(typeLabel);
         int typeLabelX = x + (width - typeLabelWidth) / 2;
         int typeLabelY = contentY + font.lineHeight + 2;
-        guiGraphics.drawString(font, typeLabel, typeLabelX, typeLabelY, type.getColor());
+        drawUiIcon(guiGraphics, type.getIcon(), typeLabelX, typeLabelY - 1, type.getColor());
+        guiGraphics.drawString(font, typeLabel, typeLabelX + 13, typeLabelY, type.getColor());
 
         // ==================== 分隔线 ====================
         int separatorY = typeLabelY + font.lineHeight + 4;
@@ -626,10 +701,11 @@ public class CardRenderer {
         int lineHeight = 11;
 
         // 主人信息（左对齐，带图标）
-        String ownerLabel = isOwned ? "👑" : "🔑";
-        String ownerInfo = ownerLabel + " " + ownerName;
-        String truncatedOwner = truncateText(font, ownerInfo, width / 2 - padding);
-        guiGraphics.drawString(font, truncatedOwner, x + padding, infoY, isOwned ? 0xFFFFD700 : 0xFF87CEEB);
+        UiIcon ownerIcon = isOwned ? UiIcon.OWNER : UiIcon.KEY;
+        int ownerColor = isOwned ? 0xFFFFD700 : 0xFF87CEEB;
+        String truncatedOwner = truncateText(font, ownerName, width / 2 - padding - 13);
+        drawUiIcon(guiGraphics, ownerIcon, x + padding, infoY - 1, ownerColor);
+        guiGraphics.drawString(font, truncatedOwner, x + padding + 13, infoY, ownerColor);
 
         // 所有权标识（右对齐）
         String statusText = isOwned ? "我的领地" : "已授权";
@@ -674,7 +750,7 @@ public class CardRenderer {
             // 传送按钮（左）
             int teleportX = x + padding;
             drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, singleButtonWidth, buttonHeight,
-                "📍 传送", teleportHovered, type.getColor());
+                UiIcon.TELEPORT, "传送", teleportHovered, type.getColor());
             result[0] = teleportX;
             result[1] = buttonY;
             result[2] = teleportX + singleButtonWidth;
@@ -683,7 +759,7 @@ public class CardRenderer {
             // 管理按钮（右）
             int manageX = teleportX + singleButtonWidth + buttonSpacing;
             drawTerritoryActionButton(guiGraphics, font, manageX, buttonY, singleButtonWidth, buttonHeight,
-                "⚙️ 管理", manageHovered, THEME_TERRITORY);
+                UiIcon.MANAGE, "管理", manageHovered, THEME_TERRITORY);
             result[4] = manageX;
             result[5] = buttonY;
             result[6] = manageX + singleButtonWidth;
@@ -693,7 +769,7 @@ public class CardRenderer {
             int buttonWidth = width - padding * 2;
             int teleportX = x + padding;
             drawTerritoryActionButton(guiGraphics, font, teleportX, buttonY, buttonWidth, buttonHeight,
-                "📍 传送", teleportHovered, type.getColor());
+                UiIcon.TELEPORT, "传送", teleportHovered, type.getColor());
             result[0] = teleportX;
             result[1] = buttonY;
             result[2] = teleportX + buttonWidth;
@@ -720,7 +796,7 @@ public class CardRenderer {
      * 绘制领地操作按钮（内部小按钮）
      */
     private static void drawTerritoryActionButton(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height,
-                                                   String text, boolean isHovered, int accentColor) {
+                                                   UiIcon icon, String text, boolean isHovered, int accentColor) {
         UiButtonStyle style = UiButtonStyle.accent(accentColor)
             .setPadding(6)
             .setStripeWidth(3)
@@ -732,6 +808,10 @@ public class CardRenderer {
             .setTextShadow(false);
         UiButtonRenderer.drawStripedButton(guiGraphics, font, x, y, width, height,
             text, "", style, isHovered, UiButtonRenderer.TextAlign.CENTER, false);
+        int textWidth = font.width(text);
+        int iconX = x + (width - textWidth) / 2 - 14;
+        int iconY = y + (height - 10) / 2;
+        drawUiIcon(guiGraphics, icon, iconX, iconY, isHovered ? 0xFFFFFFFF : 0xCCFFFFFF);
     }
 
     /**

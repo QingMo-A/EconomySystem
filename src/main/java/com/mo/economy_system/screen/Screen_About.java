@@ -138,7 +138,7 @@ public class Screen_About extends Screen {
 
     private void drawTitle(GuiGraphics guiGraphics) {
         int y = PANEL_PADDING + font.lineHeight + 10;
-        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y, 200, "ℹ️ 关于");
+        CardRenderer.drawVersionInfo(guiGraphics, font, PANEL_PADDING, y, 200, CardRenderer.UiIcon.ABOUT, "关于");
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {

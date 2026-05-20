@@ -141,13 +141,13 @@ public class TerritoryBuff {
         tag.putInt("single_Upgrade_Level", singleUpgradeLevel);
         tag.putInt("max_Level", maxLevel);
 
-        // **✅ 添加升级费用**
+        // 添加升级费用
         ListTag costList = new ListTag();
         if (upgradeCost != null) {
             for (TerritoryBuffConfig.BuffUpgradeCost cost : upgradeCost) {
                 CompoundTag costTag = new CompoundTag();
 
-                // **✅ 保存多个物品**
+                // 保存多个物品
                 ListTag itemListTag = new ListTag();
                 for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement itemCost : cost.items) {
                     CompoundTag itemTag = new CompoundTag();
@@ -157,7 +157,7 @@ public class TerritoryBuff {
                 }
                 costTag.put("items", itemListTag);
 
-                // **✅ 经验 & 货币**
+                // 经验 & 货币
                 costTag.putInt("xp", cost.xp);
                 costTag.putInt("df_coin", cost.df_coin);
 
@@ -184,14 +184,14 @@ public class TerritoryBuff {
         boolean unlocked = tag.getBoolean("unlocked");
         int level = tag.getInt("level");
 
-        // **✅ 读取升级消耗**
+        // 读取升级消耗
         List<TerritoryBuffConfig.BuffUpgradeCost> upgradeCost = new ArrayList<>();
         ListTag costListTag = tag.getList("upgrade_Cost", Tag.TAG_COMPOUND);
         for (int i = 0; i < costListTag.size(); i++) {
             CompoundTag costTag = costListTag.getCompound(i);
             TerritoryBuffConfig.BuffUpgradeCost cost = new TerritoryBuffConfig.BuffUpgradeCost();
 
-            // **✅ 读取多个物品**
+            // 读取多个物品
             List<TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement> items = new ArrayList<>();
             ListTag itemListTag = costTag.getList("items", Tag.TAG_COMPOUND);
             for (int j = 0; j < itemListTag.size(); j++) {
@@ -202,7 +202,7 @@ public class TerritoryBuff {
             }
             cost.items = items;
 
-            // **✅ 读取经验 & 货币**
+            // 读取经验 & 货币
             cost.xp = costTag.getInt("xp");
             cost.df_coin = costTag.getInt("df_coin");
 
