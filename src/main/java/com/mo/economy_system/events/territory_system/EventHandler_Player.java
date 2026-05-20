@@ -4,6 +4,7 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryBuff;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
+import com.mo.economy_system.core.territory_system.TerritoryPermissionAction;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.BlockPos;
@@ -15,6 +16,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -143,7 +146,7 @@ public class EventHandler_Player {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         BlockPos pos = event.getPos();
-        if (!hasPermission(player, pos)) {
+        if (!hasPermission(player, pos, TerritoryPermissionAction.PLACE_BLOCK)) {
             event.setCanceled(true);
             player.sendSystemMessage(Component.literal("§c你没有权限在此领地放置方块！"));
         }
@@ -160,7 +163,7 @@ public class EventHandler_Player {
         if (!(player instanceof ServerPlayer serverPlayer)) return; // 检查是否为 ServerPlayer
 
         BlockPos pos = event.getPos();
-        if (!hasPermission(serverPlayer, pos)) {
+        if (!hasPermission(serverPlayer, pos, TerritoryPermissionAction.BREAK_BLOCK)) {
             event.setCanceled(true);
             serverPlayer.sendSystemMessage(Component.literal("§c你没有权限在此领地破坏方块！"));
         }
@@ -177,7 +180,7 @@ public class EventHandler_Player {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
         BlockPos pos = serverPlayer.blockPosition();
-        if (!hasPermission(serverPlayer, pos)) {
+        if (!hasPermission(serverPlayer, pos, TerritoryPermissionAction.USE_ITEM)) {
             event.setCanceled(true);
             serverPlayer.sendSystemMessage(Component.literal("§c你没有权限在此领地使用物品！"));
         }
@@ -194,9 +197,10 @@ public class EventHandler_Player {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
         BlockPos pos = event.getPos(); // 获取右键点击的方块位置
-        if (!hasPermission(serverPlayer, pos)) {
+        TerritoryPermissionAction action = isContainerBlock(serverPlayer, pos) ? TerritoryPermissionAction.OPEN_CONTAINER : TerritoryPermissionAction.INTERACT_BLOCK;
+        if (!hasPermission(serverPlayer, pos, action)) {
             event.setCanceled(true);
-            serverPlayer.sendSystemMessage(Component.literal("§c你没有权限在此领地右键操作方块！"));
+            serverPlayer.sendSystemMessage(Component.literal(action == TerritoryPermissionAction.OPEN_CONTAINER ? "§c你没有权限在此领地打开容器！" : "§c你没有权限在此领地右键操作方块！"));
         }
     }
 
@@ -207,12 +211,16 @@ public class EventHandler_Player {
      * @param pos    方块位置
      * @return 如果有权限返回 true，否则返回 false
      */
-    private static boolean hasPermission(ServerPlayer player, BlockPos pos) {
+    private static boolean hasPermission(ServerPlayer player, BlockPos pos, TerritoryPermissionAction action) {
         Territory territory = TerritoryManager.getTerritoryAtIgnoreY(player.serverLevel().dimension(), pos.getX(), pos.getZ());
         if (territory == null) return true; // 如果不在领地内，允许操作
 
-        // 检查是否是领地所有者或被授权的玩家
-        return territory.isOwner(player.getUUID()) || territory.hasPermission(player.getUUID()) || player.hasPermissions(2);
+        return player.hasPermissions(2) || territory.canPerform(action, player.getUUID());
+    }
+
+    private static boolean isContainerBlock(ServerPlayer player, BlockPos pos) {
+        Block block = player.serverLevel().getBlockState(pos).getBlock();
+        return block instanceof BaseEntityBlock || player.serverLevel().getBlockEntity(pos) != null;
     }
 
     /**

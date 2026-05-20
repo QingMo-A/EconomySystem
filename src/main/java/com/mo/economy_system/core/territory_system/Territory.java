@@ -23,6 +23,7 @@ public class Territory {
     private final ResourceKey<Level> dimension; // 所在维度
     private int territoryOrder; // 领地序号
     private final List<TerritoryBuff> territoryBuffs = new ArrayList<>(); // 领地buff
+    private final EnumMap<TerritoryPermissionAction, TerritoryPermissionLevel> permissions = new EnumMap<>(TerritoryPermissionAction.class);
 
 
     // 用于新建领地的构造方法（生成新 UUID）
@@ -45,6 +46,9 @@ public class Territory {
         this.authorizedPlayers = new HashSet<>();
         this.backpoint = backpoint;
         this.dimension = dimension;
+        for (TerritoryPermissionAction action : TerritoryPermissionAction.values()) {
+            permissions.put(action, TerritoryPermissionLevel.MEMBERS);
+        }
     }
 
     public UUID getTerritoryID() {
@@ -57,6 +61,11 @@ public class Territory {
 
     public String getOwnerName() {
         return ownerName;
+    }
+
+    public void setOwner(UUID ownerUUID, String ownerName) {
+        this.ownerUUID = ownerUUID;
+        this.ownerName = ownerName;
     }
 
     public String getName() {
@@ -125,6 +134,10 @@ public class Territory {
     }
 
     public void addAuthorizedPlayer(UUID playerUUID, String playerName) {
+        if (isOwner(playerUUID)) {
+            return;
+        }
+        removeAuthorizedPlayer(playerUUID);
         authorizedPlayers.add(new PlayerInfo(playerUUID, playerName));
     }
 
@@ -134,6 +147,18 @@ public class Territory {
 
     public boolean hasPermission(UUID playerUUID) {
         return authorizedPlayers.stream().anyMatch(playerInfo -> playerInfo.getUuid().equals(playerUUID));
+    }
+
+    public TerritoryPermissionLevel getPermissionLevel(TerritoryPermissionAction action) {
+        return permissions.getOrDefault(action, TerritoryPermissionLevel.MEMBERS);
+    }
+
+    public void setPermissionLevel(TerritoryPermissionAction action, TerritoryPermissionLevel level) {
+        permissions.put(action, level);
+    }
+
+    public boolean canPerform(TerritoryPermissionAction action, UUID playerUUID) {
+        return getPermissionLevel(action).allows(this, playerUUID);
     }
 
     public boolean isOwner(UUID playerUUID) {
@@ -226,6 +251,12 @@ public class Territory {
         }
         tag.put("AuthorizedPlayers", authorizedPlayersTag);
 
+        CompoundTag permissionsTag = new CompoundTag();
+        for (TerritoryPermissionAction action : TerritoryPermissionAction.values()) {
+            permissionsTag.putString(action.name(), getPermissionLevel(action).name());
+        }
+        tag.put("Permissions", permissionsTag);
+
         // 保存回城点
         if (backpoint != null) {
             CompoundTag backpointTag = new CompoundTag();
@@ -274,6 +305,19 @@ public class Territory {
             UUID playerUUID = playerCompound.getUUID("PlayerUUID");
             String playerName = playerCompound.getString("PlayerName");
             territory.addAuthorizedPlayer(playerUUID, playerName);
+        }
+
+        if (tag.contains("Permissions", Tag.TAG_COMPOUND)) {
+            CompoundTag permissionsTag = tag.getCompound("Permissions");
+            for (TerritoryPermissionAction action : TerritoryPermissionAction.values()) {
+                if (permissionsTag.contains(action.name(), Tag.TAG_STRING)) {
+                    try {
+                        territory.setPermissionLevel(action, TerritoryPermissionLevel.valueOf(permissionsTag.getString(action.name())));
+                    } catch (IllegalArgumentException ignored) {
+                        territory.setPermissionLevel(action, TerritoryPermissionLevel.MEMBERS);
+                    }
+                }
+            }
         }
 
         // 加载回城点

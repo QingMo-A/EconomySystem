@@ -422,9 +422,11 @@ public class Screen_ManageTerritory extends Screen {
             Minecraft.getInstance().setScreen(new Screen_TerritoryBuff(territory))));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_PERMISSIONS, actionNeutralStyle, () -> {
+            Minecraft.getInstance().setScreen(new Screen_TerritoryPlayerAction(territory, Screen_TerritoryPlayerAction.Mode.PERMISSION));
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_TRANSFER_OWNERSHIP, actionNeutralStyle, () -> {
+            Minecraft.getInstance().setScreen(new Screen_TerritoryPlayerAction(territory, Screen_TerritoryPlayerAction.Mode.TRANSFER));
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY, actionDangerStyle, () -> {

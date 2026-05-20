@@ -1,6 +1,7 @@
 package com.mo.economy_system.network.packets;
 
 import com.mo.economy_system.screen.territory_system.Screen_InvitePlayer;
+import com.mo.economy_system.screen.territory_system.Screen_TerritoryPlayerAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.FriendlyByteBuf;
@@ -50,6 +51,8 @@ public class Packet_ServerPlayerListResponse implements net.minecraft.network.pr
             Screen screen = minecraft.screen;
             if (screen instanceof Screen_InvitePlayer invitePlayer) {
                 invitePlayer.update(msg.accounts);
+            } else if (screen instanceof Screen_TerritoryPlayerAction playerAction) {
+                playerAction.update(msg.accounts);
             }
         });
     }

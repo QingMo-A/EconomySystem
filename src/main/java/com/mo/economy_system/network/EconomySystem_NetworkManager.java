@@ -69,6 +69,9 @@ public class EconomySystem_NetworkManager {
         registrar.playToServer(Packet_UpgradeTerritoryBuff.TYPE, Packet_UpgradeTerritoryBuff.STREAM_CODEC, Packet_UpgradeTerritoryBuff::handle);
         registrar.playToServer(Packet_SingleTerritoryDataRequest.TYPE, Packet_SingleTerritoryDataRequest.STREAM_CODEC, Packet_SingleTerritoryDataRequest::handle);
         registrar.playToClient(Packet_SingleTerritoryDataResponse.TYPE, Packet_SingleTerritoryDataResponse.STREAM_CODEC, Packet_SingleTerritoryDataResponse::handle);
+        registrar.playToServer(Packet_UpdateTerritoryPermission.TYPE, Packet_UpdateTerritoryPermission.STREAM_CODEC, Packet_UpdateTerritoryPermission::handle);
+        registrar.playToServer(Packet_TransferTerritoryOwnership.TYPE, Packet_TransferTerritoryOwnership.STREAM_CODEC, Packet_TransferTerritoryOwnership::handle);
+        registrar.playToServer(Packet_UpdateTerritoryRule.TYPE, Packet_UpdateTerritoryRule.STREAM_CODEC, Packet_UpdateTerritoryRule::handle);
     }
 
     public static void sendToClient(CustomPacketPayload packet, ServerPlayer player) {

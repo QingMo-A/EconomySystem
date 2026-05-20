@@ -228,6 +228,49 @@ public class TerritoryManager {
         }
     }
 
+    public static boolean transferTerritory(UUID territoryID, UUID newOwnerUUID, String newOwnerName) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null || newOwnerUUID == null || newOwnerName == null || newOwnerName.isBlank()) {
+            return false;
+        }
+        UUID oldOwnerUUID = territory.getOwnerUUID();
+        if (oldOwnerUUID.equals(newOwnerUUID)) {
+            return false;
+        }
+
+        territoriesByOwner.getOrDefault(oldOwnerUUID, new ArrayList<>()).remove(territory);
+        territory.removeAuthorizedPlayer(newOwnerUUID);
+        territory.addAuthorizedPlayer(oldOwnerUUID, territory.getOwnerName());
+        territory.setOwner(newOwnerUUID, newOwnerName);
+        territoriesByOwner.computeIfAbsent(newOwnerUUID, key -> new ArrayList<>()).add(territory);
+        markDirty();
+        return true;
+    }
+
+    public static boolean setTerritoryPermission(UUID territoryID, UUID playerUUID, String playerName, boolean allowed) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null || playerUUID == null || playerName == null || playerName.isBlank() || territory.isOwner(playerUUID)) {
+            return false;
+        }
+        if (allowed) {
+            territory.addAuthorizedPlayer(playerUUID, playerName);
+        } else {
+            territory.removeAuthorizedPlayer(playerUUID);
+        }
+        markDirty();
+        return true;
+    }
+
+    public static boolean setTerritoryRule(UUID territoryID, TerritoryPermissionAction action, TerritoryPermissionLevel level) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null || action == null || level == null) {
+            return false;
+        }
+        territory.setPermissionLevel(action, level);
+        markDirty();
+        return true;
+    }
+
     // 查询指定位置的领地（X 和 Z 轴）
     public static Territory getTerritoryAtIgnoreY(int x, int z) {
         List<Territory> candidates = quadTree.query(x, z);
