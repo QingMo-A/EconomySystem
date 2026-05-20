@@ -83,7 +83,9 @@ public class CardRenderer {
         OWNER("owner"),
         KEY("key"),
         TELEPORT("teleport"),
-        MANAGE("manage");
+        MANAGE("manage"),
+        ARROW_LEFT("arrow_left"),
+        ARROW_RIGHT("arrow_right");
 
         private final ResourceLocation texture;
 
@@ -98,6 +100,10 @@ public class CardRenderer {
 
     public static void drawUiIcon(GuiGraphics guiGraphics, UiIcon icon, int x, int y, int color) {
         drawUiIconTexture(guiGraphics, icon, x, y, 10);
+    }
+
+    public static void drawUiIconSized(GuiGraphics guiGraphics, UiIcon icon, int x, int y, int size) {
+        drawUiIconTexture(guiGraphics, icon, x, y, size);
     }
 
     private static void drawUiIconTexture(GuiGraphics guiGraphics, UiIcon icon, int x, int y, int size) {

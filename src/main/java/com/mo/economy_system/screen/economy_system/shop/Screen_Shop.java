@@ -318,7 +318,8 @@ public class Screen_Shop extends Screen {
         int x = PANEL_PADDING;
         int y = virtualHeight - PANEL_PADDING - font.lineHeight;
 
-        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 120, Component.translatable(Util_MessageKeys.SHOP_TITLE_KEY).getString());
+        CardRenderer.drawVersionInfo(guiGraphics, font, x, y + font.lineHeight, 120,
+            CardRenderer.UiIcon.SHOP, Component.translatable(Util_MessageKeys.SHOP_TITLE_KEY).getString());
     }
 
     private void drawEscHint(GuiGraphics guiGraphics) {
@@ -407,7 +408,7 @@ public class Screen_Shop extends Screen {
         prevBtnY2 = btnY + btnHeight;
 
         boolean prevHovered = (mouseX >= prevBtnX1 && mouseX <= prevBtnX2 && mouseY >= prevBtnY1 && mouseY <= prevBtnY2);
-        drawPageButton(guiGraphics, prevBtnX, btnY, btnWidth, btnHeight, "<", prevHovered, currentPage > 0);
+        drawPageButton(guiGraphics, prevBtnX, btnY, btnWidth, btnHeight, CardRenderer.UiIcon.ARROW_LEFT, prevHovered, currentPage > 0);
 
         // 下一页按钮
         int nextBtnX = pageTextX + pageTextWidth + 12;
@@ -418,13 +419,18 @@ public class Screen_Shop extends Screen {
         nextBtnY2 = btnY + btnHeight;
 
         boolean nextHovered = (mouseX >= nextBtnX1 && mouseX <= nextBtnX2 && mouseY >= nextBtnY1 && mouseY <= nextBtnY2);
-        drawPageButton(guiGraphics, nextBtnX, btnY, btnWidth, btnHeight, ">", nextHovered, currentPage < totalPages - 1);
+        drawPageButton(guiGraphics, nextBtnX, btnY, btnWidth, btnHeight, CardRenderer.UiIcon.ARROW_RIGHT, nextHovered, currentPage < totalPages - 1);
     }
 
-    private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height, String text, boolean isHovered, boolean isEnabled) {
+    private void drawPageButton(GuiGraphics guiGraphics, int x, int y, int width, int height,
+                                CardRenderer.UiIcon icon, boolean isHovered, boolean isEnabled) {
         UiButtonStyle style = isEnabled ? pageButtonStyle : pageButtonDisabledStyle;
         UiButtonRenderer.drawStripedButton(guiGraphics, font, x, y, width, height,
-            text, "", style, isEnabled && isHovered, UiButtonRenderer.TextAlign.CENTER, false);
+            "", "", style, isEnabled && isHovered, UiButtonRenderer.TextAlign.CENTER, false);
+        int iconSize = 12;
+        int iconX = x + (width - iconSize) / 2;
+        int iconY = y + (height - iconSize) / 2;
+        CardRenderer.drawUiIconSized(guiGraphics, icon, iconX, iconY, iconSize);
     }
 
     private int getTotalPages() {
