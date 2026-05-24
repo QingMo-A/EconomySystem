@@ -32,6 +32,9 @@ public class ShopItem {
     private double fluctuationFactor; // 涨幅系数（用于动态调整价格）
     private final String nbt;
     private final String itemData;
+    private int recentDemand;
+    private int virtualStock;
+    private int maxVirtualStock;
 
     public ShopItem(String itemId, int basePrice, String description) {
         this(UUID.randomUUID().toString(), itemId, basePrice, description, null, null);
@@ -55,6 +58,9 @@ public class ShopItem {
         this.fluctuationFactor = 1.0;  // 默认涨幅系数为 1.0（无变化）
         this.nbt = nbt;
         this.itemData = itemData;
+        this.recentDemand = 0;
+        this.maxVirtualStock = 0;
+        this.virtualStock = 0;
     }
 
     private static String normalizeShopItemId(String shopItemId) {
@@ -104,6 +110,49 @@ public class ShopItem {
     public String getNbt() { return nbt; }
 
     public String getItemData() { return itemData; }
+
+    public int getRecentDemand() { return recentDemand; }
+
+    public int getVirtualStock() { return virtualStock; }
+
+    public int getMaxVirtualStock() { return maxVirtualStock; }
+
+    public void addRecentDemand(int quantity) {
+        if (quantity > 0) {
+            this.recentDemand = Math.max(0, this.recentDemand + quantity);
+        }
+    }
+
+    public void decayRecentDemand(double factor) {
+        this.recentDemand = Math.max(0, (int) Math.round(this.recentDemand * factor));
+    }
+
+    public void consumeVirtualStock(int quantity) {
+        if (quantity > 0) {
+            ensurePricingState(ShopPricingConfig.get());
+            this.virtualStock = Math.max(0, this.virtualStock - quantity);
+        }
+    }
+
+    public void restockVirtualStock(double rate) {
+        ensurePricingState(ShopPricingConfig.get());
+        int missing = Math.max(0, maxVirtualStock - virtualStock);
+        int restored = (int) Math.ceil(missing * rate);
+        if (restored > 0) {
+            virtualStock = Math.min(maxVirtualStock, virtualStock + restored);
+        }
+    }
+
+    public void ensurePricingState(ShopPricingConfig config) {
+        int expectedMax = Math.max(config.minMaxStock, Math.max(config.defaultMaxStock, Math.max(1, basePrice) * 32));
+        if (maxVirtualStock <= 0) {
+            maxVirtualStock = expectedMax;
+        }
+        if (virtualStock <= 0) {
+            virtualStock = maxVirtualStock;
+        }
+        virtualStock = Math.max(0, Math.min(virtualStock, maxVirtualStock));
+    }
 
     public ItemStack getItemStack() {
         return getItemStack(null);
@@ -226,6 +275,9 @@ public class ShopItem {
         tag.putInt("lastPrice", lastPrice);  // 保存上次的价格
         tag.putString("description", description);
         tag.putDouble("fluctuationFactor", fluctuationFactor);
+        tag.putInt("recentDemand", recentDemand);
+        tag.putInt("virtualStock", virtualStock);
+        tag.putInt("maxVirtualStock", maxVirtualStock);
 
         // **保存 nbtData**（如果有的话）
         if (nbt != null) {
@@ -254,6 +306,10 @@ public class ShopItem {
         shopItem.setCurrentPrice(tag.getInt("currentPrice"));
         shopItem.lastPrice = tag.getInt("lastPrice");
         shopItem.setFluctuationFactor(tag.getDouble("fluctuationFactor"));
+        shopItem.recentDemand = tag.getInt("recentDemand");
+        shopItem.virtualStock = tag.getInt("virtualStock");
+        shopItem.maxVirtualStock = tag.getInt("maxVirtualStock");
+        shopItem.ensurePricingState(ShopPricingConfig.get());
 
         return shopItem;
     }

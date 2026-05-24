@@ -101,6 +101,7 @@ public class Packet_ShopBuyItem implements net.minecraft.network.protocol.common
                     return;
                 }
                 addItemsToInventory(player.getInventory(), template, msg.quantity);
+                EconomySystem.SHOP_MANAGER.recordPurchase(shopItem, msg.quantity);
                 player.sendSystemMessage(Component.translatable(
                         Util_MessageKeys.SHOP_BUY_SUCCESSFULLY_MESSAGE_KEY,
                         totalPrice,

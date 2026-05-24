@@ -2,8 +2,10 @@ package com.mo.economy_system.commands.economy_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.armor.armors.SupporterHat;
+import com.mo.economy_system.core.economy_system.shop.ShopPricingConfig;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.core.settings.GameSettingsManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
+import java.util.Map;
 
 public class Command_Economy {
 
@@ -73,6 +76,60 @@ public class Command_Economy {
                                                     String name = StringArgumentType.getString(context, "name");
                                                     return bindSupporterHat(context.getSource(), executor, uuid, name);
                                                 }))))));
+
+        dispatcher.register(Commands.literal("economy_system")
+                .then(Commands.literal("settings")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("list")
+                                .executes(context -> {
+                                    Map<String, String> settings = GameSettingsManager.getAll();
+                                    context.getSource().sendSuccess(() -> Component.literal("EconomySystem 设置项:"), false);
+                                    for (Map.Entry<String, String> entry : settings.entrySet()) {
+                                        String description = GameSettingsManager.description(entry.getKey());
+                                        context.getSource().sendSuccess(() -> Component.literal(
+                                                entry.getKey() + " = " + entry.getValue() + (description.isBlank() ? "" : " | " + description)
+                                        ), false);
+                                    }
+                                    return 1;
+                                }))
+                        .then(Commands.literal("get")
+                                .then(Commands.argument("key", StringArgumentType.word())
+                                        .executes(context -> {
+                                            String key = StringArgumentType.getString(context, "key");
+                                            String value = GameSettingsManager.get(key);
+                                            if (value == null) {
+                                                context.getSource().sendFailure(Component.literal("未知设置项: " + key));
+                                                return 0;
+                                            }
+                                            context.getSource().sendSuccess(() -> Component.literal(key + " = " + value), false);
+                                            return 1;
+                                        })))
+                        .then(Commands.literal("set")
+                                .then(Commands.argument("key", StringArgumentType.word())
+                                        .then(Commands.argument("value", StringArgumentType.word())
+                                                .executes(context -> {
+                                                    String key = StringArgumentType.getString(context, "key");
+                                                    String value = StringArgumentType.getString(context, "value");
+                                                    try {
+                                                        if (!GameSettingsManager.set(key, value)) {
+                                                            context.getSource().sendFailure(Component.literal("未知设置项: " + key));
+                                                            return 0;
+                                                        }
+                                                        context.getSource().sendSuccess(() -> Component.literal("已设置 " + key + " = " + GameSettingsManager.get(key)), false);
+                                                        return 1;
+                                                    } catch (IllegalArgumentException e) {
+                                                        context.getSource().sendFailure(Component.literal("设置失败: " + e.getMessage()));
+                                                        return 0;
+                                                    }
+                                                }))))
+                        .then(Commands.literal("reload")
+                                .executes(context -> {
+                                    GameSettingsManager.load();
+                                    ShopPricingConfig.reload();
+                                    EconomySystem.SHOP_MANAGER.reloadPricingConfig();
+                                    context.getSource().sendSuccess(() -> Component.literal("已重载 EconomySystem 设置"), false);
+                                    return 1;
+                                }))));
 
         dispatcher.register(Commands.literal("coin")
                 // 查询余额

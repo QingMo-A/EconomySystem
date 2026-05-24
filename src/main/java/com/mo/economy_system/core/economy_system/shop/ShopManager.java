@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.core.settings.GameSettingsManager;
 import net.neoforged.fml.loading.FMLPaths;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -12,12 +13,9 @@ import net.minecraft.world.item.ItemStack;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class ShopManager {
     public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID, "economy_shop.json");
@@ -25,8 +23,6 @@ public class ShopManager {
             .setPrettyPrinting()  // 启用格式化
             .disableHtmlEscaping() // 可选：禁用 HTML 转义（如保留 &、< 等符号）
             .create();
-    private static final Random RANDOM = new Random();
-
     private final List<ShopItem> items = new ArrayList<>();
 
     public ShopManager() {
@@ -73,6 +69,7 @@ public class ShopManager {
             if (loadedItems != null) {
                 items.clear();
                 items.addAll(loadedItems);
+                ensurePricingState();
             }
         } catch (IOException e) {
             EconomySystem.LOGGER.error("Failed to load shop config {}", CONFIG_FILE, e);
@@ -202,69 +199,85 @@ public class ShopManager {
     }
 
     public void adjustPrices() {
+        ShopPricingConfig config = ShopPricingConfig.get();
+        String mode = GameSettingsManager.get(GameSettingsManager.SHOP_PRICING_MODE);
         for (ShopItem item : items) {
             int basePrice = item.getBasePrice(); // 基础价格应为整数
             if (basePrice <= 0) {
                 EconomySystem.LOGGER.warn("Skip price adjustment for {} because basePrice is {}", item.getItemId(), basePrice);
                 continue;
             }
-            int currentPrice = item.getCurrentPrice();
-
-            // 计算价格偏离比例（使用浮点计算，最终结果转为int）
-            double deviation = (currentPrice - (double)basePrice) / basePrice;
-
-            // 定义波动参数
-            double minFactor = 0.5;  // 最小波动系数
-            double maxFactor = 3.0;  // 最大波动系数
-            double baseFluctuation = 0.1; // 基础波动幅度
-
-            // 根据偏离程度细分波动区间
-            if (deviation >= 0.5) {          // 溢价50%以上
-                minFactor = 0.3;             // 强抑制上涨
-                maxFactor = 0.8;
-                baseFluctuation = -0.05;     // 允许小幅回落
-            } else if (deviation >= 0.3) {   // 溢价30%-50%
-                minFactor = 0.6;
-                maxFactor = 1.2;
-            } else if (deviation <= -0.5) {  // 折价50%以上
-                minFactor = 1.5;             // 强刺激回升
-                maxFactor = 2.5;
-                baseFluctuation = 0.15;      // 增加回升概率
-            } else if (deviation <= -0.3) {  // 折价30%-50%
-                minFactor = 1.2;
-                maxFactor = 1.8;
-            } else {                         // 正常波动区间（-30% ~ +30%）
-                minFactor = 0.8;
-                maxFactor = 1.2;
-            }
-
-            // 生成带趋势的随机因子
-            double randomFactor = baseFluctuation +
-                    (minFactor + (maxFactor - minFactor) * RANDOM.nextDouble());
-
-            // 应用衰减函数控制极端波动
-            randomFactor = 1 + (randomFactor - 1) *
-                    Math.exp(-Math.abs(deviation));
-
-            // 计算新价格（保证整数）
-            int newPrice = (int) Math.round(currentPrice * randomFactor);
-
-            // 设置价格边界保护
-            newPrice = Math.max(1, Math.min(newPrice, basePrice * 5)); // 最高不超过5倍
-
-            // 当接近基础价格时增加稳定性
-            if (Math.abs(newPrice - basePrice) <= basePrice * 0.1) {
-                newPrice = basePrice + (int)((newPrice - basePrice) * 0.5);
-            }
-
+            item.ensurePricingState(config);
+            int currentPrice = Math.max(1, item.getCurrentPrice());
+            int targetPrice = "stock".equalsIgnoreCase(mode)
+                ? calculateStockTargetPrice(item, config)
+                : calculateDemandTargetPrice(item, config);
+            int newPrice = moveToward(currentPrice, targetPrice, config.maxCycleChangeRate);
+            newPrice = clampPrice(newPrice, basePrice, config);
             item.setCurrentPrice(newPrice);
-
-            // 记录波动系数（保留两位小数）
-            BigDecimal fluctuation = new BigDecimal(randomFactor - 1)
-                    .setScale(2, RoundingMode.HALF_UP);
-            item.setFluctuationFactor(fluctuation.doubleValue());
+            item.setFluctuationFactor(roundRate((newPrice - currentPrice) / (double) currentPrice));
+            item.decayRecentDemand(config.demandDecay);
+            item.restockVirtualStock(config.restockRate);
         }
 
         saveToConfig();
+    }
+
+    public synchronized void recordPurchase(ShopItem item, int quantity) {
+        if (item == null || quantity <= 0) {
+            return;
+        }
+        item.addRecentDemand(quantity);
+        item.consumeVirtualStock(quantity);
+        saveToConfig();
+    }
+
+    public synchronized void reloadPricingConfig() {
+        ShopPricingConfig.reload();
+        ensurePricingState();
+        saveToConfig();
+    }
+
+    private void ensurePricingState() {
+        ShopPricingConfig config = ShopPricingConfig.get();
+        for (ShopItem item : items) {
+            item.ensurePricingState(config);
+        }
+    }
+
+    private static int calculateDemandTargetPrice(ShopItem item, ShopPricingConfig config) {
+        int basePrice = item.getBasePrice();
+        double demandPressure = Math.log1p(item.getRecentDemand()) * config.demandSensitivity;
+        double currentPremium = (item.getCurrentPrice() - (double) basePrice) / basePrice;
+        double returnPressure = -currentPremium * config.idleReturnRate;
+        double multiplier = 1.0D + demandPressure + returnPressure;
+        return clampPrice((int) Math.round(basePrice * multiplier), basePrice, config);
+    }
+
+    private static int calculateStockTargetPrice(ShopItem item, ShopPricingConfig config) {
+        int basePrice = item.getBasePrice();
+        double stockRatio = item.getMaxVirtualStock() <= 0 ? 1.0D : item.getVirtualStock() / (double) item.getMaxVirtualStock();
+        double scarcity = 1.0D - Math.max(0.0D, Math.min(1.0D, stockRatio));
+        double multiplier = 1.0D + Math.pow(scarcity, 1.35D) * config.stockSensitivity;
+        return clampPrice((int) Math.round(basePrice * multiplier), basePrice, config);
+    }
+
+    private static int moveToward(int currentPrice, int targetPrice, double maxCycleChangeRate) {
+        int maxStep = Math.max(1, (int) Math.ceil(currentPrice * Math.max(0.0D, maxCycleChangeRate)));
+        int delta = targetPrice - currentPrice;
+        if (Math.abs(delta) <= maxStep) {
+            return targetPrice;
+        }
+        return currentPrice + (delta > 0 ? maxStep : -maxStep);
+    }
+
+    private static int clampPrice(int price, int basePrice, ShopPricingConfig config) {
+        int min = Math.max(1, (int) Math.floor(basePrice * config.minPriceMultiplier));
+        int max = Math.max(min, (int) Math.ceil(basePrice * config.maxPriceMultiplier));
+        return Math.max(min, Math.min(max, price));
+    }
+
+    private static double roundRate(double rate) {
+        return Math.round(rate * 100.0D) / 100.0D;
     }
 }
