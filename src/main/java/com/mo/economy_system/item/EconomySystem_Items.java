@@ -64,6 +64,13 @@ public class EconomySystem_Items {
             false
     );
 
+    public static final DeferredHolder<Item, ? extends Item> PLAYER_351987654321_DOLL_HAT = registerPlayerDollHat(
+            "player_351987654321_doll_hat",
+            "e453107e-a998-47b9-a55f-d3aeded19a96",
+            "351987654321",
+            false
+    );
+
     private static DeferredHolder<Item, ? extends Item> registerPlayerDollHat(String id, String playerUuid, String playerName, boolean slimModel) {
         return ITEMS.register(id,
                 () -> new PlayerDollHatItem(

@@ -24,6 +24,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add("item.economy_system.player_doll_hat", "玩家玩偶帽子");
         add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
         add("item.economy_system.hanhanyu_doll_hat", "__HanHanYu__");
+        add("item.economy_system.player_351987654321_doll_hat", "351987654321");
 
         // Enchantment | 附魔
         add("enchantment.economy_system.carefully", "细心");
