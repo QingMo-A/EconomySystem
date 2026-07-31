@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.check_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
@@ -20,7 +21,7 @@ import java.util.concurrent.Executors;
  * - totalChunks: 总块数
  * - chunkData: 当前块的 Base64 文本或其他字符串数据
  */
-public class Packet_Chunk implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_Chunk implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Chunk> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_chunk"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Chunk> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Chunk.encode(packet, buf), Packet_Chunk::decode);

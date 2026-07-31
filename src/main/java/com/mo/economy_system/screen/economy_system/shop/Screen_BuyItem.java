@@ -2,7 +2,8 @@ package com.mo.economy_system.screen.economy_system.shop;
 
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_ShopBuyItem;
+import com.mo.economy_system.common.network.ShopBuyItemMessage;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -183,7 +184,9 @@ public class Screen_BuyItem extends Screen {
         guiGraphics.drawString(this.font, priceText, panelX + (PANEL_WIDTH - priceWidth) / 2, priceY, 0xFFFFFFFF);
 
         int countValue = parseCountValue();
-        int totalPrice = countValue > 0 ? shopItem.getCurrentPrice() * countValue : 0;
+        long totalPrice = countValue > 0
+                ? (long) shopItem.getCurrentPrice() * countValue
+                : 0L;
         Component totalText = Component.translatable(Util_MessageKeys.SHOP_BUY_TOTAL_PRICE_TEXT_KEY, totalPrice)
                 .withStyle(ChatFormatting.GOLD);
         int totalWidth = this.font.width(totalText);
@@ -288,7 +291,7 @@ public class Screen_BuyItem extends Screen {
         }
 
         EconomySystem_NetworkManager.sendToServer(
-                new Packet_ShopBuyItem(shopItem.getShopItemId(), count)
+                new ShopBuyItemMessage(shopItem.getShopItemId(), count)
         );
 
         if (this.minecraft != null) {
@@ -317,7 +320,8 @@ public class Screen_BuyItem extends Screen {
 
         if (maxStackSize > 1) {
             for (ItemStack stack : player.getInventory().items) {
-                if (ItemStack.isSameItemSameComponents(stack, itemStack) && stack.getCount() < stack.getMaxStackSize()) {
+                if (EconomyServices.platform().itemStacks().sameItemAndData(stack, itemStack)
+                        && stack.getCount() < stack.getMaxStackSize()) {
                     int availableSpace = stack.getMaxStackSize() - stack.getCount();
                     int transfer = Math.min(availableSpace, remaining);
                     remaining -= transfer;

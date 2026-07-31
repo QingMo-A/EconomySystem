@@ -45,18 +45,21 @@ EconomySystem 是梦鱼服 / DreamingFish 服务器的 Minecraft 经济基础模
 ### 1.3 常用 Gradle 命令
 
 ```bash
-./gradlew build
-./gradlew runClient
-./gradlew runServer
-./gradlew runData
+./gradlew buildAllTargets
+./gradlew runNeoForge1211Client
+./gradlew runNeoForge1211Server
+./gradlew runNeoForge1211Data
+./gradlew buildForge1201
 ```
 
 Windows 下使用：
 
 ```bat
-gradlew.bat build
-gradlew.bat runClient
-gradlew.bat runServer
+gradlew.bat buildAllTargets
+gradlew.bat runNeoForge1211Client
+gradlew.bat runNeoForge1211Server
+gradlew.bat runNeoForge1211Data
+gradlew.bat buildForge1201
 ```
 
 ---

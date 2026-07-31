@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.check_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
@@ -19,7 +20,7 @@ import java.util.concurrent.Executors;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class Packet_Check implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_Check implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_Check> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "check_system/packet_check"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_Check> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_Check.encode(packet, buf), Packet_Check::decode);

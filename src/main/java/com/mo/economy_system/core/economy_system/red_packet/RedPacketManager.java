@@ -1,7 +1,9 @@
 package com.mo.economy_system.core.economy_system.red_packet;
 
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -98,9 +100,8 @@ public class RedPacketManager {
      * 根据 UUID 获取玩家对象
      */
     private static ServerPlayer getPlayerByUUID(UUID uuid) {
-        return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList()
-                .getPlayer(uuid);
+        MinecraftServer server = EconomyServices.platform().currentServer();
+        return server == null ? null : server.getPlayerList().getPlayer(uuid);
     }
 }
 

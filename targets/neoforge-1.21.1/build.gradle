@@ -1,0 +1,185 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev'
+    id 'idea'
+}
+
+base {
+    archivesName = "${mod_id}-neoforge-1.21.1"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content {
+            includeGroupByRegex('software\\.bernie.*')
+            includeGroup('com.eliotlash.mclib')
+        }
+    }
+    maven {
+        name = 'JEI'
+        url = 'https://maven.blamejared.com/'
+    }
+}
+
+sourceSets {
+    main {
+        // During the incremental migration the current NeoForge 1.21.1 tree
+        // remains in place. Files move to common/ or this target only after a
+        // bridge boundary has been verified on both versions.
+        java.setSrcDirs([
+                rootProject.file('src/main/java'),
+                rootProject.file('common/src/main/java'),
+                file('src/main/java')
+        ])
+        resources.setSrcDirs([
+                rootProject.file('src/main/resources'),
+                rootProject.file('src/generated/resources'),
+                rootProject.file('common/src/main/resources'),
+                file('src/main/resources'),
+                file('src/generated/resources')
+        ])
+        resources.exclude('**/*.bbmodel')
+        resources.exclude('**/.cache/**')
+        // This untracked directory is a design/reference library, not a valid
+        // Minecraft resource namespace (many paths contain spaces/uppercase).
+        resources.exclude('assets/icons_nieobie/**')
+    }
+    test {
+        java.setSrcDirs([
+                rootProject.file('common/src/test/java'),
+                file('src/test/java')
+        ])
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory = rootProject.file('run')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        clientDev2 {
+            client()
+            gameDirectory = rootProject.file('dev2')
+            programArguments.addAll '--username', 'Dev2'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            gameDirectory = rootProject.file('run')
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = rootProject.file('run')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            data()
+            gameDirectory = rootProject.file('run-data')
+            programArguments.addAll(
+                    '--mod', project.mod_id,
+                    '--all',
+                    '--output', rootProject.file('src/generated/resources').absolutePath,
+                    '--existing', rootProject.file('src/main/resources').absolutePath
+            )
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    implementation 'org.xerial:sqlite-jdbc:3.46.1.0'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+
+    implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_description        : 'A Minecraft economy and RPG systems mod.'
+    ]
+    inputs.properties(replaceProperties)
+    expand(replaceProperties)
+    from(rootProject.file('src/main/templates'))
+    into(layout.buildDirectory.dir('generated/sources/modMetadata'))
+}
+
+sourceSets.main.resources.srcDir(generateModMetadata)
+neoForge.ideSyncTask(generateModMetadata)
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from(components.java)
+        }
+    }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('repo')
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

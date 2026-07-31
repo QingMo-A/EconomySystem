@@ -1,7 +1,7 @@
 package com.mo.economy_system.armor.armors;
 
+import com.mo.economy_system.utils.ItemStackDataHelper;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -12,7 +12,6 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
@@ -42,11 +41,10 @@ public class SupporterHat extends ArmorItem {
     }
 
     public static Optional<UUID> getSupporterUuid(ItemStack stack) {
-        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-        if (customData.isEmpty()) {
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag == null || tag.isEmpty()) {
             return Optional.empty();
         }
-        CompoundTag tag = customData.copyTag();
         if (!tag.contains(SUPPORTER_UUID_KEY)) {
             return Optional.empty();
         }
@@ -58,19 +56,21 @@ public class SupporterHat extends ArmorItem {
     }
 
     public static void setSupporter(ItemStack stack, UUID supporterUuid, String supporterName) {
-        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-            tag.putString(SUPPORTER_UUID_KEY, supporterUuid.toString());
-            if (supporterName != null && !supporterName.isBlank()) {
-                tag.putString(SUPPORTER_NAME_KEY, supporterName);
-            }
-        });
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag == null) {
+            tag = new CompoundTag();
+        }
+        tag.putString(SUPPORTER_UUID_KEY, supporterUuid.toString());
+        if (supporterName != null && !supporterName.isBlank()) {
+            tag.putString(SUPPORTER_NAME_KEY, supporterName);
+        }
+        ItemStackDataHelper.setTag(stack, tag);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-        CompoundTag tag = customData.copyTag();
-        if (tag.contains(SUPPORTER_UUID_KEY)) {
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag != null && tag.contains(SUPPORTER_UUID_KEY)) {
             String name = tag.getString(SUPPORTER_NAME_KEY);
             tooltipComponents.add(Component.literal("赞助者: " + (name.isBlank() ? tag.getString(SUPPORTER_UUID_KEY) : name)).withStyle(ChatFormatting.GOLD));
         } else {

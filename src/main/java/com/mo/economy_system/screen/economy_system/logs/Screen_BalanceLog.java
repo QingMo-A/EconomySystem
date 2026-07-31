@@ -1,8 +1,8 @@
 package com.mo.economy_system.screen.economy_system.logs;
 
-import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.common.network.BalanceLogRequestMessage;
+import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_BalanceLogRequest;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -29,7 +29,7 @@ public class Screen_BalanceLog extends Screen {
     private static final String[] TABS = {"全部", "指令", "红包", "领地", "市场", "转账", "税费", "系统"};
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
-    private final List<EconomySavedData.BalanceLogEntry> logs = new ArrayList<>();
+    private final List<BalanceLogEntry> logs = new ArrayList<>();
     private int selectedTab = 0;
     private int scrollOffset = 0;
     private int pageOffset = 0;
@@ -46,11 +46,11 @@ public class Screen_BalanceLog extends Screen {
         requestPage(0);
     }
 
-    public void updateLogs(List<EconomySavedData.BalanceLogEntry> entries) {
+    public void updateLogs(List<BalanceLogEntry> entries) {
         updateLogs(entries, TABS[selectedTab], pageOffset, pageLimit, entries.size());
     }
 
-    public void updateLogs(List<EconomySavedData.BalanceLogEntry> entries, String category, int offset, int limit, int total) {
+    public void updateLogs(List<BalanceLogEntry> entries, String category, int offset, int limit, int total) {
         logs.clear();
         logs.addAll(entries);
         pageOffset = Math.max(0, offset);
@@ -66,7 +66,9 @@ public class Screen_BalanceLog extends Screen {
     }
 
     private void requestPage(int offset) {
-        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceLogRequest(TABS[selectedTab], offset, PAGE_SIZE));
+        EconomySystem_NetworkManager.sendToServer(
+                new BalanceLogRequestMessage(TABS[selectedTab], offset, PAGE_SIZE)
+        );
     }
 
     private void calculateVirtualSize() {
@@ -125,7 +127,7 @@ public class Screen_BalanceLog extends Screen {
     }
 
     private void renderRows(GuiGraphics guiGraphics, int x, int y, int width, int height) {
-        List<EconomySavedData.BalanceLogEntry> filtered = logs;
+        List<BalanceLogEntry> filtered = logs;
         int visibleRows = Math.max(1, height / ROW_HEIGHT);
         scrollOffset = Mth.clamp(scrollOffset, 0, Math.max(0, filtered.size() - visibleRows));
 
@@ -136,7 +138,7 @@ public class Screen_BalanceLog extends Screen {
         }
 
         for (int i = 0; i < visibleRows && i + scrollOffset < filtered.size(); i++) {
-            EconomySavedData.BalanceLogEntry entry = filtered.get(i + scrollOffset);
+            BalanceLogEntry entry = filtered.get(i + scrollOffset);
             int rowY = y + i * ROW_HEIGHT;
             int bg = i % 2 == 0 ? 0x301A2633 : 0x201A2633;
             guiGraphics.fill(x, rowY, x + width, rowY + ROW_HEIGHT - 2, bg);

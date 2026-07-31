@@ -10,6 +10,8 @@ import com.mo.economy_system.core.economy_system.shop.ShopConfigWatcher;
 import com.mo.economy_system.core.economy_system.shop.ShopManager;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.sound.EconomySystem_Sounds;
+import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -21,8 +23,13 @@ import org.slf4j.Logger;
 @Mod(EconomySystem.MODID)
 public class EconomySystem {
     public static final boolean isDev = true;
-    public static final String MODID = "economy_system";
+    public static final String MODID = EconomyConstants.MOD_ID;
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    static {
+        EconomyServices.init(new NeoForge1211Platform());
+    }
+
     public static final ShopManager SHOP_MANAGER = new ShopManager();
     public static final RewardManager REWARD_MANAGER = new RewardManager();
 

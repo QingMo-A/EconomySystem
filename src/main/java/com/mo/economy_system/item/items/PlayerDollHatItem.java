@@ -1,9 +1,9 @@
 package com.mo.economy_system.item.items;
 
 import com.mo.economy_system.client.render.PlayerDollHatItemRenderer;
+import com.mo.economy_system.utils.ItemStackDataHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -12,7 +12,6 @@ import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
 import java.util.List;
@@ -53,9 +52,8 @@ public class PlayerDollHatItem extends ArmorItem {
     }
 
     public boolean isSlimModel(ItemStack stack) {
-        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-        if (!customData.isEmpty()) {
-            CompoundTag tag = customData.copyTag();
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag != null && !tag.isEmpty()) {
             if (tag.contains(SKIN_SLIM_KEY)) {
                 return tag.getBoolean(SKIN_SLIM_KEY);
             }
@@ -64,21 +62,23 @@ public class PlayerDollHatItem extends ArmorItem {
     }
 
     public static void setSkin(ItemStack stack, UUID skinPlayerUuid, String skinPlayerName, boolean slimModel) {
-        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-            tag.putString(SKIN_UUID_KEY, skinPlayerUuid.toString());
-            if (skinPlayerName != null && !skinPlayerName.isBlank()) {
-                tag.putString(SKIN_NAME_KEY, skinPlayerName);
-            }
-            tag.putBoolean(SKIN_SLIM_KEY, slimModel);
-        });
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag == null) {
+            tag = new CompoundTag();
+        }
+        tag.putString(SKIN_UUID_KEY, skinPlayerUuid.toString());
+        if (skinPlayerName != null && !skinPlayerName.isBlank()) {
+            tag.putString(SKIN_NAME_KEY, skinPlayerName);
+        }
+        tag.putBoolean(SKIN_SLIM_KEY, slimModel);
+        ItemStackDataHelper.setTag(stack, tag);
     }
 
     private static Optional<String> getStoredString(ItemStack stack, String key) {
-        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
-        if (customData.isEmpty()) {
+        CompoundTag tag = ItemStackDataHelper.getTag(stack);
+        if (tag == null || tag.isEmpty()) {
             return Optional.empty();
         }
-        CompoundTag tag = customData.copyTag();
         return tag.contains(key) ? Optional.of(tag.getString(key)) : Optional.empty();
     }
 

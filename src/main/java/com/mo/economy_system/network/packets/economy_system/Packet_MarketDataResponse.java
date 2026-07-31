@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.economy_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
@@ -12,7 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Packet_MarketDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_MarketDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_MarketDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_market_data_response"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_MarketDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_MarketDataResponse.encode(packet, buf), Packet_MarketDataResponse::decode);

@@ -1,8 +1,8 @@
 package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.core.territory_system.Territory;
+import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.Packet_ServerPlayerListRequest;
 import com.mo.economy_system.network.packets.territory_system.Packet_InvitePlayer;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.HighLevelTextField;
@@ -58,7 +58,7 @@ public class Screen_InvitePlayer extends Screen {
     public Screen_InvitePlayer(Territory territory) {
         super(Component.translatable(Util_MessageKeys.INVITE_TITLE_KEY));
         this.territory = territory;
-        EconomySystem_NetworkManager.sendToServer(new Packet_ServerPlayerListRequest());
+        EconomySystem_NetworkManager.sendToServer(ServerPlayerListRequestMessage.INSTANCE);
         inviteStyle = createButtonStyle(CardRenderer.THEME_TERRITORY);
         backStyle = createButtonStyle(CardRenderer.THEME_ABOUT);
     }

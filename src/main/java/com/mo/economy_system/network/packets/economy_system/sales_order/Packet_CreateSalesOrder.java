@@ -1,11 +1,13 @@
 package com.mo.economy_system.network.packets.economy_system.sales_order;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,7 +20,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final Type<Packet_CreateSalesOrder> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID, "economy_system/sales_order/packet_create_sales_order"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_CreateSalesOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_CreateSalesOrder.encode(packet, buf), Packet_CreateSalesOrder::decode);
@@ -112,7 +114,8 @@ public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.c
     private static int countMatchingItems(Inventory inventory, ItemStack template) {
         int count = 0;
         for (ItemStack stack : inventory.items) {
-            if (!stack.isEmpty() && ItemStack.isSameItemSameComponents(stack, template)) {
+            if (!stack.isEmpty()
+                    && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
                 count += stack.getCount();
             }
         }
@@ -125,7 +128,8 @@ public class Packet_CreateSalesOrder implements net.minecraft.network.protocol.c
             if (remaining <= 0) {
                 return;
             }
-            if (!stack.isEmpty() && ItemStack.isSameItemSameComponents(stack, template)) {
+            if (!stack.isEmpty()
+                    && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
                 int removed = Math.min(remaining, stack.getCount());
                 stack.shrink(removed);
                 remaining -= removed;

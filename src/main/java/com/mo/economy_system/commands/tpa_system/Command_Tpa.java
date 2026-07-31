@@ -1,6 +1,7 @@
 package com.mo.economy_system.commands.tpa_system;
 
 import com.mo.economy_system.item.EconomySystem_Items;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
@@ -9,6 +10,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -238,9 +240,8 @@ public class Command_Tpa {
     }
 
     private static ServerPlayer getPlayerByUUID(UUID uuid) {
-        return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList()
-                .getPlayer(uuid);
+        MinecraftServer server = EconomyServices.platform().currentServer();
+        return server == null ? null : server.getPlayerList().getPlayer(uuid);
     }
 
 

@@ -2,11 +2,12 @@ package com.mo.economy_system.core.update_checker_system;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.platform.EconomyServices;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.fml.ModList;
 
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -30,9 +31,7 @@ public class UpdateChecker {
         new Thread(() -> {
             try {
                 // 获取当前版本号
-                String currentVersion = "v" + ModList.get().getModContainerById("economy_system")
-                        .map(mod -> mod.getModInfo().getVersion().toString())
-                        .orElse("unknown");
+                String currentVersion = "v" + EconomyServices.platform().modVersion(EconomySystem.MODID);
 
                 // 创建连接
                 HttpURLConnection connection = (HttpURLConnection) new URL(GITHUB_API_URL).openConnection();

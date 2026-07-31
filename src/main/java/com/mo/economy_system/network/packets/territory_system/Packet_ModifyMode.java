@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.item.items.Item_ClaimWand;
@@ -10,7 +11,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_ModifyMode implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_ModifyMode implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ModifyMode> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_modify_mode"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ModifyMode> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ModifyMode.encode(packet, buf), Packet_ModifyMode::decode);

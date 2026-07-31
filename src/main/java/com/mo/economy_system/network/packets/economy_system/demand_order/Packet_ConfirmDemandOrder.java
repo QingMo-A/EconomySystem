@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.economy_system.demand_order;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
@@ -15,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_ConfirmDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_ConfirmDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_ConfirmDemandOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/demand_order/packet_confirm_demand_order"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_ConfirmDemandOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_ConfirmDemandOrder.encode(packet, buf), Packet_ConfirmDemandOrder::decode);

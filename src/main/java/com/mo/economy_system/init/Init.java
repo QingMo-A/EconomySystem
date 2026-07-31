@@ -1,12 +1,15 @@
 package com.mo.economy_system.init;
 
 import com.mo.economy_system.EconomySystem;
-import net.neoforged.fml.loading.FMLPaths;
+import com.mo.economy_system.platform.EconomyServices;
 
 import java.io.File;
 
 public class Init {
-    public static final String CONFIG_FOLDER_PATH = FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID;
+    public static final String CONFIG_FOLDER_PATH = EconomyServices.platform()
+            .configDirectory()
+            .resolve(EconomySystem.MODID)
+            .toString();
 
     public Init() {
         File dir = new File(CONFIG_FOLDER_PATH);

@@ -2,6 +2,8 @@ package com.mo.economy_system.commands.economy_system;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.armor.armors.SupporterHat;
+import com.mo.economy_system.common.economy.TransferService;
+import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.core.economy_system.shop.ShopPricingConfig;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
@@ -17,7 +19,6 @@ import net.minecraft.commands.arguments.UuidArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
@@ -193,26 +194,13 @@ public class Command_Economy {
                                 .then(Commands.argument("amount", IntegerArgumentType.integer(1))
                                         .executes(context -> {
                                             ServerPlayer receiver = EntityArgument.getPlayer(context, "target");
-                                            UUID receiverUUID = receiver.getUUID();
                                             ServerPlayer sender = context.getSource().getPlayerOrException();
                                             int amount = IntegerArgumentType.getInteger(context, "amount");
 
-                                            if (sender != null) {
-                                                ServerLevel serverLevel = sender.serverLevel(); // 使用 sender.serverLevel() 获取 ServerLevel
-                                                if (serverLevel != null) {
-                                                    EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                                                    Player target = serverLevel.getPlayerByUUID(receiverUUID); // 根据 UUID 获取目标玩家
-
-                                                    if (target != null && !target.getUUID().equals(sender.getUUID()) && data.minBalance(sender.getUUID(), amount, "转账", "赠与 " + target.getName().getString())) {
-                                                        data.addBalance(target.getUUID(), amount, "转账", "来自 " + sender.getName().getString() + " 的赠与");
-                                                        sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_SUCCESSFULLY_MESSAGE_KEY, amount, target.getName().getString()));
-                                                        target.sendSystemMessage(Component.translatable(Util_MessageKeys.RECEIVE_SUCCESSFULLY_MESSAGE_KEY, sender.getName().getString(), amount));
-                                                    } else {
-                                                        sender.sendSystemMessage(Component.translatable(Util_MessageKeys.TRANSFER_FAILED_MESSAGE_KEY));
-                                                    }
-                                                }
-                                            }
-                                            // EconomyNetwork.INSTANCE.sendToServer(new TransferPacket(receiver.getUUID(), amount));
+                                            TransferService.execute(
+                                                    sender,
+                                                    new TransferMessage(receiver.getUUID(), amount)
+                                            );
                                             return 1;
                                         }))))
         );

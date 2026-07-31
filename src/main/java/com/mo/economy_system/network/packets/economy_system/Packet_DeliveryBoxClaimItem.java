@@ -1,8 +1,10 @@
 package com.mo.economy_system.network.packets.economy_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.platform.EconomyServices;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,7 +14,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_DeliveryBoxClaimItem implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_DeliveryBoxClaimItem implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_DeliveryBoxClaimItem> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_delivery_box_claim_item"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_DeliveryBoxClaimItem> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_DeliveryBoxClaimItem.encode(packet, buf), Packet_DeliveryBoxClaimItem::decode);
@@ -86,7 +88,7 @@ public class Packet_DeliveryBoxClaimItem implements net.minecraft.network.protoc
                 if (!isOffhandSlot) {
                     remaining -= Math.min(maxStackSize, remaining);
                 }
-            } else if (ItemStack.isSameItemSameComponents(slotStack, stack)) {
+            } else if (EconomyServices.platform().itemStacks().sameItemAndData(slotStack, stack)) {
                 int slotLimit = Math.min(inventory.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = slotLimit - slotStack.getCount();
                 if (space > 0) {

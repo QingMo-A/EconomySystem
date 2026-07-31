@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.territory_system.InviteManager;
 import com.mo.economy_system.core.territory_system.PlayerInfo;
 import com.mo.economy_system.core.territory_system.Territory;
@@ -14,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_InvitePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_InvitePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_InvitePlayer> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_invite_player"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_InvitePlayer> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_InvitePlayer.encode(packet, buf), Packet_InvitePlayer::decode);

@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.settings.GameSettingsManager;
-import net.neoforged.fml.loading.FMLPaths;
+import com.mo.economy_system.platform.EconomyServices;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ShopManager {
-    public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID, "economy_shop.json");
+    public static final File CONFIG_FILE = EconomyServices.platform()
+            .configDirectory()
+            .resolve(EconomySystem.MODID)
+            .resolve("economy_shop.json")
+            .toFile();
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()  // 启用格式化
             .disableHtmlEscaping() // 可选：禁用 HTML 转义（如保留 &、< 等符号）
@@ -29,7 +33,7 @@ public class ShopManager {
         loadFromConfig();
     }
 
-    public List<ShopItem> getItems() {
+    public synchronized List<ShopItem> getItems() {
         return new ArrayList<>(items); // 返回副本以保护内部列表
     }
 

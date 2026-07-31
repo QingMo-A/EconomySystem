@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.economy_system.shop;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.utils.ItemStackDataHelper;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.core.Holder;
@@ -116,6 +117,29 @@ public class ShopItem {
     public int getVirtualStock() { return virtualStock; }
 
     public int getMaxVirtualStock() { return maxVirtualStock; }
+
+    public ShopItemSnapshot toBridgeSnapshot() {
+        return new ShopItemSnapshot(
+                getShopItemId(), itemId, basePrice, currentPrice, lastPrice, description,
+                fluctuationFactor, nbt, itemData, recentDemand, virtualStock, maxVirtualStock
+        );
+    }
+
+    public static ShopItem fromBridgeSnapshot(ShopItemSnapshot snapshot) {
+        String legacyNbt = snapshot.nbt().isBlank() ? null : snapshot.nbt();
+        String fullItemData = snapshot.itemData().isBlank() ? null : snapshot.itemData();
+        ShopItem item = new ShopItem(
+                snapshot.shopItemId(), snapshot.itemId(), snapshot.basePrice(),
+                snapshot.description(), legacyNbt, fullItemData
+        );
+        item.currentPrice = snapshot.currentPrice();
+        item.lastPrice = snapshot.lastPrice();
+        item.fluctuationFactor = snapshot.fluctuationFactor();
+        item.recentDemand = snapshot.recentDemand();
+        item.virtualStock = snapshot.virtualStock();
+        item.maxVirtualStock = snapshot.maxVirtualStock();
+        return item;
+    }
 
     public void addRecentDemand(int quantity) {
         if (quantity > 0) {

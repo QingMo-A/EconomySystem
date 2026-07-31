@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.FriendlyByteBuf;
@@ -9,7 +10,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_RemovePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_RemovePlayer implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_RemovePlayer> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_remove_player"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_RemovePlayer> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_RemovePlayer.encode(packet, buf), Packet_RemovePlayer::decode);

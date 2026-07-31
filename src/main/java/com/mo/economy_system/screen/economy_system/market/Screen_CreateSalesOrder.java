@@ -2,6 +2,7 @@ package com.mo.economy_system.screen.economy_system.market;
 
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -330,7 +331,8 @@ public class Screen_CreateSalesOrder extends Screen {
     private int countMatchingItems(ItemStack template) {
         int count = 0;
         for (ItemStack stack : player.getInventory().items) {
-            if (!stack.isEmpty() && ItemStack.isSameItemSameComponents(stack, template)) {
+            if (!stack.isEmpty()
+                    && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
                 count += stack.getCount();
             }
         }

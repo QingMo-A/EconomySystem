@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.economy_system.sales_order;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
@@ -16,7 +17,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_PurchaseSalesOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/sales_order/packet_purchase_sales_order"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_PurchaseSalesOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_PurchaseSalesOrder.encode(packet, buf), Packet_PurchaseSalesOrder::decode);

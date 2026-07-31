@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.economy_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
@@ -9,7 +10,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.List;
 
-public class Packet_DeliveryBoxDataRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_DeliveryBoxDataRequest implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_DeliveryBoxDataRequest> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/packet_delivery_box_data_request"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_DeliveryBoxDataRequest> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_DeliveryBoxDataRequest.encode(packet, buf), Packet_DeliveryBoxDataRequest::decode);

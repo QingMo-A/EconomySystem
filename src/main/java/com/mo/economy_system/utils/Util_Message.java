@@ -1,12 +1,12 @@
 package com.mo.economy_system.utils;
 
+import com.mo.economy_system.platform.EconomyServices;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 public class Util_Message {
     public static void sendGlobalMessage(String message) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = EconomyServices.platform().currentServer();
         if (server != null) {
             Component chatMessage = Component.literal(message);
             server.getPlayerList().broadcastSystemMessage(chatMessage, false);
@@ -14,7 +14,7 @@ public class Util_Message {
     }
 
     public static void sendDebugMessage(String message) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = EconomyServices.platform().currentServer();
         if (server != null) {
             Component chatMessage = Component.literal("[Debug] " + message);
             server.getPlayerList().broadcastSystemMessage(chatMessage, false);
@@ -23,7 +23,7 @@ public class Util_Message {
 
     // 发送服务器日志消息
     public static void log(String message) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = EconomyServices.platform().currentServer();
         if (server != null) {
             server.getPlayerList().broadcastSystemMessage(Component.literal("[Server]: " + message), false);
         }

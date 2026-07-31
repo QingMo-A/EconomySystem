@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 import com.mo.economy_system.core.economy_system.EconomySavedData;
@@ -15,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_UpgradeTerritoryBuff implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_UpgradeTerritoryBuff> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_upgrade_territory_buff"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_UpgradeTerritoryBuff> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_UpgradeTerritoryBuff.encode(packet, buf), Packet_UpgradeTerritoryBuff::decode);

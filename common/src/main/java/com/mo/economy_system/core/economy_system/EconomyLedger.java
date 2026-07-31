@@ -1,0 +1,279 @@
+package com.mo.economy_system.core.economy_system;
+
+import java.util.AbstractMap;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+/**
+ * Loader-neutral economy state and business rules.
+ *
+ * <p>Targets supply a dirty callback (for example {@code SavedData#setDirty})
+ * and translate {@link Snapshot snapshots} to their native persistence
+ * format. Restoring a snapshot intentionally does not invoke the callback.</p>
+ */
+public final class EconomyLedger {
+    public static final int MAX_BALANCE = Integer.MAX_VALUE;
+    public static final int MAX_LOGS_PER_PLAYER = 1000;
+
+    private static final String DEFAULT_CATEGORY = "系统";
+    private static final String ALL_CATEGORIES = "全部";
+
+    private final Runnable dirtyCallback;
+    private final Map<UUID, Integer> accounts = new HashMap<>();
+    private final Map<UUID, List<String>> offlineMessages = new HashMap<>();
+    private final Map<UUID, Deque<BalanceLogEntry>> balanceLogs = new HashMap<>();
+
+    public EconomyLedger(Runnable dirtyCallback) {
+        this.dirtyCallback = Objects.requireNonNull(dirtyCallback, "dirtyCallback");
+    }
+
+    public int getBalance(UUID playerUUID) {
+        return accounts.getOrDefault(playerUUID, 0);
+    }
+
+    public void setBalance(UUID playerUUID, int amount) {
+        setBalance(playerUUID, amount, DEFAULT_CATEGORY, "余额设置");
+    }
+
+    public void setBalance(UUID playerUUID, int amount, String category, String reason) {
+        int before = getBalance(playerUUID);
+        int after = Math.max(0, amount);
+        accounts.put(playerUUID, after);
+        recordBalanceLog(playerUUID, category, reason, after - before, before, after);
+        dirtyCallback.run();
+    }
+
+    public boolean addBalance(UUID playerUUID, int amount) {
+        return addBalance(playerUUID, amount, DEFAULT_CATEGORY, "余额增加");
+    }
+
+    public boolean addBalance(UUID playerUUID, int amount, String category, String reason) {
+        if (amount <= 0) {
+            return false;
+        }
+        int balance = getBalance(playerUUID);
+        if (balance > MAX_BALANCE - amount) {
+            setBalance(playerUUID, MAX_BALANCE, category, reason);
+            return true;
+        }
+        setBalance(playerUUID, balance + amount, category, reason);
+        return true;
+    }
+
+    public boolean minBalance(UUID playerUUID, int amount) {
+        return minBalance(playerUUID, amount, DEFAULT_CATEGORY, "余额减少");
+    }
+
+    public boolean minBalance(UUID playerUUID, int amount, String category, String reason) {
+        if (amount <= 0) {
+            return false;
+        }
+        int balance = getBalance(playerUUID);
+        if (balance < amount) {
+            return false;
+        }
+        setBalance(playerUUID, balance - amount, category, reason);
+        return true;
+    }
+
+    public boolean hasEnoughBalance(UUID playerUUID, int amount) {
+        return amount > 0 && getBalance(playerUUID) >= amount;
+    }
+
+    /**
+     * Moves the complete amount between two accounts or changes neither one.
+     * Recipient overflow is rejected so currency can never disappear through
+     * the general {@link #addBalance(UUID, int)} saturation behavior.
+     */
+    public BalanceTransferResult transferBalance(
+            UUID senderUUID,
+            UUID recipientUUID,
+            int amount,
+            String category,
+            String senderReason,
+            String recipientReason
+    ) {
+        Objects.requireNonNull(senderUUID, "senderUUID");
+        Objects.requireNonNull(recipientUUID, "recipientUUID");
+        if (amount <= 0) {
+            return BalanceTransferResult.INVALID_AMOUNT;
+        }
+        if (senderUUID.equals(recipientUUID)) {
+            return BalanceTransferResult.SAME_ACCOUNT;
+        }
+
+        int senderBefore = getBalance(senderUUID);
+        if (senderBefore < amount) {
+            return BalanceTransferResult.INSUFFICIENT_FUNDS;
+        }
+
+        int recipientBefore = getBalance(recipientUUID);
+        if ((long) recipientBefore + amount > MAX_BALANCE) {
+            return BalanceTransferResult.RECIPIENT_BALANCE_LIMIT;
+        }
+
+        int senderAfter = senderBefore - amount;
+        int recipientAfter = recipientBefore + amount;
+        accounts.put(senderUUID, senderAfter);
+        accounts.put(recipientUUID, recipientAfter);
+        recordBalanceLog(
+                senderUUID,
+                category,
+                senderReason,
+                -amount,
+                senderBefore,
+                senderAfter
+        );
+        recordBalanceLog(
+                recipientUUID,
+                category,
+                recipientReason,
+                amount,
+                recipientBefore,
+                recipientAfter
+        );
+        dirtyCallback.run();
+        return BalanceTransferResult.SUCCESS;
+    }
+
+    public void storeOfflineMessage(UUID playerUUID, String message) {
+        offlineMessages.computeIfAbsent(playerUUID, key -> new ArrayList<>()).add(message);
+        dirtyCallback.run();
+    }
+
+    public List<String> getOfflineMessages(UUID playerUUID) {
+        List<String> messages = offlineMessages.remove(playerUUID);
+        dirtyCallback.run();
+        return messages == null ? new ArrayList<>() : messages;
+    }
+
+    /** Returns newest-first balance history for the requested player. */
+    public List<BalanceLogEntry> getBalanceLogs(UUID playerUUID) {
+        Deque<BalanceLogEntry> logs = balanceLogs.get(playerUUID);
+        return logs == null ? new ArrayList<>() : new ArrayList<>(logs);
+    }
+
+    public BalanceLogPage getBalanceLogs(UUID playerUUID, String category, int offset, int limit) {
+        String normalizedCategory = category == null ? ALL_CATEGORIES : category;
+        int safeOffset = Math.max(0, offset);
+        int safeLimit = Math.max(1, Math.min(100, limit));
+        List<BalanceLogEntry> filtered = getBalanceLogs(playerUUID).stream()
+                .filter(entry -> ALL_CATEGORIES.equals(normalizedCategory)
+                        || normalizedCategory.equals(entry.category()))
+                .toList();
+        int total = filtered.size();
+        int fromIndex = Math.min(safeOffset, total);
+        int toIndex = Math.min(fromIndex + safeLimit, total);
+        return new BalanceLogPage(
+                filtered.subList(fromIndex, toIndex),
+                normalizedCategory,
+                safeOffset,
+                safeLimit,
+                total
+        );
+    }
+
+    /** Returns balance-sorted immutable account entries. */
+    public List<Map.Entry<UUID, Integer>> getAllAccounts() {
+        return accounts.entrySet().stream()
+                .sorted((left, right) -> right.getValue().compareTo(left.getValue()))
+                .<Map.Entry<UUID, Integer>>map(entry ->
+                        new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    /** Returns immutable account entries without imposing an order. */
+    public List<Map.Entry<UUID, Integer>> getAllPlayers() {
+        return accounts.entrySet().stream()
+                .<Map.Entry<UUID, Integer>>map(entry ->
+                        new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    /** Creates a deeply immutable state copy suitable for a target codec. */
+    public Snapshot snapshot() {
+        Map<UUID, Integer> accountSnapshot = Collections.unmodifiableMap(new LinkedHashMap<>(accounts));
+
+        Map<UUID, List<String>> messageSnapshot = new LinkedHashMap<>();
+        offlineMessages.forEach((uuid, messages) -> messageSnapshot.put(uuid, List.copyOf(messages)));
+
+        Map<UUID, List<BalanceLogEntry>> logSnapshot = new LinkedHashMap<>();
+        balanceLogs.forEach((uuid, logs) -> logSnapshot.put(uuid, List.copyOf(logs)));
+
+        return new Snapshot(accountSnapshot, messageSnapshot, logSnapshot);
+    }
+
+    /** Replaces all state from an immutable target-decoded snapshot without marking it dirty. */
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        accounts.clear();
+        offlineMessages.clear();
+        balanceLogs.clear();
+
+        accounts.putAll(snapshot.accounts());
+        snapshot.offlineMessages().forEach((uuid, messages) ->
+                offlineMessages.put(uuid, new ArrayList<>(messages)));
+        snapshot.balanceLogs().forEach((uuid, logs) -> {
+            Deque<BalanceLogEntry> restoredLogs = new ArrayDeque<>();
+            int count = 0;
+            for (BalanceLogEntry entry : logs) {
+                if (count++ >= MAX_LOGS_PER_PLAYER) {
+                    break;
+                }
+                restoredLogs.addLast(entry);
+            }
+            balanceLogs.put(uuid, restoredLogs);
+        });
+    }
+
+    private void recordBalanceLog(
+            UUID playerUUID,
+            String category,
+            String reason,
+            int delta,
+            int before,
+            int after
+    ) {
+        if (delta == 0) {
+            return;
+        }
+        Deque<BalanceLogEntry> logs = balanceLogs.computeIfAbsent(playerUUID, key -> new ArrayDeque<>());
+        logs.addFirst(new BalanceLogEntry(System.currentTimeMillis(), category, reason, delta, before, after));
+        while (logs.size() > MAX_LOGS_PER_PLAYER) {
+            logs.removeLast();
+        }
+    }
+
+    /** Deeply immutable representation of all ledger state. */
+    public record Snapshot(
+            Map<UUID, Integer> accounts,
+            Map<UUID, List<String>> offlineMessages,
+            Map<UUID, List<BalanceLogEntry>> balanceLogs
+    ) {
+        public Snapshot {
+            accounts = immutableMap(accounts);
+            offlineMessages = immutableListMap(offlineMessages);
+            balanceLogs = immutableListMap(balanceLogs);
+        }
+
+        private static <V> Map<UUID, V> immutableMap(Map<UUID, V> source) {
+            Objects.requireNonNull(source, "source");
+            return Collections.unmodifiableMap(new LinkedHashMap<>(source));
+        }
+
+        private static <V> Map<UUID, List<V>> immutableListMap(Map<UUID, ? extends List<V>> source) {
+            Objects.requireNonNull(source, "source");
+            Map<UUID, List<V>> copy = new LinkedHashMap<>();
+            source.forEach((uuid, values) -> copy.put(uuid, List.copyOf(values)));
+            return Collections.unmodifiableMap(copy);
+        }
+    }
+}

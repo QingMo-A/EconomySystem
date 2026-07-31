@@ -1,11 +1,13 @@
 package com.mo.economy_system.network.packets.economy_system.demand_order;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
@@ -17,7 +19,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_DeliverDemandOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/demand_order/packet_deliver_demand_order"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_DeliverDemandOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_DeliverDemandOrder.encode(packet, buf), Packet_DeliverDemandOrder::decode);
@@ -122,7 +124,7 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
         int count = 0;
         NonNullList<ItemStack> inventory = player.getInventory().items; // 获取主物品栏
         for (ItemStack stack : inventory) {
-            if (ItemStack.isSameItemSameComponents(stack, targetStack)) { // 检查物品类型和 NBT 是否匹配
+            if (EconomyServices.platform().itemStacks().sameItemAndData(stack, targetStack)) { // 检查物品类型和 NBT 是否匹配
                 count += stack.getCount();
             }
         }
@@ -140,7 +142,7 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
         NonNullList<ItemStack> inventory = player.getInventory().items; // 获取主物品栏
         for (int i = 0; i < inventory.size(); i++) {
             ItemStack stack = inventory.get(i);
-            if (ItemStack.isSameItemSameComponents(stack, targetStack)) { // 检查物品类型和 NBT 是否匹配
+            if (EconomyServices.platform().itemStacks().sameItemAndData(stack, targetStack)) { // 检查物品类型和 NBT 是否匹配
                 int removeAmount = Math.min(stack.getCount(), count);
                 stack.shrink(removeAmount); // 减少物品数量
                 count -= removeAmount;

@@ -2,7 +2,7 @@ package com.mo.economy_system.screen.economy_system.shop;
 
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_ShopDataRequest;
+import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.screen.components.CardRenderer;
@@ -96,7 +96,7 @@ public class Screen_Shop extends Screen {
 
     public Screen_Shop() {
         super(Component.translatable(Util_MessageKeys.SHOP_TITLE_KEY));
-        EconomySystem_NetworkManager.sendToServer(new Packet_ShopDataRequest());
+        EconomySystem_NetworkManager.sendToServer(ShopDataRequestMessage.INSTANCE);
     }
 
     public void updateShopItems(List<ShopItem> items) {

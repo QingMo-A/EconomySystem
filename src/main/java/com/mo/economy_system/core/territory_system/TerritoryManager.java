@@ -1,11 +1,11 @@
 package com.mo.economy_system.core.territory_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.utils.Util_Message;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.File;
 import java.util.*;
@@ -15,7 +15,11 @@ public class TerritoryManager {
 
     private static TerritorySavedData savedData;
     private static boolean initialized = false;
-    public static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile() + File.separator + EconomySystem.MODID, "territory_buffs.json");
+    public static final File CONFIG_FILE = EconomyServices.platform()
+            .configDirectory()
+            .resolve(EconomySystem.MODID)
+            .resolve("territory_buffs.json")
+            .toFile();
 
     private static final Map<UUID, Territory> territoryByID = Collections.synchronizedMap(new HashMap<>());
     private static final Map<UUID, List<Territory>> territoriesByOwner = new ConcurrentHashMap<>();

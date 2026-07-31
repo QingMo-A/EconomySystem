@@ -1,0 +1,140 @@
+plugins {
+    id 'java-library'
+    id 'net.minecraftforge.gradle'
+    id 'idea'
+}
+
+base {
+    archivesName = "${mod_id}-forge-1.20.1"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content {
+            includeGroupByRegex('software\\.bernie.*')
+            includeGroup('com.eliotlash.mclib')
+        }
+    }
+    maven {
+        name = 'JEI'
+        url = 'https://maven.blamejared.com/'
+    }
+}
+
+minecraft {
+    mappings channel: project.forge_1201_mapping_channel, version: project.forge_1201_mapping_version
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory rootProject.file('run/forge-1.20.1')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                "${mod_id}" {
+                    source(sourceSets.main)
+                }
+            }
+        }
+
+        client {
+            property 'forge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', project.mod_id
+            args '--nogui'
+        }
+
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            workingDirectory rootProject.file('run-data/forge-1.20.1')
+            args(
+                    '--mod', project.mod_id,
+                    '--all',
+                    '--output', file('src/generated/resources').absolutePath,
+                    '--existing', file('src/main/resources').absolutePath
+            )
+        }
+    }
+}
+
+sourceSets {
+    main {
+        // The current root src tree is the NeoForge 1.21.1 behavior baseline
+        // and intentionally is not compiled directly by this legacy target.
+        java.setSrcDirs([
+                rootProject.file('common/src/main/java'),
+                file('src/main/java')
+        ])
+        resources.setSrcDirs([
+                rootProject.file('common/src/main/resources'),
+                file('src/main/resources'),
+                file('src/generated/resources')
+        ])
+        resources.exclude('**/*.bbmodel')
+        resources.exclude('**/.cache/**')
+    }
+    test {
+        java.setSrcDirs([
+                rootProject.file('common/src/test/java'),
+                file('src/test/java')
+        ])
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
+
+    implementation 'org.xerial:sqlite-jdbc:3.46.1.0'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+
+    compileOnly fg.deobf("software.bernie.geckolib:geckolib-forge-${forge_1201_minecraft_version}:${forge_1201_geckolib_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${forge_1201_minecraft_version}-common-api:${forge_1201_jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${forge_1201_minecraft_version}-forge-api:${forge_1201_jei_version}")
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version_range: forge_1201_minecraft_version_range,
+            forge_version_range    : forge_1201_version_range,
+            loader_version_range   : forge_1201_loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : 'A Minecraft economy and RPG systems mod.'
+    ]
+    inputs.properties(replaceProperties)
+    filesMatching('META-INF/mods.toml') {
+        expand(replaceProperties)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

@@ -1,8 +1,8 @@
 package com.mo.economy_system.screen;
 
 import com.mo.economy_system.client.util.UiAnimation;
+import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_BalanceRequest;
 import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -108,7 +108,7 @@ public class Screen_Home extends Screen {
 
     public Screen_Home() {
         super(Component.translatable(Util_MessageKeys.HOME_TITLE_KEY));
-        EconomySystem_NetworkManager.sendToServer(new Packet_BalanceRequest());
+        EconomySystem_NetworkManager.sendToServer(new BalanceRequestMessage());
         EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
         for (int i = 0; i < NAV_COLORS.length; i++) {
             navButtonStyles[i] = UiButtonStyle.accent(NAV_COLORS[i]);

@@ -1,5 +1,6 @@
 package com.mo.economy_system.network.packets.territory_system;
 
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
 import net.minecraft.client.Minecraft;
@@ -7,7 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
-public class Packet_SingleTerritoryDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload {
+public class Packet_SingleTerritoryDataResponse implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
 
     public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_SingleTerritoryDataResponse> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "territory_system/packet_single_territory_data_response"));
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_SingleTerritoryDataResponse> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_SingleTerritoryDataResponse.encode(packet, buf), Packet_SingleTerritoryDataResponse::decode);
