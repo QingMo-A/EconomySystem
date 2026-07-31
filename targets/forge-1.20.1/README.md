@@ -26,3 +26,20 @@ shape only; obsolete handlers and removed server systems are not restored.
 Messages without an implemented Forge codec fail explicitly instead of being
 silently dropped. In particular, legacy `check/get/chunk` messages (`23-30`)
 are intentionally excluded pending a security redesign.
+
+## ItemStack snapshot bridge
+
+Stage A is complete for Forge 1.20.1. The target reads and writes snapshot
+schema v1 using native 1.20.1 item NBT for JSON names/lore, enchantment IDs and
+levels, damage, repair cost, unbreakable, dyed color, custom model data, and
+custom data. Missing 1.21.1 items and non-equivalent data are rejected.
+
+Known fail-closed limits include attribute modifiers, adventure predicates,
+entity/block-entity item data, Forge capabilities, unknown display fields, and
+different tooltip visibility for normal versus stored enchantments (1.20.1 has
+one shared hide flag). The old `{id,count,customData}` compact format remains a
+read/legacy-API compatibility path only. Protocol `8` is the next planned
+migration and has not been implemented here.
+
+The current full target suite contains 35 passing tests. The paired NeoForge
+1.21.1 target contains 36 passing tests; `buildAllTargets --rerun-tasks` passes.

@@ -38,7 +38,22 @@ maintaining independent registration order.
 - Shop purchasing is server authoritative and rolls inventory back before a
   refund when delivery fails. Price-stat persistence happens after delivery
   and cannot produce a refund plus retained items.
-- The Forge shop adapter converts a deliberately bounded set of 1.21 item
-  components to 1.20 NBT and rejects unknown components instead of silently
-  dropping them. The compact general ItemStack bridge remains custom-data-only;
-  market and delivery migration still require a complete component schema.
+- Item snapshot schema v1 is complete. `ItemStackSnapshot` is immutable and
+  loader-neutral; its strict codec writes `schemaVersion`, `id`, `count`, and
+  `components`. Supported components are custom name, lore, normal and stored
+  enchantments, damage, repair cost, unbreakable, dyed color, custom model
+  data, and custom data. Text uses stable JSON and enchantments use registry
+  IDs. All collections and NBT values are defensively copied.
+- Snapshot reads fail closed on unknown schema versions, component names, bad
+  types, invalid counts, missing target items, unsupported target data, or a
+  conversion that cannot be lossless. NeoForge rejects every non-default data
+  component outside the v1 allow-list. Forge rejects native fields such as
+  attribute modifiers, can-place/can-destroy predicates, entity/block-entity
+  data, capabilities, unknown display fields, and tooltip states that 1.20.1
+  cannot represent independently.
+- Legacy compact `{id,count,customData}` tags remain read-compatible only.
+  `saveSimple/loadSimple` remain deprecated compatibility entry points; every
+  new snapshot write uses schema v1. Stage A is complete. The next migration
+  slice is protocol `8` (create sale order), which is not part of Stage A.
+- The verified Stage A build runs 35 Forge 1.20.1 tests and 36 NeoForge
+  1.21.1 tests with no failures.
