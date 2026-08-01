@@ -5,7 +5,10 @@ import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataRequest;
+import com.mo.economy_system.common.client.ClientMarketState;
+import com.mo.economy_system.common.network.MarketDataRequestMessage;
+import com.mo.economy_system.common.network.MarketDataRequestPurpose;
+import com.mo.economy_system.common.network.MarketOrderFilter;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
@@ -81,7 +84,10 @@ public class Screen_Market extends Screen {
     private int currentPage = 0;
     private int rows = 3;
     private int columns = -1;
-    private int itemsPerPage = -1;
+    private int itemsPerPage = 50;
+    private int totalMatched;
+    private int serverOffset;
+    private long searchDueMillis = -1;
 
     // ==================== 搜索与过滤 ====================
     private EditBox searchBox;
@@ -136,7 +142,7 @@ public class Screen_Market extends Screen {
 
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
-        EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
+        requestMarketPage();
         topListStyle = createTopButtonStyle(CardRenderer.THEME_DELIVERY);
         topRequestStyle = createTopButtonStyle(CardRenderer.THEME_SHOP);
         actionBuyStyle = createActionButtonStyle(CardRenderer.THEME_MARKET);
@@ -155,9 +161,22 @@ public class Screen_Market extends Screen {
             .setBorderAlphaHover(0x20);
     }
 
+    private void requestMarketPage() { requestMarketPage(serverOffset); }
+    private void requestMarketPage(int offset) {
+        long requestId = ClientMarketState.nextPageRequestId();
+        MarketOrderFilter filter = MarketOrderFilter.values()[filterIndex];
+        String query = searchBox == null ? "" : searchBox.getValue();
+        EconomySystem_NetworkManager.sendToServer(new MarketDataRequestMessage(
+                requestId, MarketDataRequestPurpose.PAGE, Math.max(0, offset), Math.max(1, itemsPerPage), filter, query));
+    }
+
     public void updateMarketItems(List<MarketItem> items) {
         this.allItems = items;
         this.filteredItems = new ArrayList<>(items);
+        var state = ClientMarketState.snapshot();
+        this.totalMatched = state.totalMatched();
+        this.serverOffset = state.offset();
+        this.currentPage = itemsPerPage > 0 ? serverOffset / itemsPerPage : 0;
     }
 
     @Override
@@ -182,7 +201,7 @@ public class Screen_Market extends Screen {
 
         this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, SEARCH_BOX_HEIGHT, Component.translatable("搜索市场..."));
         this.searchBox.setMaxLength(50);
-        this.searchBox.setHint(Component.literal("搜索市场..."));
+        this.searchBox.setHint(Component.literal("搜索物品 ID 或订单创建者"));
         this.searchBox.setResponder(this::onSearchChanged);
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
@@ -214,8 +233,10 @@ public class Screen_Market extends Screen {
     }
 
     private void onSearchChanged(String text) {
-        applyFilters();
+        searchDueMillis = System.currentTimeMillis() + 250L;
     }
+
+    @Override public void tick() { super.tick(); if (searchDueMillis >= 0 && System.currentTimeMillis() >= searchDueMillis) { searchDueMillis=-1; serverOffset=0; requestMarketPage(0); } }
 
     private void applyFilters() {
         filteredItems = allItems.stream()
@@ -405,12 +426,8 @@ public class Screen_Market extends Screen {
         columns = Math.max(1, (virtualWidth - PANEL_PADDING * 2 + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
         itemsPerPage = rows * columns;
 
-        // 计算分页
-        int totalPages = (int) Math.ceil((double) filteredItems.size() / itemsPerPage);
-        currentPage = Math.min(currentPage, Math.max(0, totalPages - 1));
-
-        int startIndex = currentPage * itemsPerPage;
-        int endIndex = Math.min(startIndex + itemsPerPage, filteredItems.size());
+        int startIndex = 0;
+        int endIndex = Math.min(itemsPerPage, filteredItems.size());
 
         // 网格配置
         int gridStartX = PANEL_PADDING;
@@ -699,7 +716,7 @@ public class Screen_Market extends Screen {
     }
 
     private int getTotalPages() {
-        return (int) Math.ceil((double) filteredItems.size() / itemsPerPage);
+        return itemsPerPage <= 0 ? 0 : (int) Math.ceil((double) totalMatched / itemsPerPage);
     }
 
     @Override
@@ -718,7 +735,8 @@ public class Screen_Market extends Screen {
             if (virtualMouseX >= filterX && virtualMouseX <= filterX + textWidth &&
                 virtualMouseY >= filterY - 2 && virtualMouseY <= filterY + font.lineHeight + 5) {
                 filterIndex = i;
-                applyFilters();
+                serverOffset = 0;
+                requestMarketPage(0);
                 return true;
             }
             filterX += textWidth + 20;
@@ -767,13 +785,13 @@ public class Screen_Market extends Screen {
         // 检查翻页按钮
         if (virtualMouseX >= prevBtnX1 && virtualMouseX <= prevBtnX2 &&
             virtualMouseY >= prevBtnY1 && virtualMouseY <= prevBtnY2) {
-            if (currentPage > 0) currentPage--;
+            if (currentPage > 0) requestMarketPage(Math.max(0, serverOffset - itemsPerPage));
             return true;
         }
 
         if (virtualMouseX >= nextBtnX1 && virtualMouseX <= nextBtnX2 &&
             virtualMouseY >= nextBtnY1 && virtualMouseY <= nextBtnY2) {
-            if (currentPage < getTotalPages() - 1) currentPage++;
+            if (currentPage < getTotalPages() - 1) requestMarketPage(serverOffset + itemsPerPage);
             return true;
         }
 
@@ -840,7 +858,7 @@ public class Screen_Market extends Screen {
     }
 
     public void refresh() {
-        EconomySystem_NetworkManager.sendToServer(new Packet_MarketDataRequest());
+        requestMarketPage();
     }
 
     @Override
@@ -848,7 +866,8 @@ public class Screen_Market extends Screen {
         int totalPages = getTotalPages();
         if (totalPages > 1) {
             int newPage = currentPage - (int) Math.signum(scrollY);
-            currentPage = Math.max(0, Math.min(totalPages - 1, newPage));
+            newPage = Math.max(0, Math.min(totalPages - 1, newPage));
+            if (newPage != currentPage) requestMarketPage(newPage * itemsPerPage);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

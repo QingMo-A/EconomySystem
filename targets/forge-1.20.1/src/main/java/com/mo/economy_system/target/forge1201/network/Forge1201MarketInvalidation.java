@@ -1,0 +1,3 @@
+package com.mo.economy_system.target.forge1201.network;
+import com.mo.economy_system.common.market.MarketOrderType;import com.mo.economy_system.common.network.MarketDataResponseMessage;import com.mo.economy_system.core.economy_system.market.MarketSavedData;import net.minecraft.server.level.ServerPlayer;
+final class Forge1201MarketInvalidation{static void broadcast(ServerPlayer source){var orders=MarketSavedData.getInstance(source.serverLevel()).getOrders();int sales=0,demand=0;for(var o:orders)if(o.type()==MarketOrderType.SALES)sales++;else demand++;var m=MarketDataResponseMessage.invalidated(sales,demand);for(ServerPlayer p:source.server.getPlayerList().getPlayers())Forge1201NetworkChannel.sendToPlayer(p,m);}}

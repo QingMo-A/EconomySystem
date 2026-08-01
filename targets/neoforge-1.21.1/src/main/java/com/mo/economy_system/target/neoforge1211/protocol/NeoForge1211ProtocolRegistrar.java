@@ -39,8 +39,8 @@ public final class NeoForge1211ProtocolRegistrar {
         bindCommon(registrar, EconomyMessages.SHOP_BUY_ITEM, NeoForge1211ShopPurchaseHandler::handle);
         bindCommon(registrar, EconomyMessages.CREATE_SALES_ORDER, NeoForge1211CreateSalesOrderHandler::handle);
         bindCommon(registrar, EconomyMessages.CREATE_DEMAND_ORDER, NeoForge1211CreateDemandOrderHandler::handle);
-        bind(registrar, EconomyProtocol.MARKET_DATA_REQUEST, Packet_MarketDataRequest.TYPE, Packet_MarketDataRequest.STREAM_CODEC, Packet_MarketDataRequest::handle);
-        bind(registrar, EconomyProtocol.MARKET_DATA_RESPONSE, Packet_MarketDataResponse.TYPE, Packet_MarketDataResponse.STREAM_CODEC, Packet_MarketDataResponse::handle);
+        bindCommon(registrar, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataHandlers::request);
+        bindCommon(registrar, EconomyMessages.MARKET_DATA_RESPONSE, NeoForge1211MarketDataHandlers::response);
         bind(registrar, EconomyProtocol.PURCHASE_SALES_ORDER, Packet_PurchaseSalesOrder.TYPE, Packet_PurchaseSalesOrder.STREAM_CODEC, Packet_PurchaseSalesOrder::handle);
         bind(registrar, EconomyProtocol.CONFIRM_DEMAND_ORDER, Packet_ConfirmDemandOrder.TYPE, Packet_ConfirmDemandOrder.STREAM_CODEC, Packet_ConfirmDemandOrder::handle);
         bind(registrar, EconomyProtocol.DELIVER_DEMAND_ORDER, Packet_DeliverDemandOrder.TYPE, Packet_DeliverDemandOrder.STREAM_CODEC, Packet_DeliverDemandOrder::handle);

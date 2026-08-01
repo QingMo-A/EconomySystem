@@ -5,7 +5,7 @@ import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
@@ -75,7 +75,7 @@ public class Packet_RemoveSalesOrder implements net.minecraft.network.protocol.c
             giveOrDropSplit(itemReceiver, item.getItemStack());
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
+            MarketInvalidationBroadcaster.broadcast(player);
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY));
         });

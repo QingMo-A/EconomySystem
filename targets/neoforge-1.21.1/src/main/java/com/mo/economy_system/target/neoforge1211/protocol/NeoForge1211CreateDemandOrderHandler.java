@@ -7,6 +7,7 @@ import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -27,6 +28,7 @@ public final class NeoForge1211CreateDemandOrderHandler {
                             new RepositoryAdapter(market), player.getUUID(), player.getName().getString(),
                             UUID::randomUUID, System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result));
+            if (result == CreateDemandOrderResult.SUCCESS) MarketInvalidationBroadcaster.broadcast(player);
             if (CreateDemandOrderFeedback.internalFailure(result))
                 EconomySystem.LOGGER.error("Demand order creation failed player={} result={}", player.getUUID(), result);
         });

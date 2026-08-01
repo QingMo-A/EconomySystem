@@ -8,7 +8,7 @@ import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
@@ -36,7 +36,7 @@ public final class NeoForge1211CreateSalesOrderHandler {
                             System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result, message.totalPrice()));
             if (result == CreateSalesOrderResult.SUCCESS) {
-                EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
+                MarketInvalidationBroadcaster.broadcast(player);
             } else if (CreateSalesOrderFeedback.internalFailure(result)) {
                 EconomySystem.LOGGER.error("Sales order creation failed player={} name={} result={}",
                         player.getUUID(), player.getName().getString(), result);

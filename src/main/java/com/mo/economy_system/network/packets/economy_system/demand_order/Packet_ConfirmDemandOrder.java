@@ -5,7 +5,7 @@ import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.MarketItem;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
@@ -71,7 +71,7 @@ public class Packet_ConfirmDemandOrder implements net.minecraft.network.protocol
             giveOrDropSplit(player, item.getItemStack());
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
+            MarketInvalidationBroadcaster.broadcast(player);
 
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_SUCCESS_KEY, item.getItemStack().getHoverName(), item.getItemStack().getCount()));
         });

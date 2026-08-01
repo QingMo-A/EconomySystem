@@ -18,6 +18,8 @@ import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
+import com.mo.economy_system.common.network.MarketDataRequestMessage;
+import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -143,6 +145,13 @@ public final class Forge1201NetworkChannel {
                 .consumerMainThread(Forge1201CreateDemandOrderHandler::handle)
                 .add();
 
+        CHANNEL.messageBuilder(MarketDataRequestMessage.class, EconomyMessages.MARKET_DATA_REQUEST.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201MarketDataCodec::encodeRequest).decoder(Forge1201MarketDataCodec::decodeRequest)
+                .consumerMainThread(Forge1201MarketDataHandlers::request).add();
+        CHANNEL.messageBuilder(MarketDataResponseMessage.class, EconomyMessages.MARKET_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(Forge1201MarketDataCodec::encodeResponse).decoder(Forge1201MarketDataCodec::decodeResponse)
+                .consumerMainThread(Forge1201MarketDataHandlers::response).add();
+
         CHANNEL.messageBuilder(
                         ServerPlayerListRequestMessage.class,
                         EconomyMessages.SERVER_PLAYER_LIST_REQUEST.discriminator(),
@@ -193,6 +202,7 @@ public final class Forge1201NetworkChannel {
 
     static void sendToServer(CreateSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(CreateDemandOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+    static void sendToServer(MarketDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();
@@ -213,6 +223,7 @@ public final class Forge1201NetworkChannel {
         requireRegistered();
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
     }
+    static void sendToPlayer(ServerPlayer player, MarketDataResponseMessage message) { requireRegistered(); CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message); }
 
     static void sendToPlayer(ServerPlayer player, ServerPlayerListResponseMessage message) {
         requireRegistered();

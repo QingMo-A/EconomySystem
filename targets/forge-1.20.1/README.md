@@ -84,3 +84,9 @@ Market payments and compensation for protocols `8/9` now use the common exact ba
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
 client send route is covered by fail-closed dispatch testing. Legacy saturating calls in
 unmigrated features remain out of scope; Forge discriminator `16` remains unregistered.
+
+Protocols `10/11` now use the common summary/page market model and strict schema-v1
+snapshot codec. Forge can send requests, serve authenticated filtered pages, receive
+responses into `ClientMarketState`, and broadcast bounded invalidations. Pages contain at
+most 100 orders; no legacy full-market `MarketItem` NBT is transmitted.
+The full target suite now contains 115 passing tests; NeoForge contains 116.

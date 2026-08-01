@@ -10,28 +10,43 @@ public final class CancelDemandOrderService {
 
     public static CancelDemandOrderResult execute(UUID tradeId, Context context) {
         if (tradeId==null||context==null) return CancelDemandOrderResult.INVALID_CONTEXT;
-        MarketOrder order=context.repository().find(tradeId);
+        MarketOrder order;
+        try { order=context.repository().find(tradeId); }
+        catch(RuntimeException exception){report(context,tradeId,CancelDemandOrderResult.ORDER_REMOVE_FAILED,null,null,exception);return CancelDemandOrderResult.ORDER_REMOVE_FAILED;}
         if(order==null)return CancelDemandOrderResult.NOT_FOUND;
         if(order.type()!=MarketOrderType.DEMAND)return CancelDemandOrderResult.WRONG_ORDER_TYPE;
         if(order.delivered())return CancelDemandOrderResult.ALREADY_DELIVERED;
         if(!context.operator()&&!order.sellerId().equals(context.actorId()))return CancelDemandOrderResult.NOT_OWNER;
         if(order.totalPrice()<=0)return CancelDemandOrderResult.INVALID_PRICE;
-        if(!context.account().canCreditExact(order.sellerId(),order.totalPrice()))return CancelDemandOrderResult.OWNER_BALANCE_LIMIT;
-        DemandOrderRemovalResult removed=context.repository().removeUndeliveredDemand(tradeId);
+        try { if(!context.account().canCreditExact(order.sellerId(),order.totalPrice()))return CancelDemandOrderResult.OWNER_BALANCE_LIMIT; }
+        catch(RuntimeException exception){report(context,tradeId,CancelDemandOrderResult.REFUND_FAILED,null,null,exception);return CancelDemandOrderResult.REFUND_FAILED;}
+        DemandOrderRemovalResult removed;
+        try { removed=context.repository().removeUndeliveredDemand(tradeId); }
+        catch(RuntimeException exception){report(context,tradeId,CancelDemandOrderResult.ORDER_REMOVE_FAILED,null,null,exception);return CancelDemandOrderResult.ORDER_REMOVE_FAILED;}
         if(removed.status()!=DemandOrderRemovalStatus.REMOVED||removed.removal()==null)return mapRemoval(removed.status());
+        MarketOrder actual=removed.removal().order();
+        if(!sameTransaction(order,actual,tradeId)){
+            MarketOrderRestoreResult restored=restore(removed);
+            CancelDemandOrderResult result=restored==MarketOrderRestoreResult.RESTORED?CancelDemandOrderResult.ORDER_CHANGED:CancelDemandOrderResult.ROLLBACK_FAILED;
+            report(context,tradeId,result,null,restored,null);return result;
+        }
         BalanceMutationResult refund;
         RuntimeException refundError=null;
-        try{refund=context.account().creditExact(order.sellerId(),order.totalPrice());}
+        try{refund=context.account().creditExact(actual.sellerId(),actual.totalPrice());}
         catch(RuntimeException exception){refund=BalanceMutationResult.PERSIST_FAILED;refundError=exception;}
         if(refund==BalanceMutationResult.SUCCESS)return CancelDemandOrderResult.SUCCESS;
         MarketOrderRestoreResult restored;
-        try{restored=removed.removal().restore().restore();}
-        catch(RuntimeException exception){restored=MarketOrderRestoreResult.PERSIST_FAILED;}
+        restored=restore(removed);
         CancelDemandOrderResult result=restored==MarketOrderRestoreResult.RESTORED
-                ? CancelDemandOrderResult.REFUND_FAILED:CancelDemandOrderResult.ROLLBACK_FAILED;
+                ? (refund==BalanceMutationResult.BALANCE_LIMIT?CancelDemandOrderResult.OWNER_BALANCE_LIMIT:CancelDemandOrderResult.REFUND_FAILED)
+                :CancelDemandOrderResult.ROLLBACK_FAILED;
         report(context,tradeId,result,refund,restored,refundError);
         return result;
     }
+
+    private static boolean sameTransaction(MarketOrder expected,MarketOrder actual,UUID id){return actual!=null&&actual.tradeId().equals(id)
+            &&actual.type()==MarketOrderType.DEMAND&&!actual.delivered()&&actual.sellerId().equals(expected.sellerId())&&actual.totalPrice()==expected.totalPrice();}
+    private static MarketOrderRestoreResult restore(DemandOrderRemovalResult removed){try{return removed.removal().restore().restore();}catch(RuntimeException exception){return MarketOrderRestoreResult.PERSIST_FAILED;}}
 
     private static CancelDemandOrderResult mapRemoval(DemandOrderRemovalStatus status){return switch(status){
         case NOT_FOUND->CancelDemandOrderResult.NOT_FOUND;case WRONG_ORDER_TYPE->CancelDemandOrderResult.WRONG_ORDER_TYPE;

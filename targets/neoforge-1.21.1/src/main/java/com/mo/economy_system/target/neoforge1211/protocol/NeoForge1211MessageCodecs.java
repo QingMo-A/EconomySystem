@@ -301,6 +301,8 @@ public final class NeoForge1211MessageCodecs {
                 return new CreateDemandOrderMessage(itemId, quantity, totalPrice);
             }
         });
+        register(codecs, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataCodec.REQUEST);
+        register(codecs, EconomyMessages.MARKET_DATA_RESPONSE, NeoForge1211MarketDataCodec.RESPONSE);
         register(codecs, EconomyMessages.SERVER_PLAYER_LIST_REQUEST, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(

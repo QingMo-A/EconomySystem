@@ -108,3 +108,13 @@ cancellation now use exact operations. Cancellation removes through a rollback h
 before refunding the original owner; delivery never removes items when full payment
 cannot fit. Forge protocol `9` has a client send route. Discriminator `16` remains
 unregistered and protocols `10/11` are next.
+
+## Market data protocols 10/11
+
+Market reads now use bounded common messages. Protocol `10` distinguishes `SUMMARY`
+from server-filtered `PAGE` requests; pages are limited to 100 orders and queries to 64
+characters. `MINE` always uses the authenticated sender UUID. Protocol `11` carries only
+schema-v1 item snapshots and immutable order fields, never dynamic `MarketItem` NBT.
+`ClientMarketState` atomically stores summary/page data, ignores older request IDs, and
+marks pages stale on lightweight `INVALIDATED` broadcasts without clearing them.
+The verified suites contain 115 Forge 1.20.1 tests and 116 NeoForge 1.21.1 tests.

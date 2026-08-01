@@ -6,7 +6,7 @@ import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
@@ -33,7 +33,7 @@ public class Packet_RemoveDemandOrder implements net.minecraft.network.protocol.
         CancelDemandOrderResult result=CancelDemandOrderService.execute(msg.itemId,new CancelDemandOrderService.Context(
                 player.getUUID(),Util_Player.isOP(player),new AccountAdapter(accounts),new RepositoryAdapter(market),reporter(player)));
         player.sendSystemMessage(Component.translatable(CancelDemandOrderFeedback.messageKey(result)));
-        if(result==CancelDemandOrderResult.SUCCESS)EconomySystem_NetworkManager.sendToClient(player,new Packet_MarketDataResponse(market.getMarketItems()));
+        if(result==CancelDemandOrderResult.SUCCESS)MarketInvalidationBroadcaster.broadcast(player);
     });}
 
     private static CancelDemandOrderService.FailureReporter reporter(ServerPlayer player){return(id,result,refund,restore,cause)->

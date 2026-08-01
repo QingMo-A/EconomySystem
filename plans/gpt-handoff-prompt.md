@@ -29,6 +29,8 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 
 市场余额事务已经加固：普通 addBalance 保留历史封顶语义，但协议 8/9、旧求购交付和旧求购取消必须使用 common exact API。exact 溢出或 dirty 失败不会留下余额或日志的部分修改。取消求购通过可回滚的 MarketLedger 删除并只向原所有者退款。Forge 协议 9 发送路由已补齐，但协议 16 仍未迁移或注册。不要顺手扩大到其他旧经济调用点。
 
+协议 10/11 已迁移为有界分页读取：SUMMARY 不携带订单，PAGE 最大 100 条并由服务端执行 ALL/MINE/SALES/DEMAND 过滤以及物品 ID/创建者搜索；MINE 身份只取真实发送者。响应只传 schema-v1 Snapshot。ClientMarketState 会忽略旧 requestId，市场变化只广播 INVALIDATED。旧 Packet_MarketDataRequest/Response 已删除。下一步是协议 12，不要同时迁移 13-16。
+
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks
 rg -n "net\.neoforged|net\.minecraftforge" common/src

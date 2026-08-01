@@ -31,6 +31,7 @@ final class Forge1201CreateDemandOrderHandler {
                             new RepositoryAdapter(market), player.getUUID(), player.getName().getString(),
                             UUID::randomUUID, System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result));
+            if (result == CreateDemandOrderResult.SUCCESS) Forge1201MarketInvalidation.broadcast(player);
             if (CreateDemandOrderFeedback.internalFailure(result))
                 LOGGER.error("Demand order creation failed player={} result={}", player.getUUID(), result);
         }

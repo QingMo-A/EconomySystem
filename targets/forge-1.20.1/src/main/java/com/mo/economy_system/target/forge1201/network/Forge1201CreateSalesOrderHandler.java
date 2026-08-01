@@ -35,6 +35,7 @@ final class Forge1201CreateSalesOrderHandler {
                     new InventoryAdapter(inventory, player), new AccountAdapter(accounts, player), new RepositoryAdapter(market),
                     player.getUUID(), player.getName().getString(), UUID::randomUUID, System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result, message.totalPrice()));
+            if (result == CreateSalesOrderResult.SUCCESS) Forge1201MarketInvalidation.broadcast(player);
             if (CreateSalesOrderFeedback.internalFailure(result)) {
                 LOGGER.error("Sales order creation failed player={} name={} result={}",
                         player.getUUID(), player.getName().getString(), result);

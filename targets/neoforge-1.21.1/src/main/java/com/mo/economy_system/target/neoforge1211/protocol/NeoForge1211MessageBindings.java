@@ -38,8 +38,8 @@ public final class NeoForge1211MessageBindings {
         registry.register(EconomyMessages.SHOP_BUY_ITEM);
         registry.register(EconomyMessages.CREATE_SALES_ORDER);
         registry.register(EconomyMessages.CREATE_DEMAND_ORDER);
-        bind(registry, EconomyProtocol.MARKET_DATA_REQUEST, Packet_MarketDataRequest.class);
-        bind(registry, EconomyProtocol.MARKET_DATA_RESPONSE, Packet_MarketDataResponse.class);
+        registry.register(EconomyMessages.MARKET_DATA_REQUEST);
+        registry.register(EconomyMessages.MARKET_DATA_RESPONSE);
         bind(registry, EconomyProtocol.PURCHASE_SALES_ORDER, Packet_PurchaseSalesOrder.class);
         bind(registry, EconomyProtocol.CONFIRM_DEMAND_ORDER, Packet_ConfirmDemandOrder.class);
         bind(registry, EconomyProtocol.DELIVER_DEMAND_ORDER, Packet_DeliverDemandOrder.class);

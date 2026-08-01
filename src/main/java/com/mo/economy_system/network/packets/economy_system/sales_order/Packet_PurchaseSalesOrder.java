@@ -6,7 +6,7 @@ import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -99,7 +99,7 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
             }
 
             // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToClient(buyer, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
+            MarketInvalidationBroadcaster.broadcast(buyer);
 
             // 打印日志
             System.out.println("Item sold: " + item.getItemStack().getHoverName().getString() +

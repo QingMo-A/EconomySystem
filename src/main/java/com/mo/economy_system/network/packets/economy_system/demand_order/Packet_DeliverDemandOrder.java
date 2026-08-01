@@ -7,7 +7,7 @@ import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
+import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.utils.Util_MessageKeys;
@@ -49,7 +49,7 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
                         ? Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY : result == DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT
                         ? Util_MessageKeys.DELIVERY_BALANCE_LIMIT_KEY : Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
             }
-            EconomySystem_NetworkManager.sendToClient(supplier, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
+            MarketInvalidationBroadcaster.broadcast(supplier);
         });
     }
 
