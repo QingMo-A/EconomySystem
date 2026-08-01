@@ -4,6 +4,7 @@ import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
+import com.mo.economy_system.platform.item.ItemStackSnapshotValidator;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -112,16 +113,18 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
             if ((hideFlags & ~knownHideFlags) != 0) return failure(ItemStackSnapshotError.UNSUPPORTED_COMPONENT, "unsupported HideFlags bits: " + (hideFlags & ~knownHideFlags));
             int damage = source.getInt("Damage");
             int repairCost = source.getInt("RepairCost");
-            if (damage < 0 || repairCost < 0 || (stack.isDamageableItem() && damage > stack.getMaxDamage())) return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "invalid damage or repair cost");
+            if (damage < 0 || repairCost < 0 || (damage != 0 && (stack.getMaxDamage() <= 0 || damage > stack.getMaxDamage()))) {
+                return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "invalid damage or repair cost");
+            }
             boolean unbreakable = source.getBoolean("Unbreakable");
             OptionalInt model = source.contains("CustomModelData", Tag.TAG_INT) ? OptionalInt.of(source.getInt("CustomModelData")) : OptionalInt.empty();
             CompoundTag customData = source.copy();
             NATIVE_KEYS.forEach(customData::remove);
-            return ItemStackSnapshotResult.success(new ItemStackSnapshot(
+            return ItemStackSnapshot.create(
                     BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), stack.getCount(), name, lore,
                     enchantments.orElseThrow(), stored.orElseThrow(), (hideFlags & 1) == 0, (hideFlags & 1) == 0,
                     damage, repairCost, unbreakable, (hideFlags & 4) == 0, color, (hideFlags & 64) == 0,
-                    model, customData));
+                    model, customData);
         } catch (RuntimeException exception) {
             return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, exception.getMessage());
         }
@@ -129,7 +132,7 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
 
     @Override
     public ItemStackSnapshotResult<ItemStack> restoreSnapshot(ItemStackSnapshot snapshot, HolderLookup.Provider registries) {
-        ItemStackSnapshotResult<Boolean> validation = validateSnapshotData(snapshot);
+        ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
         if (!validation.isSuccess()) return copyFailure(validation);
         ResourceLocation itemId;
         try { itemId = new ResourceLocation(snapshot.itemId()); }
@@ -173,7 +176,7 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
             if (!stored.isSuccess()) return copyFailure(stored);
             if (!stored.orElseThrow().isEmpty()) tag.put("StoredEnchantments", stored.orElseThrow());
             if (snapshot.damage() != 0) {
-                if (!stack.isDamageableItem() || snapshot.damage() > stack.getMaxDamage()) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "invalid damage for " + itemId);
+                if (stack.getMaxDamage() <= 0 || snapshot.damage() > stack.getMaxDamage()) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "invalid damage for " + itemId);
                 tag.putInt("Damage", snapshot.damage());
             }
             if (snapshot.repairCost() != 0) tag.putInt("RepairCost", snapshot.repairCost());
@@ -226,16 +229,6 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
             list.add(entry);
         }
         return ItemStackSnapshotResult.success(list);
-    }
-
-    private static ItemStackSnapshotResult<Boolean> validateSnapshotData(ItemStackSnapshot snapshot) {
-        if (snapshot.damage() < 0 || snapshot.repairCost() < 0) return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "negative damage or repair cost");
-        if (snapshot.dyedColor().isPresent() && (snapshot.dyedColor().getAsInt() < 0 || snapshot.dyedColor().getAsInt() > 0xFFFFFF)) {
-            return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "dyed color outside RGB range");
-        }
-        for (int level : snapshot.enchantments().values()) if (level <= 0 || level > Short.MAX_VALUE) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "enchantment level outside 1.20.1 range: " + level);
-        for (int level : snapshot.storedEnchantments().values()) if (level <= 0 || level > Short.MAX_VALUE) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "stored enchantment level outside 1.20.1 range: " + level);
-        return ItemStackSnapshotResult.success(Boolean.TRUE);
     }
 
     private static <T> ItemStackSnapshotResult<T> failure(ItemStackSnapshotError error, String detail) {

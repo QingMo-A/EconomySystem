@@ -30,12 +30,13 @@ public interface EconomyItemStackBridge {
      * data. It is not a complete cross-version ItemStack snapshot: damage,
      * enchantments, display metadata, and other 1.21 data components require
      * an explicit component-level bridge before those features move to
-     * Forge 1.20.1.</p>
+     * Forge 1.20.1. This method is only for legacy features that have not yet
+     * migrated; new persistence and protocol code must use schema-v1 snapshots.</p>
      */
     @Deprecated(forRemoval = false)
     CompoundTag saveSimple(ItemStack stack);
 
-    /** Reads the compact storage schema produced by {@link #saveSimple}. */
+    /** Reads legacy compact storage only; new code must use {@link ItemStackSnapshotCodec}. */
     @Deprecated(forRemoval = false)
     ItemStack loadSimple(CompoundTag tag);
 }

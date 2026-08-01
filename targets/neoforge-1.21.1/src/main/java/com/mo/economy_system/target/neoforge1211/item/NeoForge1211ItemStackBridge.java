@@ -4,6 +4,10 @@ import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
+import com.mo.economy_system.platform.item.ItemStackSnapshotValidator;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -82,9 +86,9 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
         try {
             ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
             Optional<String> name = Optional.ofNullable(stack.get(DataComponents.CUSTOM_NAME))
-                    .map(component -> Component.Serializer.toJson(component, registries));
+                    .map(component -> serializeComponent(component, registries));
             ItemLore lore = stack.getOrDefault(DataComponents.LORE, ItemLore.EMPTY);
-            List<String> loreJson = lore.lines().stream().map(component -> Component.Serializer.toJson(component, registries)).toList();
+            List<String> loreJson = lore.lines().stream().map(component -> serializeComponent(component, registries)).toList();
             ItemEnchantments enchantments = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
             ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
             ItemStackSnapshotResult<Map<String, Integer>> enchantmentValues = captureEnchantments(enchantments);
@@ -92,7 +96,7 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
             ItemStackSnapshotResult<Map<String, Integer>> storedValues = captureEnchantments(stored);
             if (!storedValues.isSuccess()) return copyFailure(storedValues);
             int damage = stack.getOrDefault(DataComponents.DAMAGE, 0);
-            if (damage < 0 || (stack.isDamageableItem() && damage > stack.getMaxDamage())) {
+            if (damage < 0 || (damage != 0 && (stack.getMaxDamage() <= 0 || damage > stack.getMaxDamage()))) {
                 return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "invalid damage=" + damage);
             }
             int repairCost = stack.getOrDefault(DataComponents.REPAIR_COST, 0);
@@ -101,12 +105,12 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
             DyedItemColor color = stack.get(DataComponents.DYED_COLOR);
             CustomModelData model = stack.get(DataComponents.CUSTOM_MODEL_DATA);
             CompoundTag customData = copyCustomData(stack);
-            return ItemStackSnapshotResult.success(new ItemStackSnapshot(itemId.toString(), stack.getCount(), name, loreJson,
+            return ItemStackSnapshot.create(itemId.toString(), stack.getCount(), name, loreJson,
                     enchantmentValues.orElseThrow(), storedValues.orElseThrow(), shown(enchantments), shown(stored),
                     damage, repairCost, unbreakable != null, unbreakable == null || unbreakable.showInTooltip(),
                     color == null ? OptionalInt.empty() : OptionalInt.of(color.rgb()), color == null || color.showInTooltip(),
                     model == null ? OptionalInt.empty() : OptionalInt.of(model.value()),
-                    customData == null ? new CompoundTag() : customData));
+                    customData == null ? new CompoundTag() : customData);
         } catch (RuntimeException exception) {
             return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, exception.getMessage());
         }
@@ -114,7 +118,7 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
 
     @Override
     public ItemStackSnapshotResult<ItemStack> restoreSnapshot(ItemStackSnapshot snapshot, HolderLookup.Provider registries) {
-        ItemStackSnapshotResult<Boolean> validation = validateSnapshotData(snapshot);
+        ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
         if (!validation.isSuccess()) return copyFailure(validation);
         ResourceLocation itemId;
         try {
@@ -150,7 +154,7 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
             if (!stored.isSuccess()) return copyFailure(stored);
             if (!snapshot.storedEnchantments().isEmpty() || !snapshot.storedEnchantmentsShown()) stack.set(DataComponents.STORED_ENCHANTMENTS, stored.orElseThrow());
             if (snapshot.damage() != 0) {
-                if (!stack.isDamageableItem() || snapshot.damage() > stack.getMaxDamage()) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "damage is not valid for " + itemId);
+                if (stack.getMaxDamage() <= 0 || snapshot.damage() > stack.getMaxDamage()) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "damage is not valid for " + itemId);
                 stack.set(DataComponents.DAMAGE, snapshot.damage());
             }
             if (snapshot.repairCost() != 0) stack.set(DataComponents.REPAIR_COST, snapshot.repairCost());
@@ -194,14 +198,13 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
         return enchantments.equals(enchantments.withTooltip(true));
     }
 
-    private static ItemStackSnapshotResult<Boolean> validateSnapshotData(ItemStackSnapshot snapshot) {
-        if (snapshot.damage() < 0 || snapshot.repairCost() < 0) return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "negative damage or repair cost");
-        if (snapshot.dyedColor().isPresent() && (snapshot.dyedColor().getAsInt() < 0 || snapshot.dyedColor().getAsInt() > 0xFFFFFF)) {
-            return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "dyed color outside RGB range");
-        }
-        for (int level : snapshot.enchantments().values()) if (level <= 0) return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "invalid enchantment level=" + level);
-        for (int level : snapshot.storedEnchantments().values()) if (level <= 0) return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, "invalid stored enchantment level=" + level);
-        return ItemStackSnapshotResult.success(Boolean.TRUE);
+    private static String serializeComponent(Component component, HolderLookup.Provider registries) {
+        String json = Component.Serializer.toJson(component, registries);
+        JsonElement parsed = JsonParser.parseString(json);
+        if (!parsed.isJsonPrimitive() || !parsed.getAsJsonPrimitive().isString()) return json;
+        JsonObject normalized = new JsonObject();
+        normalized.addProperty("text", parsed.getAsString());
+        return normalized.toString();
     }
 
     private static <T> ItemStackSnapshotResult<T> failure(ItemStackSnapshotError error, String detail) {

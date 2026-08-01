@@ -23,7 +23,13 @@ public final class ItemStackSnapshotCodec {
 
     private ItemStackSnapshotCodec() {}
 
-    public static CompoundTag encode(ItemStackSnapshot snapshot) {
+    public static ItemStackSnapshotResult<CompoundTag> encode(ItemStackSnapshot snapshot) {
+        ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
+        if (!validation.isSuccess()) return copyFailure(validation);
+        return ItemStackSnapshotResult.success(encodeUnchecked(snapshot));
+    }
+
+    static CompoundTag encodeUnchecked(ItemStackSnapshot snapshot) {
         CompoundTag root = new CompoundTag();
         root.putInt("schemaVersion", ItemStackSnapshot.CURRENT_SCHEMA_VERSION);
         root.putString("id", snapshot.itemId());
@@ -59,6 +65,12 @@ public final class ItemStackSnapshotCodec {
 
     public static ItemStackSnapshotResult<ItemStackSnapshot> decode(CompoundTag input) {
         if (input == null) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "snapshot is null");
+        if (ItemStackSnapshotValidator.maxDepth(input) > ItemStackSnapshotLimits.MAX_CUSTOM_DATA_DEPTH + 2) {
+            return failure(ItemStackSnapshotError.DATA_LIMIT_EXCEEDED, "encoded snapshot exceeds nesting limit");
+        }
+        if (ItemStackSnapshotValidator.estimatedBytes(input) > ItemStackSnapshotLimits.MAX_ENCODED_SNAPSHOT_BYTES) {
+            return failure(ItemStackSnapshotError.DATA_LIMIT_EXCEEDED, "encoded snapshot exceeds byte limit");
+        }
         CompoundTag root = input.copy();
         try {
             if (!root.contains("schemaVersion")) return decodeLegacy(root);
@@ -85,7 +97,8 @@ public final class ItemStackSnapshotCodec {
         }
         BaseFields fields = base.orElseThrow();
         CompoundTag customData = root.contains("customData", Tag.TAG_COMPOUND) ? root.getCompound("customData") : new CompoundTag();
-        return ItemStackSnapshotResult.success(empty(fields, customData));
+        return create(fields, Optional.empty(), List.of(), Map.of(), Map.of(), true, true, 0, 0,
+                false, true, OptionalInt.empty(), true, OptionalInt.empty(), customData);
     }
 
     private static ItemStackSnapshotResult<ItemStackSnapshot> decodeV1(CompoundTag root) {
@@ -131,14 +144,19 @@ public final class ItemStackSnapshotCodec {
         Enchantments book = stored.orElseThrow();
         ShownValue unbreakableValue = unbreakable.orElseThrow();
         ColorValue colorValue = color.orElseThrow();
-        return ItemStackSnapshotResult.success(new ItemStackSnapshot(fields.id, fields.count, name, loreResult.orElseThrow(),
-                normal.values, book.values, normal.shown, book.shown, damage.orElseThrow(), repair.orElseThrow(),
-                unbreakableValue.present, unbreakableValue.shown, colorValue.rgb, colorValue.shown, model, customData));
+        return create(fields, name, loreResult.orElseThrow(), normal.values, book.values, normal.shown, book.shown,
+                damage.orElseThrow(), repair.orElseThrow(), unbreakableValue.present, unbreakableValue.shown,
+                colorValue.rgb, colorValue.shown, model, customData);
     }
 
-    private static ItemStackSnapshot empty(BaseFields fields, CompoundTag customData) {
-        return new ItemStackSnapshot(fields.id, fields.count, Optional.empty(), List.of(), Map.of(), Map.of(),
-                true, true, 0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), customData);
+    private static ItemStackSnapshotResult<ItemStackSnapshot> create(
+            BaseFields fields, Optional<String> name, List<String> lore, Map<String, Integer> enchantments,
+            Map<String, Integer> storedEnchantments, boolean enchantmentsShown, boolean storedEnchantmentsShown,
+            int damage, int repairCost, boolean unbreakable, boolean unbreakableShown, OptionalInt color,
+            boolean colorShown, OptionalInt model, CompoundTag customData) {
+        return ItemStackSnapshot.create(fields.id, fields.count, name, lore, enchantments, storedEnchantments,
+                enchantmentsShown, storedEnchantmentsShown, damage, repairCost, unbreakable, unbreakableShown,
+                color, colorShown, model, customData);
     }
 
     private static ItemStackSnapshotResult<BaseFields> readBase(CompoundTag root) {

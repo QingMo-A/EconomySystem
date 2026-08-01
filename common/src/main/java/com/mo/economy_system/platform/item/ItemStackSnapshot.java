@@ -31,7 +31,7 @@ public final class ItemStackSnapshot {
     private final OptionalInt customModelData;
     private final CompoundTag customData;
 
-    public ItemStackSnapshot(String itemId, int count, Optional<String> customNameJson, List<String> loreJson,
+    private ItemStackSnapshot(String itemId, int count, Optional<String> customNameJson, List<String> loreJson,
                              Map<String, Integer> enchantments, Map<String, Integer> storedEnchantments,
                              boolean enchantmentsShown, boolean storedEnchantmentsShown, int damage, int repairCost,
                              boolean unbreakable, boolean unbreakableShown, OptionalInt dyedColor,
@@ -52,6 +52,22 @@ public final class ItemStackSnapshot {
         this.dyedColorShown = dyedColorShown;
         this.customModelData = Objects.requireNonNull(customModelData, "customModelData");
         this.customData = Objects.requireNonNull(customData, "customData").copy();
+    }
+
+    public static ItemStackSnapshotResult<ItemStackSnapshot> create(
+            String itemId, int count, Optional<String> customNameJson, List<String> loreJson,
+            Map<String, Integer> enchantments, Map<String, Integer> storedEnchantments,
+            boolean enchantmentsShown, boolean storedEnchantmentsShown, int damage, int repairCost,
+            boolean unbreakable, boolean unbreakableShown, OptionalInt dyedColor,
+            boolean dyedColorShown, OptionalInt customModelData, CompoundTag customData) {
+        try {
+            ItemStackSnapshot snapshot = new ItemStackSnapshot(itemId, count, customNameJson, loreJson, enchantments,
+                    storedEnchantments, enchantmentsShown, storedEnchantmentsShown, damage, repairCost, unbreakable,
+                    unbreakableShown, dyedColor, dyedColorShown, customModelData, customData);
+            return ItemStackSnapshotValidator.validate(snapshot);
+        } catch (NullPointerException exception) {
+            return ItemStackSnapshotResult.failure(ItemStackSnapshotError.INVALID_SCHEMA, exception.getMessage());
+        }
     }
 
     public String itemId() { return itemId; }

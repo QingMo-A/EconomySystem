@@ -2,6 +2,8 @@ package com.mo.economy_system.target.neoforge1211.item;
 
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
+import com.mo.economy_system.platform.item.ItemStackSnapshotCodec;
+import com.mo.economy_system.platform.item.ItemStackSnapshotGoldenFixture;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.HolderLookup;
@@ -62,9 +64,9 @@ class NeoForge1211ItemStackBridgeTest {
 
     @Test
     void roundTripsMultipleEnchantmentsAndLevels() {
-        ItemStackSnapshot source = new ItemStackSnapshot("minecraft:diamond_sword", 1, Optional.empty(), List.of(),
+        ItemStackSnapshot source = ItemStackSnapshot.create("minecraft:diamond_sword", 1, Optional.empty(), List.of(),
                 Map.of("minecraft:sharpness", 5, "minecraft:unbreaking", 3), Map.of(), false, true,
-                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag());
+                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
         ItemStack stack = bridge.restoreSnapshot(source, registries).orElseThrow();
         ItemStackSnapshot captured = bridge.captureSnapshot(stack, registries).orElseThrow();
         assertEquals(source.enchantments(), captured.enchantments());
@@ -85,13 +87,54 @@ class NeoForge1211ItemStackBridgeTest {
                 bridge.restoreSnapshot(empty("minecraft:stone", 65), RegistryAccess.EMPTY).error().orElseThrow());
     }
 
+    @Test
+    void rejectsNonDamageableDamageAndExplicitComponentRemoval() {
+        ItemStack damagedStone = new ItemStack(Items.STONE);
+        damagedStone.set(DataComponents.DAMAGE, 1);
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.captureSnapshot(damagedStone, registries).error().orElseThrow());
+
+        ItemStack removedDefault = new ItemStack(Items.STONE);
+        removedDefault.remove(DataComponents.ENCHANTMENTS);
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.captureSnapshot(removedDefault, registries).error().orElseThrow());
+    }
+
+    @Test
+    void rejectsUnknownEnchantmentsAndInvalidComponentJson() {
+        ItemStackSnapshot unknownEnchantment = ItemStackSnapshot.create("minecraft:diamond_sword", 1, Optional.empty(), List.of(),
+                Map.of("missing_mod:not_here", 1), Map.of(), true, true, 0, 0, false, true,
+                OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.restoreSnapshot(unknownEnchantment, registries).error().orElseThrow());
+
+        ItemStackSnapshot badName = ItemStackSnapshot.create("minecraft:stone", 1, Optional.of("{"), List.of(),
+                Map.of(), Map.of(), true, true, 0, 0, false, true, OptionalInt.empty(), true,
+                OptionalInt.empty(), new CompoundTag()).orElseThrow();
+        assertEquals(ItemStackSnapshotError.DATA_PARSE_FAILED, bridge.restoreSnapshot(badName, registries).error().orElseThrow());
+        ItemStackSnapshot badLore = ItemStackSnapshot.create("minecraft:stone", 1, Optional.empty(), List.of("{"),
+                Map.of(), Map.of(), true, true, 0, 0, false, true, OptionalInt.empty(), true,
+                OptionalInt.empty(), new CompoundTag()).orElseThrow();
+        assertEquals(ItemStackSnapshotError.DATA_PARSE_FAILED, bridge.restoreSnapshot(badLore, registries).error().orElseThrow());
+    }
+
+    @Test
+    void roundTripsSharedGoldenSchemaIncludingStoredEnchantments() {
+        CompoundTag golden = ItemStackSnapshotGoldenFixture.schema();
+        ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(golden).orElseThrow();
+        ItemStack restored = bridge.restoreSnapshot(decoded, registries).orElseThrow();
+        ItemStackSnapshot captured = bridge.captureSnapshot(restored, registries).orElseThrow();
+        assertEquals(golden, ItemStackSnapshotCodec.encode(captured).orElseThrow());
+        assertEquals(Map.of("minecraft:mending", 1), captured.storedEnchantments());
+    }
+
     private ItemStack roundTrip(ItemStack source) {
         ItemStackSnapshot snapshot = bridge.captureSnapshot(source, registries).orElseThrow();
         return bridge.restoreSnapshot(snapshot, registries).orElseThrow();
     }
 
     private static ItemStackSnapshot empty(String id, int count) {
-        return new ItemStackSnapshot(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
-                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag());
+        return ItemStackSnapshot.create(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
+                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
     }
 }

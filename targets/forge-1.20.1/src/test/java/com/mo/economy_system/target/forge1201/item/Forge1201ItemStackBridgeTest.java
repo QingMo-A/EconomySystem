@@ -2,6 +2,8 @@ package com.mo.economy_system.target.forge1201.item;
 
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
+import com.mo.economy_system.platform.item.ItemStackSnapshotCodec;
+import com.mo.economy_system.platform.item.ItemStackSnapshotGoldenFixture;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.SharedConstants;
@@ -74,11 +76,61 @@ class Forge1201ItemStackBridgeTest {
         assertEquals(ItemStackSnapshotError.INVALID_COUNT,
                 bridge.restoreSnapshot(empty("minecraft:stone", 65), RegistryAccess.EMPTY).error().orElseThrow());
 
-        ItemStackSnapshot splitFlags = new ItemStackSnapshot("minecraft:enchanted_book", 1, Optional.empty(), List.of(),
+        ItemStackSnapshot splitFlags = ItemStackSnapshot.create("minecraft:enchanted_book", 1, Optional.empty(), List.of(),
                 Map.of("minecraft:unbreaking", 1), Map.of("minecraft:mending", 1), true, false,
-                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag());
+                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
         assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
                 bridge.restoreSnapshot(splitFlags, RegistryAccess.EMPTY).error().orElseThrow());
+    }
+
+    @Test
+    void rejectsNonDamageableDamageAndNativeFieldConflicts() {
+        ItemStack damagedStone = new ItemStack(Items.STONE);
+        damagedStone.getOrCreateTag().putInt("Damage", 1);
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.captureSnapshot(damagedStone, RegistryAccess.EMPTY).error().orElseThrow());
+
+        for (String key : List.of("Damage", "display", "Enchantments")) {
+            CompoundTag customData = new CompoundTag();
+            if (key.equals("Damage")) customData.putInt(key, 1); else if (key.equals("display")) customData.put(key, new CompoundTag()); else customData.put(key, new ListTag());
+            ItemStackSnapshot collision = ItemStackSnapshot.create("minecraft:stone", 1, Optional.empty(), List.of(),
+                    Map.of(), Map.of(), true, true, 0, 0, false, true, OptionalInt.empty(), true,
+                    OptionalInt.empty(), customData).orElseThrow();
+            assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                    bridge.restoreSnapshot(collision, RegistryAccess.EMPTY).error().orElseThrow());
+        }
+    }
+
+    @Test
+    void rejectsUnknownHideFlagsDisplayFieldsEnchantmentsAndLargeLevels() {
+        ItemStack hideFlags = new ItemStack(Items.STONE);
+        hideFlags.getOrCreateTag().putInt("HideFlags", 2);
+        assertEquals(ItemStackSnapshotError.UNSUPPORTED_COMPONENT,
+                bridge.captureSnapshot(hideFlags, RegistryAccess.EMPTY).error().orElseThrow());
+
+        ItemStack display = new ItemStack(Items.STONE);
+        CompoundTag displayTag = new CompoundTag();
+        displayTag.putString("Unknown", "value");
+        display.getOrCreateTag().put("display", displayTag);
+        assertEquals(ItemStackSnapshotError.UNSUPPORTED_COMPONENT,
+                bridge.captureSnapshot(display, RegistryAccess.EMPTY).error().orElseThrow());
+
+        ItemStackSnapshot unknown = enchanted("missing_mod:not_here", 1);
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.restoreSnapshot(unknown, RegistryAccess.EMPTY).error().orElseThrow());
+        ItemStackSnapshot large = enchanted("minecraft:unbreaking", Short.MAX_VALUE + 1);
+        assertEquals(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION,
+                bridge.restoreSnapshot(large, RegistryAccess.EMPTY).error().orElseThrow());
+    }
+
+    @Test
+    void roundTripsSharedGoldenSchemaIncludingStoredEnchantments() {
+        CompoundTag golden = ItemStackSnapshotGoldenFixture.schema();
+        ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(golden).orElseThrow();
+        ItemStack restored = bridge.restoreSnapshot(decoded, RegistryAccess.EMPTY).orElseThrow();
+        ItemStackSnapshot captured = bridge.captureSnapshot(restored, RegistryAccess.EMPTY).orElseThrow();
+        assertEquals(golden, ItemStackSnapshotCodec.encode(captured).orElseThrow());
+        assertEquals(Map.of("minecraft:mending", 1), captured.storedEnchantments());
     }
 
     private ItemStack roundTrip(ItemStack source) {
@@ -87,7 +139,13 @@ class Forge1201ItemStackBridgeTest {
     }
 
     private static ItemStackSnapshot empty(String id, int count) {
-        return new ItemStackSnapshot(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
-                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag());
+        return ItemStackSnapshot.create(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
+                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
+    }
+
+    private static ItemStackSnapshot enchanted(String enchantmentId, int level) {
+        return ItemStackSnapshot.create("minecraft:diamond_sword", 1, Optional.empty(), List.of(),
+                Map.of(enchantmentId, level), Map.of(), true, true, 0, 0, false, true,
+                OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow();
     }
 }

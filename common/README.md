@@ -55,5 +55,13 @@ maintaining independent registration order.
   `saveSimple/loadSimple` remain deprecated compatibility entry points; every
   new snapshot write uses schema v1. Stage A is complete. The next migration
   slice is protocol `8` (create sale order), which is not part of Stage A.
-- The verified Stage A build runs 35 Forge 1.20.1 tests and 36 NeoForge
-  1.21.1 tests with no failures.
+- Snapshot validation is centralized in `ItemStackSnapshotValidator`; creation
+  and strict encoding return explicit results. Limits are: item/enchantment ID
+  256 characters, name and each lore line 8,192 characters, 64 lore lines,
+  32,768 total lore characters, 64 normal and 64 stored enchantments, 32,767
+  estimated custom-data bytes at 16 levels, and 65,536 estimated encoded bytes.
+  Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
+- Both targets reject nonzero damage on items with no durability, so capture
+  and restore now apply the same rule. One shared schema-v1 golden fixture is
+  restored and recaptured by both targets. The verified hardened suite runs 43
+  Forge 1.20.1 tests and 44 NeoForge 1.21.1 tests with no failures.

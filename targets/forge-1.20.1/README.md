@@ -41,5 +41,12 @@ one shared hide flag). The old `{id,count,customData}` compact format remains a
 read/legacy-API compatibility path only. Protocol `8` is the next planned
 migration and has not been implemented here.
 
-The current full target suite contains 35 passing tests. The paired NeoForge
-1.21.1 target contains 36 passing tests; `buildAllTargets --rerun-tasks` passes.
+The hardened bridge applies the common snapshot limits at creation, schema
+decode/encode, capture, and restore. Nonzero `Damage` on an item with no
+durability now fails during capture instead of producing a snapshot that later
+fails restoration. A shared schema-v1 golden fixture covers native names,
+lore, normal/stored enchantments, tooltip flags, damage, repair cost,
+unbreakable, dye, model data, and custom data.
+
+The current full target suite contains 43 passing tests. The paired NeoForge
+1.21.1 target contains 44 passing tests; `buildAllTargets --rerun-tasks` passes.

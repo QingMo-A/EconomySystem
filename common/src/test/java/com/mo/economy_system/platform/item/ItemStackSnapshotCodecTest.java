@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ItemStackSnapshotCodecTest {
     @Test
     void goldenSchemaV1ContainsStableFieldsAndAllSupportedComponents() {
-        CompoundTag encoded = ItemStackSnapshotCodec.encode(fullSnapshot());
+        CompoundTag encoded = ItemStackSnapshotCodec.encode(fullSnapshot()).orElseThrow();
         assertEquals("{components:{customData:{economyOwner:\"alice\"},customModelData:42,customName:'{\"text\":\"Ledger Blade\"}',damage:7,dyedColor:{rgb:3368601,showInTooltip:1b},enchantments:{entries:[{id:\"minecraft:sharpness\",level:5},{id:\"minecraft:unbreaking\",level:3}],showInTooltip:1b},lore:['{\"text\":\"Line one\"}','{\"text\":\"Line two\"}'],repairCost:4,storedEnchantments:{entries:[{id:\"minecraft:mending\",level:1}],showInTooltip:0b},unbreakable:{showInTooltip:0b}},count:2,id:\"minecraft:diamond_sword\",schemaVersion:1}", encoded.toString());
         ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(encoded).orElseThrow();
         assertSnapshotEquals(fullSnapshot(), decoded);
@@ -23,9 +23,9 @@ class ItemStackSnapshotCodecTest {
     @Test
     void supportsOrdinaryAndMultiCountSnapshots() {
         ItemStackSnapshot ordinary = empty("minecraft:stone", 1, new CompoundTag());
-        assertSnapshotEquals(ordinary, ItemStackSnapshotCodec.decode(ItemStackSnapshotCodec.encode(ordinary)).orElseThrow());
+        assertSnapshotEquals(ordinary, ItemStackSnapshotCodec.decode(ItemStackSnapshotCodec.encode(ordinary).orElseThrow()).orElseThrow());
         ItemStackSnapshot multiple = empty("minecraft:stone", 32, new CompoundTag());
-        assertEquals(32, ItemStackSnapshotCodec.decode(ItemStackSnapshotCodec.encode(multiple)).orElseThrow().count());
+        assertEquals(32, ItemStackSnapshotCodec.decode(ItemStackSnapshotCodec.encode(multiple).orElseThrow()).orElseThrow().count());
     }
 
     @Test
@@ -38,30 +38,30 @@ class ItemStackSnapshotCodecTest {
         legacy.put("customData", data);
         ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(legacy).orElseThrow();
         assertEquals("alice", decoded.customData().getString("owner"));
-        CompoundTag rewritten = ItemStackSnapshotCodec.encode(decoded);
+        CompoundTag rewritten = ItemStackSnapshotCodec.encode(decoded).orElseThrow();
         assertEquals(1, rewritten.getInt("schemaVersion"));
         assertTrue(rewritten.getCompound("components").contains("customData"));
     }
 
     @Test
     void rejectsUnknownVersionUnknownComponentAndMalformedFields() {
-        CompoundTag future = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag()));
+        CompoundTag future = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag())).orElseThrow();
         future.putInt("schemaVersion", 99);
         assertError(future, ItemStackSnapshotError.UNSUPPORTED_SCHEMA_VERSION);
 
-        CompoundTag unknown = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag()));
+        CompoundTag unknown = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag())).orElseThrow();
         unknown.getCompound("components").putBoolean("mystery", true);
         assertError(unknown, ItemStackSnapshotError.UNSUPPORTED_COMPONENT);
 
-        CompoundTag invalid = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag()));
+        CompoundTag invalid = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag())).orElseThrow();
         invalid.putString("count", "many");
         assertError(invalid, ItemStackSnapshotError.INVALID_COUNT);
 
-        CompoundTag zero = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag()));
+        CompoundTag zero = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag())).orElseThrow();
         zero.putInt("count", 0);
         assertError(zero, ItemStackSnapshotError.INVALID_COUNT);
 
-        CompoundTag negative = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag()));
+        CompoundTag negative = ItemStackSnapshotCodec.encode(empty("minecraft:stone", 1, new CompoundTag())).orElseThrow();
         negative.putInt("count", -2);
         assertError(negative, ItemStackSnapshotError.INVALID_COUNT);
     }
@@ -73,9 +73,9 @@ class ItemStackSnapshotCodecTest {
         java.util.ArrayList<String> lore = new java.util.ArrayList<>(List.of("{\"text\":\"safe\"}"));
         LinkedHashMap<String, Integer> enchantments = new LinkedHashMap<>();
         enchantments.put("minecraft:sharpness", 1);
-        ItemStackSnapshot snapshot = new ItemStackSnapshot("minecraft:stone", 1, Optional.empty(), lore,
+        ItemStackSnapshot snapshot = ItemStackSnapshot.create("minecraft:stone", 1, Optional.empty(), lore,
                 enchantments, Map.of(), true, true, 0, 0, false, true,
-                OptionalInt.empty(), true, OptionalInt.empty(), source);
+                OptionalInt.empty(), true, OptionalInt.empty(), source).orElseThrow();
         source.putInt("value", 2);
         lore.clear();
         enchantments.clear();
@@ -86,7 +86,10 @@ class ItemStackSnapshotCodecTest {
         leaked.putInt("value", 3);
         assertEquals(1, snapshot.customData().getInt("value"));
 
-        CompoundTag encoded = ItemStackSnapshotCodec.encode(snapshot);
+        CompoundTag encoded = ItemStackSnapshotCodec.encode(snapshot).orElseThrow();
+        CompoundTag postEncodeView = snapshot.customData();
+        postEncodeView.putInt("value", 99);
+        assertEquals(1, encoded.getCompound("components").getCompound("customData").getInt("value"));
         ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(encoded).orElseThrow();
         encoded.getCompound("components").getCompound("customData").putInt("value", 4);
         assertEquals(1, decoded.customData().getInt("value"));
@@ -97,7 +100,7 @@ class ItemStackSnapshotCodecTest {
     @Test
     void invalidItemIdRemainsTargetValidationResponsibility() {
         ItemStackSnapshot decoded = ItemStackSnapshotCodec.decode(
-                ItemStackSnapshotCodec.encode(empty("missing_mod:not_here", 1, new CompoundTag()))).orElseThrow();
+                ItemStackSnapshotCodec.encode(empty("missing_mod:not_here", 1, new CompoundTag())).orElseThrow()).orElseThrow();
         assertEquals("missing_mod:not_here", decoded.itemId());
     }
 
@@ -107,15 +110,15 @@ class ItemStackSnapshotCodecTest {
         enchantments.put("minecraft:unbreaking", 3);
         CompoundTag data = new CompoundTag();
         data.putString("economyOwner", "alice");
-        return new ItemStackSnapshot("minecraft:diamond_sword", 2, Optional.of("{\"text\":\"Ledger Blade\"}"),
+        return ItemStackSnapshot.create("minecraft:diamond_sword", 2, Optional.of("{\"text\":\"Ledger Blade\"}"),
                 List.of("{\"text\":\"Line one\"}", "{\"text\":\"Line two\"}"), enchantments,
                 Map.of("minecraft:mending", 1), true, false, 7, 4, true, false,
-                OptionalInt.of(0x336699), true, OptionalInt.of(42), data);
+                OptionalInt.of(0x336699), true, OptionalInt.of(42), data).orElseThrow();
     }
 
     private static ItemStackSnapshot empty(String id, int count, CompoundTag data) {
-        return new ItemStackSnapshot(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
-                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), data);
+        return ItemStackSnapshot.create(id, count, Optional.empty(), List.of(), Map.of(), Map.of(), true, true,
+                0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), data).orElseThrow();
     }
 
     private static void assertError(CompoundTag tag, ItemStackSnapshotError error) {
