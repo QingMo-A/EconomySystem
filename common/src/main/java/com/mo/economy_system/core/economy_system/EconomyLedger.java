@@ -130,7 +130,20 @@ public final class EconomyLedger {
      * Recipient overflow is rejected so currency can never disappear through
      * the general {@link #addBalance(UUID, int)} saturation behavior.
      */
-    public BalanceTransferResult transferBalance(
+    public synchronized BalanceTransferResult previewTransferExact(UUID senderUUID, UUID recipientUUID, int amount) {
+        Objects.requireNonNull(senderUUID, "senderUUID");
+        Objects.requireNonNull(recipientUUID, "recipientUUID");
+        if (amount <= 0) return BalanceTransferResult.INVALID_AMOUNT;
+        if (senderUUID.equals(recipientUUID)) return BalanceTransferResult.SAME_ACCOUNT;
+        int senderBefore = getBalance(senderUUID);
+        if (senderBefore < amount) return BalanceTransferResult.INSUFFICIENT_FUNDS;
+        if ((long) getBalance(recipientUUID) + amount > MAX_BALANCE) {
+            return BalanceTransferResult.RECIPIENT_BALANCE_LIMIT;
+        }
+        return BalanceTransferResult.SUCCESS;
+    }
+
+    public synchronized BalanceTransferResult transferExact(
             UUID senderUUID,
             UUID recipientUUID,
             int amount,
@@ -138,24 +151,16 @@ public final class EconomyLedger {
             String senderReason,
             String recipientReason
     ) {
-        Objects.requireNonNull(senderUUID, "senderUUID");
-        Objects.requireNonNull(recipientUUID, "recipientUUID");
-        if (amount <= 0) {
-            return BalanceTransferResult.INVALID_AMOUNT;
-        }
-        if (senderUUID.equals(recipientUUID)) {
-            return BalanceTransferResult.SAME_ACCOUNT;
-        }
-
+        BalanceTransferResult preview = previewTransferExact(senderUUID, recipientUUID, amount);
+        if (preview != BalanceTransferResult.SUCCESS) return preview;
+        boolean senderExisted = accounts.containsKey(senderUUID);
+        boolean recipientExisted = accounts.containsKey(recipientUUID);
         int senderBefore = getBalance(senderUUID);
-        if (senderBefore < amount) {
-            return BalanceTransferResult.INSUFFICIENT_FUNDS;
-        }
-
         int recipientBefore = getBalance(recipientUUID);
-        if ((long) recipientBefore + amount > MAX_BALANCE) {
-            return BalanceTransferResult.RECIPIENT_BALANCE_LIMIT;
-        }
+        Deque<BalanceLogEntry> senderLogs = balanceLogs.containsKey(senderUUID)
+                ? new ArrayDeque<>(balanceLogs.get(senderUUID)) : null;
+        Deque<BalanceLogEntry> recipientLogs = balanceLogs.containsKey(recipientUUID)
+                ? new ArrayDeque<>(balanceLogs.get(recipientUUID)) : null;
 
         int senderAfter = senderBefore - amount;
         int recipientAfter = recipientBefore + amount;
@@ -177,8 +182,25 @@ public final class EconomyLedger {
                 recipientBefore,
                 recipientAfter
         );
-        dirtyCallback.run();
+        try {
+            dirtyCallback.run();
+        } catch (RuntimeException exception) {
+            restoreAccount(senderUUID, senderExisted, senderBefore, senderLogs);
+            restoreAccount(recipientUUID, recipientExisted, recipientBefore, recipientLogs);
+            return BalanceTransferResult.PERSIST_FAILED;
+        }
         return BalanceTransferResult.SUCCESS;
+    }
+
+    /** Compatibility entry point for protocol 4; delegates to the atomic exact transfer. */
+    public BalanceTransferResult transferBalance(UUID senderUUID, UUID recipientUUID, int amount, String category,
+                                                 String senderReason, String recipientReason) {
+        return transferExact(senderUUID, recipientUUID, amount, category, senderReason, recipientReason);
+    }
+
+    private void restoreAccount(UUID id, boolean existed, int balance, Deque<BalanceLogEntry> logs) {
+        if (existed) accounts.put(id, balance); else accounts.remove(id);
+        if (logs == null) balanceLogs.remove(id); else balanceLogs.put(id, logs);
     }
 
     public void storeOfflineMessage(UUID playerUUID, String message) {

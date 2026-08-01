@@ -19,7 +19,12 @@ public final class ClientMarketState {
         case SUMMARY->{if(m.requestId()!=current.latestSummaryRequestId||m.marketRevision()<current.marketRevision)yield false;current=new Snapshot(m.marketRevision(),m.totalSales(),m.totalDemand(),current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,current.loading,current.stale,current.error);yield true;}
         case INVALIDATED->{if(m.marketRevision()<current.marketRevision)yield false;current=new Snapshot(m.marketRevision(),m.totalSales(),m.totalDemand(),current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,current.loading,true,current.error);yield true;}
     };}
-    public static synchronized void pageError(String error){current=new Snapshot(current.marketRevision,current.totalSales,current.totalDemand,current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,false,current.stale,Objects.requireNonNull(error));}
+    public static synchronized boolean pageError(long requestId,long revision,String error){
+        Objects.requireNonNull(error);
+        if(requestId!=current.latestPageRequestId||revision<current.marketRevision)return false;
+        current=new Snapshot(current.marketRevision,current.totalSales,current.totalDemand,current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,false,current.stale,error);
+        return true;
+    }
     public static synchronized void reset(){current=empty();}
     public record Snapshot(long marketRevision,int totalSales,int totalDemand,List<MarketOrderSnapshot> orders,int totalMatched,int offset,int limit,long latestPageRequestId,long latestSummaryRequestId,boolean loading,boolean stale,String error){
         public Snapshot{orders=List.copyOf(orders);Objects.requireNonNull(error);}

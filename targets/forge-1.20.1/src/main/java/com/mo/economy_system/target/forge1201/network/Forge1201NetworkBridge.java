@@ -16,6 +16,7 @@ import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
+import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -54,6 +55,7 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
             return;
         }
         if (message.getClass() == MarketDataRequestMessage.class) { Forge1201NetworkChannel.sendToServer((MarketDataRequestMessage) message); return; }
+        if (message.getClass() == PurchaseSalesOrderMessage.class) { Forge1201NetworkChannel.sendToServer((PurchaseSalesOrderMessage) message); return; }
         if (message.getClass() == ServerPlayerListRequestMessage.class) {
             Forge1201NetworkChannel.sendToServer((ServerPlayerListRequestMessage) message);
             return;

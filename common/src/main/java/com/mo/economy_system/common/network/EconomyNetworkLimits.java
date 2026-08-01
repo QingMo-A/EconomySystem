@@ -20,6 +20,7 @@ public final class EconomyNetworkLimits {
     public static final int MAX_MARKET_OWNER_NAME_LENGTH = 64;
     public static final int MAX_MARKET_ORDERS = MarketLedger.MAX_ORDERS;
     public static final int MAX_MARKET_RESPONSE_ESTIMATED_BYTES = 768 * 1024;
+    public static final int MAX_MARKET_RESPONSE_WIRE_BYTES = MAX_MARKET_RESPONSE_ESTIMATED_BYTES;
 
     private EconomyNetworkLimits() {
     }

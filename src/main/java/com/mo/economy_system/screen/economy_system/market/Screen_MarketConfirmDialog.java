@@ -4,7 +4,7 @@ import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
+import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -388,7 +388,7 @@ public class Screen_MarketConfirmDialog extends Screen {
         switch (confirmType) {
             case BUY_SALES -> {
                 if (salesOrder != null) {
-                    EconomySystem_NetworkManager.sendToServer(new Packet_PurchaseSalesOrder(salesOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new PurchaseSalesOrderMessage(salesOrder.getTradeID()));
                 }
             }
             case REMOVE_SALES -> {
@@ -401,10 +401,6 @@ public class Screen_MarketConfirmDialog extends Screen {
                     EconomySystem_NetworkManager.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
                 }
             }
-        }
-        // 刷新市场界面
-        if (parentScreen != null) {
-            parentScreen.refresh();
         }
         Minecraft.getInstance().setScreen(parentScreen);
     }

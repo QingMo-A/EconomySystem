@@ -347,5 +347,19 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.MARKET_SYNC_FAILED, "Market data synchronization failed");
         add(Util_MessageKeys.MARKET_SELLER, "Seller");
         add(Util_MessageKeys.MARKET_REQUESTER, "Requester");
+        add(Util_MessageKeys.MARKET_PURCHASE_SUCCESS, "Purchased %s x%s for %s MengYu Coins");
+        add(Util_MessageKeys.MARKET_PURCHASE_NOT_FOUND, "This sales order no longer exists");
+        add(Util_MessageKeys.MARKET_PURCHASE_WRONG_TYPE, "This order is not a sales order");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELF, "You cannot purchase your own sales order");
+        add(Util_MessageKeys.MARKET_PURCHASE_INSUFFICIENT_FUNDS, "Insufficient balance");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELLER_BALANCE_LIMIT, "The seller cannot receive the full payment");
+        add(Util_MessageKeys.MARKET_PURCHASE_INVENTORY_FULL, "Your main inventory does not have enough space");
+        add(Util_MessageKeys.MARKET_PURCHASE_ORDER_CHANGED, "The order changed; please refresh and try again");
+        add(Util_MessageKeys.MARKET_PURCHASE_PERSIST_FAILED, "Could not persist the market change");
+        add(Util_MessageKeys.MARKET_PURCHASE_ITEM_FAILED, "Could not deliver the complete item quantity");
+        add(Util_MessageKeys.MARKET_PURCHASE_PAYMENT_FAILED, "Payment failed; no purchase was completed");
+        add(Util_MessageKeys.MARKET_PURCHASE_ROLLBACK_FAILED, "Purchase rollback needs administrator attention");
+        add(Util_MessageKeys.MARKET_PURCHASE_FAILED, "Purchase failed");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELLER_NOTICE, "Sold %s x%s to %s for %s MengYu Coins");
     }
 }

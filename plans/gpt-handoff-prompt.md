@@ -37,5 +37,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
+
+协议 10/11 已正式关闭，decoder 会在读取 Snapshot NBT 前检查 768 KiB raw wire 大小。协议 12 已迁移为 UUID-only `PurchaseSalesOrderMessage`：客户端不传价格、数量、卖家或物品，服务端执行权威订单验证、主物品栏全量容量检查、事务插入、销售订单恢复句柄和原子 exact 双账户转账。空间不足不会掉落物品，通知与 INVALIDATED 只在提交后执行。下一步为协议 13，不要同时迁移 14-16。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```

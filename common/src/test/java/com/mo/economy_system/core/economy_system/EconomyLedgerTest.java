@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -158,5 +159,29 @@ class EconomyLedgerTest {
         assertEquals(10,ledger.getBalance(existing));assertEquals(List.of(oldLog),ledger.getBalanceLogs(existing));
         assertEquals(BalanceMutationResult.PERSIST_FAILED,ledger.creditExact(missing,5,"market","credit"));
         assertFalse(ledger.snapshot().accounts().containsKey(missing));assertTrue(ledger.getBalanceLogs(missing).isEmpty());
+    }
+
+    @Test void exactTransferRestoresBothAccountsLogsAndExistenceWhenDirtyFails() {
+        UUID sender=UUID.randomUUID(),recipient=UUID.randomUUID();BalanceLogEntry oldLog=new BalanceLogEntry(1,"old","old",20,0,20);
+        AtomicInteger dirty=new AtomicInteger();EconomyLedger ledger=new EconomyLedger(()->{dirty.incrementAndGet();throw new IllegalStateException("dirty");});
+        ledger.restore(new EconomyLedger.Snapshot(Map.of(sender,20),Map.of(),Map.of(sender,List.of(oldLog))));
+        assertEquals(BalanceTransferResult.PERSIST_FAILED,ledger.transferExact(sender,recipient,10,"market","buy","sell"));
+        assertEquals(20,ledger.getBalance(sender));assertFalse(ledger.snapshot().accounts().containsKey(recipient));
+        assertEquals(List.of(oldLog),ledger.getBalanceLogs(sender));assertTrue(ledger.getBalanceLogs(recipient).isEmpty());assertEquals(1,dirty.get());
+    }
+
+    @Test void transferPreviewAcceptsExactLimitAndRejectsOverflow() {
+        UUID sender=UUID.randomUUID(),recipient=UUID.randomUUID();EconomyLedger ledger=new EconomyLedger(()->{});
+        ledger.restore(new EconomyLedger.Snapshot(Map.of(sender,20,recipient,EconomyLedger.MAX_BALANCE-10),Map.of(),Map.of()));
+        assertEquals(BalanceTransferResult.SUCCESS,ledger.previewTransferExact(sender,recipient,10));
+        assertEquals(BalanceTransferResult.RECIPIENT_BALANCE_LIMIT,ledger.previewTransferExact(sender,recipient,11));
+    }
+
+    @Test void concurrentExactTransfersDoNotLoseUpdates() throws InterruptedException {
+        UUID sender=UUID.randomUUID(),recipient=UUID.randomUUID();EconomyLedger ledger=new EconomyLedger(()->{});
+        ledger.restore(new EconomyLedger.Snapshot(Map.of(sender,1000),Map.of(),Map.of()));
+        int workers=10,perWorker=50;CountDownLatch start=new CountDownLatch(1);List<Thread> threads=new java.util.ArrayList<>();
+        for(int worker=0;worker<workers;worker++){Thread thread=new Thread(()->{try{start.await();for(int i=0;i<perWorker;i++)assertEquals(BalanceTransferResult.SUCCESS,ledger.transferExact(sender,recipient,1,"test","send","receive"));}catch(InterruptedException exception){Thread.currentThread().interrupt();throw new AssertionError(exception);}});threads.add(thread);thread.start();}
+        start.countDown();for(Thread thread:threads)thread.join();assertEquals(500,ledger.getBalance(sender));assertEquals(500,ledger.getBalance(recipient));
     }
 }

@@ -35,6 +35,7 @@ public class MarketSavedData extends SavedData {
     public boolean removeOrder(java.util.UUID id) { return ledger.remove(id); }
     public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
     public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) { return ledger.removeUndeliveredDemand(id); }
+    public com.mo.economy_system.common.market.SalesOrderRemovalResult removeSalesForPurchase(java.util.UUID id) { return ledger.removeSalesForPurchase(id); }
 
     public List<MarketItem> getMarketItems() {
         List<MarketItem> result = new ArrayList<>();
@@ -44,8 +45,8 @@ public class MarketSavedData extends SavedData {
 
     public void addMarketItem(MarketItem item) { if (!ledger.add(fromLegacy(item))) throw new IllegalStateException("market rejected order"); }
     public void removeMarketItem(MarketItem item) { ledger.remove(item.getTradeID()); }
-    public void clearMarketItems() { ledger.replace(List.of()); }
-    public void replaceMarketItems(List<MarketItem> items) { ledger.replace(items.stream().map(this::fromLegacy).toList()); }
+    public void clearMarketItems() { ledger.replaceAll(List.of()); }
+    public void replaceMarketItems(List<MarketItem> items) { ledger.replaceAll(items.stream().map(this::fromLegacy).toList()); }
 
     @Override public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
@@ -64,7 +65,7 @@ public class MarketSavedData extends SavedData {
             for (int i = 0; i < list.size(); i++) restored.add(data.decodeOrder(list.getCompound(i)));
         }
         long revision=tag.contains("marketRevision",Tag.TAG_LONG)?tag.getLong("marketRevision"):0L;
-        data.ledger.load(restored,revision);
+        data.ledger.loadFromPersistence(restored,revision);
         return data;
     }
 

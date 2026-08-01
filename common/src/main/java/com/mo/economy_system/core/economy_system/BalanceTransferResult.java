@@ -7,5 +7,6 @@ public enum BalanceTransferResult {
     SAME_ACCOUNT,
     INSUFFICIENT_FUNDS,
     RECIPIENT_BALANCE_LIMIT,
+    PERSIST_FAILED,
     TARGET_NOT_AVAILABLE
 }

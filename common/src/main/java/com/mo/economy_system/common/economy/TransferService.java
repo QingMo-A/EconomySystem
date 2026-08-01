@@ -29,7 +29,7 @@ public final class TransferService {
         }
 
         EconomySavedData data = EconomySavedData.getInstance(sender.serverLevel());
-        BalanceTransferResult result = data.transferBalance(
+        BalanceTransferResult result = data.transferExact(
                 sender.getUUID(),
                 recipient.getUUID(),
                 message.amount(),

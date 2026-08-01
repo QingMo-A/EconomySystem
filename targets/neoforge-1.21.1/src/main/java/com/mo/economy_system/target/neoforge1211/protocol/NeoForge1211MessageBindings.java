@@ -6,7 +6,6 @@ import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
@@ -40,7 +39,7 @@ public final class NeoForge1211MessageBindings {
         registry.register(EconomyMessages.CREATE_DEMAND_ORDER);
         registry.register(EconomyMessages.MARKET_DATA_REQUEST);
         registry.register(EconomyMessages.MARKET_DATA_RESPONSE);
-        bind(registry, EconomyProtocol.PURCHASE_SALES_ORDER, Packet_PurchaseSalesOrder.class);
+        registry.register(EconomyMessages.PURCHASE_SALES_ORDER);
         bind(registry, EconomyProtocol.CONFIRM_DEMAND_ORDER, Packet_ConfirmDemandOrder.class);
         bind(registry, EconomyProtocol.DELIVER_DEMAND_ORDER, Packet_DeliverDemandOrder.class);
         bind(registry, EconomyProtocol.REMOVE_SALES_ORDER, Packet_RemoveSalesOrder.class);

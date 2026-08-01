@@ -76,8 +76,8 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-The current full target suite contains 123 passing tests. The paired NeoForge
-1.21.1 target contains 124 passing tests; `buildAllTargets --rerun-tasks` passes.
+The current full target suite contains 141 passing tests. The paired NeoForge
+1.21.1 target contains 142 passing tests; `buildAllTargets --rerun-tasks` passes.
 Protocols `8` through `11` are closed. Protocol `12` is the next migration slice.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
@@ -91,3 +91,9 @@ responses into `ClientMarketState`, and broadcast bounded invalidations. Pages c
 up to exactly 9 validated orders and a 768 KiB estimated payload budget; no legacy full-market
 `MarketItem` NBT is transmitted. Market revision is persisted as `marketRevision` and
 is sourced atomically with every response and invalidation.
+
+Protocol `12` is a real Forge C2S UUID-only message using the shared purchase transaction.
+It performs authoritative order/Snapshot validation, main-inventory capacity and atomic
+insertion, exact two-account payment, recoverable order removal, and independent rollback.
+A full inventory rejects the purchase without dropping items. Forge discriminators `13-16`
+remain unregistered; protocol `13` is next.

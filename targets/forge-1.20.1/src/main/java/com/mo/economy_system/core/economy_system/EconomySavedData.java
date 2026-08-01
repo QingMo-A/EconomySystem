@@ -89,6 +89,15 @@ public class EconomySavedData extends SavedData {
         );
     }
 
+    public BalanceTransferResult previewTransferExact(UUID senderUUID, UUID recipientUUID, int amount) {
+        return ledger.previewTransferExact(senderUUID, recipientUUID, amount);
+    }
+
+    public BalanceTransferResult transferExact(UUID senderUUID, UUID recipientUUID, int amount, String category,
+                                               String senderReason, String recipientReason) {
+        return ledger.transferExact(senderUUID, recipientUUID, amount, category, senderReason, recipientReason);
+    }
+
     public void storeOfflineMessage(UUID playerUUID, String message) {
         ledger.storeOfflineMessage(playerUUID, message);
     }

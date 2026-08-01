@@ -17,8 +17,13 @@ public final class NeoForge1211MarketDataHandlers {
     private static final Logger LOGGER=LogUtils.getLogger();
     public static void request(MarketDataRequestMessage message, IPayloadContext context) {
         context.enqueueWork(() -> { if (context.player() instanceof ServerPlayer player) {
-            var data=MarketSavedData.getInstance(player.serverLevel());
-            EconomySystem_NetworkManager.sendToClient(player,MarketDataQueryService.query(data.getView(),player.getUUID(),message));
+            try {
+                var data=MarketSavedData.getInstance(player.serverLevel());
+                var response=MarketDataQueryService.query(data.getView(),player.getUUID(),message);
+                EconomySystem_NetworkManager.sendToClient(player,response);
+            } catch (RuntimeException exception) {
+                LOGGER.error("Failed to serve market data request player={} request={}",player.getUUID(),message.requestId(),exception);
+            }
         }});
     }
     public static void response(MarketDataResponseMessage message, IPayloadContext context) {
@@ -37,7 +42,7 @@ public final class NeoForge1211MarketDataHandlers {
                 var stack=EconomyServices.platform().itemStacks().restoreSnapshot(order.item(),minecraft.level.registryAccess()).orElseThrow(); stack.setCount(order.quantity());
                 items.add(order.type()==MarketOrderType.DEMAND?new DemandOrder(order.tradeId(),order.item().itemId(),stack,order.totalPrice(),order.ownerName(),order.ownerId(),order.listingTime(),order.expirationTime(),order.delivered()):new SalesOrder(order.tradeId(),order.item().itemId(),stack,order.totalPrice(),order.ownerName(),order.ownerId(),order.listingTime(),order.expirationTime()));
             } if(!ClientMarketState.commitPage(message))return;if(screen instanceof com.mo.economy_system.screen.economy_system.market.Screen_Market market)market.updateMarketItems(items); }
-            catch(RuntimeException exception){ClientMarketState.pageError("market_sync_failed");LOGGER.error("Failed to materialize market page request={} revision={}",message.requestId(),message.marketRevision(),exception);if(minecraft.player!=null)minecraft.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.market.sync_failed"),false);}
+            catch(RuntimeException exception){ClientMarketState.pageError(message.requestId(),message.marketRevision(),"market_sync_failed");LOGGER.error("Failed to materialize market page request={} revision={}",message.requestId(),message.marketRevision(),exception);if(minecraft.player!=null)minecraft.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.market.sync_failed"),false);}
         }
     }
 }

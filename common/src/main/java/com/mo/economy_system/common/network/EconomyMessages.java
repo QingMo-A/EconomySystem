@@ -45,6 +45,8 @@ public final class EconomyMessages {
             new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_REQUEST, MarketDataRequestMessage.class);
     public static final EconomyMessageType<MarketDataResponseMessage> MARKET_DATA_RESPONSE =
             new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_RESPONSE, MarketDataResponseMessage.class);
+    public static final EconomyMessageType<PurchaseSalesOrderMessage> PURCHASE_SALES_ORDER =
+            new EconomyMessageType<>(EconomyProtocol.PURCHASE_SALES_ORDER, PurchaseSalesOrderMessage.class);
 
     public static final EconomyMessageType<ServerPlayerListRequestMessage> SERVER_PLAYER_LIST_REQUEST =
             new EconomyMessageType<>(

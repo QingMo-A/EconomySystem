@@ -95,7 +95,7 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- The full suites now contain 123 passing Forge 1.20.1 tests and 124 passing NeoForge
+- The full suites now contain 141 passing Forge 1.20.1 tests and 142 passing NeoForge
   1.21.1 tests. Protocols `8` through `11` are closed; protocol `12` is next.
 
 ## Exact market balance transactions
@@ -121,3 +121,16 @@ Every response carries the revision and is limited by a conservative 768 KiB est
 payload budget. PAGE and SUMMARY have independent request IDs; invalidation revisions
 prevent older responses from replacing newer statistics. NeoForge restores every item
 snapshot before atomically publishing a page. The initial migration was `666fccc`.
+
+Protocol `10/11` is closed. Both decoders reject raw payloads above 768 KiB before
+reading order or Snapshot NBT data. Persistence loading and runtime replacement now use
+separate `loadFromPersistence` and `replaceAll` ledger APIs.
+
+## Sales-order purchase protocol 12
+
+Protocol `12` sends only the order UUID. The server resolves the authoritative sales
+order, validates/restores its schema-v1 Snapshot, checks exact buyer-to-seller payment and
+main-inventory capacity, then uses transactional order removal and inventory insertion.
+Insufficient space rejects the purchase without ground drops. Payment failure independently
+rolls back inventory and restores the order at its original index. Notifications and market
+invalidation occur only after commit. Protocol `13` is next.

@@ -17,6 +17,7 @@ import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
@@ -303,6 +304,10 @@ public final class NeoForge1211MessageCodecs {
         });
         register(codecs, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataCodec.REQUEST);
         register(codecs, EconomyMessages.MARKET_DATA_RESPONSE, NeoForge1211MarketDataCodec.RESPONSE);
+        register(codecs, EconomyMessages.PURCHASE_SALES_ORDER, new NeoForge1211MessageCodec<>() {
+            @Override public void encode(PurchaseSalesOrderMessage message, RegistryFriendlyByteBuf buffer) { buffer.writeUUID(message.tradeId()); }
+            @Override public PurchaseSalesOrderMessage decode(RegistryFriendlyByteBuf buffer) { return new PurchaseSalesOrderMessage(buffer.readUUID()); }
+        });
         register(codecs, EconomyMessages.SERVER_PLAYER_LIST_REQUEST, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(

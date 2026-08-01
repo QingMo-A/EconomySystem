@@ -65,6 +65,37 @@ public final class MarketLedger {
         return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.NOT_FOUND);
     }
 
+    public synchronized SalesOrderRemovalResult removeSalesForPurchase(UUID tradeId) {
+        Objects.requireNonNull(tradeId, "tradeId");
+        RemovalAttempt attempt = removeMatching(tradeId, MarketOrderType.SALES);
+        return switch (attempt.status()) {
+            case REMOVED -> SalesOrderRemovalResult.removed(attempt.removal());
+            case NOT_FOUND -> SalesOrderRemovalResult.failure(SalesOrderRemovalStatus.NOT_FOUND);
+            case WRONG_ORDER_TYPE -> SalesOrderRemovalResult.failure(SalesOrderRemovalStatus.WRONG_ORDER_TYPE);
+            case PERSIST_FAILED -> SalesOrderRemovalResult.failure(SalesOrderRemovalStatus.PERSIST_FAILED);
+        };
+    }
+
+    private RemovalAttempt removeMatching(UUID tradeId, MarketOrderType expectedType) {
+        for (int index = 0; index < orders.size(); index++) {
+            MarketOrder order = orders.get(index);
+            if (!order.tradeId().equals(tradeId)) continue;
+            if (order.type() != expectedType) return RemovalAttempt.failure(RemovalStatus.WRONG_ORDER_TYPE);
+            requireRevisionCapacity();
+            orders.remove(index);
+            try {
+                dirtyCallback.run();
+            } catch (RuntimeException exception) {
+                orders.add(index, order);
+                return RemovalAttempt.failure(RemovalStatus.PERSIST_FAILED);
+            }
+            int originalIndex = index;
+            revision++;
+            return RemovalAttempt.removed(new MarketOrderRemoval(order, () -> restoreRemoval(order, originalIndex)));
+        }
+        return RemovalAttempt.failure(RemovalStatus.NOT_FOUND);
+    }
+
     private synchronized MarketOrderRestoreResult restoreRemoval(MarketOrder order,int index) {
         if (orders.stream().anyMatch(existing->existing.tradeId().equals(order.tradeId()))) return MarketOrderRestoreResult.DUPLICATE_ID;
         requireRevisionCapacity(); int restoredIndex=Math.min(index,orders.size());orders.add(restoredIndex,order);
@@ -73,20 +104,22 @@ public final class MarketLedger {
         revision++; return MarketOrderRestoreResult.RESTORED;
     }
 
-    public synchronized void restore(List<MarketOrder> restored) {
-        validateRestored(restored); orders.clear();orders.addAll(restored);
-    }
-
-    public synchronized void replace(List<MarketOrder> restored) {
+    public synchronized void replaceAll(List<MarketOrder> restored) {
         validateRestored(restored); requireRevisionCapacity(); List<MarketOrder> before=List.copyOf(orders);
         orders.clear(); orders.addAll(restored);
         try { dirtyCallback.run(); } catch (RuntimeException exception) { orders.clear();orders.addAll(before);throw exception; }
         revision++;
     }
 
-    public synchronized void load(List<MarketOrder> restored,long loadedRevision) {
+    public synchronized void loadFromPersistence(List<MarketOrder> restored,long loadedRevision) {
         if(loadedRevision<0)throw new IllegalArgumentException("negative market revision"); validateRestored(restored);
         orders.clear();orders.addAll(restored);revision=loadedRevision;
+    }
+
+    private enum RemovalStatus { REMOVED, NOT_FOUND, WRONG_ORDER_TYPE, PERSIST_FAILED }
+    private record RemovalAttempt(RemovalStatus status, MarketOrderRemoval removal) {
+        static RemovalAttempt failure(RemovalStatus status) { return new RemovalAttempt(status, null); }
+        static RemovalAttempt removed(MarketOrderRemoval removal) { return new RemovalAttempt(RemovalStatus.REMOVED, removal); }
     }
 
     private static void validateRestored(List<MarketOrder> restored) {

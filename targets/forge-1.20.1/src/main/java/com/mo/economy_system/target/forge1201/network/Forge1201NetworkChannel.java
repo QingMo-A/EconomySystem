@@ -20,6 +20,7 @@ import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
+import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -151,6 +152,9 @@ public final class Forge1201NetworkChannel {
         CHANNEL.messageBuilder(MarketDataResponseMessage.class, EconomyMessages.MARKET_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(Forge1201MarketDataCodec::encodeResponse).decoder(Forge1201MarketDataCodec::decodeResponse)
                 .consumerMainThread(Forge1201MarketDataHandlers::response).add();
+        CHANNEL.messageBuilder(PurchaseSalesOrderMessage.class, EconomyMessages.PURCHASE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201PurchaseSalesOrderCodec::encode).decoder(Forge1201PurchaseSalesOrderCodec::decode)
+                .consumerMainThread(Forge1201PurchaseSalesOrderHandler::handle).add();
 
         CHANNEL.messageBuilder(
                         ServerPlayerListRequestMessage.class,
@@ -203,6 +207,7 @@ public final class Forge1201NetworkChannel {
     static void sendToServer(CreateSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(CreateDemandOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(MarketDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+    static void sendToServer(PurchaseSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();

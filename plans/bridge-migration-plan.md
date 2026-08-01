@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 下一迁移切片是协议 `12` 购买销售订单；本轮未正式迁移协议 `12-16`。
-- 完整回归为 Forge 123 项、NeoForge 124 项，双目标构建通过。
+- 完整回归为 Forge 141 项、NeoForge 142 项，双目标构建通过。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - 只有权威账本修改成功才广播失效；下一步仍是协议 `12`。
@@ -147,5 +147,14 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 ```
+
+### 协议 12：购买销售订单（已完成）
+
+- 协议 10/11 已关闭；双端 decoder 在读取订单或 Snapshot NBT 前拒绝超过 768 KiB 的 raw payload。
+- 市场持久化加载与运行时替换分别使用 `loadFromPersistence` 和 `replaceAll`，不再存在无 revision 修改旁路。
+- 协议 12 客户端只发送 `tradeId`；价格、数量、卖家与物品全部由服务端权威订单提供。
+- 买卖双方通过单次 dirty 的 `transferExact` 原子转账，dirty 失败恢复双方账户存在性、余额和日志。
+- 销售订单删除提供原索引恢复句柄；物品只事务性插入主物品栏，空间不足直接拒绝且不生成掉落。
+- 成功提交后才发送通知与 INVALIDATED；下一步为协议 13，Forge 仍未注册 13-16。
 
 若仅 ForgeGradle TLS 证书握手失败，当次命令可临时增加 `"-Dnet.minecraftforge.gradle.check.certs=false"`，禁止写入项目配置。每轮还要检查 Forge JAR 不包含 NeoForge target 类。

@@ -348,5 +348,19 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.MARKET_SYNC_FAILED, "市场数据同步失败");
         add(Util_MessageKeys.MARKET_SELLER, "卖家");
         add(Util_MessageKeys.MARKET_REQUESTER, "求购者");
+        add(Util_MessageKeys.MARKET_PURCHASE_SUCCESS, "成功购买 %s x%s，共支付 %s 梦鱼币");
+        add(Util_MessageKeys.MARKET_PURCHASE_NOT_FOUND, "该销售订单已不存在");
+        add(Util_MessageKeys.MARKET_PURCHASE_WRONG_TYPE, "该订单不是销售订单");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELF, "不能购买自己的销售订单");
+        add(Util_MessageKeys.MARKET_PURCHASE_INSUFFICIENT_FUNDS, "余额不足");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELLER_BALANCE_LIMIT, "卖家余额无法接收完整款项");
+        add(Util_MessageKeys.MARKET_PURCHASE_INVENTORY_FULL, "主物品栏空间不足");
+        add(Util_MessageKeys.MARKET_PURCHASE_ORDER_CHANGED, "订单已变化，请刷新后重试");
+        add(Util_MessageKeys.MARKET_PURCHASE_PERSIST_FAILED, "市场数据保存失败");
+        add(Util_MessageKeys.MARKET_PURCHASE_ITEM_FAILED, "物品无法完整发放");
+        add(Util_MessageKeys.MARKET_PURCHASE_PAYMENT_FAILED, "支付失败，购买未完成");
+        add(Util_MessageKeys.MARKET_PURCHASE_ROLLBACK_FAILED, "购买回滚失败，请联系管理员");
+        add(Util_MessageKeys.MARKET_PURCHASE_FAILED, "购买失败");
+        add(Util_MessageKeys.MARKET_PURCHASE_SELLER_NOTICE, "已向 %3$s 售出 %1$s x%2$s，收入 %4$s 梦鱼币");
     }
 }

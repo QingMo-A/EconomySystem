@@ -56,6 +56,11 @@ class Forge1201MarketDataProtocolTest {
         assertThrows(DecoderException.class, () -> Forge1201MarketDataCodec.decodeResponse(response));
     }
 
+    @Test void rejectsOversizedWirePayloadBeforeParsingSnapshot() {
+        FriendlyByteBuf buffer=buffer();buffer.writeZero(EconomyNetworkLimits.MAX_MARKET_RESPONSE_WIRE_BYTES+1);
+        assertThrows(DecoderException.class,()->Forge1201MarketDataCodec.decodeResponse(buffer));
+    }
+
     private static void assertRequestRoundTrip(MarketDataRequestMessage message) {
         FriendlyByteBuf buffer = buffer();
         Forge1201MarketDataCodec.encodeRequest(message, buffer);

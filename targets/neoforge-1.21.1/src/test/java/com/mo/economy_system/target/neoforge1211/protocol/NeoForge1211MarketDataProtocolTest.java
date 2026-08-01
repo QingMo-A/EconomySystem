@@ -57,6 +57,11 @@ class NeoForge1211MarketDataProtocolTest {
         assertThrows(DecoderException.class, () -> NeoForge1211MarketDataCodec.RESPONSE.decode(response));
     }
 
+    @Test void rejectsOversizedWirePayloadBeforeParsingSnapshot() {
+        RegistryFriendlyByteBuf buffer=buffer();buffer.writeZero(EconomyNetworkLimits.MAX_MARKET_RESPONSE_WIRE_BYTES+1);
+        assertThrows(DecoderException.class,()->NeoForge1211MarketDataCodec.RESPONSE.decode(buffer));
+    }
+
     private static void assertRequestRoundTrip(MarketDataRequestMessage message) {
         RegistryFriendlyByteBuf buffer = buffer();
         NeoForge1211MarketDataCodec.REQUEST.encode(message, buffer);

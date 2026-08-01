@@ -314,5 +314,19 @@ public class Util_MessageKeys {
     public static final String MARKET_SYNC_FAILED = "message.market.sync_failed";
     public static final String MARKET_SELLER = "screen.market.seller";
     public static final String MARKET_REQUESTER = "screen.market.requester";
+    public static final String MARKET_PURCHASE_SUCCESS = "message.market.purchase.success";
+    public static final String MARKET_PURCHASE_NOT_FOUND = "message.market.purchase.not_found";
+    public static final String MARKET_PURCHASE_WRONG_TYPE = "message.market.purchase.wrong_type";
+    public static final String MARKET_PURCHASE_SELF = "message.market.purchase.self";
+    public static final String MARKET_PURCHASE_INSUFFICIENT_FUNDS = "message.market.purchase.insufficient_funds";
+    public static final String MARKET_PURCHASE_SELLER_BALANCE_LIMIT = "message.market.purchase.seller_balance_limit";
+    public static final String MARKET_PURCHASE_INVENTORY_FULL = "message.market.purchase.inventory_full";
+    public static final String MARKET_PURCHASE_ORDER_CHANGED = "message.market.purchase.order_changed";
+    public static final String MARKET_PURCHASE_PERSIST_FAILED = "message.market.purchase.persist_failed";
+    public static final String MARKET_PURCHASE_ITEM_FAILED = "message.market.purchase.item_failed";
+    public static final String MARKET_PURCHASE_PAYMENT_FAILED = "message.market.purchase.payment_failed";
+    public static final String MARKET_PURCHASE_ROLLBACK_FAILED = "message.market.purchase.rollback_failed";
+    public static final String MARKET_PURCHASE_FAILED = "message.market.purchase.failed";
+    public static final String MARKET_PURCHASE_SELLER_NOTICE = "message.market.purchase.seller_notice";
 }
 
