@@ -70,7 +70,6 @@ public class EconomySystem_EventHandler {
 
         // 初始化 市场系统
         MarketSavedData marketData = MarketSavedData.getInstance(overworld);
-        MarketManager.setMarketItems(marketData.getMarketItems()); // 将数据加载到 MarketManager
 
         // 初始化 领地系统
         TerritoryManager.reset();
@@ -81,11 +80,7 @@ public class EconomySystem_EventHandler {
     public static void onServerStopping(ServerStoppingEvent event) {
         // 服务器停止时，Forge 会自动保存 SavedData
         System.out.println("Saving economy data...");
-        MarketSavedData marketData = MarketSavedData.getInstance(event.getServer().overworld());
-        marketData.clearMarketItems(); // 清空原有数据
-        for (MarketItem item : MarketManager.getMarketItems()) {
-            marketData.addMarketItem(item); // 保存当前市场商品
-        }
+        MarketSavedData.getInstance(event.getServer().overworld()).setDirty();
     }
 
     @SubscribeEvent
@@ -109,8 +104,9 @@ public class EconomySystem_EventHandler {
             EconomySavedData economySavedData = EconomySavedData.getInstance(overworld);
             MarketSavedData marketData = MarketSavedData.getInstance(overworld);
             DeliveryBoxSavedData deliveryBoxSavedData = DeliveryBoxSavedData.getInstance(overworld);
-            marketData.clearMarketItems(); // 清空原有数据
-            for (MarketItem item : MarketManager.getMarketItems()) {
+            List<MarketItem> currentMarketItems = MarketManager.getMarketItems();
+            marketData.clearMarketItems();
+            for (MarketItem item : currentMarketItems) {
                 if (item.isExpired()) {
                     ServerPlayer owner = event.getServer().getPlayerList().getPlayer(item.getSellerID());
                     if (item instanceof DemandOrder demandOrder) {
@@ -145,7 +141,6 @@ public class EconomySystem_EventHandler {
                     marketData.addMarketItem(item); // 保存当前市场商品
                 }
             }
-            MarketManager.setMarketItems(marketData.getMarketItems()); // 将数据加载到 MarketManager
         }
 
         // 定时检查红包

@@ -23,6 +23,11 @@ public abstract class MarketItem {
 
 
     public MarketItem(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID, long listingTime) {
+        this(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, listingTime + EXPIRATION_DURATION);
+    }
+
+    protected MarketItem(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID,
+                         long listingTime, long expirationTime) {
         this.tradeID = tradeID;
         this.itemID = itemID;
         this.itemStack = itemStack.copy();
@@ -30,7 +35,7 @@ public abstract class MarketItem {
         this.sellerName = sellerName;
         this.sellerID = sellerID;
         this.listingTime = listingTime;
-        this.expirationTime = listingTime + EXPIRATION_DURATION; // 设置过期时间
+        this.expirationTime = expirationTime;
     }
 
     // 公共方法（Getters）...

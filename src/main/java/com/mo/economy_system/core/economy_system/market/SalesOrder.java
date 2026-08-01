@@ -11,6 +11,11 @@ public class SalesOrder extends MarketItem {
         super(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime);
     }
 
+    public SalesOrder(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID,
+                      long listingTime, long expirationTime) {
+        super(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime);
+    }
+
     @Override
     public CompoundTag toNBT() {
         return super.toNBT(); // 复用父类逻辑（已包含 type 字段）
@@ -33,6 +38,7 @@ public class SalesOrder extends MarketItem {
         String sellerName = tag.getString("sellerName");
         UUID sellerID = tag.getUUID("sellerID");
         long listingTime = tag.getLong("listingTime");
-        return new SalesOrder(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime);
+        long expirationTime = tag.contains("expirationTime") ? tag.getLong("expirationTime") : listingTime + 3L * 24L * 60L * 60L * 1000L;
+        return new SalesOrder(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime);
     }
 }

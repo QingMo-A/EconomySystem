@@ -16,6 +16,7 @@ import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -129,6 +130,12 @@ public final class Forge1201NetworkChannel {
                 .consumerMainThread(Forge1201ShopPurchaseHandler::handle)
                 .add();
 
+        CHANNEL.messageBuilder(CreateSalesOrderMessage.class, EconomyMessages.CREATE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201NetworkChannel::encodeCreateSalesOrder)
+                .decoder(Forge1201NetworkChannel::decodeCreateSalesOrder)
+                .consumerMainThread(Forge1201CreateSalesOrderHandler::handle)
+                .add();
+
         CHANNEL.messageBuilder(
                         ServerPlayerListRequestMessage.class,
                         EconomyMessages.SERVER_PLAYER_LIST_REQUEST.discriminator(),
@@ -176,6 +183,8 @@ public final class Forge1201NetworkChannel {
         requireRegistered();
         CHANNEL.sendToServer(message);
     }
+
+    static void sendToServer(CreateSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();
@@ -375,6 +384,16 @@ public final class Forge1201NetworkChannel {
                 buffer.readUtf(EconomyNetworkLimits.MAX_SHOP_ITEM_ID_LENGTH),
                 buffer.readInt()
         );
+    }
+
+    private static void encodeCreateSalesOrder(CreateSalesOrderMessage message, FriendlyByteBuf buffer) {
+        buffer.writeInt(message.slot()); buffer.writeInt(message.quantity()); buffer.writeInt(message.totalPrice());
+    }
+
+    private static CreateSalesOrderMessage decodeCreateSalesOrder(FriendlyByteBuf buffer) {
+        int slot = buffer.readInt(); int quantity = buffer.readInt(); int totalPrice = buffer.readInt();
+        if (slot < 0 || quantity <= 0 || totalPrice <= 0) throw new DecoderException("Invalid create sales order request");
+        return new CreateSalesOrderMessage(slot, quantity, totalPrice);
     }
 
     private static void encodeShopDataResponse(

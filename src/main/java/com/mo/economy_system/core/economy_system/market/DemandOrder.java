@@ -14,6 +14,12 @@ public class DemandOrder extends MarketItem {
         this.delivered = delivered;
     }
 
+    public DemandOrder(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID,
+                       long listingTime, long expirationTime, boolean delivered) {
+        super(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime);
+        this.delivered = delivered;
+    }
+
     @Override
     public CompoundTag toNBT() {
         CompoundTag tag = super.toNBT(); // 复用父类逻辑
@@ -39,7 +45,8 @@ public class DemandOrder extends MarketItem {
         UUID sellerID = tag.getUUID("sellerID");
         long listingTime = tag.getLong("listingTime");
         boolean delivered = tag.getBoolean("delivered");
-        return new DemandOrder(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, delivered);
+        long expirationTime = tag.contains("expirationTime") ? tag.getLong("expirationTime") : listingTime + 3L * 24L * 60L * 60L * 1000L;
+        return new DemandOrder(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime, delivered);
     }
 
     public boolean isDelivered() { return delivered; }

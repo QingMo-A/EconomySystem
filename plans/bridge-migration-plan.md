@@ -67,9 +67,16 @@ components
 
 旧 compact `{id,count,customData}` 只作为读取兼容输入；读取后会形成仅含 custom data 的 v1 Snapshot。所有新 Snapshot 写入都带 `schemaVersion: 1`。`saveSimple/loadSimple` 暂时保留并标为 deprecated，避免破坏尚未迁移的功能。
 
-## 阶段 B：市场读取与订单创建（下一步，尚未开始）
+## 阶段 B：市场读取与订单创建（进行中）
 
-下一步才迁移协议 `8` 创建销售订单，然后是 `9` 创建求购订单和 `10/11` 市场数据。服务器必须重新验证手中物品、数量、价格和税费，并为扣物品/冻结金额与订单落盘提供补偿路径。
+协议 `8` 创建销售订单已经完成；下一步才是 `9` 创建求购订单，之后才处理 `10/11` 市场数据。本轮未迁移购买、取消、配送箱或领地。
+
+- common 消息只含 `slot`、`quantity`、`totalPrice`，discriminator 固定为 `8`；
+- 服务端重读槽位，保存 count=1 的 schema-v1 模板，数量与整单总价分别保存；
+- 税费使用 `(totalPrice + 9L) / 10L`，校验期间无状态修改，库存/税费/订单失败有补偿路径；
+- common `MarketLedger` 保证 ID 唯一、列表不可变、容量有界，target SavedData 只处理版本 API；
+- 新写入使用 `sales_order` / `demand_order`，精确保留 `expirationTime`；
+- 兼容旧 Java 类名和旧订单字段；Forge 无法无损转换旧物品数据时中止并阻止覆盖。
 
 - 订单持久化类型使用稳定 ID，并兼容旧存档类名；
 - 金额乘法先使用 `long` 检查，禁止整数溢出；

@@ -12,6 +12,7 @@ import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -39,6 +40,10 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
         }
         if (message.getClass() == ShopBuyItemMessage.class) {
             Forge1201NetworkChannel.sendToServer((ShopBuyItemMessage) message);
+            return;
+        }
+        if (message.getClass() == CreateSalesOrderMessage.class) {
+            Forge1201NetworkChannel.sendToServer((CreateSalesOrderMessage) message);
             return;
         }
         if (message.getClass() == ServerPlayerListRequestMessage.class) {

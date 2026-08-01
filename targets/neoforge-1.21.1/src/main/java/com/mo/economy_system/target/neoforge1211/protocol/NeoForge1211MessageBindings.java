@@ -7,7 +7,6 @@ import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_CreateDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_PurchaseSalesOrder;
 import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
@@ -38,7 +37,7 @@ public final class NeoForge1211MessageBindings {
         registry.register(EconomyMessages.SHOP_DATA_REQUEST);
         registry.register(EconomyMessages.SHOP_DATA_RESPONSE);
         registry.register(EconomyMessages.SHOP_BUY_ITEM);
-        bind(registry, EconomyProtocol.CREATE_SALES_ORDER, Packet_CreateSalesOrder.class);
+        registry.register(EconomyMessages.CREATE_SALES_ORDER);
         bind(registry, EconomyProtocol.CREATE_DEMAND_ORDER, Packet_CreateDemandOrder.class);
         bind(registry, EconomyProtocol.MARKET_DATA_REQUEST, Packet_MarketDataRequest.class);
         bind(registry, EconomyProtocol.MARKET_DATA_RESPONSE, Packet_MarketDataResponse.class);

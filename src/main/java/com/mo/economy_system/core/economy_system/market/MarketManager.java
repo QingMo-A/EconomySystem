@@ -1,52 +1,29 @@
 package com.mo.economy_system.core.economy_system.market;
 
-import java.util.ArrayList;
+import net.minecraft.server.level.ServerLevel;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.server.level.ServerLevel;
+import java.util.ArrayList;
 
-public class MarketManager {
-    private static final List<MarketItem> marketItems = new ArrayList<>();
-
+/** Compatibility facade for protocols not yet migrated; state lives only in MarketSavedData's common ledger. */
+public final class MarketManager {
+    private static MarketSavedData data;
+    private static List<MarketItem> compatibilityView;
+    private MarketManager() {}
+    static synchronized void bind(MarketSavedData value) { data = value; }
+    private static MarketSavedData data() { if (data == null) throw new IllegalStateException("market is not initialized"); return data; }
     public static synchronized List<MarketItem> getMarketItems() {
-        return new ArrayList<>(marketItems);
+        compatibilityView = data().getMarketItems();
+        return new ArrayList<>(compatibilityView);
     }
-
-    public static synchronized void setMarketItems(List<MarketItem> items) {
-        marketItems.clear();
-        marketItems.addAll(items);
-    }
-
-    public static synchronized void addMarketItem(MarketItem item) {
-        marketItems.add(0, item);
-    }
-
-    public static synchronized void removeMarketItem(MarketItem item) {
-        marketItems.remove(item);
-    }
-
-    public static synchronized boolean removeMarketItemById(UUID itemId) {
-        return marketItems.removeIf(item -> item.getTradeID().equals(itemId));
-    }
-
-    public static synchronized void clearMarketItems() {
-        marketItems.clear();
-    }
-
-    public static synchronized MarketItem getMarketItemById(UUID itemId) {
-        for (MarketItem item : marketItems) {
-            if (item.getTradeID().equals(itemId)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
+    public static synchronized void setMarketItems(List<MarketItem> items) { compatibilityView = new ArrayList<>(items); data().replaceMarketItems(items); }
+    public static synchronized void addMarketItem(MarketItem item) { data().addMarketItem(item); compatibilityView = data().getMarketItems(); }
+    public static synchronized void removeMarketItem(MarketItem item) { data().removeMarketItem(item); if (compatibilityView != null) compatibilityView.removeIf(value -> value.getTradeID().equals(item.getTradeID())); }
+    public static synchronized boolean removeMarketItemById(UUID id) { boolean removed = data().removeOrder(id); if (compatibilityView != null) compatibilityView.removeIf(value -> value.getTradeID().equals(id)); return removed; }
+    public static synchronized void clearMarketItems() { data().clearMarketItems(); compatibilityView = new ArrayList<>(); }
+    public static synchronized MarketItem getMarketItemById(UUID id) { compatibilityView = data().getMarketItems(); return compatibilityView.stream().filter(i -> i.getTradeID().equals(id)).findFirst().orElse(null); }
     public static synchronized void saveTo(ServerLevel level) {
-        MarketSavedData marketData = MarketSavedData.getInstance(level.getServer().overworld());
-        marketData.clearMarketItems();
-        for (MarketItem item : marketItems) {
-            marketData.addMarketItem(item);
-        }
+        MarketSavedData target = MarketSavedData.getInstance(level);
+        if (compatibilityView != null) target.replaceMarketItems(compatibilityView); else target.setDirty();
     }
 }

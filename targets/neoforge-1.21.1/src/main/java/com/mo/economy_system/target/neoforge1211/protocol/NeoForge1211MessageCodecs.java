@@ -6,6 +6,7 @@ import com.mo.economy_system.common.network.BalanceLogResponseMessage;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
+import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
@@ -274,6 +275,16 @@ public final class NeoForge1211MessageCodecs {
                         buffer.readUtf(EconomyNetworkLimits.MAX_SHOP_ITEM_ID_LENGTH),
                         buffer.readInt()
                 );
+            }
+        });
+        register(codecs, EconomyMessages.CREATE_SALES_ORDER, new NeoForge1211MessageCodec<>() {
+            @Override public void encode(CreateSalesOrderMessage message, RegistryFriendlyByteBuf buffer) {
+                buffer.writeInt(message.slot()); buffer.writeInt(message.quantity()); buffer.writeInt(message.totalPrice());
+            }
+            @Override public CreateSalesOrderMessage decode(RegistryFriendlyByteBuf buffer) {
+                int slot = buffer.readInt(); int quantity = buffer.readInt(); int totalPrice = buffer.readInt();
+                if (slot < 0 || quantity <= 0 || totalPrice <= 0) throw new DecoderException("Invalid create sales order request");
+                return new CreateSalesOrderMessage(slot, quantity, totalPrice);
             }
         });
         register(codecs, EconomyMessages.SERVER_PLAYER_LIST_REQUEST, new NeoForge1211MessageCodec<>() {

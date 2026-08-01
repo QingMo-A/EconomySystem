@@ -20,7 +20,7 @@
 
 阶段 A 已完成并经过安全加固：ItemStackSnapshot schema v1、集中 validator/limits、严格结果式 codec、DATA_LIMIT_EXCEEDED、旧 compact 读取兼容、Damage 对称校验、NeoForge Data Components 适配、Forge 原生 NBT 适配以及双端共享黄金 fixture 已建立。限制值以 common/README.md 和迁移计划为准。旧 saveSimple/loadSimple 只是 deprecated 兼容入口；新代码必须使用 Snapshot schema v1。
 
-你的下一项任务是阶段 B 的第一个独立切片：协议 8（创建销售订单）。开始前先审查现有 NeoForge 1.21.1 行为和 ItemStackSnapshot API，给出影响范围；不要同时批量迁移协议 9、市场列表、配送箱或领地。服务器必须重新验证玩家实际持有的物品、数量、价格和税费，扣物品与订单落盘必须有清晰回滚/补偿路径。
+阶段 B 的第一个切片协议 8（创建销售订单）已经完成。下一项任务才是协议 9（创建求购订单）；开始前审查 common 的 MarketOrder、MarketLedger、MarketOrderCodec 和双端 SavedData 外壳，不要同时迁移 10/11、购买、取消、配送箱或领地。
 
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks

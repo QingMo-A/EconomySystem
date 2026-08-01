@@ -86,4 +86,25 @@ public final class ItemStackSnapshot {
     public boolean dyedColorShown() { return dyedColorShown; }
     public OptionalInt customModelData() { return customModelData; }
     public CompoundTag customData() { return customData.copy(); }
+
+    @Override
+    public boolean equals(Object value) {
+        if (this == value) return true;
+        if (!(value instanceof ItemStackSnapshot other)) return false;
+        return count == other.count && enchantmentsShown == other.enchantmentsShown
+                && storedEnchantmentsShown == other.storedEnchantmentsShown && damage == other.damage
+                && repairCost == other.repairCost && unbreakable == other.unbreakable
+                && unbreakableShown == other.unbreakableShown && dyedColorShown == other.dyedColorShown
+                && itemId.equals(other.itemId) && customNameJson.equals(other.customNameJson)
+                && loreJson.equals(other.loreJson) && enchantments.equals(other.enchantments)
+                && storedEnchantments.equals(other.storedEnchantments) && dyedColor.equals(other.dyedColor)
+                && customModelData.equals(other.customModelData) && customData.equals(other.customData);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(itemId, count, customNameJson, loreJson, enchantments, storedEnchantments,
+                enchantmentsShown, storedEnchantmentsShown, damage, repairCost, unbreakable, unbreakableShown,
+                dyedColor, dyedColorShown, customModelData, customData);
+    }
 }

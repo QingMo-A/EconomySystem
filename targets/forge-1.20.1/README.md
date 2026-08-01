@@ -1,13 +1,14 @@
 # Forge 1.20.1 Target Status
 
 This target now validates the Gradle/Java 17/Forge toolchain, shared platform
-services, the Forge SavedData shell, and six end-to-end protocol slices:
+services, the Forge SavedData shells, and seven end-to-end protocol slices:
 
 - balance request/response (`0/1`);
 - balance-history request/response (`2/3`);
 - atomic online-player transfer (`4`);
 - system-shop catalog request/response (`5/6`);
 - server-authoritative system-shop purchase (`7`);
+- server-authoritative sales-order creation (`8`);
 - server player-list request/response (`34/35`).
 
 The Forge shop adapter reads the authoritative `economy_shop.json` schema and
@@ -38,8 +39,15 @@ Known fail-closed limits include attribute modifiers, adventure predicates,
 entity/block-entity item data, Forge capabilities, unknown display fields, and
 different tooltip visibility for normal versus stored enchantments (1.20.1 has
 one shared hide flag). The old `{id,count,customData}` compact format remains a
-read/legacy-API compatibility path only. Protocol `8` is the next planned
-migration and has not been implemented here.
+read/legacy-API compatibility path only.
+
+Protocol `8` is registered as `PLAY_TO_SERVER` with strict decoding. The server
+owns item identity, snapshot data, tax, seller, order ID, and timestamps. New
+market writes use stable `sales_order` / `demand_order` IDs, a count-one item
+template, separate quantity, and exact `expirationTime`. Legacy Java class names
+remain readable; unsupported legacy 1.20.1 item data aborts conversion instead
+of being silently dropped or overwritten. Forge still has no copied full market
+UI. Protocol `9` is the next migration slice.
 
 The hardened bridge applies the common snapshot limits at creation, schema
 decode/encode, capture, and restore. Nonzero `Damage` on an item with no
@@ -48,5 +56,5 @@ fails restoration. A shared schema-v1 golden fixture covers native names,
 lore, normal/stored enchantments, tooltip flags, damage, repair cost,
 unbreakable, dye, model data, and custom data.
 
-The current full target suite contains 43 passing tests. The paired NeoForge
-1.21.1 target contains 44 passing tests; `buildAllTargets --rerun-tasks` passes.
+The current full target suite contains 54 passing tests. The paired NeoForge
+1.21.1 target contains 55 passing tests; `buildAllTargets --rerun-tasks` passes.

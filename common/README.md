@@ -23,8 +23,8 @@ maintaining independent registration order.
 - Protocol `bridge-1` locks all 44 NeoForge 1.21.1 message IDs, directions,
   and Forge discriminators (`0` through `43`).
 - Common messages currently cover balance (`0/1`), balance history (`2/3`),
-  transfers (`4`), system-shop catalog synchronization and purchasing (`5-7`), and server
-  player lists (`34/35`). Both targets have real codecs and handlers for these
+  transfers (`4`), system-shop catalog synchronization and purchasing (`5-7`),
+  sales-order creation (`8`), and server player lists (`34/35`). Both targets have real codecs and handlers for these
   messages.
 - Transfers are atomic: invalid, self, insufficient-funds, offline-target, and
   recipient-overflow attempts change neither account. Online recipients are
@@ -54,7 +54,7 @@ maintaining independent registration order.
 - Legacy compact `{id,count,customData}` tags remain read-compatible only.
   `saveSimple/loadSimple` remain deprecated compatibility entry points; every
   new snapshot write uses schema v1. Stage A is complete. The next migration
-  slice is protocol `8` (create sale order), which is not part of Stage A.
+  Stage A is closed; protocol `8` now consumes this schema for sales-order creation.
 - Snapshot validation is centralized in `ItemStackSnapshotValidator`; creation
   and strict encoding return explicit results. Limits are: item/enchantment ID
   256 characters, name and each lore line 8,192 characters, 64 lore lines,
@@ -65,3 +65,11 @@ maintaining independent registration order.
   and restore now apply the same rule. One shared schema-v1 golden fixture is
   restored and recaptured by both targets. The verified hardened suite runs 43
   Forge 1.20.1 tests and 44 NeoForge 1.21.1 tests with no failures.
+- Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
+  inventory state, stores a count-one template, counts matching stacks with `long`,
+  charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
+  ledger write fails. Quantity remains separate and `totalPrice` is never multiplied.
+- New market writes use `sales_order` / `demand_order`, schema-v1 `itemStack`,
+  `listedCount`, `basePrice`, seller fields, and exact listing/expiration times.
+  Old Java class type names remain readable. Unsupported legacy Forge stack data
+  fails conversion before it can be overwritten.

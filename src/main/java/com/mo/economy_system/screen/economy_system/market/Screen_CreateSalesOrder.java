@@ -1,7 +1,7 @@
 package com.mo.economy_system.screen.economy_system.market;
 
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_CreateSalesOrder;
+import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -439,7 +439,7 @@ public class Screen_CreateSalesOrder extends Screen {
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.LIST_INSUFFICIENT_ITEM_MESSAGE_KEY));
             return;
         }
-        EconomySystem_NetworkManager.sendToServer(new Packet_CreateSalesOrder(selectedSlot, selectedCount, price.get()));
+        EconomySystem_NetworkManager.sendToServer(new CreateSalesOrderMessage(selectedSlot, selectedCount, price.get()));
         if (minecraft != null) {
             minecraft.setScreen(new Screen_Market());
         }

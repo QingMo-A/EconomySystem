@@ -35,6 +35,9 @@ public final class EconomyMessages {
     public static final EconomyMessageType<ShopBuyItemMessage> SHOP_BUY_ITEM =
             new EconomyMessageType<>(EconomyProtocol.SHOP_BUY_ITEM, ShopBuyItemMessage.class);
 
+    public static final EconomyMessageType<CreateSalesOrderMessage> CREATE_SALES_ORDER =
+            new EconomyMessageType<>(EconomyProtocol.CREATE_SALES_ORDER, CreateSalesOrderMessage.class);
+
     public static final EconomyMessageType<ServerPlayerListRequestMessage> SERVER_PLAYER_LIST_REQUEST =
             new EconomyMessageType<>(
                     EconomyProtocol.SERVER_PLAYER_LIST_REQUEST,
