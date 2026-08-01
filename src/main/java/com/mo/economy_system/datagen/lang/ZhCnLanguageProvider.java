@@ -144,6 +144,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.LIST_LIST_BUTTON_KEY, "上架");
         add(Util_MessageKeys.LIST_NO_ITEM_IN_HAND_MESSAGE_KEY, "你没有手持物品");
         add(Util_MessageKeys.LIST_INVALID_PRICE_MESSAGE_KEY, "非法价格");
+        add(Util_MessageKeys.LIST_INVALID_QUANTITY_MESSAGE_KEY, "非法数量");
+        add(Util_MessageKeys.LIST_UNSUPPORTED_ITEM_DATA_MESSAGE_KEY, "该物品包含市场暂不支持的数据");
+        add(Util_MessageKeys.LIST_MARKET_FULL_MESSAGE_KEY, "市场订单已满，请稍后再试");
+        add(Util_MessageKeys.LIST_CREATE_FAILED_MESSAGE_KEY, "创建销售订单失败，请稍后再试");
+        add(Util_MessageKeys.LIST_ROLLBACK_FAILED_MESSAGE_KEY, "订单创建失败且恢复状态异常，请联系管理员");
         add(Util_MessageKeys.LIST_SUCCESSFULLY_MESSAGE_KEY, "上架成功!");
         add(Util_MessageKeys.LIST_INSUFFICIENT_ITEM_MESSAGE_KEY, "你没有足够的物品去上架");
         add(Util_MessageKeys.LIST_UNMATCHED_ITEM_MESSAGE_KEY, "你手中的物品与上架的物品不匹配");

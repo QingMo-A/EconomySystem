@@ -1,0 +1,13 @@
+{
+  "message.list.invalid_price": "Invalid price",
+  "message.list.invalid_quantity": "Invalid quantity",
+  "message.list.unsupported_item_data": "This item's data is not supported by the market",
+  "message.list.market_full": "The market is full; please try again later",
+  "message.list.create_failed": "Could not create the sales order; please try again later",
+  "message.list.rollback_failed": "Order creation failed and state recovery needs administrator attention",
+  "message.list.list_insufficient_item": "You do not have enough matching items",
+  "message.list.list_item_tax_payment_failed": "Insufficient balance for the listing tax: %s",
+  "message.list.list_successfully": "Sales order created",
+  "message.list.list_unmatched_item": "Invalid inventory slot",
+  "message.list.no_item_in_hand": "The selected slot is empty"
+}

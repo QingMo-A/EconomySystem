@@ -20,7 +20,7 @@
 
 阶段 A 已完成并经过安全加固：ItemStackSnapshot schema v1、集中 validator/limits、严格结果式 codec、DATA_LIMIT_EXCEEDED、旧 compact 读取兼容、Damage 对称校验、NeoForge Data Components 适配、Forge 原生 NBT 适配以及双端共享黄金 fixture 已建立。限制值以 common/README.md 和迁移计划为准。旧 saveSimple/loadSimple 只是 deprecated 兼容入口；新代码必须使用 Snapshot schema v1。
 
-阶段 B 的第一个切片协议 8（创建销售订单）已经完成。下一项任务才是协议 9（创建求购订单）；开始前审查 common 的 MarketOrder、MarketLedger、MarketOrderCodec 和双端 SavedData 外壳，不要同时迁移 10/11、购买、取消、配送箱或领地。
+阶段 B 的第一个切片协议 8（创建销售订单）已经完成并经过事务加固：部分删除自动恢复，退税与物品补偿独立尝试，repository 添加为原子契约，双端有安全反馈与事务日志，MarketManager 不再缓存回写旧视图。下一项任务才是协议 9（创建求购订单）；开始前审查 common 的 MarketOrder、MarketLedger、MarketOrderCodec 和双端 SavedData 外壳，不要同时迁移 10/11、购买、取消、配送箱或领地。
 
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks

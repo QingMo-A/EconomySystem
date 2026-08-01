@@ -17,5 +17,22 @@ class NeoForge1211MarketSavedDataTest {
         MarketOrder decoded = MarketOrderCodec.decodeCurrent(saved.getList("marketItems", Tag.TAG_COMPOUND).getCompound(0)).orElseThrow();
         assertEquals(original, decoded); assertEquals(123456, decoded.expirationTime());
     }
+    @Test void readsBothLegacyJavaTypeNamesWithVersionedSnapshots() {
+        MarketOrder sale = new MarketOrder(MarketOrderType.SALES,UUID.randomUUID(),item(),65,100,"s",UUID.randomUUID(),1,999,false);
+        MarketOrder demand = new MarketOrder(MarketOrderType.DEMAND,UUID.randomUUID(),item(),3,20,"d",UUID.randomUUID(),2,888,true);
+        CompoundTag saleTag=MarketOrderCodec.encode(sale);saleTag.putString("type","com.mo.economy_system.core.economy_system.market.SalesOrder");
+        CompoundTag demandTag=MarketOrderCodec.encode(demand);demandTag.putString("type","com.mo.economy_system.core.economy_system.market.DemandOrder");
+        CompoundTag root=new CompoundTag();ListTag list=new ListTag();list.add(saleTag);list.add(demandTag);root.put("marketItems",list);
+        List<MarketOrder> orders=MarketSavedData.load(root,null).getOrders();
+        assertEquals(65,orders.get(0).quantity());assertEquals(999,orders.get(0).expirationTime());
+        assertTrue(orders.get(1).delivered());assertEquals(888,orders.get(1).expirationTime());
+    }
+    @Test void malformedVersionedOrderFailsBeforeAnyRewrite() {
+        CompoundTag valid=MarketOrderCodec.encode(new MarketOrder(MarketOrderType.SALES,UUID.randomUUID(),item(),1,1,"s",UUID.randomUUID(),1,2,false));
+        CompoundTag broken=valid.copy();broken.putString("future","unsupported");
+        CompoundTag root=new CompoundTag();ListTag list=new ListTag();list.add(valid);list.add(broken);root.put("marketItems",list);
+        assertThrows(IllegalArgumentException.class,()->MarketSavedData.load(root,null));
+        assertEquals(2,root.getList("marketItems",Tag.TAG_COMPOUND).size());
+    }
     private static ItemStackSnapshot item() { return ItemStackSnapshot.create("minecraft:stone", 1, Optional.empty(), List.of(), Map.of(), Map.of(), true, true, 0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow(); }
 }

@@ -21,4 +21,12 @@ class MarketLedgerTest {
         assertThrows(IllegalArgumentException.class, () -> ledger.restore(List.of(order, order)));
         assertTrue(ledger.orders().isEmpty());
     }
+
+    @Test void dirtyFailureRemovesOnlyTheNewOrder() {
+        MarketLedger ledger = new MarketLedger(() -> { throw new IllegalStateException("dirty"); });
+        MarketOrder order = new MarketOrder(MarketOrderType.SALES, UUID.randomUUID(), MarketOrderCodecTest.item(), 1, 1,
+                "a", UUID.randomUUID(), 1, 2, false);
+        assertThrows(IllegalStateException.class, () -> ledger.add(order));
+        assertTrue(ledger.orders().isEmpty());
+    }
 }

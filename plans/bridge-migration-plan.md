@@ -77,6 +77,12 @@ components
 - common `MarketLedger` 保证 ID 唯一、列表不可变、容量有界，target SavedData 只处理版本 API；
 - 新写入使用 `sales_order` / `demand_order`，精确保留 `expirationTime`；
 - 兼容旧 Java 类名和旧订单字段；Forge 无法无损转换旧物品数据时中止并阻止覆盖。
+- 协议 `8` 已完成事务加固：多堆删除不完整或抛异常会先恢复整个背包；删除结果不再用 `null` 表意；
+- repository 的 `false`/异常均保证不残留新订单，重复 ID 不会删除旧订单；
+- 退税与物品恢复分别捕获并始终全部尝试，任一补偿失败返回 `ROLLBACK_FAILED` 并记录事务阶段日志；
+- Forge 与 NeoForge 均向玩家返回稳定翻译消息，内部错误不泄漏枚举或堆栈；
+- `MarketManager` 不再缓存和回写兼容视图，当前世界的 `MarketSavedData/MarketLedger` 是唯一权威；
+- 最终回归套件为 Forge 72 项、NeoForge 73 项。协议 `8` 正式关闭，下一步仍只迁移协议 `9`。
 
 - 订单持久化类型使用稳定 ID，并兼容旧存档类名；
 - 金额乘法先使用 `long` 检查，禁止整数溢出；

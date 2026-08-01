@@ -73,3 +73,14 @@ maintaining independent registration order.
   `listedCount`, `basePrice`, seller fields, and exact listing/expiration times.
   Old Java class type names remain readable. Unsupported legacy Forge stack data
   fails conversion before it can be overwritten.
+- Protocol `8` transaction hardening is complete. A partial or exceptional multi-stack
+  removal restores every inventory slot before returning failure. Repository add is
+  explicitly atomic: `false` or an exception may not leave the proposed order behind.
+  Tax refund and inventory restoration are attempted independently, so one compensation
+  exception never skips the other; any incomplete compensation reports `ROLLBACK_FAILED`.
+- Both loaders map every result to stable, user-safe translation keys. Internal failures
+  and compensation outcomes are logged with player/trade/stage context. The legacy
+  `MarketManager` facade no longer caches or writes back a market view; the bound
+  `MarketSavedData`/`MarketLedger` remains the sole authority.
+- The hardened suites now contain 72 passing Forge 1.20.1 tests and 73 passing NeoForge
+  1.21.1 tests. Protocol `8` is closed; protocol `9` remains the next migration slice.

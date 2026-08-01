@@ -1,0 +1,13 @@
+{
+  "message.list.invalid_price": "非法价格",
+  "message.list.invalid_quantity": "非法数量",
+  "message.list.unsupported_item_data": "该物品包含市场暂不支持的数据",
+  "message.list.market_full": "市场订单已满，请稍后再试",
+  "message.list.create_failed": "创建销售订单失败，请稍后再试",
+  "message.list.rollback_failed": "订单创建失败且恢复状态异常，请联系管理员",
+  "message.list.list_insufficient_item": "你没有足够的物品去上架",
+  "message.list.list_item_tax_payment_failed": "你没有足够的梦鱼币来交付商品税: %s 枚梦鱼币",
+  "message.list.list_successfully": "上架成功!",
+  "message.list.list_unmatched_item": "无效的背包槽位",
+  "message.list.no_item_in_hand": "所选槽位没有物品"
+}

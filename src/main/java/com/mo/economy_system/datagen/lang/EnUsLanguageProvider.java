@@ -143,6 +143,11 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.LIST_LIST_BUTTON_KEY, "List List");
         add(Util_MessageKeys.LIST_NO_ITEM_IN_HAND_MESSAGE_KEY, "List No Item In Hand");
         add(Util_MessageKeys.LIST_INVALID_PRICE_MESSAGE_KEY, "List Invalid Price");
+        add(Util_MessageKeys.LIST_INVALID_QUANTITY_MESSAGE_KEY, "Invalid quantity");
+        add(Util_MessageKeys.LIST_UNSUPPORTED_ITEM_DATA_MESSAGE_KEY, "This item's data is not supported by the market");
+        add(Util_MessageKeys.LIST_MARKET_FULL_MESSAGE_KEY, "The market is full; please try again later");
+        add(Util_MessageKeys.LIST_CREATE_FAILED_MESSAGE_KEY, "Could not create the sales order; please try again later");
+        add(Util_MessageKeys.LIST_ROLLBACK_FAILED_MESSAGE_KEY, "Order creation failed and state recovery needs administrator attention");
         add(Util_MessageKeys.LIST_SUCCESSFULLY_MESSAGE_KEY, "List Successfully");
         add(Util_MessageKeys.LIST_INSUFFICIENT_ITEM_MESSAGE_KEY, "List Insufficient Item");
         add(Util_MessageKeys.LIST_UNMATCHED_ITEM_MESSAGE_KEY, "List Unmatched Item");

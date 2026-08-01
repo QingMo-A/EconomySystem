@@ -56,5 +56,13 @@ fails restoration. A shared schema-v1 golden fixture covers native names,
 lore, normal/stored enchantments, tooltip flags, damage, repair cost,
 unbreakable, dye, model data, and custom data.
 
-The current full target suite contains 54 passing tests. The paired NeoForge
-1.21.1 target contains 55 passing tests; `buildAllTargets --rerun-tasks` passes.
+Protocol `8` transaction handling now restores the complete pre-operation inventory
+when a multi-stack removal is partial or throws. Repository failure triggers independent
+tax and item compensation; either compensation failing produces `ROLLBACK_FAILED` and
+an error log. Forge sends a translated success or failure message for every result and
+no longer silently discards the service outcome. The compatibility `MarketManager` does
+not retain or write back a stale list.
+
+The current full target suite contains 72 passing tests. The paired NeoForge
+1.21.1 target contains 73 passing tests; `buildAllTargets --rerun-tasks` passes.
+Protocol `8` is closed. Protocol `9` remains the next migration slice.

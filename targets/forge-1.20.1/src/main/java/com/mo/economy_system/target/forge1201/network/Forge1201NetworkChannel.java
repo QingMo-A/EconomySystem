@@ -131,8 +131,8 @@ public final class Forge1201NetworkChannel {
                 .add();
 
         CHANNEL.messageBuilder(CreateSalesOrderMessage.class, EconomyMessages.CREATE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
-                .encoder(Forge1201NetworkChannel::encodeCreateSalesOrder)
-                .decoder(Forge1201NetworkChannel::decodeCreateSalesOrder)
+                .encoder(Forge1201CreateSalesOrderCodec::encode)
+                .decoder(Forge1201CreateSalesOrderCodec::decode)
                 .consumerMainThread(Forge1201CreateSalesOrderHandler::handle)
                 .add();
 
@@ -384,16 +384,6 @@ public final class Forge1201NetworkChannel {
                 buffer.readUtf(EconomyNetworkLimits.MAX_SHOP_ITEM_ID_LENGTH),
                 buffer.readInt()
         );
-    }
-
-    private static void encodeCreateSalesOrder(CreateSalesOrderMessage message, FriendlyByteBuf buffer) {
-        buffer.writeInt(message.slot()); buffer.writeInt(message.quantity()); buffer.writeInt(message.totalPrice());
-    }
-
-    private static CreateSalesOrderMessage decodeCreateSalesOrder(FriendlyByteBuf buffer) {
-        int slot = buffer.readInt(); int quantity = buffer.readInt(); int totalPrice = buffer.readInt();
-        if (slot < 0 || quantity <= 0 || totalPrice <= 0) throw new DecoderException("Invalid create sales order request");
-        return new CreateSalesOrderMessage(slot, quantity, totalPrice);
     }
 
     private static void encodeShopDataResponse(

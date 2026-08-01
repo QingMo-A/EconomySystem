@@ -115,6 +115,11 @@ public class Util_MessageKeys {
     public static final String LIST_INSUFFICIENT_ITEM_MESSAGE_KEY = "message.list.list_insufficient_item";
     public static final String LIST_UNMATCHED_ITEM_MESSAGE_KEY = "message.list.list_unmatched_item";
     public static final String LIST_ITEM_TAX_PAYMENT_FAILED_MESSAGE_KEY = "message.list.list_item_tax_payment_failed";
+    public static final String LIST_INVALID_QUANTITY_MESSAGE_KEY = "message.list.invalid_quantity";
+    public static final String LIST_UNSUPPORTED_ITEM_DATA_MESSAGE_KEY = "message.list.unsupported_item_data";
+    public static final String LIST_MARKET_FULL_MESSAGE_KEY = "message.list.market_full";
+    public static final String LIST_CREATE_FAILED_MESSAGE_KEY = "message.list.create_failed";
+    public static final String LIST_ROLLBACK_FAILED_MESSAGE_KEY = "message.list.rollback_failed";
 
     // Screen_CreateDemandOrder | 创建求购单
     public static final String REQUEST_TITLE_KEY = "screen.request.title";
