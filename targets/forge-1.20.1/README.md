@@ -76,9 +76,9 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-The current full target suite contains 109 passing tests. The paired NeoForge
-1.21.1 target contains 110 passing tests; `buildAllTargets --rerun-tasks` passes.
-Protocols `8` and `9` are closed. Protocols `10/11` are the next migration slice.
+The current full target suite contains 123 passing tests. The paired NeoForge
+1.21.1 target contains 124 passing tests; `buildAllTargets --rerun-tasks` passes.
+Protocols `8` through `11` are closed. Protocol `12` is the next migration slice.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -88,5 +88,6 @@ unmigrated features remain out of scope; Forge discriminator `16` remains unregi
 Protocols `10/11` now use the common summary/page market model and strict schema-v1
 snapshot codec. Forge can send requests, serve authenticated filtered pages, receive
 responses into `ClientMarketState`, and broadcast bounded invalidations. Pages contain at
-most 100 orders; no legacy full-market `MarketItem` NBT is transmitted.
-The full target suite now contains 115 passing tests; NeoForge contains 116.
+up to exactly 9 validated orders and a 768 KiB estimated payload budget; no legacy full-market
+`MarketItem` NBT is transmitted. Market revision is persisted as `marketRevision` and
+is sourced atomically with every response and invalidation.

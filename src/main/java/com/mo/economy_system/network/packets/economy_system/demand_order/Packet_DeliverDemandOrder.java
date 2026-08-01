@@ -49,7 +49,7 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
                         ? Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY : result == DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT
                         ? Util_MessageKeys.DELIVERY_BALANCE_LIMIT_KEY : Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
             }
-            MarketInvalidationBroadcaster.broadcast(supplier);
+            if(result==DemandOrderDeliveryResult.SUCCESS)MarketInvalidationBroadcaster.broadcast(supplier);
         });
     }
 

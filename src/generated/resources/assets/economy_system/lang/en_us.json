@@ -282,5 +282,6 @@
   "message.request.cancel_delivered": "A delivered demand order cannot be cancelled",
   "message.request.cancel_balance_limit": "The refund would exceed the owner's balance limit",
   "message.request.cancel_failed": "Could not cancel the demand order",
-  "message.request.cancel_rollback_failed": "Cancellation failed and order recovery needs administrator attention"
+  "message.request.cancel_rollback_failed": "Cancellation failed and order recovery needs administrator attention",
+  "screen.market.search_hint": "Search item ID or order creator", "screen.market.loading": "Loading", "screen.market.stale": "Page changed; refreshing", "message.market.sync_failed": "Market data synchronization failed", "screen.market.seller": "Seller", "screen.market.requester": "Requester"
 }

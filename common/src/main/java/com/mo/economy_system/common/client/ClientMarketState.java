@@ -3,18 +3,26 @@ package com.mo.economy_system.common.client;
 import com.mo.economy_system.common.network.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class ClientMarketState {
     private static final AtomicLong IDS=new AtomicLong();
-    private static final AtomicReference<Snapshot> CURRENT=new AtomicReference<>(new Snapshot(0,0,List.of(),0,0,0,-1,false));
+    private static Snapshot current=empty();
     private ClientMarketState(){}
-    public static long nextPageRequestId(){long id=IDS.incrementAndGet(); CURRENT.updateAndGet(s->new Snapshot(s.totalSales,s.totalDemand,s.orders,s.totalMatched,s.offset,s.limit,id,s.stale));return id;}
-    public static Snapshot snapshot(){return CURRENT.get();}
-    public static boolean apply(MarketDataResponseMessage m){Objects.requireNonNull(m);return switch(m.kind()){
-        case SUMMARY->{CURRENT.updateAndGet(s->new Snapshot(m.totalSales(),m.totalDemand(),s.orders,s.totalMatched,s.offset,s.limit,s.latestRequestId,s.stale));yield true;}
-        case INVALIDATED->{CURRENT.updateAndGet(s->new Snapshot(m.totalSales(),m.totalDemand(),s.orders,s.totalMatched,s.offset,s.limit,s.latestRequestId,true));yield true;}
-        case PAGE->{if(m.requestId()<CURRENT.get().latestRequestId)yield false;IDS.accumulateAndGet(m.requestId(),Math::max);CURRENT.set(new Snapshot(m.totalSales(),m.totalDemand(),m.orders(),m.totalMatched(),m.offset(),m.limit(),m.requestId(),false));yield true;}
+    private static Snapshot empty(){return new Snapshot(0,0,0,List.of(),0,0,EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE,-1,-1,false,false,"");}
+    public static synchronized long nextPageRequestId(){long id=IDS.incrementAndGet();current=current.withRequests(id,current.latestSummaryRequestId,true);return id;}
+    public static synchronized long nextSummaryRequestId(){long id=IDS.incrementAndGet();current=current.withRequests(current.latestPageRequestId,id,current.loading);return id;}
+    public static synchronized Snapshot snapshot(){return current;}
+    public static synchronized boolean canAcceptPage(MarketDataResponseMessage m){return m.kind()==MarketDataResponseKind.PAGE&&m.requestId()==current.latestPageRequestId&&m.marketRevision()>=current.marketRevision;}
+    public static synchronized boolean commitPage(MarketDataResponseMessage m){if(!canAcceptPage(m))return false;current=new Snapshot(m.marketRevision(),m.totalSales(),m.totalDemand(),m.orders(),m.totalMatched(),m.offset(),m.limit(),current.latestPageRequestId,current.latestSummaryRequestId,false,false,"");return true;}
+    public static synchronized boolean apply(MarketDataResponseMessage m){Objects.requireNonNull(m);return switch(m.kind()){
+        case PAGE->commitPage(m);
+        case SUMMARY->{if(m.requestId()!=current.latestSummaryRequestId||m.marketRevision()<current.marketRevision)yield false;current=new Snapshot(m.marketRevision(),m.totalSales(),m.totalDemand(),current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,current.loading,current.stale,current.error);yield true;}
+        case INVALIDATED->{if(m.marketRevision()<current.marketRevision)yield false;current=new Snapshot(m.marketRevision(),m.totalSales(),m.totalDemand(),current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,current.loading,true,current.error);yield true;}
     };}
-    public record Snapshot(int totalSales,int totalDemand,List<MarketOrderSnapshot> orders,int totalMatched,int offset,int limit,long latestRequestId,boolean stale){public Snapshot{orders=List.copyOf(orders);}}
+    public static synchronized void pageError(String error){current=new Snapshot(current.marketRevision,current.totalSales,current.totalDemand,current.orders,current.totalMatched,current.offset,current.limit,current.latestPageRequestId,current.latestSummaryRequestId,false,current.stale,Objects.requireNonNull(error));}
+    public static synchronized void reset(){current=empty();}
+    public record Snapshot(long marketRevision,int totalSales,int totalDemand,List<MarketOrderSnapshot> orders,int totalMatched,int offset,int limit,long latestPageRequestId,long latestSummaryRequestId,boolean loading,boolean stale,String error){
+        public Snapshot{orders=List.copyOf(orders);Objects.requireNonNull(error);}
+        Snapshot withRequests(long page,long summary,boolean loading){return new Snapshot(marketRevision,totalSales,totalDemand,orders,totalMatched,offset,limit,page,summary,loading,stale,error);}
+    }
 }

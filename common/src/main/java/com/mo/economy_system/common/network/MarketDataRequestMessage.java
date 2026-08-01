@@ -14,7 +14,7 @@ public record MarketDataRequestMessage(long requestId, MarketDataRequestPurpose 
         if (purpose == MarketDataRequestPurpose.SUMMARY) {
             if (offset != 0 || limit != 0 || filter != MarketOrderFilter.ALL || !query.isEmpty())
                 throw new IllegalArgumentException("invalid summary request");
-        } else if (offset < 0 || limit < 1 || limit > EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE) {
+        } else if (offset < 0 || limit != EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE) {
             throw new IllegalArgumentException("invalid page request");
         }
     }

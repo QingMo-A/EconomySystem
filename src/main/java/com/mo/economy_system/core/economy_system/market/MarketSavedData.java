@@ -28,6 +28,7 @@ public class MarketSavedData extends SavedData {
     private HolderLookup.Provider registries;
 
     public List<MarketOrder> getOrders() { return ledger.orders(); }
+    public com.mo.economy_system.common.market.MarketLedgerView getView() { return ledger.view(); }
     public MarketOrder getOrder(java.util.UUID id) { return ledger.find(id); }
     public boolean isFull() { return ledger.isFull(); }
     public boolean addOrder(MarketOrder order) { return ledger.add(order); }
@@ -43,13 +44,14 @@ public class MarketSavedData extends SavedData {
 
     public void addMarketItem(MarketItem item) { if (!ledger.add(fromLegacy(item))) throw new IllegalStateException("market rejected order"); }
     public void removeMarketItem(MarketItem item) { ledger.remove(item.getTradeID()); }
-    public void clearMarketItems() { ledger.restore(List.of()); setDirty(); }
-    public void replaceMarketItems(List<MarketItem> items) { ledger.restore(items.stream().map(this::fromLegacy).toList()); setDirty(); }
+    public void clearMarketItems() { ledger.replace(List.of()); }
+    public void replaceMarketItems(List<MarketItem> items) { ledger.replace(items.stream().map(this::fromLegacy).toList()); }
 
     @Override public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
         for (MarketOrder order : ledger.orders()) list.add(MarketOrderCodec.encode(order));
         tag.put("marketItems", list);
+        tag.putLong("marketRevision", ledger.revision());
         return tag;
     }
 
@@ -61,7 +63,8 @@ public class MarketSavedData extends SavedData {
             ListTag list = tag.getList("marketItems", Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) restored.add(data.decodeOrder(list.getCompound(i)));
         }
-        data.ledger.restore(restored);
+        long revision=tag.contains("marketRevision",Tag.TAG_LONG)?tag.getLong("marketRevision"):0L;
+        data.ledger.load(restored,revision);
         return data;
     }
 

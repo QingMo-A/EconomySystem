@@ -9,6 +9,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NeoForge1211MarketSavedDataTest {
+    @Test void persistsRevisionDefaultsOldSavesAndRejectsNegative(){CompoundTag old=new CompoundTag();assertEquals(0,MarketSavedData.load(old,null).getView().revision());CompoundTag tagged=new CompoundTag();tagged.putLong("marketRevision",41);MarketSavedData data=MarketSavedData.load(tagged,null);assertEquals(41,data.getView().revision());assertEquals(41,data.save(new CompoundTag(),null).getLong("marketRevision"));tagged.putLong("marketRevision",-1);assertThrows(IllegalArgumentException.class,()->MarketSavedData.load(tagged,null));}
     @Test void roundTripsStableOrderWithExactExpiration() {
         MarketOrder original = new MarketOrder(MarketOrderType.SALES, UUID.randomUUID(), item(), 7, 101, "seller", UUID.randomUUID(), 10, 123456, false);
         CompoundTag root = new CompoundTag(); ListTag list = new ListTag(); list.add(MarketOrderCodec.encode(original)); root.put("marketItems", list);

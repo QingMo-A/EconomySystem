@@ -29,7 +29,9 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 
 市场余额事务已经加固：普通 addBalance 保留历史封顶语义，但协议 8/9、旧求购交付和旧求购取消必须使用 common exact API。exact 溢出或 dirty 失败不会留下余额或日志的部分修改。取消求购通过可回滚的 MarketLedger 删除并只向原所有者退款。Forge 协议 9 发送路由已补齐，但协议 16 仍未迁移或注册。不要顺手扩大到其他旧经济调用点。
 
-协议 10/11 已迁移为有界分页读取：SUMMARY 不携带订单，PAGE 最大 100 条并由服务端执行 ALL/MINE/SALES/DEMAND 过滤以及物品 ID/创建者搜索；MINE 身份只取真实发送者。响应只传 schema-v1 Snapshot。ClientMarketState 会忽略旧 requestId，市场变化只广播 INVALIDATED。旧 Packet_MarketDataRequest/Response 已删除。下一步是协议 12，不要同时迁移 13-16。
+协议 10/11 已迁移为有界分页读取：SUMMARY 不携带订单，PAGE 固定 9 条并由服务端执行 ALL/MINE/SALES/DEMAND 过滤以及物品 ID/创建者搜索；MINE 身份只取真实发送者。响应只传 schema-v1 Snapshot。ClientMarketState 会忽略旧 requestId，市场变化只广播 INVALIDATED。旧 Packet_MarketDataRequest/Response 已删除。下一步是协议 12，不要同时迁移 13-16。
+
+协议 10/11 初始提交为 `666fccc`，随后已加固为固定 PAGE_SIZE=9、持久化单调 marketRevision 和 768 KiB 整包估算预算。SUMMARY/PAGE 分别维护请求 ID；INVALIDATED revision 阻止旧统计或页面覆盖。NeoForge 必须先完整恢复一页全部 Snapshot，再提交 ClientMarketState。广播仅允许在权威账本成功修改后发生。下一步仍是协议 12。
 
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks

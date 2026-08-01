@@ -101,9 +101,6 @@ public class Packet_PurchaseSalesOrder implements net.minecraft.network.protocol
             // 通知客户端刷新市场界面
             MarketInvalidationBroadcaster.broadcast(buyer);
 
-            // 打印日志
-            System.out.println("Item sold: " + item.getItemStack().getHoverName().getString() +
-                    ", Price: " + price + " coins, Buyer: " + buyer.getName().getString() + ", Seller: " + sellerID);
         });
     }
 

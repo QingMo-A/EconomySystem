@@ -114,13 +114,16 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 
 ### 协议 10/11：市场分页读取（已完成）
 
-- 协议 10 使用 `SUMMARY/PAGE`，页面最大 100 条、查询最大 64 字符；过滤与物品 ID/创建者搜索由服务端执行。
+- 协议 10 使用 `SUMMARY/PAGE`，页面固定 9 条、查询最大 64 字符；过滤与物品 ID/创建者搜索由服务端执行。
 - `MINE` 使用真实网络发送者 UUID，客户端不发送目标玩家身份。
 - 协议 11 使用不可变 `MarketOrderSnapshot` 与 schema-v1 `ItemStackSnapshot`，不再传输动态 `MarketItem` NBT。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 下一迁移切片是协议 `12` 购买销售订单；本轮未正式迁移协议 `12-16`。
-- 完整回归为 Forge 115 项、NeoForge 116 项，双目标构建通过。
+- 完整回归为 Forge 123 项、NeoForge 124 项，双目标构建通过。
+- 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
+- SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
+- 只有权威账本修改成功才广播失效；下一步仍是协议 `12`。
 
 ### 市场余额事务加固（已完成）
 

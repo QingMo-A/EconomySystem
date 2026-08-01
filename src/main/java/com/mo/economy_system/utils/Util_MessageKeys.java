@@ -308,5 +308,11 @@ public class Util_MessageKeys {
     public static final String ABOUT_TEXT_SHOW_KEY = "screen.about.show_github_text";
     public static final String ABOUT_COPY_URL = "message.about.copy_github_url";
     public static final String ABOUT_BACK_BUTTON_KEY = "button.about.back";
+    public static final String MARKET_SEARCH_HINT = "screen.market.search_hint";
+    public static final String MARKET_LOADING = "screen.market.loading";
+    public static final String MARKET_STALE = "screen.market.stale";
+    public static final String MARKET_SYNC_FAILED = "message.market.sync_failed";
+    public static final String MARKET_SELLER = "screen.market.seller";
+    public static final String MARKET_REQUESTER = "screen.market.requester";
 }
 

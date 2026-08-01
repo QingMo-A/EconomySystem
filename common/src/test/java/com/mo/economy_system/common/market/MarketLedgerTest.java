@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MarketLedgerTest {
+    @Test void revisionTracksOnlyCommittedMutationsAndLoadsWithoutIncrement(){MarketLedger ledger=new MarketLedger(()->{});assertEquals(0,ledger.revision());MarketOrder demand=order(MarketOrderType.DEMAND,false);assertTrue(ledger.add(demand));assertEquals(1,ledger.revision());assertFalse(ledger.add(demand));assertEquals(1,ledger.revision());assertEquals(DemandDeliveryTransitionResult.UPDATED,ledger.markDemandDelivered(demand.tradeId()));assertEquals(2,ledger.revision());assertTrue(ledger.remove(demand.tradeId()));assertEquals(3,ledger.revision());ledger.load(List.of(demand),17);assertEquals(17,ledger.view().revision());}
+    @Test void dirtyFailureAndRevisionExhaustionLeaveStateUntouched(){MarketOrder order=order(MarketOrderType.SALES,false);MarketLedger failing=new MarketLedger(()->{throw new IllegalStateException();});assertThrows(IllegalStateException.class,()->failing.add(order));assertEquals(0,failing.revision());assertTrue(failing.orders().isEmpty());MarketLedger exhausted=new MarketLedger(()->{});exhausted.load(List.of(),Long.MAX_VALUE);assertThrows(IllegalStateException.class,()->exhausted.add(order));assertEquals(Long.MAX_VALUE,exhausted.revision());assertTrue(exhausted.orders().isEmpty());assertThrows(IllegalArgumentException.class,()->exhausted.load(List.of(),-1));}
     @Test void idsAreUniqueListsImmutableAndChangesMarkDirty() {
         AtomicInteger dirty = new AtomicInteger(); MarketLedger ledger = new MarketLedger(dirty::incrementAndGet);
         MarketOrder order = new MarketOrder(MarketOrderType.SALES, UUID.randomUUID(), MarketOrderCodecTest.item(), 1, 1,

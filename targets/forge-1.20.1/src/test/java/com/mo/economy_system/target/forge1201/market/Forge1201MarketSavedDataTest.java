@@ -9,6 +9,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class Forge1201MarketSavedDataTest {
+    @Test void persistsRevisionDefaultsOldSavesAndRejectsNegative(){CompoundTag old=root();assertEquals(0,MarketSavedData.load(old).getView().revision());CompoundTag tagged=root();tagged.putLong("marketRevision",41);MarketSavedData data=MarketSavedData.load(tagged);assertEquals(41,data.getView().revision());assertEquals(41,data.save(new CompoundTag()).getLong("marketRevision"));tagged.putLong("marketRevision",-1);assertThrows(IllegalArgumentException.class,()->MarketSavedData.load(tagged));}
     @Test void roundTripsStableOrderAndPreservesDemandAlongsideNewSale() {
         CompoundTag root = new CompoundTag(); ListTag list = new ListTag(); list.add(MarketOrderCodec.encode(demand())); root.put("marketItems", list);
         MarketSavedData data = MarketSavedData.load(root); assertTrue(data.addOrder(sale()));

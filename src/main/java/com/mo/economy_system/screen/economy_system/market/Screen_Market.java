@@ -77,14 +77,15 @@ public class Screen_Market extends Screen {
     private static final DateTimeFormatter EXPIRATION_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
     // ==================== 数据 ====================
-    private List<MarketItem> allItems = new ArrayList<>();
     private List<MarketItem> filteredItems = new ArrayList<>();
 
     // ==================== 分页 ====================
     private int currentPage = 0;
     private int rows = 3;
     private int columns = -1;
-    private int itemsPerPage = 50;
+    private static final int PAGE_SIZE = com.mo.economy_system.common.network.EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE;
+    private final int itemsPerPage = PAGE_SIZE;
+    private boolean initialRequestSent;
     private int totalMatched;
     private int serverOffset;
     private long searchDueMillis = -1;
@@ -142,7 +143,6 @@ public class Screen_Market extends Screen {
 
     public Screen_Market() {
         super(Component.translatable(Util_MessageKeys.MARKET_TITLE_KEY));
-        requestMarketPage();
         topListStyle = createTopButtonStyle(CardRenderer.THEME_DELIVERY);
         topRequestStyle = createTopButtonStyle(CardRenderer.THEME_SHOP);
         actionBuyStyle = createActionButtonStyle(CardRenderer.THEME_MARKET);
@@ -164,14 +164,13 @@ public class Screen_Market extends Screen {
     private void requestMarketPage() { requestMarketPage(serverOffset); }
     private void requestMarketPage(int offset) {
         long requestId = ClientMarketState.nextPageRequestId();
-        MarketOrderFilter filter = MarketOrderFilter.values()[filterIndex];
+        MarketOrderFilter filter = switch(filterIndex){case 1->MarketOrderFilter.MINE;case 2->MarketOrderFilter.SALES;case 3->MarketOrderFilter.DEMAND;default->MarketOrderFilter.ALL;};
         String query = searchBox == null ? "" : searchBox.getValue();
         EconomySystem_NetworkManager.sendToServer(new MarketDataRequestMessage(
                 requestId, MarketDataRequestPurpose.PAGE, Math.max(0, offset), Math.max(1, itemsPerPage), filter, query));
     }
 
     public void updateMarketItems(List<MarketItem> items) {
-        this.allItems = items;
         this.filteredItems = new ArrayList<>(items);
         var state = ClientMarketState.snapshot();
         this.totalMatched = state.totalMatched();
@@ -201,11 +200,12 @@ public class Screen_Market extends Screen {
 
         this.searchBox = new EditBox(this.font, searchBoxX, searchBoxY, searchBoxWidth, SEARCH_BOX_HEIGHT, Component.translatable("搜索市场..."));
         this.searchBox.setMaxLength(50);
-        this.searchBox.setHint(Component.literal("搜索物品 ID 或订单创建者"));
+        this.searchBox.setHint(Component.translatable(Util_MessageKeys.MARKET_SEARCH_HINT));
         this.searchBox.setResponder(this::onSearchChanged);
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
         updateSearchBoxLayout();
+        if(!initialRequestSent){initialRequestSent=true;requestMarketPage(0);}
     }
 
     private void calculateVirtualSize() {
@@ -237,35 +237,6 @@ public class Screen_Market extends Screen {
     }
 
     @Override public void tick() { super.tick(); if (searchDueMillis >= 0 && System.currentTimeMillis() >= searchDueMillis) { searchDueMillis=-1; serverOffset=0; requestMarketPage(0); } }
-
-    private void applyFilters() {
-        filteredItems = allItems.stream()
-                .filter(item -> {
-                    // 应用搜索过滤
-                    if (searchBox != null && !searchBox.getValue().isEmpty()) {
-                        String search = searchBox.getValue().toLowerCase();
-                        if (!itemMatchesSearch(item, search)) {
-                            return false;
-                        }
-                    }
-
-                    // 应用类型过滤
-                    return switch (filterIndex) {
-                        case 1 -> item.getSellerName().equals(playerName); // 我的订单
-                        case 2 -> item instanceof SalesOrder; // 卖单
-                        case 3 -> item instanceof DemandOrder; // 求单
-                        default -> true;
-                    };
-                })
-                .collect(Collectors.toList());
-        currentPage = 0;
-    }
-
-    private boolean itemMatchesSearch(MarketItem item, String search) {
-        return item.getItemID().toLowerCase().contains(search) ||
-                item.getSellerName().toLowerCase().contains(search) ||
-                item.getItemStack().getHoverName().getString().toLowerCase().contains(search);
-    }
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -424,8 +395,6 @@ public class Screen_Market extends Screen {
 
         // 计算列数
         columns = Math.max(1, (virtualWidth - PANEL_PADDING * 2 + CARD_SPACING) / (CARD_WIDTH + CARD_SPACING));
-        itemsPerPage = rows * columns;
-
         int startIndex = 0;
         int endIndex = Math.min(itemsPerPage, filteredItems.size());
 
@@ -523,7 +492,7 @@ public class Screen_Market extends Screen {
         guiGraphics.renderItem(itemStack, iconX / 2, iconY / 2);
         guiGraphics.pose().popPose();
 
-        String sellerText = "卖家: " + sellerName;
+        String sellerText = Component.translatable(isSalesOrder ? Util_MessageKeys.MARKET_SELLER : Util_MessageKeys.MARKET_REQUESTER).getString() + ": " + sellerName;
         int maxSellerWidth = width - CARD_PADDING * 2 - ACTION_BTN_WIDTH - ACTION_BTN_GAP;
         String truncatedSeller = CardRenderer.truncateText(font, sellerText, maxSellerWidth);
         guiGraphics.drawString(font, truncatedSeller, x + CARD_PADDING, y + height - 12, CardRenderer.TEXT_DESC);
@@ -836,7 +805,6 @@ public class Screen_Market extends Screen {
             case "deliver" -> {
                 if (item instanceof DemandOrder demandOrder) {
                     EconomySystem_NetworkManager.sendToServer(new Packet_DeliverDemandOrder(demandOrder.getTradeID()));
-                    refresh();
                 }
             }
             case "cancel" -> {
@@ -851,7 +819,6 @@ public class Screen_Market extends Screen {
             case "confirm" -> {
                 if (item instanceof DemandOrder demandOrder) {
                     EconomySystem_NetworkManager.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
-                    refresh();
                 }
             }
         }
@@ -860,6 +827,7 @@ public class Screen_Market extends Screen {
     public void refresh() {
         requestMarketPage();
     }
+    public void requestFallbackPage(int totalMatched){int last=totalMatched==0?0:((totalMatched-1)/PAGE_SIZE)*PAGE_SIZE;if(last!=serverOffset)requestMarketPage(last);}
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {

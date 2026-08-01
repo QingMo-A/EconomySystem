@@ -109,7 +109,7 @@ public class Screen_Home extends Screen {
     public Screen_Home() {
         super(Component.translatable(Util_MessageKeys.HOME_TITLE_KEY));
         EconomySystem_NetworkManager.sendToServer(new BalanceRequestMessage());
-        EconomySystem_NetworkManager.sendToServer(MarketDataRequestMessage.summary(0));
+        EconomySystem_NetworkManager.sendToServer(MarketDataRequestMessage.summary(com.mo.economy_system.common.client.ClientMarketState.nextSummaryRequestId()));
         for (int i = 0; i < NAV_COLORS.length; i++) {
             navButtonStyles[i] = UiButtonStyle.accent(NAV_COLORS[i]);
         }

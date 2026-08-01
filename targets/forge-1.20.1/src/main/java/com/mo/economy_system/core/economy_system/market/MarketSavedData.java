@@ -30,6 +30,7 @@ public final class MarketSavedData extends SavedData {
     public boolean isFull() { return ledger.isFull(); }
     public boolean addOrder(MarketOrder order) { return ledger.add(order); }
     public List<MarketOrder> getOrders() { return ledger.orders(); }
+    public com.mo.economy_system.common.market.MarketLedgerView getView() { return ledger.view(); }
     public MarketOrder getOrder(java.util.UUID id) { return ledger.find(id); }
     public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
     public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) { return ledger.removeUndeliveredDemand(id); }
@@ -39,6 +40,7 @@ public final class MarketSavedData extends SavedData {
         ListTag list = new ListTag();
         for (MarketOrder order : ledger.orders()) list.add(MarketOrderCodec.encode(order));
         tag.put("marketItems", list);
+        tag.putLong("marketRevision", ledger.revision());
         return tag;
     }
 
@@ -57,7 +59,8 @@ public final class MarketSavedData extends SavedData {
                 else legacy.add(order.copy());
             }
         }
-        data.ledger.restore(orders);
+        long revision=tag.contains("marketRevision",Tag.TAG_LONG)?tag.getLong("marketRevision"):0L;
+        data.ledger.load(orders,revision);
         data.pendingLegacy = List.copyOf(legacy);
         return data;
     }
@@ -70,7 +73,7 @@ public final class MarketSavedData extends SavedData {
         if (!data.pendingLegacy.isEmpty()) {
             List<MarketOrder> merged = new ArrayList<>(data.ledger.orders());
             for (CompoundTag legacy : data.pendingLegacy) merged.add(data.decodeLegacy(legacy));
-            data.ledger.restore(merged);
+            data.ledger.replace(merged);
             data.pendingLegacy = List.of();
         }
         return data;

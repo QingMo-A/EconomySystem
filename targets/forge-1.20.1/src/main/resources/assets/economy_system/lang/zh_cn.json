@@ -28,5 +28,6 @@
   "message.request.cancel_delivered": "已交付的求购订单不能取消",
   "message.request.cancel_balance_limit": "退款后余额将超过上限，无法取消订单",
   "message.request.cancel_failed": "取消求购订单失败",
-  "message.request.cancel_rollback_failed": "取消失败且订单恢复异常，请联系管理员"
+  "message.request.cancel_rollback_failed": "取消失败且订单恢复异常，请联系管理员",
+  "screen.market.search_hint": "搜索物品 ID 或订单创建者", "screen.market.loading": "正在加载", "screen.market.stale": "页面已失效，正在刷新", "message.market.sync_failed": "市场数据同步失败", "screen.market.seller": "卖家", "screen.market.requester": "求购者"
 }

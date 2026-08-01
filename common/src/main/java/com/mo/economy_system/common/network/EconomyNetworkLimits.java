@@ -15,10 +15,11 @@ public final class EconomyNetworkLimits {
     public static final int MAX_BALANCE_LOG_ENTRIES = 100;
     public static final int MAX_BALANCE_LOG_CATEGORY_LENGTH = 64;
     public static final int MAX_BALANCE_LOG_REASON_LENGTH = 256;
-    public static final int MAX_MARKET_PAGE_SIZE = 100;
+    public static final int MAX_MARKET_PAGE_SIZE = 9;
     public static final int MAX_MARKET_QUERY_LENGTH = 64;
     public static final int MAX_MARKET_OWNER_NAME_LENGTH = 64;
     public static final int MAX_MARKET_ORDERS = MarketLedger.MAX_ORDERS;
+    public static final int MAX_MARKET_RESPONSE_ESTIMATED_BYTES = 768 * 1024;
 
     private EconomyNetworkLimits() {
     }

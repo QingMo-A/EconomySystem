@@ -1,6 +1,3 @@
 package com.mo.economy_system.network;
-import com.mo.economy_system.common.market.MarketOrderType;import com.mo.economy_system.common.network.MarketDataResponseMessage;import com.mo.economy_system.core.economy_system.market.MarketSavedData;import net.minecraft.server.level.ServerPlayer;
-public final class MarketInvalidationBroadcaster {
- private MarketInvalidationBroadcaster(){}
- public static void broadcast(ServerPlayer source){var orders=MarketSavedData.getInstance(source.serverLevel()).getOrders();int sales=0,demand=0;for(var o:orders)if(o.type()==MarketOrderType.SALES)sales++;else demand++;var message=MarketDataResponseMessage.invalidated(sales,demand);for(ServerPlayer player:source.server.getPlayerList().getPlayers())EconomySystem_NetworkManager.sendToClient(player,message);}
-}
+import com.mojang.logging.LogUtils;import com.mo.economy_system.common.market.MarketInvalidationFactory;import com.mo.economy_system.core.economy_system.market.MarketSavedData;import net.minecraft.server.level.ServerPlayer;import org.slf4j.Logger;
+public final class MarketInvalidationBroadcaster {private static final Logger LOGGER=LogUtils.getLogger();private MarketInvalidationBroadcaster(){}public static void broadcast(ServerPlayer source){var message=MarketInvalidationFactory.create(MarketSavedData.getInstance(source.serverLevel()).getView());for(ServerPlayer player:source.server.getPlayerList().getPlayers())try{EconomySystem_NetworkManager.sendToClient(player,message);}catch(RuntimeException exception){LOGGER.error("Failed to invalidate market for player={}",player.getUUID(),exception);}}}

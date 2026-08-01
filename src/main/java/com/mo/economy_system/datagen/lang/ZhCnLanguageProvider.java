@@ -342,5 +342,11 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT, "退款后余额将超过上限，无法取消订单");
         add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "取消求购订单失败");
         add(Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED, "取消失败且订单恢复异常，请联系管理员");
+        add(Util_MessageKeys.MARKET_SEARCH_HINT, "搜索物品 ID 或订单创建者");
+        add(Util_MessageKeys.MARKET_LOADING, "正在加载");
+        add(Util_MessageKeys.MARKET_STALE, "页面已失效，正在刷新");
+        add(Util_MessageKeys.MARKET_SYNC_FAILED, "市场数据同步失败");
+        add(Util_MessageKeys.MARKET_SELLER, "卖家");
+        add(Util_MessageKeys.MARKET_REQUESTER, "求购者");
     }
 }

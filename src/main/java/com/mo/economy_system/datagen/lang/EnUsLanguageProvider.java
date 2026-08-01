@@ -341,5 +341,11 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT, "The refund would exceed the owner's balance limit");
         add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "Could not cancel the demand order");
         add(Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED, "Cancellation failed and order recovery needs administrator attention");
+        add(Util_MessageKeys.MARKET_SEARCH_HINT, "Search item ID or order creator");
+        add(Util_MessageKeys.MARKET_LOADING, "Loading");
+        add(Util_MessageKeys.MARKET_STALE, "Page changed; refreshing");
+        add(Util_MessageKeys.MARKET_SYNC_FAILED, "Market data synchronization failed");
+        add(Util_MessageKeys.MARKET_SELLER, "Seller");
+        add(Util_MessageKeys.MARKET_REQUESTER, "Requester");
     }
 }

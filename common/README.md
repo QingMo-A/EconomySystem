@@ -95,8 +95,8 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- The hardened suites now contain 109 passing Forge 1.20.1 tests and 110 passing NeoForge
-  1.21.1 tests. Protocols `8` and `9` are closed; `10/11` market reads are next.
+- The full suites now contain 123 passing Forge 1.20.1 tests and 124 passing NeoForge
+  1.21.1 tests. Protocols `8` through `11` are closed; protocol `12` is next.
 
 ## Exact market balance transactions
 
@@ -112,9 +112,12 @@ unregistered and protocols `10/11` are next.
 ## Market data protocols 10/11
 
 Market reads now use bounded common messages. Protocol `10` distinguishes `SUMMARY`
-from server-filtered `PAGE` requests; pages are limited to 100 orders and queries to 64
+from server-filtered `PAGE` requests; pages are fixed at 9 orders and queries to 64
 characters. `MINE` always uses the authenticated sender UUID. Protocol `11` carries only
 schema-v1 item snapshots and immutable order fields, never dynamic `MarketItem` NBT.
 `ClientMarketState` atomically stores summary/page data, ignores older request IDs, and
 marks pages stale on lightweight `INVALIDATED` broadcasts without clearing them.
-The verified suites contain 115 Forge 1.20.1 tests and 116 NeoForge 1.21.1 tests.
+Every response carries the revision and is limited by a conservative 768 KiB estimated
+payload budget. PAGE and SUMMARY have independent request IDs; invalidation revisions
+prevent older responses from replacing newer statistics. NeoForge restores every item
+snapshot before atomically publishing a page. The initial migration was `666fccc`.
