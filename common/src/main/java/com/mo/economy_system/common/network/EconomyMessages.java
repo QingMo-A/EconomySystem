@@ -38,6 +38,9 @@ public final class EconomyMessages {
     public static final EconomyMessageType<CreateSalesOrderMessage> CREATE_SALES_ORDER =
             new EconomyMessageType<>(EconomyProtocol.CREATE_SALES_ORDER, CreateSalesOrderMessage.class);
 
+    public static final EconomyMessageType<CreateDemandOrderMessage> CREATE_DEMAND_ORDER =
+            new EconomyMessageType<>(EconomyProtocol.CREATE_DEMAND_ORDER, CreateDemandOrderMessage.class);
+
     public static final EconomyMessageType<ServerPlayerListRequestMessage> SERVER_PLAYER_LIST_REQUEST =
             new EconomyMessageType<>(
                     EconomyProtocol.SERVER_PLAYER_LIST_REQUEST,

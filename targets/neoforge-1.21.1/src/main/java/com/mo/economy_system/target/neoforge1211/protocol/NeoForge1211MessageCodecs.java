@@ -7,6 +7,7 @@ import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
+import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
@@ -287,6 +288,19 @@ public final class NeoForge1211MessageCodecs {
                 return new CreateSalesOrderMessage(slot, quantity, totalPrice);
             }
         });
+        register(codecs, EconomyMessages.CREATE_DEMAND_ORDER, new NeoForge1211MessageCodec<>() {
+            @Override public void encode(CreateDemandOrderMessage message, RegistryFriendlyByteBuf buffer) {
+                validateDemand(message.itemId(), message.quantity(), message.totalPrice());
+                buffer.writeUtf(message.itemId(), EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
+                buffer.writeInt(message.quantity()); buffer.writeInt(message.totalPrice());
+            }
+            @Override public CreateDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
+                String itemId = buffer.readUtf(EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
+                int quantity = buffer.readInt(); int totalPrice = buffer.readInt();
+                validateDemand(itemId, quantity, totalPrice);
+                return new CreateDemandOrderMessage(itemId, quantity, totalPrice);
+            }
+        });
         register(codecs, EconomyMessages.SERVER_PLAYER_LIST_REQUEST, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(
@@ -377,6 +391,13 @@ public final class NeoForge1211MessageCodecs {
         return offset >= 0
                 && limit >= 1
                 && limit <= EconomyNetworkLimits.MAX_BALANCE_LOG_ENTRIES;
+    }
+
+    private static void validateDemand(String itemId, int quantity, int totalPrice) {
+        if (itemId == null || itemId.isBlank()
+                || itemId.length() > EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH
+                || quantity <= 0 || totalPrice <= 0)
+            throw new DecoderException("Invalid create demand order request");
     }
 
     private static boolean isValidBalanceLogResponseMetadata(

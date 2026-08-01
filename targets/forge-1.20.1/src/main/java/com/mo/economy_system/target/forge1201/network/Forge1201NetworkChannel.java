@@ -17,6 +17,7 @@ import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
+import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -134,6 +135,12 @@ public final class Forge1201NetworkChannel {
                 .encoder(Forge1201CreateSalesOrderCodec::encode)
                 .decoder(Forge1201CreateSalesOrderCodec::decode)
                 .consumerMainThread(Forge1201CreateSalesOrderHandler::handle)
+                .add();
+
+        CHANNEL.messageBuilder(CreateDemandOrderMessage.class, EconomyMessages.CREATE_DEMAND_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201CreateDemandOrderCodec::encode)
+                .decoder(Forge1201CreateDemandOrderCodec::decode)
+                .consumerMainThread(Forge1201CreateDemandOrderHandler::handle)
                 .add();
 
         CHANNEL.messageBuilder(

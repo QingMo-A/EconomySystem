@@ -1,8 +1,7 @@
 package com.mo.economy_system.screen.economy_system.market;
 
-import com.mo.economy_system.core.economy_system.market.DemandOrder;
+import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_CreateDemandOrder;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.HighLevelTextField;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -24,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Comparator;
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.UUID;
 
 public class Screen_CreateDemandOrder extends Screen {
 
@@ -329,21 +327,9 @@ public class Screen_CreateDemandOrder extends Screen {
             return;
         }
 
-        ItemStack stack = validation.stack().copy();
-        stack.setCount(validation.count());
-
-        DemandOrder marketItem = new DemandOrder(
-                UUID.randomUUID(),
-                stack.getItem().getDescriptionId(),
-                stack,
-                validation.price(),
-                player.getName().getString(),
-                player.getUUID(),
-                System.currentTimeMillis(),
-                false
-        );
-
-        EconomySystem_NetworkManager.sendToServer(new Packet_CreateDemandOrder(marketItem));
+        String itemId = BuiltInRegistries.ITEM.getKey(validation.stack().getItem()).toString();
+        EconomySystem_NetworkManager.sendToServer(
+                new CreateDemandOrderMessage(itemId, validation.count(), validation.price()));
         if (this.minecraft != null) {
             this.minecraft.setScreen(new Screen_Market());
         }

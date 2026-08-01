@@ -9,5 +9,16 @@
   "message.list.list_item_tax_payment_failed": "你没有足够的梦鱼币来交付商品税: %s 枚梦鱼币",
   "message.list.list_successfully": "上架成功!",
   "message.list.list_unmatched_item": "无效的背包槽位",
-  "message.list.no_item_in_hand": "所选槽位没有物品"
+  "message.list.no_item_in_hand": "所选槽位没有物品",
+  "message.request.create_success": "求购订单创建成功",
+  "message.request.invalid_item_id": "无效的物品 ID",
+  "message.request.item_not_found": "找不到该物品",
+  "message.request.invalid_quantity": "求购数量无效",
+  "message.request.quantity_exceeds_limit": "求购数量超过该物品的单组上限",
+  "message.request.invalid_price": "求购总价无效",
+  "message.request.insufficient_funds": "余额不足，无法冻结求购总金额",
+  "message.request.market_full": "市场订单已满，请稍后再试",
+  "message.request.unsupported_item": "该物品的默认形态暂不支持求购",
+  "message.request.create_failed": "创建求购订单失败，请稍后再试",
+  "message.request.refund_failed": "订单创建失败且退款异常，请联系管理员"
 }

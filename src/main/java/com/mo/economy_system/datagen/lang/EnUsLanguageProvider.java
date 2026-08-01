@@ -322,5 +322,16 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY, "About Text Show");
         add(Util_MessageKeys.ABOUT_COPY_URL, "About Copy Url");
         add(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY, "About Back");
+        add(Util_MessageKeys.REQUEST_CREATE_SUCCESS, "Demand order created");
+        add(Util_MessageKeys.REQUEST_INVALID_ITEM_ID, "Invalid item ID");
+        add(Util_MessageKeys.REQUEST_ITEM_NOT_FOUND, "Item not found");
+        add(Util_MessageKeys.REQUEST_INVALID_QUANTITY, "Invalid demand quantity");
+        add(Util_MessageKeys.REQUEST_QUANTITY_EXCEEDS_LIMIT, "Quantity exceeds this item's stack limit");
+        add(Util_MessageKeys.REQUEST_INVALID_PRICE, "Invalid total price");
+        add(Util_MessageKeys.REQUEST_INSUFFICIENT_FUNDS, "Insufficient balance to freeze the total price");
+        add(Util_MessageKeys.REQUEST_MARKET_FULL, "The market is full; please try again later");
+        add(Util_MessageKeys.REQUEST_UNSUPPORTED_ITEM, "This item's default form is not supported");
+        add(Util_MessageKeys.REQUEST_CREATE_FAILED, "Could not create the demand order; please try again later");
+        add(Util_MessageKeys.REQUEST_REFUND_FAILED, "Order creation failed and the refund needs administrator attention");
     }
 }

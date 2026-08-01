@@ -69,7 +69,7 @@ components
 
 ## 阶段 B：市场读取与订单创建（进行中）
 
-协议 `8` 创建销售订单已经完成；下一步才是 `9` 创建求购订单，之后才处理 `10/11` 市场数据。本轮未迁移购买、取消、配送箱或领地。
+协议 `8` 创建销售订单和协议 `9` 创建求购订单均已完成；下一步才处理 `10/11` 市场数据。本轮未迁移购买、确认、交付、取消、配送箱或领地。
 
 - common 消息只含 `slot`、`quantity`、`totalPrice`，discriminator 固定为 `8`；
 - 服务端重读槽位，保存 count=1 的 schema-v1 模板，数量与整单总价分别保存；
@@ -82,7 +82,19 @@ components
 - 退税与物品恢复分别捕获并始终全部尝试，任一补偿失败返回 `ROLLBACK_FAILED` 并记录事务阶段日志；
 - Forge 与 NeoForge 均向玩家返回稳定翻译消息，内部错误不泄漏枚举或堆栈；
 - `MarketManager` 不再缓存和回写兼容视图，当前世界的 `MarketSavedData/MarketLedger` 是唯一权威；
-- 最终回归套件为 Forge 85 项、NeoForge 87 项。协议 `8` 正式关闭，下一步仍只迁移协议 `9`。
+- 协议 `8` 的事务加固保持关闭状态；协议 `9` 在下述独立切片中完成。
+
+协议 `9` 完成内容：
+
+- common 消息只含 `itemId`、`quantity`、`totalPrice`，discriminator 固定为 `9`；
+- `totalPrice` 是整笔求购单冻结金额，只扣除一次，不乘 quantity，也不收销售税；
+- 服务端解析注册表默认物品，拒绝非法 ID、不存在物品、air 和无法严格捕获的默认形态；
+- 模板 Snapshot count 固定为 1，quantity 独立保存且限制为物品 `maxStackSize`；
+- UUID、求购者身份、listing/expiration 时间及初始 `delivered=false` 全部由服务端生成；
+- 扣款后 ledger 添加失败会退还完整冻结金额，退款失败返回明确结果并记录日志；
+- NeoForge UI 不再构造或发送 `DemandOrder`、ItemStack 或 NBT；Forge 仅注册协议 9 的服务端接收路径；
+- 新订单继续写入稳定 `demand_order` schema，并可由现有交付服务查找、单次支付和持久化 delivered；
+- 最终回归套件为 Forge 98 项、NeoForge 100 项。协议 `9` 正式关闭，下一步为协议 `10/11`。
 
 - 订单持久化类型使用稳定 ID，并兼容旧存档类名；
 - 金额乘法先使用 `long` 检查，禁止整数溢出；

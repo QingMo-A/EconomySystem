@@ -120,6 +120,17 @@ public class Util_MessageKeys {
     public static final String LIST_MARKET_FULL_MESSAGE_KEY = "message.list.market_full";
     public static final String LIST_CREATE_FAILED_MESSAGE_KEY = "message.list.create_failed";
     public static final String LIST_ROLLBACK_FAILED_MESSAGE_KEY = "message.list.rollback_failed";
+    public static final String REQUEST_CREATE_SUCCESS = "message.request.create_success";
+    public static final String REQUEST_INVALID_ITEM_ID = "message.request.invalid_item_id";
+    public static final String REQUEST_ITEM_NOT_FOUND = "message.request.item_not_found";
+    public static final String REQUEST_INVALID_QUANTITY = "message.request.invalid_quantity";
+    public static final String REQUEST_QUANTITY_EXCEEDS_LIMIT = "message.request.quantity_exceeds_limit";
+    public static final String REQUEST_INVALID_PRICE = "message.request.invalid_price";
+    public static final String REQUEST_INSUFFICIENT_FUNDS = "message.request.insufficient_funds";
+    public static final String REQUEST_MARKET_FULL = "message.request.market_full";
+    public static final String REQUEST_UNSUPPORTED_ITEM = "message.request.unsupported_item";
+    public static final String REQUEST_CREATE_FAILED = "message.request.create_failed";
+    public static final String REQUEST_REFUND_FAILED = "message.request.refund_failed";
 
     // Screen_CreateDemandOrder | 创建求购单
     public static final String REQUEST_TITLE_KEY = "screen.request.title";

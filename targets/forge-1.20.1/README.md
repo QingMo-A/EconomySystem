@@ -9,6 +9,7 @@ services, the Forge SavedData shells, and seven end-to-end protocol slices:
 - system-shop catalog request/response (`5/6`);
 - server-authoritative system-shop purchase (`7`);
 - server-authoritative sales-order creation (`8`);
+- server-authoritative demand-order creation (`9`);
 - server player-list request/response (`34/35`).
 
 The Forge shop adapter reads the authoritative `economy_shop.json` schema and
@@ -68,6 +69,13 @@ transaction service so detached compatibility views cannot lose the delivered fl
 permit duplicate payment. This hardens the existing NeoForge protocol `14` path only;
 protocol `14` has not been migrated or registered on Forge 1.20.1.
 
-The current full target suite contains 85 passing tests. The paired NeoForge
-1.21.1 target contains 87 passing tests; `buildAllTargets --rerun-tasks` passes.
-Protocol `8` is closed. Protocol `9` remains the next migration slice.
+Protocol `9` accepts only `itemId`, `quantity`, and the whole-order `totalPrice`.
+Forge resolves the default registered item, captures a count-one schema-v1 template,
+rejects air and unsupported data, and enforces the native maximum stack size. The server
+generates identity and timestamps, freezes `totalPrice` once without listing tax, and
+refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
+later market discriminators remain unregistered.
+
+The current full target suite contains 98 passing tests. The paired NeoForge
+1.21.1 target contains 100 passing tests; `buildAllTargets --rerun-tasks` passes.
+Protocols `8` and `9` are closed. Protocols `10/11` are the next migration slice.

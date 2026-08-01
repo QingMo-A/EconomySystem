@@ -323,5 +323,16 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY, "点击复制");
         add(Util_MessageKeys.ABOUT_COPY_URL, "Github仓库链接已经复制到粘贴板了");
         add(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY, "返回");
+        add(Util_MessageKeys.REQUEST_CREATE_SUCCESS, "求购订单创建成功");
+        add(Util_MessageKeys.REQUEST_INVALID_ITEM_ID, "无效的物品 ID");
+        add(Util_MessageKeys.REQUEST_ITEM_NOT_FOUND, "找不到该物品");
+        add(Util_MessageKeys.REQUEST_INVALID_QUANTITY, "求购数量无效");
+        add(Util_MessageKeys.REQUEST_QUANTITY_EXCEEDS_LIMIT, "求购数量超过该物品的单组上限");
+        add(Util_MessageKeys.REQUEST_INVALID_PRICE, "求购总价无效");
+        add(Util_MessageKeys.REQUEST_INSUFFICIENT_FUNDS, "余额不足，无法冻结求购总金额");
+        add(Util_MessageKeys.REQUEST_MARKET_FULL, "市场订单已满，请稍后再试");
+        add(Util_MessageKeys.REQUEST_UNSUPPORTED_ITEM, "该物品的默认形态暂不支持求购");
+        add(Util_MessageKeys.REQUEST_CREATE_FAILED, "创建求购订单失败，请稍后再试");
+        add(Util_MessageKeys.REQUEST_REFUND_FAILED, "订单创建失败且退款异常，请联系管理员");
     }
 }

@@ -20,12 +20,12 @@
 
 阶段 A 已完成并经过安全加固：ItemStackSnapshot schema v1、集中 validator/limits、严格结果式 codec、DATA_LIMIT_EXCEEDED、旧 compact 读取兼容、Damage 对称校验、NeoForge Data Components 适配、Forge 原生 NBT 适配以及双端共享黄金 fixture 已建立。限制值以 common/README.md 和迁移计划为准。旧 saveSimple/loadSimple 只是 deprecated 兼容入口；新代码必须使用 Snapshot schema v1。
 
-阶段 B 的第一个切片协议 8（创建销售订单）已经完成并经过事务加固：部分删除自动恢复，退税与物品补偿独立尝试，repository 添加为原子契约，双端有安全反馈与事务日志，MarketManager 不再缓存回写旧视图。下一项任务才是协议 9（创建求购订单）；开始前审查 common 的 MarketOrder、MarketLedger、MarketOrderCodec 和双端 SavedData 外壳，不要同时迁移 10/11、购买、取消、配送箱或领地。
+阶段 B 的协议 8（创建销售订单）与协议 9（创建求购订单）已经完成。协议 9 的消息只有 itemId、quantity、totalPrice；totalPrice 是一次冻结的整单金额，不乘 quantity、无销售税。服务端解析默认注册物品、强制 count-one Snapshot、限制 maxStackSize，并生成 UUID、所有者、时间和 delivered=false。ledger 添加失败会退款。下一项任务是协议 10/11 市场数据读取；不要同时迁移购买、确认、交付、取消、配送箱或领地。
 
 兼容性修复说明：旧 NeoForge 协议 14 的求购交付已使用 common 事务服务和
 MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分离的只读兼容
 视图，不得通过 setDelivered 等 setter 假设持久化。该改动不是协议 14 迁移，Forge
-不得注册 discriminator 14。下一项任务仍是协议 9。
+不得注册 discriminator 14。协议 9 已关闭，下一项任务是协议 10/11。
 
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks

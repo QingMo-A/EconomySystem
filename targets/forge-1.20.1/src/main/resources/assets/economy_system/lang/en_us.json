@@ -9,5 +9,16 @@
   "message.list.list_item_tax_payment_failed": "Insufficient balance for the listing tax: %s",
   "message.list.list_successfully": "Sales order created",
   "message.list.list_unmatched_item": "Invalid inventory slot",
-  "message.list.no_item_in_hand": "The selected slot is empty"
+  "message.list.no_item_in_hand": "The selected slot is empty",
+  "message.request.create_success": "Demand order created",
+  "message.request.invalid_item_id": "Invalid item ID",
+  "message.request.item_not_found": "Item not found",
+  "message.request.invalid_quantity": "Invalid demand quantity",
+  "message.request.quantity_exceeds_limit": "Quantity exceeds this item's stack limit",
+  "message.request.invalid_price": "Invalid total price",
+  "message.request.insufficient_funds": "Insufficient balance to freeze the total price",
+  "message.request.market_full": "The market is full; please try again later",
+  "message.request.unsupported_item": "This item's default form is not supported",
+  "message.request.create_failed": "Could not create the demand order; please try again later",
+  "message.request.refund_failed": "Order creation failed and the refund needs administrator attention"
 }

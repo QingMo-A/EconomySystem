@@ -24,7 +24,7 @@ maintaining independent registration order.
   and Forge discriminators (`0` through `43`).
 - Common messages currently cover balance (`0/1`), balance history (`2/3`),
   transfers (`4`), system-shop catalog synchronization and purchasing (`5-7`),
-  sales-order creation (`8`), and server player lists (`34/35`). Both targets have real codecs and handlers for these
+  sales-order creation (`8`), demand-order creation (`9`), and server player lists (`34/35`). Both targets have real codecs and handlers for these
   messages.
 - Transfers are atomic: invalid, self, insufficient-funds, offline-target, and
   recipient-overflow attempts change neither account. Online recipients are
@@ -88,5 +88,12 @@ maintaining independent registration order.
   and independent compensation are shared in common code. A repeated delivery cannot
   pay the supplier twice. This is a compatibility safety fix, not protocol `14`
   migration; Forge still has no discriminator `14` registration.
-- The hardened suites now contain 85 passing Forge 1.20.1 tests and 87 passing NeoForge
-  1.21.1 tests. Protocol `8` is closed; protocol `9` remains the next migration slice.
+- Protocol `9` carries only `itemId`, `quantity`, and `totalPrice`. The server resolves
+  the registered default item, rejects air/unknown/unsupported items, captures a count-one
+  schema-v1 template, and limits quantity to that item's maximum stack size. `totalPrice`
+  is the one-time frozen amount and is never multiplied by quantity; demand listings have
+  no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
+  server-owned. Repository failure refunds the complete frozen amount, with refund failure
+  reported explicitly.
+- The hardened suites now contain 98 passing Forge 1.20.1 tests and 100 passing NeoForge
+  1.21.1 tests. Protocols `8` and `9` are closed; `10/11` market reads are next.
