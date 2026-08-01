@@ -2,6 +2,7 @@ package com.mo.economy_system.common.market;
 
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -38,20 +39,24 @@ public final class CreateDemandOrderService {
             return CreateDemandOrderResult.PAYMENT_FAILED;
         }
 
-        long now = context.clock().getAsLong();
+        long now;
         long expiration;
-        try { expiration = Math.addExact(now, MarketOrder.EXPIRATION_DURATION_MILLIS); }
-        catch (ArithmeticException exception) { return CreateDemandOrderResult.TIME_OVERFLOW; }
-        UUID tradeId = context.ids().get();
+        try { now=context.clock().getAsLong();expiration = Math.addExact(now, MarketOrder.EXPIRATION_DURATION_MILLIS); }
+        catch (RuntimeException exception) { return CreateDemandOrderResult.TIME_OVERFLOW; }
+        UUID tradeId;
+        try { tradeId=context.ids().get(); } catch (RuntimeException exception) { return CreateDemandOrderResult.ID_GENERATION_FAILED; }
         if (tradeId == null) return CreateDemandOrderResult.ID_GENERATION_FAILED;
-        MarketOrder order = new MarketOrder(MarketOrderType.DEMAND, tradeId, item.template(), message.quantity(),
-                message.totalPrice(), context.buyerName(), context.buyerId(), now, expiration, false);
+        MarketOrder order;
+        try { order = new MarketOrder(MarketOrderType.DEMAND, tradeId, item.template(), message.quantity(),
+                message.totalPrice(), context.buyerName(), context.buyerId(), now, expiration, false); }
+        catch (RuntimeException exception) { return CreateDemandOrderResult.SNAPSHOT_REJECTED; }
 
-        boolean debited;
+        BalanceMutationResult debitResult;
         RuntimeException debitError = null;
-        try { debited = context.account().debit(message.totalPrice()); }
-        catch (RuntimeException exception) { debited = false; debitError = exception; }
-        if (!debited) {
+        try { debitResult = context.account().debitExact(message.totalPrice()); }
+        catch (RuntimeException exception) { debitResult = BalanceMutationResult.PERSIST_FAILED; debitError = exception; }
+        if (debitResult != BalanceMutationResult.SUCCESS) {
+            if (debitResult == BalanceMutationResult.INSUFFICIENT_FUNDS) return CreateDemandOrderResult.INSUFFICIENT_FUNDS;
             report(context, tradeId, "payment-debit", CreateDemandOrderResult.PAYMENT_FAILED, debitError, false);
             return CreateDemandOrderResult.PAYMENT_FAILED;
         }
@@ -64,7 +69,7 @@ public final class CreateDemandOrderService {
 
         boolean refunded;
         RuntimeException refundError = null;
-        try { refunded = context.account().credit(message.totalPrice()); }
+        try { refunded = context.account().creditExact(message.totalPrice()) == BalanceMutationResult.SUCCESS; }
         catch (RuntimeException exception) { refunded = false; refundError = exception; }
         CreateDemandOrderResult result = refunded ? CreateDemandOrderResult.ORDER_PERSIST_FAILED
                 : CreateDemandOrderResult.REFUND_FAILED;
@@ -97,7 +102,7 @@ public final class CreateDemandOrderService {
         }
     }
     public interface ItemResolver { DemandItemResolveResult resolve(String itemId); }
-    public interface Account { boolean canDebit(int amount); boolean debit(int amount); boolean credit(int amount); }
+    public interface Account { boolean canDebit(int amount); BalanceMutationResult debitExact(int amount); BalanceMutationResult creditExact(int amount); }
     public interface Repository {
         boolean isFull();
         /** Returning false or throwing must not leave the supplied order in the repository. */

@@ -5,6 +5,7 @@ import com.mo.economy_system.common.market.MarketOrder;
 import com.mo.economy_system.common.market.MarketOrderCodec;
 import com.mo.economy_system.common.market.MarketOrderType;
 import com.mo.economy_system.common.market.DemandDeliveryTransitionResult;
+import com.mo.economy_system.common.market.DemandOrderRemovalResult;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
@@ -31,6 +32,7 @@ public final class MarketSavedData extends SavedData {
     public List<MarketOrder> getOrders() { return ledger.orders(); }
     public MarketOrder getOrder(java.util.UUID id) { return ledger.find(id); }
     public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
+    public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) { return ledger.removeUndeliveredDemand(id); }
 
     @Override public CompoundTag save(CompoundTag tag) {
         if (!pendingLegacy.isEmpty()) throw new IllegalStateException("unresolved legacy market data cannot be overwritten");

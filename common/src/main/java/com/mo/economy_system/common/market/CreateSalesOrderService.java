@@ -1,6 +1,7 @@
 package com.mo.economy_system.common.market;
 
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
 
@@ -59,15 +60,15 @@ public final class CreateSalesOrderService {
             return result;
         }
 
-        boolean debited;
+        BalanceMutationResult debitResult;
         RuntimeException debitException = null;
         try {
-            debited = context.account().debit(tax);
+            debitResult = context.account().debitExact(tax);
         } catch (RuntimeException exception) {
-            debited = false;
+            debitResult = BalanceMutationResult.PERSIST_FAILED;
             debitException = exception;
         }
-        if (!debited) {
+        if (debitResult != BalanceMutationResult.SUCCESS) {
             Compensation compensation = compensate(context, tax, false, removal.rollback());
             CreateSalesOrderResult result = compensation.complete()
                     ? CreateSalesOrderResult.TAX_MUTATION_FAILED : CreateSalesOrderResult.ROLLBACK_FAILED;
@@ -104,7 +105,7 @@ public final class CreateSalesOrderService {
         boolean taxRestored = !taxDebited;
         RuntimeException taxError = null;
         if (taxDebited) {
-            try { taxRestored = context.account().credit(tax); }
+            try { taxRestored = context.account().creditExact(tax) == BalanceMutationResult.SUCCESS; }
             catch (RuntimeException exception) { taxRestored = false; taxError = exception; }
         }
         boolean inventoryRestored;
@@ -140,7 +141,7 @@ public final class CreateSalesOrderService {
         public static RemovalResult success(Removal rollback) { return new RemovalResult(true, true, Objects.requireNonNull(rollback)); }
         public static RemovalResult failure(boolean restored) { return new RemovalResult(false, restored, null); }
     }
-    public interface Account { boolean canDebit(int amount); boolean debit(int amount); boolean credit(int amount); }
+    public interface Account { boolean canDebit(int amount); BalanceMutationResult debitExact(int amount); BalanceMutationResult creditExact(int amount); }
     public interface Repository {
         boolean isFull();
         /** Returning false or throwing must never leave the supplied order in the repository. */

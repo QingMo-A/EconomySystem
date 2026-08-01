@@ -4,6 +4,7 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
@@ -65,8 +66,8 @@ public final class NeoForge1211CreateSalesOrderHandler {
     }
     private record AccountAdapter(EconomySavedData data, ServerPlayer player) implements CreateSalesOrderService.Account {
         public boolean canDebit(int amount) { return data.hasEnoughBalance(player.getUUID(), amount); }
-        public boolean debit(int amount) { return data.minBalance(player.getUUID(), amount, "税费", "上架商品税"); }
-        public boolean credit(int amount) { return data.addBalance(player.getUUID(), amount, "税费", "上架失败退税"); }
+        public BalanceMutationResult debitExact(int amount) { return data.debitExact(player.getUUID(), amount, "税费", "上架商品税"); }
+        public BalanceMutationResult creditExact(int amount) { return data.creditExact(player.getUUID(), amount, "税费", "上架失败退税"); }
     }
     private record InventoryAdapter(Inventory inventory, ServerPlayer player) implements CreateSalesOrderService.Inventory {
         public int slotCount() { return inventory.items.size(); }

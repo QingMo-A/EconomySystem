@@ -27,6 +27,8 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 视图，不得通过 setDelivered 等 setter 假设持久化。该改动不是协议 14 迁移，Forge
 不得注册 discriminator 14。协议 9 已关闭，下一项任务是协议 10/11。
 
+市场余额事务已经加固：普通 addBalance 保留历史封顶语义，但协议 8/9、旧求购交付和旧求购取消必须使用 common exact API。exact 溢出或 dirty 失败不会留下余额或日志的部分修改。取消求购通过可回滚的 MarketLedger 删除并只向原所有者退款。Forge 协议 9 发送路由已补齐，但协议 16 仍未迁移或注册。不要顺手扩大到其他旧经济调用点。
+
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks
 rg -n "net\.neoforged|net\.minecraftforge" common/src

@@ -13,6 +13,7 @@ import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
+import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -20,6 +21,11 @@ import net.minecraft.server.level.ServerPlayer;
  * the NeoForge 1.21.1 semantic protocol is moved into common.
  */
 public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
+    static int serverDiscriminator(Class<? extends EconomyNetworkMessage> messageType) {
+        if (messageType == CreateDemandOrderMessage.class) return 9;
+        throw new UnsupportedOperationException("Forge 1.20.1 codec is not registered yet for " + messageType.getName());
+    }
+
     @Override
     public void sendToServer(EconomyNetworkMessage message) {
         if (message.getClass() == BalanceRequestMessage.class) {
@@ -44,6 +50,11 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
         }
         if (message.getClass() == CreateSalesOrderMessage.class) {
             Forge1201NetworkChannel.sendToServer((CreateSalesOrderMessage) message);
+            return;
+        }
+        if (message.getClass() == CreateDemandOrderMessage.class) {
+            serverDiscriminator(CreateDemandOrderMessage.class);
+            Forge1201NetworkChannel.sendToServer((CreateDemandOrderMessage) message);
             return;
         }
         if (message.getClass() == ServerPlayerListRequestMessage.class) {

@@ -88,6 +88,43 @@ public final class EconomyLedger {
         return amount > 0 && getBalance(playerUUID) >= amount;
     }
 
+    public boolean canCreditExact(UUID playerUUID, int amount) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        return amount > 0 && (long) getBalance(playerUUID) + amount <= MAX_BALANCE;
+    }
+
+    public BalanceMutationResult creditExact(UUID playerUUID, int amount, String category, String reason) {
+        return mutateExact(playerUUID, amount, category, reason, true);
+    }
+
+    public BalanceMutationResult debitExact(UUID playerUUID, int amount, String category, String reason) {
+        return mutateExact(playerUUID, amount, category, reason, false);
+    }
+
+    private synchronized BalanceMutationResult mutateExact(UUID playerUUID, int amount, String category,
+                                                            String reason, boolean credit) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        if (amount <= 0) return BalanceMutationResult.INVALID_AMOUNT;
+        boolean accountExisted = accounts.containsKey(playerUUID);
+        int before = getBalance(playerUUID);
+        if (credit && (long) before + amount > MAX_BALANCE) return BalanceMutationResult.BALANCE_LIMIT;
+        if (!credit && before < amount) return BalanceMutationResult.INSUFFICIENT_FUNDS;
+        Deque<BalanceLogEntry> previousLogs = balanceLogs.containsKey(playerUUID)
+                ? new ArrayDeque<>(balanceLogs.get(playerUUID)) : null;
+        int after = credit ? before + amount : before - amount;
+        accounts.put(playerUUID, after);
+        recordBalanceLog(playerUUID, category, reason, credit ? amount : -amount, before, after);
+        try {
+            dirtyCallback.run();
+        } catch (RuntimeException exception) {
+            if (accountExisted) accounts.put(playerUUID, before); else accounts.remove(playerUUID);
+            if (previousLogs == null) balanceLogs.remove(playerUUID);
+            else balanceLogs.put(playerUUID, previousLogs);
+            return BalanceMutationResult.PERSIST_FAILED;
+        }
+        return BalanceMutationResult.SUCCESS;
+    }
+
     /**
      * Moves the complete amount between two accounts or changes neither one.
      * Recipient overflow is rejected so currency can never disappear through

@@ -1,84 +1,47 @@
 package com.mo.economy_system.network.packets.economy_system.demand_order;
 
-import com.mo.economy_system.platform.network.EconomyNetworkMessage;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.core.economy_system.market.DemandOrder;
+import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.common.market.*;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
-import com.mo.economy_system.core.economy_system.market.MarketItem;
-import com.mo.economy_system.core.economy_system.market.MarketManager;
+import com.mo.economy_system.core.economy_system.market.MarketSavedData;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.economy_system.Packet_MarketDataResponse;
-import com.mo.economy_system.utils.Util_MessageKeys;
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.utils.Util_Player;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
+/** Legacy NeoForge protocol 16 payload retained until formal migration. */
 public class Packet_RemoveDemandOrder implements net.minecraft.network.protocol.common.custom.CustomPacketPayload, EconomyNetworkMessage {
-
-    public static final net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<Packet_RemoveDemandOrder> TYPE = new net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.mo.economy_system.EconomySystem.MODID, "economy_system/demand_order/packet_remove_demand_order"));
-    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, Packet_RemoveDemandOrder> STREAM_CODEC = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> Packet_RemoveDemandOrder.encode(packet, buf), Packet_RemoveDemandOrder::decode);
-
-    @Override
-    public net.minecraft.network.protocol.common.custom.CustomPacketPayload.Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type() {
-        return TYPE;
-    }
-
+    public static final Type<Packet_RemoveDemandOrder> TYPE = new Type<>(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(EconomySystem.MODID,"economy_system/demand_order/packet_remove_demand_order"));
+    public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf,Packet_RemoveDemandOrder> STREAM_CODEC=net.minecraft.network.codec.StreamCodec.of((buf,packet)->encode(packet,buf),Packet_RemoveDemandOrder::decode);
     private final UUID itemId;
+    public Packet_RemoveDemandOrder(UUID itemId){this.itemId=itemId;}
+    @Override public Type<? extends net.minecraft.network.protocol.common.custom.CustomPacketPayload> type(){return TYPE;}
+    public static void encode(Packet_RemoveDemandOrder msg,FriendlyByteBuf buf){buf.writeUUID(msg.itemId);}
+    public static Packet_RemoveDemandOrder decode(FriendlyByteBuf buf){return new Packet_RemoveDemandOrder(buf.readUUID());}
 
-    public Packet_RemoveDemandOrder(UUID itemId) {
-        this.itemId = itemId;
-    }
+    public static void handle(Packet_RemoveDemandOrder msg,IPayloadContext context){context.enqueueWork(()->{
+        if(!(context.player() instanceof ServerPlayer player))return;
+        EconomySavedData accounts=EconomySavedData.getInstance(player.serverLevel());
+        MarketSavedData market=MarketSavedData.getInstance(player.serverLevel());
+        CancelDemandOrderResult result=CancelDemandOrderService.execute(msg.itemId,new CancelDemandOrderService.Context(
+                player.getUUID(),Util_Player.isOP(player),new AccountAdapter(accounts),new RepositoryAdapter(market),reporter(player)));
+        player.sendSystemMessage(Component.translatable(CancelDemandOrderFeedback.messageKey(result)));
+        if(result==CancelDemandOrderResult.SUCCESS)EconomySystem_NetworkManager.sendToClient(player,new Packet_MarketDataResponse(market.getMarketItems()));
+    });}
 
-    public static void encode(Packet_RemoveDemandOrder msg, FriendlyByteBuf buf) {
-        buf.writeUUID(msg.itemId);
-    }
-
-    public static Packet_RemoveDemandOrder decode(FriendlyByteBuf buf) {
-        return new Packet_RemoveDemandOrder(buf.readUUID());
-    }
-
-    public static void handle(Packet_RemoveDemandOrder msg, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
-            if (player == null) return;
-
-            // 获取市场中的商品
-            MarketItem item = MarketManager.getMarketItemById(msg.itemId);
-            if (!(item instanceof DemandOrder demandOrder) || demandOrder.isDelivered()) {
-                player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_REMOVE_FAILED_MESSAGE_KEY));
-                return;
-            }
-
-            // 验证是否是卖家
-            if (!item.getSellerID().equals(player.getUUID())) {
-                if (!Util_Player.isOP(player)) {
-                    player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_UNMATCHED_SELLER_MESSAGE_KEY));
-                    return;
-                }
-            }
-
-            // 从市场中移除商品
-            if (!MarketManager.removeMarketItemById(msg.itemId)) {
-                player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_REMOVE_FAILED_MESSAGE_KEY));
-                return;
-            }
-            MarketManager.saveTo(player.serverLevel());
-
-            // 将钱返回给卖家
-            ServerLevel serverLevel = player.serverLevel();
-            EconomySavedData savedData = EconomySavedData.getInstance(serverLevel);
-
-                savedData.addBalance(item.getSellerID(), item.getBasePrice(), "市场", "取消求购单退款");
-
-            // 通知客户端刷新市场界面
-            EconomySystem_NetworkManager.sendToClient(player, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
-
-            player.sendSystemMessage(Component.translatable(Util_MessageKeys.MARKET_ITEM_HAS_BEEN_RETURNED_MESSAGE_KEY));
-        });
-    }
+    private static CancelDemandOrderService.FailureReporter reporter(ServerPlayer player){return(id,result,refund,restore,cause)->
+            EconomySystem.LOGGER.error("Demand cancellation failed actor={} order={} result={} refund={} restore={}",player.getUUID(),id,result,refund,restore,cause);}
+    private record AccountAdapter(EconomySavedData data) implements CancelDemandOrderService.Account{
+        public boolean canCreditExact(UUID owner,int amount){return data.canCreditExact(owner,amount);}
+        public BalanceMutationResult creditExact(UUID owner,int amount){return data.creditExact(owner,amount,"市场","取消求购单退款");}}
+    private record RepositoryAdapter(MarketSavedData data) implements CancelDemandOrderService.Repository{
+        public MarketOrder find(UUID id){return data.getOrder(id);}
+        public DemandOrderRemovalResult removeUndeliveredDemand(UUID id){return data.removeUndeliveredDemand(id);}}
 }
-

@@ -95,5 +95,16 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- The hardened suites now contain 98 passing Forge 1.20.1 tests and 100 passing NeoForge
+- The hardened suites now contain 109 passing Forge 1.20.1 tests and 110 passing NeoForge
   1.21.1 tests. Protocols `8` and `9` are closed; `10/11` market reads are next.
+
+## Exact market balance transactions
+
+Legacy `addBalance` keeps its saturating behavior for unmigrated features. Transactions
+requiring complete payment or compensation use `creditExact`, `debitExact`, and
+`canCreditExact`: overflow fails with `BALANCE_LIMIT`, while dirty failure restores the
+affected account and log. Protocols `8/9`, legacy demand delivery, and legacy demand
+cancellation now use exact operations. Cancellation removes through a rollback handle
+before refunding the original owner; delivery never removes items when full payment
+cannot fit. Forge protocol `9` has a client send route. Discriminator `16` remains
+unregistered and protocols `10/11` are next.

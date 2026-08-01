@@ -274,5 +274,13 @@
   "message.request.market_full": "市场订单已满，请稍后再试",
   "message.request.unsupported_item": "该物品的默认形态暂不支持求购",
   "message.request.create_failed": "创建求购订单失败，请稍后再试",
-  "message.request.refund_failed": "订单创建失败且退款异常，请联系管理员"
+  "message.request.refund_failed": "订单创建失败且退款异常，请联系管理员",
+  "message.delivery.balance_limit": "余额已达到上限，无法完整接收求购款",
+  "message.request.cancel_success": "求购订单已取消并完整退款",
+  "message.request.cancel_not_found": "求购订单不存在",
+  "message.request.cancel_not_owner": "你无权取消该求购订单",
+  "message.request.cancel_delivered": "已交付的求购订单不能取消",
+  "message.request.cancel_balance_limit": "退款后余额将超过上限，无法取消订单",
+  "message.request.cancel_failed": "取消求购订单失败",
+  "message.request.cancel_rollback_failed": "取消失败且订单恢复异常，请联系管理员"
 }

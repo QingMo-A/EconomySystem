@@ -2,6 +2,7 @@ package com.mo.economy_system.common.market;
 
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
@@ -70,7 +71,7 @@ class CreateDemandOrderServiceTest {
                 f.repository.orders.set(0,new MarketOrder(current.type(),current.tradeId(),current.item(),current.quantity(),current.totalPrice(),current.sellerName(),current.sellerId(),current.listingTime(),current.expirationTime(),true));return DemandDeliveryTransitionResult.UPDATED;}};
         DemandOrderDeliveryService.Inventory inventory=new DemandOrderDeliveryService.Inventory(){public Object restoreTemplate(MarketOrder order){return new Object();}public long countMatching(Object template){return items[0];}
             public DemandOrderDeliveryService.RemovalResult removeMatching(Object template,int quantity){int before=items[0];items[0]-=quantity;return DemandOrderDeliveryService.RemovalResult.success(()->{items[0]=before;return true;});}};
-        DemandOrderDeliveryService.Account account=new DemandOrderDeliveryService.Account(){public boolean credit(int amount){payments[0]++;supplierBalance[0]+=amount;return true;}public boolean debit(int amount){supplierBalance[0]-=amount;return true;}};
+        DemandOrderDeliveryService.Account account=new DemandOrderDeliveryService.Account(){public boolean canCreditExact(int amount){return true;}public BalanceMutationResult creditExact(int amount){payments[0]++;supplierBalance[0]+=amount;return BalanceMutationResult.SUCCESS;}public BalanceMutationResult debitExact(int amount){supplierBalance[0]-=amount;return BalanceMutationResult.SUCCESS;}};
         var context=new DemandOrderDeliveryService.Context(UUID.randomUUID(),inventory,account,repository,DemandOrderDeliveryService.FailureReporter.noop());
         assertEquals(DemandOrderDeliveryResult.SUCCESS,DemandOrderDeliveryService.execute(created.tradeId(),context));
         assertEquals(DemandOrderDeliveryResult.ALREADY_DELIVERED,DemandOrderDeliveryService.execute(created.tradeId(),context));
@@ -84,7 +85,7 @@ class CreateDemandOrderServiceTest {
         CreateDemandOrderResult execute(){return CreateDemandOrderService.execute(message,new CreateDemandOrderService.Context(raw->resolve,account,repository,buyer,"buyer",()->id,()->now,CreateDemandOrderService.FailureReporter.noop()));}
     }
     private static final class FakeAccount implements CreateDemandOrderService.Account {int balance=1000,debits,credits;boolean debitFalse,debitThrows,creditFalse,creditThrows;
-        public boolean canDebit(int amount){return balance>=amount;}public boolean debit(int amount){debits++;if(debitThrows)throw new IllegalStateException();if(debitFalse)return false;balance-=amount;return true;}public boolean credit(int amount){credits++;if(creditThrows)throw new IllegalStateException();if(creditFalse)return false;balance+=amount;return true;}}
+        public boolean canDebit(int amount){return balance>=amount;}public BalanceMutationResult debitExact(int amount){debits++;if(debitThrows)throw new IllegalStateException();if(debitFalse)return BalanceMutationResult.PERSIST_FAILED;balance-=amount;return BalanceMutationResult.SUCCESS;}public BalanceMutationResult creditExact(int amount){credits++;if(creditThrows)throw new IllegalStateException();if(creditFalse)return BalanceMutationResult.PERSIST_FAILED;balance+=amount;return BalanceMutationResult.SUCCESS;}}
     private static final class FakeRepository implements CreateDemandOrderService.Repository {List<MarketOrder> orders=new ArrayList<>();boolean full,addFalse,addThrows;
         public boolean isFull(){return full;}public boolean add(MarketOrder order){if(addThrows)throw new IllegalStateException();if(addFalse||orders.stream().anyMatch(existing->existing.tradeId().equals(order.tradeId())))return false;orders.add(order);return true;}}
     private static ItemStackSnapshot item(){return ItemStackSnapshot.create("minecraft:stone",1,Optional.empty(),List.of(),Map.of(),Map.of(),true,true,0,0,false,true,OptionalInt.empty(),true,OptionalInt.empty(),new CompoundTag()).orElseThrow();}

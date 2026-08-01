@@ -37,9 +37,37 @@ public final class MarketLedger {
     }
 
     public synchronized boolean remove(UUID tradeId) {
-        boolean changed = orders.removeIf(order -> order.tradeId().equals(tradeId));
-        if (changed) dirtyCallback.run();
-        return changed;
+        for (int index=0;index<orders.size();index++) if (orders.get(index).tradeId().equals(tradeId)) {
+            MarketOrder removed=orders.remove(index);
+            try { dirtyCallback.run(); }
+            catch (RuntimeException exception) { orders.add(index,removed);throw exception; }
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized DemandOrderRemovalResult removeUndeliveredDemand(UUID tradeId) {
+        Objects.requireNonNull(tradeId, "tradeId");
+        for (int index=0;index<orders.size();index++) {
+            MarketOrder order=orders.get(index);
+            if (!order.tradeId().equals(tradeId)) continue;
+            if (order.type()!=MarketOrderType.DEMAND) return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.WRONG_ORDER_TYPE);
+            if (order.delivered()) return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.ALREADY_DELIVERED);
+            orders.remove(index);
+            try { dirtyCallback.run(); }
+            catch (RuntimeException exception) { orders.add(index,order);return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.PERSIST_FAILED); }
+            int originalIndex=index;
+            return DemandOrderRemovalResult.removed(new MarketOrderRemoval(order,()->restoreRemoval(order,originalIndex)));
+        }
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.NOT_FOUND);
+    }
+
+    private synchronized MarketOrderRestoreResult restoreRemoval(MarketOrder order,int index) {
+        if (orders.stream().anyMatch(existing->existing.tradeId().equals(order.tradeId()))) return MarketOrderRestoreResult.DUPLICATE_ID;
+        int restoredIndex=Math.min(index,orders.size());orders.add(restoredIndex,order);
+        try { dirtyCallback.run(); }
+        catch (RuntimeException exception) { orders.remove(restoredIndex);return MarketOrderRestoreResult.PERSIST_FAILED; }
+        return MarketOrderRestoreResult.RESTORED;
     }
 
     public synchronized void restore(List<MarketOrder> restored) {

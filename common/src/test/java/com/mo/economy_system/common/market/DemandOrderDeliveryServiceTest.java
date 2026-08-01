@@ -1,5 +1,7 @@
 package com.mo.economy_system.common.market;
 
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
+
 import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,6 +24,9 @@ class DemandOrderDeliveryServiceTest {
     @Test void paymentFalseOrExceptionRestoresItems() {
         Fixture rejected=new Fixture();rejected.account.creditFalse=true;assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED,rejected.execute());assertState(rejected,20,100,false,1,0,1);
         Fixture thrown=new Fixture();thrown.account.creditThrows=true;assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED,thrown.execute());assertState(thrown,20,100,false,1,0,1);
+    }
+    @Test void recipientBalanceLimitRejectsBeforeInventoryMutation() {
+        Fixture f=new Fixture();f.account.canCredit=false;assertEquals(DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT,f.execute());assertState(f,20,100,false,0,0,0);
     }
     @Test void ledgerFailureRevertsPaymentAndItems() {
         Fixture f=new Fixture();f.repository.transition=DemandDeliveryTransitionResult.PERSIST_FAILED;
@@ -50,9 +55,10 @@ class DemandOrderDeliveryServiceTest {
         public DemandOrderDeliveryService.RemovalResult removeMatching(Object t,int q){removeCalls++;int before=count;if(removeThrows){count=before;throw new IllegalStateException();}if(partialFailure){count-=2;count=before;return DemandOrderDeliveryService.RemovalResult.failure(true);}count-=q;return DemandOrderDeliveryService.RemovalResult.success(()->{rollbackCalls++;if(rollbackThrows)throw new IllegalStateException();count=before;return true;});}
     }
     private static final class FakeAccount implements DemandOrderDeliveryService.Account {
-        int balance=100,creditCalls,debitCalls;boolean creditFalse,creditThrows,debitFalse,debitThrows;
-        public boolean credit(int a){creditCalls++;if(creditThrows)throw new IllegalStateException();if(creditFalse)return false;balance+=a;return true;}
-        public boolean debit(int a){debitCalls++;if(debitThrows)throw new IllegalStateException();if(debitFalse)return false;balance-=a;return true;}
+        int balance=100,creditCalls,debitCalls;boolean canCredit=true,creditFalse,creditThrows,debitFalse,debitThrows;
+        public boolean canCreditExact(int a){return canCredit&&(long)balance+a<=Integer.MAX_VALUE;}
+        public BalanceMutationResult creditExact(int a){creditCalls++;if(creditThrows)throw new IllegalStateException();if(creditFalse)return BalanceMutationResult.PERSIST_FAILED;balance+=a;return BalanceMutationResult.SUCCESS;}
+        public BalanceMutationResult debitExact(int a){debitCalls++;if(debitThrows)throw new IllegalStateException();if(debitFalse)return BalanceMutationResult.PERSIST_FAILED;balance-=a;return BalanceMutationResult.SUCCESS;}
     }
     private static final class FakeRepository implements DemandOrderDeliveryService.Repository {
         MarketOrder order=new MarketOrder(MarketOrderType.DEMAND,UUID.randomUUID(),MarketOrderCodecTest.item(),5,17,"buyer",UUID.randomUUID(),1,2,false);DemandDeliveryTransitionResult transition=DemandDeliveryTransitionResult.UPDATED;

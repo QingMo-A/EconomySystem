@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
 import net.minecraft.network.chat.Component;
@@ -48,8 +49,8 @@ final class Forge1201CreateDemandOrderHandler {
 
     private record AccountAdapter(EconomySavedData data, ServerPlayer player) implements CreateDemandOrderService.Account {
         public boolean canDebit(int amount) { return data.hasEnoughBalance(player.getUUID(), amount); }
-        public boolean debit(int amount) { return data.minBalance(player.getUUID(), amount, "市场", "创建求购单冻结金额"); }
-        public boolean credit(int amount) { return data.addBalance(player.getUUID(), amount, "市场", "创建求购单失败退款"); }
+        public BalanceMutationResult debitExact(int amount) { return data.debitExact(player.getUUID(), amount, "市场", "创建求购单冻结金额"); }
+        public BalanceMutationResult creditExact(int amount) { return data.creditExact(player.getUUID(), amount, "市场", "创建求购单失败退款"); }
     }
     private record RepositoryAdapter(MarketSavedData data) implements CreateDemandOrderService.Repository {
         public boolean isFull() { return data.isFull(); }

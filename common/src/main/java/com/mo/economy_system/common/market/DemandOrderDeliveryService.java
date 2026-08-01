@@ -1,5 +1,7 @@
 package com.mo.economy_system.common.market;
 
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -16,6 +18,7 @@ public final class DemandOrderDeliveryService {
         if (order.sellerId().equals(context.supplierId())) return DemandOrderDeliveryResult.SELF_DELIVERY;
         if (order.totalPrice() <= 0) return DemandOrderDeliveryResult.INVALID_PRICE;
         if (order.quantity() <= 0) return DemandOrderDeliveryResult.INVALID_QUANTITY;
+        if (!context.account().canCreditExact(order.totalPrice())) return DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT;
         Object template = context.inventory().restoreTemplate(order);
         if (template == null) return DemandOrderDeliveryResult.TEMPLATE_RESTORE_FAILED;
         if (context.inventory().countMatching(template) < order.quantity()) return DemandOrderDeliveryResult.INSUFFICIENT_ITEMS;
@@ -35,16 +38,18 @@ public final class DemandOrderDeliveryService {
             return result;
         }
 
-        boolean paid;
+        BalanceMutationResult paymentResult;
         RuntimeException paymentError = null;
-        try { paid = context.account().credit(order.totalPrice()); }
-        catch (RuntimeException exception) { paid = false; paymentError = exception; }
-        if (!paid) {
+        try { paymentResult = context.account().creditExact(order.totalPrice()); }
+        catch (RuntimeException exception) { paymentResult = BalanceMutationResult.PERSIST_FAILED; paymentError = exception; }
+        if (paymentResult != BalanceMutationResult.SUCCESS) {
             boolean restored;
             RuntimeException inventoryError = null;
             try { restored = removal.rollback().rollback(); }
             catch (RuntimeException exception) { restored = false; inventoryError = exception; }
-            DemandOrderDeliveryResult result = restored ? DemandOrderDeliveryResult.PAYMENT_FAILED : DemandOrderDeliveryResult.ROLLBACK_FAILED;
+            DemandOrderDeliveryResult result = restored && paymentResult == BalanceMutationResult.BALANCE_LIMIT
+                    ? DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT
+                    : restored ? DemandOrderDeliveryResult.PAYMENT_FAILED : DemandOrderDeliveryResult.ROLLBACK_FAILED;
             report(context, tradeId, "payment", result, paymentError,
                     new Compensation(false, true, true, restored, null, inventoryError));
             return result;
@@ -67,7 +72,7 @@ public final class DemandOrderDeliveryService {
     private static Compensation compensate(Context context, int amount, Removal rollback) {
         boolean paymentReverted;
         RuntimeException paymentError = null;
-        try { paymentReverted = context.account().debit(amount); }
+        try { paymentReverted = context.account().debitExact(amount) == BalanceMutationResult.SUCCESS; }
         catch (RuntimeException exception) { paymentReverted = false; paymentError = exception; }
         boolean inventoryRestored;
         RuntimeException inventoryError = null;
@@ -96,7 +101,7 @@ public final class DemandOrderDeliveryService {
         public static RemovalResult success(Removal rollback) { return new RemovalResult(true, true, Objects.requireNonNull(rollback)); }
         public static RemovalResult failure(boolean restored) { return new RemovalResult(false, restored, null); }
     }
-    public interface Account { boolean credit(int amount); boolean debit(int amount); }
+    public interface Account { boolean canCreditExact(int amount); BalanceMutationResult creditExact(int amount); BalanceMutationResult debitExact(int amount); }
     public interface Repository { MarketOrder find(UUID tradeId); DemandDeliveryTransitionResult markDelivered(UUID tradeId); }
     public interface FailureReporter {
         void report(UUID tradeId, String stage, DemandOrderDeliveryResult result, RuntimeException cause, Compensation compensation);

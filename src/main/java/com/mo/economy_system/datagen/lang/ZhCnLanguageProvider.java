@@ -334,5 +334,13 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.REQUEST_UNSUPPORTED_ITEM, "该物品的默认形态暂不支持求购");
         add(Util_MessageKeys.REQUEST_CREATE_FAILED, "创建求购订单失败，请稍后再试");
         add(Util_MessageKeys.REQUEST_REFUND_FAILED, "订单创建失败且退款异常，请联系管理员");
+        add(Util_MessageKeys.DELIVERY_BALANCE_LIMIT_KEY, "余额已达到上限，无法完整接收求购款");
+        add(Util_MessageKeys.REQUEST_CANCEL_SUCCESS, "求购订单已取消并完整退款");
+        add(Util_MessageKeys.REQUEST_CANCEL_NOT_FOUND, "求购订单不存在");
+        add(Util_MessageKeys.REQUEST_CANCEL_NOT_OWNER, "你无权取消该求购订单");
+        add(Util_MessageKeys.REQUEST_CANCEL_DELIVERED, "已交付的求购订单不能取消");
+        add(Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT, "退款后余额将超过上限，无法取消订单");
+        add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "取消求购订单失败");
+        add(Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED, "取消失败且订单恢复异常，请联系管理员");
     }
 }

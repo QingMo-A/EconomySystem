@@ -76,6 +76,11 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-The current full target suite contains 98 passing tests. The paired NeoForge
-1.21.1 target contains 100 passing tests; `buildAllTargets --rerun-tasks` passes.
+The current full target suite contains 109 passing tests. The paired NeoForge
+1.21.1 target contains 110 passing tests; `buildAllTargets --rerun-tasks` passes.
 Protocols `8` and `9` are closed. Protocols `10/11` are the next migration slice.
+
+Market payments and compensation for protocols `8/9` now use the common exact balance
+API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
+client send route is covered by fail-closed dispatch testing. Legacy saturating calls in
+unmigrated features remain out of scope; Forge discriminator `16` remains unregistered.

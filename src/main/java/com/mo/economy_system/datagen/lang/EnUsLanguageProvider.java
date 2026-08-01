@@ -333,5 +333,13 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.REQUEST_UNSUPPORTED_ITEM, "This item's default form is not supported");
         add(Util_MessageKeys.REQUEST_CREATE_FAILED, "Could not create the demand order; please try again later");
         add(Util_MessageKeys.REQUEST_REFUND_FAILED, "Order creation failed and the refund needs administrator attention");
+        add(Util_MessageKeys.DELIVERY_BALANCE_LIMIT_KEY, "Your balance cannot receive the full demand-order payment");
+        add(Util_MessageKeys.REQUEST_CANCEL_SUCCESS, "Demand order cancelled and fully refunded");
+        add(Util_MessageKeys.REQUEST_CANCEL_NOT_FOUND, "Demand order not found");
+        add(Util_MessageKeys.REQUEST_CANCEL_NOT_OWNER, "You cannot cancel this demand order");
+        add(Util_MessageKeys.REQUEST_CANCEL_DELIVERED, "A delivered demand order cannot be cancelled");
+        add(Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT, "The refund would exceed the owner's balance limit");
+        add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "Could not cancel the demand order");
+        add(Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED, "Cancellation failed and order recovery needs administrator attention");
     }
 }

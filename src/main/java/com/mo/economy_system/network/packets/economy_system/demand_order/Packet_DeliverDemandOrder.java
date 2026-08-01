@@ -3,6 +3,7 @@ package com.mo.economy_system.network.packets.economy_system.demand_order;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketManager;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
@@ -45,7 +46,8 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
                 notifyRequester(supplier, accounts, before, display);
             } else {
                 supplier.sendSystemMessage(Component.translatable(result == DemandOrderDeliveryResult.INSUFFICIENT_ITEMS
-                        ? Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY : Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
+                        ? Util_MessageKeys.DELIVERY_NOT_ENOUGH_ITEMS_KEY : result == DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT
+                        ? Util_MessageKeys.DELIVERY_BALANCE_LIMIT_KEY : Util_MessageKeys.MARKET_ITEM_DOES_NOT_EXIST_MESSAGE_KEY));
             }
             EconomySystem_NetworkManager.sendToClient(supplier, new Packet_MarketDataResponse(MarketManager.getMarketItems()));
         });
@@ -72,8 +74,9 @@ public class Packet_DeliverDemandOrder implements net.minecraft.network.protocol
         public DemandDeliveryTransitionResult markDelivered(UUID id) { return data.markDemandDelivered(id); }
     }
     private record AccountAdapter(EconomySavedData data, ServerPlayer player) implements DemandOrderDeliveryService.Account {
-        public boolean credit(int amount) { return data.addBalance(player.getUUID(), amount, "市场", "交付求购单"); }
-        public boolean debit(int amount) { return data.minBalance(player.getUUID(), amount, "市场", "交付求购单回滚"); }
+        public boolean canCreditExact(int amount) { return data.canCreditExact(player.getUUID(), amount); }
+        public BalanceMutationResult creditExact(int amount) { return data.creditExact(player.getUUID(), amount, "市场", "交付求购单"); }
+        public BalanceMutationResult debitExact(int amount) { return data.debitExact(player.getUUID(), amount, "市场", "交付求购单回滚"); }
     }
     private record InventoryAdapter(ServerPlayer player) implements DemandOrderDeliveryService.Inventory {
         private Inventory inventory() { return player.getInventory(); }

@@ -150,6 +150,14 @@ public class Util_MessageKeys {
     public static final String REQUEST_CANCEL_KEY = "button.request.cancel";
     public static final String REQUEST_CLAIM_BUTTON_KEY = "button.request.claim";
     public static final String DELIVERY_NOT_ENOUGH_ITEMS_KEY = "message.delivery.not_enough_items";
+    public static final String DELIVERY_BALANCE_LIMIT_KEY = "message.delivery.balance_limit";
+    public static final String REQUEST_CANCEL_SUCCESS = "message.request.cancel_success";
+    public static final String REQUEST_CANCEL_NOT_FOUND = "message.request.cancel_not_found";
+    public static final String REQUEST_CANCEL_NOT_OWNER = "message.request.cancel_not_owner";
+    public static final String REQUEST_CANCEL_DELIVERED = "message.request.cancel_delivered";
+    public static final String REQUEST_CANCEL_BALANCE_LIMIT = "message.request.cancel_balance_limit";
+    public static final String REQUEST_CANCEL_FAILED = "message.request.cancel_failed";
+    public static final String REQUEST_CANCEL_ROLLBACK_FAILED = "message.request.cancel_rollback_failed";
     public static final String DELIVERY_SUCCESS_KEY = "message.delivery.success";
     public static final String CLAIM_SUCCESS_KEY = "message.request.claim.success";
     public static final String CLAIM_NOT_OWNER_KEY = "message.claim.not_owner";

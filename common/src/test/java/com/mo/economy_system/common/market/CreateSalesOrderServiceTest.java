@@ -1,5 +1,7 @@
 package com.mo.economy_system.common.market;
 
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
+
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.platform.item.*;
 import org.junit.jupiter.api.Test;
@@ -140,8 +142,8 @@ class CreateSalesOrderServiceTest {
     private static final class FakeAccount implements CreateSalesOrderService.Account {
         int balance=1000,debits,creditCalls; boolean debitFalse,debitThrows,creditFalse,creditThrows;
         public boolean canDebit(int amount){return balance>=amount;}
-        public boolean debit(int amount){debits++;if(debitThrows)throw new IllegalStateException("debit");if(debitFalse)return false;balance-=amount;return true;}
-        public boolean credit(int amount){creditCalls++;if(creditThrows)throw new IllegalStateException("credit");if(creditFalse)return false;balance+=amount;return true;}
+        public BalanceMutationResult debitExact(int amount){debits++;if(debitThrows)throw new IllegalStateException("debit");if(debitFalse)return BalanceMutationResult.PERSIST_FAILED;balance-=amount;return BalanceMutationResult.SUCCESS;}
+        public BalanceMutationResult creditExact(int amount){creditCalls++;if(creditThrows)throw new IllegalStateException("credit");if(creditFalse)return BalanceMutationResult.PERSIST_FAILED;balance+=amount;return BalanceMutationResult.SUCCESS;}
     }
     private static final class FakeRepository implements CreateSalesOrderService.Repository {
         final List<MarketOrder> orders=new ArrayList<>(); boolean full,reject,throwsOnAdd;

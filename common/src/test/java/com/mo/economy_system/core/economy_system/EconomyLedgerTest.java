@@ -3,6 +3,7 @@ package com.mo.economy_system.core.economy_system;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -133,5 +134,29 @@ class EconomyLedgerTest {
         assertEquals(42, restored.getBalance(player));
         assertEquals(List.of("hello"), restored.getOfflineMessages(player));
         assertEquals(1, dirtyCalls.get());
+    }
+
+    @Test void exactMutationsNeverClampAndWriteOneLog() {
+        AtomicInteger dirty=new AtomicInteger();EconomyLedger ledger=new EconomyLedger(dirty::incrementAndGet);UUID player=UUID.randomUUID();
+        assertEquals(BalanceMutationResult.INVALID_AMOUNT,ledger.creditExact(player,0,"market","bad"));
+        assertEquals(BalanceMutationResult.SUCCESS,ledger.creditExact(player,100,"market","credit"));
+        assertEquals(BalanceMutationResult.SUCCESS,ledger.debitExact(player,40,"market","debit"));
+        assertEquals(60,ledger.getBalance(player));assertEquals(2,ledger.getBalanceLogs(player).size());assertEquals(2,dirty.get());
+        assertEquals(BalanceMutationResult.INSUFFICIENT_FUNDS,ledger.debitExact(player,61,"market","bad"));assertEquals(60,ledger.getBalance(player));
+        ledger.restore(new EconomyLedger.Snapshot(Map.of(player,EconomyLedger.MAX_BALANCE-5),Map.of(),Map.of()));
+        assertEquals(BalanceMutationResult.SUCCESS,ledger.creditExact(player,5,"market","limit"));assertEquals(EconomyLedger.MAX_BALANCE,ledger.getBalance(player));
+        List<BalanceLogEntry> before=ledger.getBalanceLogs(player);int dirtyBefore=dirty.get();
+        assertEquals(BalanceMutationResult.BALANCE_LIMIT,ledger.creditExact(player,1,"market","overflow"));
+        assertEquals(EconomyLedger.MAX_BALANCE,ledger.getBalance(player));assertEquals(before,ledger.getBalanceLogs(player));assertEquals(dirtyBefore,dirty.get());
+    }
+
+    @Test void exactMutationRestoresBalanceLogsAndAccountExistenceWhenDirtyFails() {
+        UUID existing=UUID.randomUUID(),missing=UUID.randomUUID();EconomyLedger ledger=new EconomyLedger(()->{throw new IllegalStateException("dirty");});
+        BalanceLogEntry oldLog=new BalanceLogEntry(1,"old","old",10,0,10);
+        ledger.restore(new EconomyLedger.Snapshot(Map.of(existing,10),Map.of(),Map.of(existing,List.of(oldLog))));
+        assertEquals(BalanceMutationResult.PERSIST_FAILED,ledger.creditExact(existing,5,"market","credit"));
+        assertEquals(10,ledger.getBalance(existing));assertEquals(List.of(oldLog),ledger.getBalanceLogs(existing));
+        assertEquals(BalanceMutationResult.PERSIST_FAILED,ledger.creditExact(missing,5,"market","credit"));
+        assertFalse(ledger.snapshot().accounts().containsKey(missing));assertTrue(ledger.getBalanceLogs(missing).isEmpty());
     }
 }

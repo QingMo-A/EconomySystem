@@ -55,5 +55,28 @@ class MarketLedgerTest {
         assertEquals(demand,ledger.orders().get(0));assertFalse(ledger.orders().get(0).delivered());
     }
 
+    @Test void ordinaryRemoveRestoresOriginalIndexWhenDirtyFails() {
+        AtomicInteger calls=new AtomicInteger();MarketLedger ledger=new MarketLedger(()->{if(calls.incrementAndGet()==1)throw new IllegalStateException("dirty");});
+        MarketOrder first=order(MarketOrderType.SALES,false),second=order(MarketOrderType.DEMAND,false);ledger.restore(List.of(first,second));
+        assertThrows(IllegalStateException.class,()->ledger.remove(first.tradeId()));assertEquals(List.of(first,second),ledger.orders());assertFalse(ledger.remove(UUID.randomUUID()));
+    }
+
+    @Test void transactionalDemandRemovalRestoresAtOriginalIndexAndRejectsInvalidOrders() {
+        MarketLedger ledger=new MarketLedger(()->{});MarketOrder first=order(MarketOrderType.SALES,false),demand=order(MarketOrderType.DEMAND,false),delivered=order(MarketOrderType.DEMAND,true);ledger.restore(List.of(first,demand,delivered));
+        assertEquals(DemandOrderRemovalStatus.WRONG_ORDER_TYPE,ledger.removeUndeliveredDemand(first.tradeId()).status());
+        assertEquals(DemandOrderRemovalStatus.ALREADY_DELIVERED,ledger.removeUndeliveredDemand(delivered.tradeId()).status());
+        assertEquals(DemandOrderRemovalStatus.NOT_FOUND,ledger.removeUndeliveredDemand(UUID.randomUUID()).status());
+        DemandOrderRemovalResult removed=ledger.removeUndeliveredDemand(demand.tradeId());assertEquals(DemandOrderRemovalStatus.REMOVED,removed.status());assertEquals(List.of(first,delivered),ledger.orders());
+        assertEquals(MarketOrderRestoreResult.RESTORED,removed.removal().restore().restore());assertEquals(List.of(first,demand,delivered),ledger.orders());
+        assertEquals(MarketOrderRestoreResult.DUPLICATE_ID,removed.removal().restore().restore());
+    }
+
+    @Test void transactionalRemovalAndRestoreFailClosedOnDirtyFailure() {
+        MarketOrder demand=order(MarketOrderType.DEMAND,false);MarketLedger removeFails=new MarketLedger(()->{throw new IllegalStateException();});removeFails.restore(List.of(demand));
+        assertEquals(DemandOrderRemovalStatus.PERSIST_FAILED,removeFails.removeUndeliveredDemand(demand.tradeId()).status());assertEquals(List.of(demand),removeFails.orders());
+        AtomicInteger calls=new AtomicInteger();MarketLedger restoreFails=new MarketLedger(()->{if(calls.incrementAndGet()>1)throw new IllegalStateException();});restoreFails.restore(List.of(demand));
+        DemandOrderRemovalResult removed=restoreFails.removeUndeliveredDemand(demand.tradeId());assertEquals(MarketOrderRestoreResult.PERSIST_FAILED,removed.removal().restore().restore());assertTrue(restoreFails.orders().isEmpty());
+    }
+
     private static MarketOrder order(MarketOrderType type,boolean delivered){return new MarketOrder(type,UUID.randomUUID(),MarketOrderCodecTest.item(),3,17,"seller",UUID.randomUUID(),10,99,delivered);}
 }

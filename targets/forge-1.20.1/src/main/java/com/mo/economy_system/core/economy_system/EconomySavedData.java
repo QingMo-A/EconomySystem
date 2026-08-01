@@ -63,6 +63,14 @@ public class EconomySavedData extends SavedData {
         return ledger.hasEnoughBalance(playerUUID, amount);
     }
 
+    public boolean canCreditExact(UUID playerUUID, int amount) { return ledger.canCreditExact(playerUUID, amount); }
+    public BalanceMutationResult creditExact(UUID playerUUID, int amount, String category, String reason) {
+        return ledger.creditExact(playerUUID, amount, category, reason);
+    }
+    public BalanceMutationResult debitExact(UUID playerUUID, int amount, String category, String reason) {
+        return ledger.debitExact(playerUUID, amount, category, reason);
+    }
+
     public BalanceTransferResult transferBalance(
             UUID senderUUID,
             UUID recipientUUID,

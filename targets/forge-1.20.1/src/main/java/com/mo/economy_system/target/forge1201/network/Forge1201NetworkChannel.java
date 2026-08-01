@@ -192,6 +192,7 @@ public final class Forge1201NetworkChannel {
     }
 
     static void sendToServer(CreateSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+    static void sendToServer(CreateDemandOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();
