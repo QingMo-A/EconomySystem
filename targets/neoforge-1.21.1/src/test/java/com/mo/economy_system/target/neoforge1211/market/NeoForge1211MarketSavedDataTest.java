@@ -34,5 +34,15 @@ class NeoForge1211MarketSavedDataTest {
         assertThrows(IllegalArgumentException.class,()->MarketSavedData.load(root,null));
         assertEquals(2,root.getList("marketItems",Tag.TAG_COMPOUND).size());
     }
+    @Test void deliveredTransitionPersistsAndPreservesSnapshotAndExpiration() {
+        MarketOrder demand=new MarketOrder(MarketOrderType.DEMAND,UUID.randomUUID(),item(),70,25,"d",UUID.randomUUID(),5,777,false);
+        MarketOrder sale=new MarketOrder(MarketOrderType.SALES,UUID.randomUUID(),item(),1,2,"s",UUID.randomUUID(),6,888,false);
+        CompoundTag root=new CompoundTag();ListTag list=new ListTag();list.add(MarketOrderCodec.encode(demand));list.add(MarketOrderCodec.encode(sale));root.put("marketItems",list);
+        MarketSavedData data=MarketSavedData.load(root,null);assertEquals(DemandDeliveryTransitionResult.UPDATED,data.markDemandDelivered(demand.tradeId()));
+        assertEquals(DemandDeliveryTransitionResult.ALREADY_DELIVERED,data.markDemandDelivered(demand.tradeId()));
+        MarketSavedData loaded=MarketSavedData.load(data.save(new CompoundTag(),null),null);assertEquals(2,loaded.getOrders().size());
+        MarketOrder updated=loaded.getOrders().get(0);assertTrue(updated.delivered());assertEquals(777,updated.expirationTime());assertEquals(demand.item(),updated.item());
+        assertEquals(DemandDeliveryTransitionResult.WRONG_ORDER_TYPE,loaded.markDemandDelivered(sale.tradeId()));
+    }
     private static ItemStackSnapshot item() { return ItemStackSnapshot.create("minecraft:stone", 1, Optional.empty(), List.of(), Map.of(), Map.of(), true, true, 0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), new CompoundTag()).orElseThrow(); }
 }

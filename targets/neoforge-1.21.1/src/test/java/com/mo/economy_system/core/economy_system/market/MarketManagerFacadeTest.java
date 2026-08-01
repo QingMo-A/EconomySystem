@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
+import net.minecraft.world.item.ItemStack;
 
 class MarketManagerFacadeTest {
     @Test void rebindingCannotMutateThePreviousWorldOrWriteAnOldViewBack() {
@@ -14,6 +15,15 @@ class MarketManagerFacadeTest {
         second.addOrder(secondOrder);MarketManager.bind(second);assertSame(second,MarketManager.boundDataForTest());
         assertTrue(MarketManager.removeMarketItemById(secondOrder.tradeId()));
         assertEquals(List.of(firstOrder),first.getOrders());assertTrue(second.getOrders().isEmpty());
+    }
+    @Test void detachedDemandMutationDoesNotPersistButExplicitTransitionDoes() {
+        MarketSavedData data=new MarketSavedData();MarketOrder demand=new MarketOrder(MarketOrderType.DEMAND,UUID.randomUUID(),item(),4,9,"buyer",UUID.randomUUID(),1,9,false);
+        data.addOrder(demand);MarketManager.bind(data);
+        DemandOrder detached=new DemandOrder(demand.tradeId(),demand.item().itemId(),ItemStack.EMPTY,demand.totalPrice(),demand.sellerName(),demand.sellerId(),demand.listingTime(),demand.expirationTime(),false);
+        detached.setDelivered(true);
+        assertFalse(data.getOrder(demand.tradeId()).delivered());
+        assertEquals(DemandDeliveryTransitionResult.UPDATED,MarketManager.markDemandOrderDelivered(demand.tradeId()));
+        assertTrue(data.getOrder(demand.tradeId()).delivered());
     }
     private static MarketOrder order(){return new MarketOrder(MarketOrderType.SALES,UUID.randomUUID(),item(),1,1,"s",UUID.randomUUID(),1,2,false);}
     private static ItemStackSnapshot item(){return ItemStackSnapshot.create("minecraft:stone",1,Optional.empty(),List.of(),Map.of(),Map.of(),true,true,0,0,false,true,OptionalInt.empty(),true,OptionalInt.empty(),new CompoundTag()).orElseThrow();}

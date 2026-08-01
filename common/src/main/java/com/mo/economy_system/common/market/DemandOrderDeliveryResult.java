@@ -1,0 +1,18 @@
+package com.mo.economy_system.common.market;
+
+public enum DemandOrderDeliveryResult {
+    SUCCESS,
+    INVALID_CONTEXT,
+    NOT_FOUND,
+    WRONG_ORDER_TYPE,
+    ALREADY_DELIVERED,
+    SELF_DELIVERY,
+    INVALID_PRICE,
+    INVALID_QUANTITY,
+    TEMPLATE_RESTORE_FAILED,
+    INSUFFICIENT_ITEMS,
+    INVENTORY_MUTATION_FAILED,
+    PAYMENT_FAILED,
+    LEDGER_UPDATE_FAILED,
+    ROLLBACK_FAILED
+}

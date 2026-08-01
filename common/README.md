@@ -53,8 +53,8 @@ maintaining independent registration order.
   cannot represent independently.
 - Legacy compact `{id,count,customData}` tags remain read-compatible only.
   `saveSimple/loadSimple` remain deprecated compatibility entry points; every
-  new snapshot write uses schema v1. Stage A is complete. The next migration
-  Stage A is closed; protocol `8` now consumes this schema for sales-order creation.
+  new snapshot write uses schema v1. Stage A is closed; protocol `8` consumes
+  this schema for sales-order creation.
 - Snapshot validation is centralized in `ItemStackSnapshotValidator`; creation
   and strict encoding return explicit results. Limits are: item/enchantment ID
   256 characters, name and each lore line 8,192 characters, 64 lore lines,
@@ -82,5 +82,11 @@ maintaining independent registration order.
   and compensation outcomes are logged with player/trade/stage context. The legacy
   `MarketManager` facade no longer caches or writes back a market view; the bound
   `MarketSavedData`/`MarketLedger` remains the sole authority.
-- The hardened suites now contain 72 passing Forge 1.20.1 tests and 73 passing NeoForge
+- Legacy NeoForge demand delivery (protocol `14`) now treats facade order objects as
+  detached, read-only compatibility views and persists delivery through an explicit,
+  atomic `MarketLedger` transition. Validation, item removal, payment, persistence,
+  and independent compensation are shared in common code. A repeated delivery cannot
+  pay the supplier twice. This is a compatibility safety fix, not protocol `14`
+  migration; Forge still has no discriminator `14` registration.
+- The hardened suites now contain 85 passing Forge 1.20.1 tests and 87 passing NeoForge
   1.21.1 tests. Protocol `8` is closed; protocol `9` remains the next migration slice.

@@ -36,6 +36,16 @@ class Forge1201MarketSavedDataTest {
         for (int i=0;i<=MarketLedger.MAX_ORDERS;i++) list.add(MarketOrderCodec.encode(sale()));
         root.put("marketItems", list); assertThrows(IllegalArgumentException.class, () -> MarketSavedData.load(root));
     }
+    @Test void deliveredTransitionPersistsWithoutDuplicatingMixedOrders() {
+        MarketOrder demand=order(MarketOrderType.DEMAND,false),sale=sale();MarketSavedData data=MarketSavedData.load(root(demand,sale));
+        assertEquals(DemandDeliveryTransitionResult.UPDATED,data.markDemandDelivered(demand.tradeId()));
+        assertEquals(DemandDeliveryTransitionResult.ALREADY_DELIVERED,data.markDemandDelivered(demand.tradeId()));
+        MarketSavedData loaded=MarketSavedData.load(data.save(new CompoundTag()));assertEquals(2,loaded.getOrders().size());
+        MarketOrder updated=loaded.getOrders().stream().filter(o->o.tradeId().equals(demand.tradeId())).findFirst().orElseThrow();
+        assertTrue(updated.delivered());assertEquals(demand.expirationTime(),updated.expirationTime());assertEquals(demand.item(),updated.item());
+        assertEquals(DemandDeliveryTransitionResult.WRONG_ORDER_TYPE,loaded.markDemandDelivered(sale.tradeId()));
+    }
+    private static CompoundTag root(MarketOrder... orders){CompoundTag root=new CompoundTag();ListTag list=new ListTag();for(MarketOrder order:orders)list.add(MarketOrderCodec.encode(order));root.put("marketItems",list);return root;}
     private static CompoundTag root(CompoundTag order) { CompoundTag root=new CompoundTag();ListTag list=new ListTag();list.add(order.copy());root.put("marketItems",list);return root; }
     private static MarketOrder sale() { return order(MarketOrderType.SALES, false); }
     private static MarketOrder demand() { return order(MarketOrderType.DEMAND, true); }

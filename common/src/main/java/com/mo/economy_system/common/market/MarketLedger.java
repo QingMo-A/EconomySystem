@@ -19,6 +19,9 @@ public final class MarketLedger {
 
     public synchronized List<MarketOrder> orders() { return List.copyOf(orders); }
     public synchronized boolean isFull() { return orders.size() >= MAX_ORDERS; }
+    public synchronized MarketOrder find(UUID tradeId) {
+        return orders.stream().filter(order -> order.tradeId().equals(tradeId)).findFirst().orElse(null);
+    }
 
     public synchronized boolean add(MarketOrder order) {
         Objects.requireNonNull(order, "order");
@@ -48,5 +51,27 @@ public final class MarketLedger {
         }
         orders.clear();
         orders.addAll(restored);
+    }
+
+    public synchronized DemandDeliveryTransitionResult markDemandDelivered(UUID tradeId) {
+        Objects.requireNonNull(tradeId, "tradeId");
+        for (int index = 0; index < orders.size(); index++) {
+            MarketOrder current = orders.get(index);
+            if (!current.tradeId().equals(tradeId)) continue;
+            if (current.type() != MarketOrderType.DEMAND) return DemandDeliveryTransitionResult.WRONG_ORDER_TYPE;
+            if (current.delivered()) return DemandDeliveryTransitionResult.ALREADY_DELIVERED;
+            MarketOrder updated = new MarketOrder(current.type(), current.tradeId(), current.item(), current.quantity(),
+                    current.totalPrice(), current.sellerName(), current.sellerId(), current.listingTime(),
+                    current.expirationTime(), true);
+            orders.set(index, updated);
+            try {
+                dirtyCallback.run();
+            } catch (RuntimeException exception) {
+                orders.set(index, current);
+                return DemandDeliveryTransitionResult.PERSIST_FAILED;
+            }
+            return DemandDeliveryTransitionResult.UPDATED;
+        }
+        return DemandDeliveryTransitionResult.NOT_FOUND;
     }
 }

@@ -63,6 +63,11 @@ an error log. Forge sends a translated success or failure message for every resu
 no longer silently discards the service outcome. The compatibility `MarketManager` does
 not retain or write back a stale list.
 
-The current full target suite contains 72 passing tests. The paired NeoForge
-1.21.1 target contains 73 passing tests; `buildAllTargets --rerun-tasks` passes.
+Demand-order delivery persistence now has a common atomic ledger transition and
+transaction service so detached compatibility views cannot lose the delivered flag or
+permit duplicate payment. This hardens the existing NeoForge protocol `14` path only;
+protocol `14` has not been migrated or registered on Forge 1.20.1.
+
+The current full target suite contains 85 passing tests. The paired NeoForge
+1.21.1 target contains 87 passing tests; `buildAllTargets --rerun-tasks` passes.
 Protocol `8` is closed. Protocol `9` remains the next migration slice.

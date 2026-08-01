@@ -22,6 +22,11 @@
 
 阶段 B 的第一个切片协议 8（创建销售订单）已经完成并经过事务加固：部分删除自动恢复，退税与物品补偿独立尝试，repository 添加为原子契约，双端有安全反馈与事务日志，MarketManager 不再缓存回写旧视图。下一项任务才是协议 9（创建求购订单）；开始前审查 common 的 MarketOrder、MarketLedger、MarketOrderCodec 和双端 SavedData 外壳，不要同时迁移 10/11、购买、取消、配送箱或领地。
 
+兼容性修复说明：旧 NeoForge 协议 14 的求购交付已使用 common 事务服务和
+MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分离的只读兼容
+视图，不得通过 setDelivered 等 setter 假设持久化。该改动不是协议 14 迁移，Forge
+不得注册 discriminator 14。下一项任务仍是协议 9。
+
 完成后运行：
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks
 rg -n "net\.neoforged|net\.minecraftforge" common/src

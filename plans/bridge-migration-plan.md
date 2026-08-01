@@ -82,12 +82,21 @@ components
 - 退税与物品恢复分别捕获并始终全部尝试，任一补偿失败返回 `ROLLBACK_FAILED` 并记录事务阶段日志；
 - Forge 与 NeoForge 均向玩家返回稳定翻译消息，内部错误不泄漏枚举或堆栈；
 - `MarketManager` 不再缓存和回写兼容视图，当前世界的 `MarketSavedData/MarketLedger` 是唯一权威；
-- 最终回归套件为 Forge 72 项、NeoForge 73 项。协议 `8` 正式关闭，下一步仍只迁移协议 `9`。
+- 最终回归套件为 Forge 85 项、NeoForge 87 项。协议 `8` 正式关闭，下一步仍只迁移协议 `9`。
 
 - 订单持久化类型使用稳定 ID，并兼容旧存档类名；
 - 金额乘法先使用 `long` 检查，禁止整数溢出；
 - 市场响应限制条目数量和单条物品数据大小；
 - 不信任客户端提供的 ItemStack、价格、税费或订单所有权。
+
+### 兼容性安全修复：旧协议 14 求购交付
+
+旧 NeoForge `Packet_DeliverDemandOrder` 已改为通过 common 事务服务和
+`MarketLedger.markDemandDelivered` 写入权威账本。`MarketManager` 返回的旧订单对象
+只是分离的只读兼容视图，禁止依靠 setter 回写。交付流程先校验和移除物品，再付款，
+最后原子标记 delivered；账本失败时付款撤销和库存恢复会独立尝试。重复交付不会再次
+付款。这不是协议 `14` 的正式迁移：旧 NeoForge payload/注册保留，Forge 不注册
+discriminator `14`，下一迁移切片仍是协议 `9`。
 
 ## 后续阶段
 

@@ -4,6 +4,7 @@ import com.mo.economy_system.common.market.MarketLedger;
 import com.mo.economy_system.common.market.MarketOrder;
 import com.mo.economy_system.common.market.MarketOrderCodec;
 import com.mo.economy_system.common.market.MarketOrderType;
+import com.mo.economy_system.common.market.DemandDeliveryTransitionResult;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
@@ -26,9 +27,11 @@ public class MarketSavedData extends SavedData {
     private HolderLookup.Provider registries;
 
     public List<MarketOrder> getOrders() { return ledger.orders(); }
+    public MarketOrder getOrder(java.util.UUID id) { return ledger.find(id); }
     public boolean isFull() { return ledger.isFull(); }
     public boolean addOrder(MarketOrder order) { return ledger.add(order); }
     public boolean removeOrder(java.util.UUID id) { return ledger.remove(id); }
+    public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
 
     public List<MarketItem> getMarketItems() {
         List<MarketItem> result = new ArrayList<>();
