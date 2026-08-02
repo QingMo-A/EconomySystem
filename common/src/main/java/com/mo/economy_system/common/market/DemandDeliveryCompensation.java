@@ -8,6 +8,9 @@ public record DemandDeliveryCompensation(
     RuntimeException paymentError,
     RuntimeException inventoryError) {
   public boolean complete() {
-    return paymentReverted && inventoryRestored;
+    return paymentReversalAttempted
+        && paymentReverted
+        && inventoryRollbackAttempted
+        && inventoryRestored;
   }
 }

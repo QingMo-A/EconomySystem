@@ -27,7 +27,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 视图，不得通过 setDelivered 等 setter 假设持久化。该改动不是协议 14 迁移，Forge
 不得注册 discriminator 14。协议 9 已关闭，下一项任务是协议 10/11。
 
-市场余额事务已经加固：普通 addBalance 保留历史封顶语义，但协议 8/9、旧求购交付和旧求购取消必须使用 common exact API。exact 溢出或 dirty 失败不会留下余额或日志的部分修改。取消求购通过可回滚的 MarketLedger 删除并只向原所有者退款。Forge 协议 9 发送路由已补齐，但协议 16 仍未迁移或注册。不要顺手扩大到其他旧经济调用点。
+市场余额事务已经加固。协议 16 已迁移为 common UUID 请求，使用 expected-order 删除、原求购者精确退款和显式市场状态；不要恢复旧 Packet。
 
 协议 10/11 已迁移为有界分页读取：SUMMARY 不携带订单，PAGE 固定 9 条并由服务端执行 ALL/MINE/SALES/DEMAND 过滤以及物品 ID/创建者搜索；MINE 身份只取真实发送者。响应只传 schema-v1 Snapshot。ClientMarketState 会忽略旧 requestId，市场变化只广播 INVALIDATED。旧 Packet_MarketDataRequest/Response 已删除。下一步是协议 12，不要同时迁移 13-16。
 
@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，decoder 会在读取 Snapshot NBT 前检查 768 KiB raw wire 大小。协议 12、13、14、15 已迁移；协议 16 仍为 legacy compatibility implementation。
+协议 10/11 已正式关闭，协议 12–16 已迁移；协议 17/18 尚未开始。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff
@@ -46,11 +46,11 @@ git diff --check
 Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Continue next with canonical protocol 16 (`REMOVE_DEMAND_ORDER`); do not renumber the append-only manifest.
+Protocols 12–16 are migrated. Do not renumber the append-only manifest; protocols 17/18 have not started.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-195 Forge 1.20.1 tests and 196 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+199 Forge 1.20.1 tests and 200 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
-shared inventory transaction contract coverage. Continue with canonical protocol 16 only; keep protocol 16
-legacy and preserve all discriminator assignments.
+shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
+refund semantics and invalidation on CHANGED/UNKNOWN. Do not start protocols 17/18 without a new task.

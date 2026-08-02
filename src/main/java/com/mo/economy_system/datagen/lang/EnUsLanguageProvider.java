@@ -401,6 +401,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT,
         "The refund would exceed the owner's balance limit");
     add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "Could not cancel the demand order");
+    add("message.request.cancel_state_unknown", "Market state is uncertain; refresh before retrying");
     add(
         Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED,
         "Cancellation failed and order recovery needs administrator attention");

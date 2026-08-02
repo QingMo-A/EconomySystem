@@ -12,6 +12,7 @@ import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
@@ -71,6 +72,10 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     }
     if (message.getClass() == RemoveSalesOrderMessage.class) {
       Forge1201NetworkChannel.sendToServer((RemoveSalesOrderMessage) message);
+      return;
+    }
+    if (message.getClass() == RemoveDemandOrderMessage.class) {
+      Forge1201NetworkChannel.sendToServer((RemoveDemandOrderMessage) message);
       return;
     }
     if (message.getClass() == ConfirmDemandOrderMessage.class) {

@@ -3,7 +3,7 @@ package com.mo.economy_system.screen.economy_system.market;
 import com.mo.economy_system.core.economy_system.market.DemandOrder;
 import com.mo.economy_system.core.economy_system.market.SalesOrder;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
+import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -398,7 +398,7 @@ public class Screen_MarketConfirmDialog extends Screen {
             }
             case REMOVE_DEMAND -> {
                 if (demandOrder != null) {
-                    EconomySystem_NetworkManager.sendToServer(new Packet_RemoveDemandOrder(demandOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new RemoveDemandOrderMessage(demandOrder.getTradeID()));
                 }
             }
         }

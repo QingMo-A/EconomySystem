@@ -3,7 +3,6 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageDirection;
@@ -68,12 +67,7 @@ public final class NeoForge1211ProtocolRegistrar {
         NeoForge1211DeliverDemandOrderHandler::handle);
     bindCommon(
         registrar, EconomyMessages.REMOVE_SALES_ORDER, NeoForge1211RemoveSalesOrderHandler::handle);
-    bind(
-        registrar,
-        EconomyProtocol.REMOVE_DEMAND_ORDER,
-        Packet_RemoveDemandOrder.TYPE,
-        Packet_RemoveDemandOrder.STREAM_CODEC,
-        Packet_RemoveDemandOrder::handle);
+    bindCommon(registrar, EconomyMessages.REMOVE_DEMAND_ORDER, NeoForge1211RemoveDemandOrderHandler::handle);
     bind(
         registrar,
         EconomyProtocol.TERRITORY_DATA_REQUEST,

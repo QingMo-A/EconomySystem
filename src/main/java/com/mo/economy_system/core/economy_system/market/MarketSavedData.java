@@ -58,6 +58,9 @@ public class MarketSavedData extends SavedData {
   public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) {
     return ledger.removeUndeliveredDemand(id);
   }
+  public DemandOrderRemovalResult removeUndeliveredDemandIfUnchanged(java.util.UUID id, MarketOrder expected) {
+    return ledger.removeUndeliveredDemandIfUnchanged(id, expected);
+  }
 
   public com.mo.economy_system.common.market.SalesOrderRemovalResult removeSalesTransactional(
       java.util.UUID id) {

@@ -17,6 +17,7 @@ import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
@@ -209,6 +210,15 @@ public final class Forge1201NetworkChannel {
         .decoder(Forge1201DeliverDemandOrderCodec::decode)
         .consumerMainThread(Forge1201DeliverDemandOrderHandler::handle)
         .add();
+    CHANNEL
+        .messageBuilder(
+            RemoveDemandOrderMessage.class,
+            EconomyMessages.REMOVE_DEMAND_ORDER.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
+        .encoder(Forge1201RemoveDemandOrderCodec::encode)
+        .decoder(Forge1201RemoveDemandOrderCodec::decode)
+        .consumerMainThread(Forge1201RemoveDemandOrderHandler::handle)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -289,6 +299,10 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToServer(DeliverDemandOrderMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
+  static void sendToServer(RemoveDemandOrderMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }

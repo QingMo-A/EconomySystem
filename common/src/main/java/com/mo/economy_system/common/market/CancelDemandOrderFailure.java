@@ -1,0 +1,4 @@
+package com.mo.economy_system.common.market;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
+import java.util.UUID;
+public record CancelDemandOrderFailure(UUID tradeId,UUID actorId,UUID requesterId,boolean operator,String stage,CancelDemandOrderResult result,MarketMutationState mutationState,DemandOrderRemovalStatus removalStatus,BalanceMutationResult refundResult,MarketOrderRestoreResult restoreResult,RuntimeException primaryError,RuntimeException repositoryError,RuntimeException refundError,RuntimeException restoreError) {}

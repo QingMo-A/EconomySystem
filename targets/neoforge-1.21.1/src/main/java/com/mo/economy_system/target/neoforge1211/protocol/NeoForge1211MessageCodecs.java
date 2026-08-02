@@ -14,6 +14,7 @@ import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
@@ -381,6 +382,17 @@ public final class NeoForge1211MessageCodecs {
           @Override
           public DeliverDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
             return new DeliverDemandOrderMessage(buffer.readUUID());
+          }
+        });
+    register(
+        codecs,
+        EconomyMessages.REMOVE_DEMAND_ORDER,
+        new NeoForge1211MessageCodec<>() {
+          public void encode(RemoveDemandOrderMessage message, RegistryFriendlyByteBuf buffer) {
+            buffer.writeUUID(message.tradeId());
+          }
+          public RemoveDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
+            return new RemoveDemandOrderMessage(buffer.readUUID());
           }
         });
     register(

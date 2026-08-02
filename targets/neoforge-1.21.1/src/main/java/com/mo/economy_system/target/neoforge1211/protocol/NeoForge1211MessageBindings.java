@@ -3,7 +3,6 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageRegistry;
@@ -39,7 +38,7 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.CONFIRM_DEMAND_ORDER);
     registry.register(EconomyMessages.DELIVER_DEMAND_ORDER);
     registry.register(EconomyMessages.REMOVE_SALES_ORDER);
-    bind(registry, EconomyProtocol.REMOVE_DEMAND_ORDER, Packet_RemoveDemandOrder.class);
+    registry.register(EconomyMessages.REMOVE_DEMAND_ORDER);
     bind(registry, EconomyProtocol.TERRITORY_DATA_REQUEST, Packet_TerritoryDataRequest.class);
     bind(registry, EconomyProtocol.TERRITORY_DATA_RESPONSE, Packet_TerritoryDataResponse.class);
     bind(registry, EconomyProtocol.TELEPORT_TO_TERRITORY, Packet_TeleportToTerritory.class);

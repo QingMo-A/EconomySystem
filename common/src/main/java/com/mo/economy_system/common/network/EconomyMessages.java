@@ -52,6 +52,9 @@ public final class EconomyMessages {
   public static final EconomyMessageType<DeliverDemandOrderMessage> DELIVER_DEMAND_ORDER =
       new EconomyMessageType<>(
           EconomyProtocol.DELIVER_DEMAND_ORDER, DeliverDemandOrderMessage.class);
+  public static final EconomyMessageType<RemoveDemandOrderMessage> REMOVE_DEMAND_ORDER =
+      new EconomyMessageType<>(
+          EconomyProtocol.REMOVE_DEMAND_ORDER, RemoveDemandOrderMessage.class);
 
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =

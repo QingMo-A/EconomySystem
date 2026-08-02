@@ -100,6 +100,35 @@ public final class MarketLedger {
     return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.NOT_FOUND);
   }
 
+  public synchronized DemandOrderRemovalResult removeUndeliveredDemandIfUnchanged(
+      UUID tradeId, MarketOrder expectedOrder) {
+    Objects.requireNonNull(tradeId, "tradeId");
+    Objects.requireNonNull(expectedOrder, "expectedOrder");
+    for (int index = 0; index < orders.size(); index++) {
+      MarketOrder order = orders.get(index);
+      if (!order.tradeId().equals(tradeId)) continue;
+      if (order.type() != MarketOrderType.DEMAND)
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.WRONG_ORDER_TYPE);
+      if (order.delivered())
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.ALREADY_DELIVERED);
+      if (!order.equals(expectedOrder))
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.ORDER_CHANGED);
+      if (revision == Long.MAX_VALUE)
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.PERSIST_FAILED);
+      orders.remove(index);
+      try { dirtyCallback.run(); }
+      catch (RuntimeException error) {
+        orders.add(index, order);
+        return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.PERSIST_FAILED);
+      }
+      int originalIndex = index;
+      revision++;
+      return DemandOrderRemovalResult.removed(
+          new MarketOrderRemoval(order, () -> restoreRemoval(order, originalIndex)));
+    }
+    return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.NOT_FOUND);
+  }
+
   public synchronized SalesOrderRemovalResult removeSalesTransactional(UUID tradeId) {
     Objects.requireNonNull(tradeId, "tradeId");
     RemovalAttempt attempt = removeMatching(tradeId, MarketOrderType.SALES);

@@ -55,6 +55,14 @@ class DemandDeliveryModelInvariantTest {
         () -> DemandDeliveryTransition.failure(DemandDeliveryTransitionStatus.UPDATED));
   }
 
+  @Test void compensationIsCompleteOnlyWhenBothAttemptsSucceeded() {
+    assertTrue(new DemandDeliveryCompensation(true, true, true, true, null, null).complete());
+    assertFalse(new DemandDeliveryCompensation(false, true, true, true, null, null).complete());
+    assertFalse(new DemandDeliveryCompensation(true, true, false, true, null, null).complete());
+    assertFalse(new DemandDeliveryCompensation(true, false, true, true, null, null).complete());
+    assertFalse(new DemandDeliveryCompensation(true, true, true, false, null, null).complete());
+  }
+
   private static MarketOrder order(boolean delivered) {
     return new MarketOrder(MarketOrderType.DEMAND, UUID.randomUUID(), MarketOrderCodecTest.item(),
         3, 17, "requester", UUID.randomUUID(), 10, 99, delivered);

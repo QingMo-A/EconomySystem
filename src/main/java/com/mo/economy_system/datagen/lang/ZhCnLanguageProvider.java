@@ -341,6 +341,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.REQUEST_CANCEL_DELIVERED, "已交付的求购订单不能取消");
     add(Util_MessageKeys.REQUEST_CANCEL_BALANCE_LIMIT, "退款后余额将超过上限，无法取消订单");
     add(Util_MessageKeys.REQUEST_CANCEL_FAILED, "取消求购订单失败");
+    add("message.request.cancel_state_unknown", "市场状态不确定，请刷新后再操作");
     add(Util_MessageKeys.REQUEST_CANCEL_ROLLBACK_FAILED, "取消失败且订单恢复异常，请联系管理员");
     add(Util_MessageKeys.MARKET_SEARCH_HINT, "搜索物品 ID 或订单创建者");
     add(Util_MessageKeys.MARKET_LOADING, "正在加载");

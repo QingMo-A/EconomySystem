@@ -194,6 +194,7 @@
   "message.request.cancel_not_found": "Demand order not found",
   "message.request.cancel_not_owner": "You cannot cancel this demand order",
   "message.request.cancel_rollback_failed": "Cancellation failed and order recovery needs administrator attention",
+  "message.request.cancel_state_unknown": "Market state is uncertain; refresh before retrying",
   "message.request.cancel_success": "Demand order cancelled and fully refunded",
   "message.request.claim.success": "Claim Success: %s %s",
   "message.request.create_failed": "Could not create the demand order; please try again later",

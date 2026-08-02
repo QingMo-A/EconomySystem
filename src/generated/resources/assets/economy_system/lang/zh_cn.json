@@ -194,6 +194,7 @@
   "message.request.cancel_not_found": "求购订单不存在",
   "message.request.cancel_not_owner": "你无权取消该求购订单",
   "message.request.cancel_rollback_failed": "取消失败且订单恢复异常，请联系管理员",
+  "message.request.cancel_state_unknown": "市场状态不确定，请刷新后再操作",
   "message.request.cancel_success": "求购订单已取消并完整退款",
   "message.request.claim.success": "你成功领取了 %s x %s",
   "message.request.create_failed": "创建求购订单失败，请稍后再试",
