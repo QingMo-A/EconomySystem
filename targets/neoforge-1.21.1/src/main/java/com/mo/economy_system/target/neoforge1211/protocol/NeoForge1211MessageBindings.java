@@ -39,8 +39,8 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.DELIVER_DEMAND_ORDER);
     registry.register(EconomyMessages.REMOVE_SALES_ORDER);
     registry.register(EconomyMessages.REMOVE_DEMAND_ORDER);
-    bind(registry, EconomyProtocol.TERRITORY_DATA_REQUEST, Packet_TerritoryDataRequest.class);
-    bind(registry, EconomyProtocol.TERRITORY_DATA_RESPONSE, Packet_TerritoryDataResponse.class);
+    registry.register(EconomyMessages.TERRITORY_DATA_REQUEST);
+    registry.register(EconomyMessages.TERRITORY_DATA_RESPONSE);
     bind(registry, EconomyProtocol.TELEPORT_TO_TERRITORY, Packet_TeleportToTerritory.class);
     bind(registry, EconomyProtocol.INVITE_PLAYER, Packet_InvitePlayer.class);
     bind(registry, EconomyProtocol.REMOVE_TERRITORY, Packet_RemoveTerritory.class);

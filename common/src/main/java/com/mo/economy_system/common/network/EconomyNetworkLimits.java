@@ -21,6 +21,16 @@ public final class EconomyNetworkLimits {
     public static final int MAX_MARKET_ORDERS = MarketLedger.MAX_ORDERS;
     public static final int MAX_MARKET_RESPONSE_ESTIMATED_BYTES = 768 * 1024;
     public static final int MAX_MARKET_RESPONSE_WIRE_BYTES = MAX_MARKET_RESPONSE_ESTIMATED_BYTES;
+    public static final int MAX_TERRITORIES_PER_RESPONSE = 2_048;
+    public static final int MAX_TERRITORY_NAME_LENGTH = 128;
+    public static final int MAX_TERRITORY_MEMBERS = 1_024;
+    public static final int MAX_TERRITORY_BUFFS = 128;
+    public static final int MAX_TERRITORY_RULES = 32;
+    public static final int MAX_TERRITORY_BUFF_COST_LEVELS = 128;
+    public static final int MAX_TERRITORY_COST_ITEMS = 64;
+    public static final int MAX_TERRITORY_TEXT_LENGTH = 2_048;
+    public static final int MAX_TERRITORY_RESPONSE_ESTIMATED_BYTES = 1024 * 1024;
+    public static final int MAX_TERRITORY_RESPONSE_WIRE_BYTES = 1024 * 1024;
 
     private EconomyNetworkLimits() {
     }

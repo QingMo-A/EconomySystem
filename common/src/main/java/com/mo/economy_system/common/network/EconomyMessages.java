@@ -55,6 +55,12 @@ public final class EconomyMessages {
   public static final EconomyMessageType<RemoveDemandOrderMessage> REMOVE_DEMAND_ORDER =
       new EconomyMessageType<>(
           EconomyProtocol.REMOVE_DEMAND_ORDER, RemoveDemandOrderMessage.class);
+  public static final EconomyMessageType<TerritoryDataRequestMessage> TERRITORY_DATA_REQUEST =
+      new EconomyMessageType<>(
+          EconomyProtocol.TERRITORY_DATA_REQUEST, TerritoryDataRequestMessage.class);
+  public static final EconomyMessageType<TerritoryDataResponseMessage> TERRITORY_DATA_RESPONSE =
+      new EconomyMessageType<>(
+          EconomyProtocol.TERRITORY_DATA_RESPONSE, TerritoryDataResponseMessage.class);
 
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =

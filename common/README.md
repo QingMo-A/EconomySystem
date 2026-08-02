@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 212
-  Forge 1.20.1 tests and 213 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 223
+  Forge 1.20.1 tests and 226 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -95,7 +95,12 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- Protocols 12 through 16 are migrated. Protocols 17/18 have not started.
+- Protocols 12 through 18 are migrated. Territory request 17 carries only a monotonic
+  request ID; the server derives the requester from the authenticated sender. Response
+  18 uses bounded, NBT-free snapshots: owners receive complete management data while
+  authorized members receive summary-only data. Both codecs enforce the same 1 MiB
+  estimated and raw wire budgets, and clients reject stale request IDs before atomically
+  committing restored lists. Protocol 19 and later territory operations remain legacy.
 - Protocol 14 hardening is complete: delivery uses expected-order atomic transition, exact supplier
   credit without charging the requester again, transactional main-inventory removal, and independent
   payment/inventory compensation. Failure reports carry the authoritative requester ID and per-stage
@@ -157,7 +162,10 @@ market invalidation steps are isolated. Canonical discriminators 12–16 remain 
 
 Protocol 16 cancellation resolves ownership, operator permission, refund recipient and the frozen total
 price exclusively on the server. Expected-order removal and exact refund form a compensating transaction;
-failed restoration reports CHANGED or UNKNOWN and broadcasts INVALIDATED. Protocols 17/18 remain untouched.
+failed restoration reports CHANGED or UNKNOWN and broadcasts INVALIDATED. A restored
+repository-contract mismatch is also CHANGED because the authoritative order differs
+from the preview. Protocol 14 credit failures now report active inventory rollback only
+through `inventoryRollbackSucceeded`.
 Protocol 16 hardening closes construction invariants and repository-contract recovery: ORDER_CHANGED never
 carries a stale preview as authoritative data, mismatched removed orders are restored before failure, and
 all repository/refund/restore exceptions are combined for target logs. Protocol 14 pre-compensation telemetry

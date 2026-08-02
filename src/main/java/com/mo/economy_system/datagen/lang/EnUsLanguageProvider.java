@@ -264,6 +264,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
         Util_MessageKeys.TERRITORY_MANAGEMENT_RESIZE_TERRITORY,
         "Territory Management Resize Territory");
     add(Util_MessageKeys.TERRITORY_NOT_FOUND, "Territory Not Found");
+    add(Util_MessageKeys.TERRITORY_SYNC_FAILED, "Failed to synchronize territory data. Please try again.");
     add(Util_MessageKeys.TERRITORY_NO_OWNER_PERMISSION, "Territory No Owner Permission");
     add(Util_MessageKeys.TERRITORY_REMOVE_SUCCESS, "Territory Remove Success: %s");
     add(Util_MessageKeys.TERRITORY_MANAGEMENT_KICK_PLAYER, "Territory Management Kick Player");

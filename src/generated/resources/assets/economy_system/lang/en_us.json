@@ -227,6 +227,7 @@
   "message.territory.no_permission": "Territory No Permission",
   "message.territory.not_exist": "Territory Not Exist",
   "message.territory.not_found": "Territory Not Found",
+  "message.territory.sync_failed": "Failed to synchronize territory data. Please try again.",
   "message.territory.player_kicked": "Territory Player Kicked: %s",
   "message.territory.player_removed": "Territory Player Removed",
   "message.territory.remove_success": "Territory Remove Success: %s",

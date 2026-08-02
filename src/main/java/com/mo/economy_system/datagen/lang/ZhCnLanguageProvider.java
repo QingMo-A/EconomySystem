@@ -228,6 +228,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.TERRITORY_MANAGEMENT_TRANSFER_OWNERSHIP, "领地权限转让");
     add(Util_MessageKeys.TERRITORY_MANAGEMENT_RESIZE_TERRITORY, "更改领地范围");
     add(Util_MessageKeys.TERRITORY_NOT_FOUND, "未找到要删除的领地！");
+    add(Util_MessageKeys.TERRITORY_SYNC_FAILED, "领地数据同步失败，请重试");
     add(Util_MessageKeys.TERRITORY_NO_OWNER_PERMISSION, "你不是此领地的所有者，无法删除！");
     add(Util_MessageKeys.TERRITORY_REMOVE_SUCCESS, "成功删除领地: %s");
     add(Util_MessageKeys.TERRITORY_MANAGEMENT_KICK_PLAYER, "踢出");

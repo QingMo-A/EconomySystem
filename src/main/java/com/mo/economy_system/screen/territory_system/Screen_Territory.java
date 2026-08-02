@@ -3,7 +3,7 @@ package com.mo.economy_system.screen.territory_system;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.territory_system.Packet_TeleportToTerritory;
-import com.mo.economy_system.network.packets.territory_system.Packet_TerritoryDataRequest;
+import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 领地系统屏幕 - 卡片网格风格
@@ -34,6 +35,7 @@ import java.util.Optional;
  * - 底部：翻页控制
  */
 public class Screen_Territory extends Screen {
+    private static final AtomicLong NEXT_REQUEST_ID = new AtomicLong();
 
     // ==================== 布局常量 ====================
     private static final int BASE_WIDTH = 640;
@@ -48,6 +50,8 @@ public class Screen_Territory extends Screen {
 
     // ==================== 数据 ====================
     private boolean dataLoaded = false;
+    private boolean syncFailed;
+    private long activeRequestId = -1;
     private List<Territory> ownedTerritories = new ArrayList<>();
     private List<Territory> authorizedTerritories = new ArrayList<>();
     private List<Territory> allTerritories = new ArrayList<>();
@@ -86,15 +90,20 @@ public class Screen_Territory extends Screen {
 
     public Screen_Territory() {
         super(Component.translatable(Util_MessageKeys.TERRITORY_TITLE_KEY));
-        EconomySystem_NetworkManager.sendToServer(new Packet_TerritoryDataRequest());
     }
 
-    public void updateTerritoryData(List<Territory> owned, List<Territory> authorized) {
+    public boolean acceptsRequest(long requestId) {
+        return requestId == activeRequestId;
+    }
+
+    public void commitTerritoryData(long requestId, List<Territory> owned, List<Territory> authorized) {
+        if (!acceptsRequest(requestId)) return;
+        List<Territory> newOwned = List.copyOf(owned);
+        List<Territory> newAuthorized = List.copyOf(authorized);
         this.dataLoaded = true;
-        this.ownedTerritories.clear();
-        this.authorizedTerritories.clear();
-        this.ownedTerritories.addAll(owned);
-        this.authorizedTerritories.addAll(authorized);
+        this.syncFailed = false;
+        this.ownedTerritories = new ArrayList<>(newOwned);
+        this.authorizedTerritories = new ArrayList<>(newAuthorized);
 
         allTerritories = new ArrayList<>();
         allTerritories.addAll(ownedTerritories);
@@ -104,12 +113,23 @@ public class Screen_Territory extends Screen {
                 allTerritories.add(t);
             }
         }
-        filteredTerritories = new ArrayList<>(allTerritories);
+        applySearch(searchBox == null ? "" : searchBox.getValue());
+        currentPage = Math.min(currentPage, Math.max(0, getTotalPages() - 1));
+    }
+
+    public void territorySyncFailed(long requestId) {
+        if (!acceptsRequest(requestId)) return;
+        syncFailed = true;
+        dataLoaded = true;
     }
 
     @Override
     protected void init() {
         super.init();
+        if (activeRequestId < 0) {
+            activeRequestId = NEXT_REQUEST_ID.getAndIncrement();
+            EconomySystem_NetworkManager.sendToServer(new TerritoryDataRequestMessage(activeRequestId));
+        }
         calculateVirtualSize();
 
         // 创建搜索框（左上角）
@@ -252,6 +272,12 @@ public class Screen_Territory extends Screen {
             int textX = (virtualWidth - textWidth) / 2;
             int textY = virtualHeight / 2;
             guiGraphics.drawString(font, loadingText, textX, textY, 0x80FFFFFF);
+            return;
+        }
+
+        if (syncFailed) {
+            Component failed = Component.translatable("message.territory.sync_failed");
+            guiGraphics.drawCenteredString(font, failed, virtualWidth / 2, virtualHeight / 2, 0xFFFF8080);
             return;
         }
 
@@ -422,6 +448,7 @@ public class Screen_Territory extends Screen {
     }
 
     private int getTotalPages() {
+        if (itemsPerPage <= 0) return filteredTerritories.isEmpty() ? 0 : 1;
         return (int) Math.ceil((double) filteredTerritories.size() / itemsPerPage);
     }
 

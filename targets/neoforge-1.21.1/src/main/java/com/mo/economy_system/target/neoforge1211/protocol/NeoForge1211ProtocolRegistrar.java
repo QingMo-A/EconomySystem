@@ -68,18 +68,12 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(
         registrar, EconomyMessages.REMOVE_SALES_ORDER, NeoForge1211RemoveSalesOrderHandler::handle);
     bindCommon(registrar, EconomyMessages.REMOVE_DEMAND_ORDER, NeoForge1211RemoveDemandOrderHandler::handle);
-    bind(
-        registrar,
-        EconomyProtocol.TERRITORY_DATA_REQUEST,
-        Packet_TerritoryDataRequest.TYPE,
-        Packet_TerritoryDataRequest.STREAM_CODEC,
-        Packet_TerritoryDataRequest::handle);
-    bind(
-        registrar,
-        EconomyProtocol.TERRITORY_DATA_RESPONSE,
-        Packet_TerritoryDataResponse.TYPE,
-        Packet_TerritoryDataResponse.STREAM_CODEC,
-        Packet_TerritoryDataResponse::handle);
+    bindCommon(
+        registrar, EconomyMessages.TERRITORY_DATA_REQUEST,
+        NeoForge1211TerritoryDataHandlers::handleRequest);
+    bindCommon(
+        registrar, EconomyMessages.TERRITORY_DATA_RESPONSE,
+        NeoForge1211TerritoryDataHandlers::handleResponse);
     bind(
         registrar,
         EconomyProtocol.TELEPORT_TO_TERRITORY,

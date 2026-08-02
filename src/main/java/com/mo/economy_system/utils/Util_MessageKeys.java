@@ -255,6 +255,7 @@ public class Util_MessageKeys {
   public static final String TERRITORY_MANAGEMENT_RESIZE_TERRITORY =
       "message.territory_management.resize_territory";
   public static final String TERRITORY_NOT_FOUND = "message.territory.not_found";
+  public static final String TERRITORY_SYNC_FAILED = "message.territory.sync_failed";
   public static final String TERRITORY_NO_OWNER_PERMISSION =
       "message.territory.no_owner_permission";
   public static final String TERRITORY_REMOVE_SUCCESS = "message.territory.remove_success";

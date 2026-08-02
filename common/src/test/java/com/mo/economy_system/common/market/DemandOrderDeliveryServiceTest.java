@@ -99,6 +99,25 @@ class DemandOrderDeliveryServiceTest {
     f = new F(); f.credit = BalanceMutationResult.PERSIST_FAILED; f.rollbackSucceeds = false; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
   }
 
+  @Test void creditFailureTelemetryDistinguishesActiveRollbackFromRemovalFailureRestore() {
+    F restored = new F();
+    restored.credit = BalanceMutationResult.PERSIST_FAILED;
+    assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, restored.run().result());
+    DemandOrderDeliveryFailure restoredFailure = restored.reports.get(restored.reports.size() - 1);
+    assertNull(restoredFailure.inventoryRemovalFailureRestored());
+    assertTrue(restoredFailure.inventoryRollbackSucceeded());
+    assertFalse(restoredFailure.paymentCreditSucceeded());
+
+    F failed = new F();
+    failed.credit = BalanceMutationResult.PERSIST_FAILED;
+    failed.rollbackSucceeds = false;
+    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, failed.run().result());
+    DemandOrderDeliveryFailure failedFailure = failed.reports.get(failed.reports.size() - 1);
+    assertNull(failedFailure.inventoryRemovalFailureRestored());
+    assertFalse(failedFailure.inventoryRollbackSucceeded());
+    assertFalse(failedFailure.paymentCreditSucceeded());
+  }
+
   @Test void compensationAlwaysAttemptsBothSidesAndReportsRequesterAndErrors() {
     F f = new F(); f.status = DemandDeliveryTransitionStatus.PERSIST_FAILED; f.debitThrows = true; f.rollbackThrows = true;
     DemandOrderDeliveryOutcome outcome = f.run(); assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, outcome.result());

@@ -112,9 +112,9 @@ public final class CancelDemandOrderService {
     RestoreAttempt restore = restore(removal);
     if (restore.result() == MarketOrderRestoreResult.RESTORED) {
       report(context, failure(context, tradeId, requesterId, "repository-contract",
-          CancelDemandOrderResult.ORDER_CHANGED, MarketMutationState.UNCHANGED,
+          CancelDemandOrderResult.ORDER_CHANGED, MarketMutationState.CHANGED,
           DemandOrderRemovalStatus.REMOVED, null, restore.result(), null, null, null, null));
-      return CancelDemandOrderOutcome.rolledBackFailure(
+      return CancelDemandOrderOutcome.changedFailure(
           CancelDemandOrderResult.ORDER_CHANGED, transactionOrder);
     }
     MarketMutationState state = restore.error() == null

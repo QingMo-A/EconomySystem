@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，协议 12–16 已迁移；协议 17/18 尚未开始。
+协议 10/11 已正式关闭，协议 12–18 已迁移；协议 19 及之后的领地操作尚未开始。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff
@@ -46,13 +46,15 @@ git diff --check
 Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Protocols 12–16 are migrated. Do not renumber the append-only manifest; protocols 17/18 have not started.
+Protocols 12–18 are migrated. Do not renumber the append-only manifest; protocol 19 and later territory actions have not started.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-212 Forge 1.20.1 tests and 213 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+223 Forge 1.20.1 tests and 226 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
 shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
-refund semantics and invalidation on CHANGED/UNKNOWN. Do not start protocols 17/18 without a new task.
+refund semantics and invalidation on CHANGED/UNKNOWN. Territory response 18 is NBT-free,
+uses full owned/minimal authorized snapshots, enforces 1 MiB budgets, and commits only the
+active request ID after complete restore. Do not start protocol 19 without a new task.
 Protocol 16 hardening is closed: illegal result/outcome combinations are rejected, mismatched removals are
 restored before failure, ORDER_CHANGED has no stale transaction order, and target logs combine all errors.

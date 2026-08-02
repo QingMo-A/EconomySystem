@@ -22,6 +22,9 @@ import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
@@ -393,6 +396,28 @@ public final class NeoForge1211MessageCodecs {
           }
           public RemoveDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
             return new RemoveDemandOrderMessage(buffer.readUUID());
+          }
+        });
+    register(
+        codecs,
+        EconomyMessages.TERRITORY_DATA_REQUEST,
+        new NeoForge1211MessageCodec<>() {
+          public void encode(TerritoryDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
+            TerritoryDataWireCodec.encodeRequest(message, buffer);
+          }
+          public TerritoryDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
+            return TerritoryDataWireCodec.decodeRequest(buffer);
+          }
+        });
+    register(
+        codecs,
+        EconomyMessages.TERRITORY_DATA_RESPONSE,
+        new NeoForge1211MessageCodec<>() {
+          public void encode(TerritoryDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
+            TerritoryDataWireCodec.encodeResponse(message, buffer);
+          }
+          public TerritoryDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
+            return TerritoryDataWireCodec.decodeResponse(buffer);
           }
         });
     register(

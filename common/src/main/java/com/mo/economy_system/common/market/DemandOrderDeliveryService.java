@@ -105,7 +105,7 @@ public final class DemandOrderDeliveryService {
               ? DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT
               : DemandOrderDeliveryResult.PAYMENT_FAILED
           : DemandOrderDeliveryResult.ROLLBACK_FAILED;
-      return rolledBack(context, tradeId, order, "payment-credit", result, true,
+      return rolledBack(context, tradeId, order, "payment-credit", result, null,
           inventory.succeeded(), creditError, inventory.error());
     }
 

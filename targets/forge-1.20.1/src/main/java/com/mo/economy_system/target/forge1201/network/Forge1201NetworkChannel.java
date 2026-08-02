@@ -25,6 +25,8 @@ import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -219,6 +221,20 @@ public final class Forge1201NetworkChannel {
         .decoder(Forge1201RemoveDemandOrderCodec::decode)
         .consumerMainThread(Forge1201RemoveDemandOrderHandler::handle)
         .add();
+    CHANNEL
+        .messageBuilder(TerritoryDataRequestMessage.class,
+            EconomyMessages.TERRITORY_DATA_REQUEST.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(Forge1201TerritoryDataCodec::encodeRequest)
+        .decoder(Forge1201TerritoryDataCodec::decodeRequest)
+        .consumerMainThread(Forge1201TerritoryDataHandlers::handleRequest)
+        .add();
+    CHANNEL
+        .messageBuilder(TerritoryDataResponseMessage.class,
+            EconomyMessages.TERRITORY_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(Forge1201TerritoryDataCodec::encodeResponse)
+        .decoder(Forge1201TerritoryDataCodec::decodeResponse)
+        .consumerMainThread(Forge1201TerritoryDataHandlers::handleResponse)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -306,6 +322,10 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
+  static void sendToServer(TerritoryDataRequestMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
 
   static void sendToServer(ServerPlayerListRequestMessage message) {
     requireRegistered();
@@ -333,6 +353,10 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToPlayer(ServerPlayer player, ServerPlayerListResponseMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+  static void sendToPlayer(ServerPlayer player, TerritoryDataResponseMessage message) {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
   }

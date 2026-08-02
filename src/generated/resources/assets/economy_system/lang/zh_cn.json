@@ -227,6 +227,7 @@
   "message.territory.no_permission": "你无权管理此领地！",
   "message.territory.not_exist": "领地不存在！",
   "message.territory.not_found": "未找到要删除的领地！",
+  "message.territory.sync_failed": "领地数据同步失败，请重试",
   "message.territory.player_kicked": "你被从领地 %s 中踢出",
   "message.territory.player_removed": "成功将玩家移出领地！",
   "message.territory.remove_success": "成功删除领地: %s",

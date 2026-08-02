@@ -15,7 +15,14 @@ class CancelDemandOrderHardeningTest {
     fixture.actual = fixture.changedQuantity();
     CancelDemandOrderOutcome outcome = fixture.execute();
     assertEquals(CancelDemandOrderResult.ORDER_CHANGED, outcome.result());
-    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertEquals(MarketMutationState.CHANGED, outcome.mutationState());
+    assertEquals(
+        List.of("broadcast", "feedback"),
+        MarketActionPostPlan.build(
+                outcome.mutationState(), false, false, () -> {}, () -> {}, () -> {})
+            .stream()
+            .map(IsolatedPostActions.NamedAction::stage)
+            .toList());
     assertEquals(fixture.actual, outcome.transactionOrder().orElseThrow());
     assertEquals(1, fixture.restoreCalls);
     assertEquals(0, fixture.creditCalls);

@@ -76,13 +76,17 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-Protocols 12 through 16 are migrated on both targets. Protocols 17/18 have not started.
+Protocols 12 through 18 are migrated on both targets. Territory request 17 carries only
+the request ID and response 18 uses explicit, bounded snapshots instead of Territory NBT.
+Forge captures its existing `territory_data` persistence into full owned snapshots and
+minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19
+and later territory actions remain legacy.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
 compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
 repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
-The verified suite contains 212 Forge tests and 213 NeoForge tests.
+The verified suite contains 223 Forge tests and 226 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
