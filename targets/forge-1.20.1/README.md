@@ -48,7 +48,7 @@ market writes use stable `sales_order` / `demand_order` IDs, a count-one item
 template, separate quantity, and exact `expirationTime`. Legacy Java class names
 remain readable; unsupported legacy 1.20.1 item data aborts conversion instead
 of being silently dropped or overwritten. Forge still has no copied full market
-UI. Protocol `9` is the next migration slice.
+UI. Protocols `9` through `13` and protocol `15` are migrated; protocol `14` is next.
 
 The hardened bridge applies the common snapshot limits at creation, schema
 decode/encode, capture, and restore. Nonzero `Damage` on an item with no
@@ -93,14 +93,14 @@ is sourced atomically with every response and invalidation.
 Protocol `12` is a real Forge C2S UUID-only message using the shared purchase transaction.
 It performs authoritative order/Snapshot validation, main-inventory capacity and atomic
 insertion, exact two-account payment, recoverable order removal, and independent rollback.
-A full inventory rejects the purchase without dropping items. Forge discriminators `13-16`
-remain unregistered as common bindings; protocol `14` is next.
+A full inventory rejects the purchase without dropping items. Discriminators `13` and `15`
+are also registered common bindings; protocols `14` and `16` remain legacy and protocol `14` is next.
 # Sales-order removal bridge
 
 Forge 1.20.1 now registers the common UUID-only sales-order removal message and routes it through the
 same common transaction service as NeoForge 1.21.1. Its inventory adapter touches only main inventory,
 fills compatible stacks before empty slots, restores all captured slots on failure, and never drops items.
-The canonical wire discriminator remains 15; protocols 13, 14 and 16 are not registered by this bridge work.
+The canonical wire discriminator remains 15; protocol 13 is registered, while protocols 14 and 16 remain legacy.
 
 Demand-order confirmation is now registered at canonical discriminator 13. Purchase, confirmation and sales
 removal share `Forge1201TransactionalInventoryAdapter`; it operates only on main inventory and restores every

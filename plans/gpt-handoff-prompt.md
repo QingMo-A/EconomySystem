@@ -49,5 +49,6 @@ Forge 1.20.1 legacy packet. Items removed by an operator must still go only to t
 Continue next with canonical protocol 14 (`DELIVER_DEMAND_ORDER`); do not renumber the append-only manifest.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
-adapters and isolated post-transaction handling. Continue with canonical protocol 14 only; keep protocol 16
+adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
+178 Forge 1.20.1 tests and 179 NeoForge 1.21.1 tests. Continue with canonical protocol 14 only; keep protocol 16
 legacy and preserve all discriminator assignments.

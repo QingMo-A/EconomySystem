@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The verified hardened suite runs 43
-  Forge 1.20.1 tests and 44 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 178
+  Forge 1.20.1 tests and 179 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -106,7 +106,7 @@ affected account and log. Protocols `8/9`, legacy demand delivery, and legacy de
 cancellation now use exact operations. Cancellation removes through a rollback handle
 before refunding the original owner; delivery never removes items when full payment
 cannot fit. Forge protocol `9` has a client send route. Discriminator `16` remains
-unregistered and protocols `10/11` are next.
+unregistered. Protocols `10/11/12/13/15` are migrated; protocol `14` is next.
 
 ## Market data protocols 10/11
 

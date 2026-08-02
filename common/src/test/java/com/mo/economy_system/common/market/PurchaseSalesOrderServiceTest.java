@@ -1,33 +1,244 @@
 package com.mo.economy_system.common.market;
 
-import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
-import com.mo.economy_system.core.economy_system.BalanceTransferResult;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class PurchaseSalesOrderServiceTest {
-    @Test void successTransfersOnceInsertsAllAndRemovesOrder() { Fixture f=new Fixture();PurchaseSalesOrderOutcome out=f.execute();assertEquals(PurchaseSalesOrderResult.SUCCESS,out.result());assertTrue(out.marketChanged());assertEquals(3,f.inventory.count);assertEquals(90,f.accounts.buyer);assertEquals(10,f.accounts.seller);assertNull(f.repository.current);assertEquals(1,f.accounts.transfers); }
-    @Test void missingWrongTypeAndSelfPurchaseDoNotMutate() {Fixture missing=new Fixture();missing.repository.current=null;assertEquals(PurchaseSalesOrderResult.NOT_FOUND,missing.execute().result());Fixture wrong=new Fixture();wrong.repository.current=wrong.order(MarketOrderType.DEMAND,wrong.seller);assertEquals(PurchaseSalesOrderResult.WRONG_ORDER_TYPE,wrong.execute().result());Fixture self=new Fixture();self.repository.current=self.order(MarketOrderType.SALES,self.buyer);assertEquals(PurchaseSalesOrderResult.SELF_PURCHASE,self.execute().result());assertEquals(0,self.accounts.transfers);}
-    @Test void balanceAndInventoryPreviewsRunBeforeRemoval(){Fixture funds=new Fixture();funds.accounts.preview=BalanceTransferResult.INSUFFICIENT_FUNDS;assertEquals(PurchaseSalesOrderResult.INSUFFICIENT_FUNDS,funds.execute().result());assertNotNull(funds.repository.current);Fixture limit=new Fixture();limit.accounts.preview=BalanceTransferResult.RECIPIENT_BALANCE_LIMIT;assertEquals(PurchaseSalesOrderResult.SELLER_BALANCE_LIMIT,limit.execute().result());Fixture full=new Fixture();full.inventory.accept=false;assertEquals(PurchaseSalesOrderResult.INVENTORY_FULL,full.execute().result());assertNotNull(full.repository.current);}
-    @Test void restoreFailureAndRemoveFailureAreReported(){Fixture restore=new Fixture();restore.inventory.restoreFails=true;assertEquals(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED,restore.execute().result());Fixture remove=new Fixture();remove.repository.removeStatus=SalesOrderRemovalStatus.PERSIST_FAILED;assertEquals(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED,remove.execute().result());}
-    @Test void changedOrderIsRestoredWithoutPayment(){Fixture f=new Fixture();f.repository.removedOverride=f.order(MarketOrderType.SALES,UUID.randomUUID());PurchaseSalesOrderOutcome out=f.execute();assertEquals(PurchaseSalesOrderResult.ORDER_CHANGED,out.result());assertFalse(out.marketChanged());assertEquals(0,f.accounts.transfers);assertNotNull(f.repository.current);}
-    @Test void insertionFailureRestoresOrder(){Fixture f=new Fixture();f.inventory.insertSuccess=false;PurchaseSalesOrderOutcome out=f.execute();assertEquals(PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED,out.result());assertFalse(out.marketChanged());assertNotNull(f.repository.current);assertEquals(0,f.inventory.count);}
-    @Test void paymentFailureIndependentlyRollsBackInventoryAndOrder(){Fixture f=new Fixture();f.accounts.transfer=BalanceTransferResult.PERSIST_FAILED;PurchaseSalesOrderOutcome out=f.execute();assertEquals(PurchaseSalesOrderResult.PAYMENT_FAILED,out.result());assertFalse(out.marketChanged());assertEquals(0,f.inventory.count);assertNotNull(f.repository.current);assertEquals(1,f.inventory.rollbacks);}
-    @Test void compensationFailureMarksMarketChangedAndReporterCannotChangeResult(){Fixture f=new Fixture();f.accounts.transfer=BalanceTransferResult.PERSIST_FAILED;f.repository.restoreSuccess=false;f.reporterThrows=true;PurchaseSalesOrderOutcome out=f.execute();assertEquals(PurchaseSalesOrderResult.ROLLBACK_FAILED,out.result());assertTrue(out.marketChanged());assertNull(f.repository.current);assertEquals(0,f.inventory.count);}
-    @Test void duplicatePurchaseCannotPayOrInsertTwice(){Fixture f=new Fixture();assertEquals(PurchaseSalesOrderResult.SUCCESS,f.execute().result());assertEquals(PurchaseSalesOrderResult.NOT_FOUND,f.execute().result());assertEquals(1,f.accounts.transfers);assertEquals(3,f.inventory.count);}
+import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
+import com.mo.economy_system.core.economy_system.BalanceTransferResult;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
-    private static final class Fixture {
-        final UUID buyer=UUID.randomUUID(),seller=UUID.randomUUID(),trade=UUID.randomUUID();final FakeInventory inventory=new FakeInventory();final FakeAccounts accounts=new FakeAccounts();final FakeRepository repository=new FakeRepository();boolean reporterThrows;
-        Fixture(){repository.current=order(MarketOrderType.SALES,seller);}
-        MarketOrder order(MarketOrderType type,UUID owner){return new MarketOrder(type,trade,MarketOrderCodecTest.item(),3,10,"seller",owner,1,2,false);}
-        PurchaseSalesOrderOutcome execute(){return PurchaseSalesOrderService.execute(new PurchaseSalesOrderMessage(trade),new PurchaseSalesOrderService.Context(buyer,inventory,inventory,accounts,repository,(a,b,c,d,e,f,g,h)->{if(reporterThrows)throw new IllegalStateException();}));}
-        final class FakeInventory implements MarketItemMaterializer,TransactionalInventory {int count,rollbacks;boolean accept=true,restoreFails,insertSuccess=true;public UUID ownerId(){return buyer;}public Object restore(MarketOrder o){if(restoreFails)throw new IllegalStateException();return new Object();}public boolean canAccept(Object t,int q){return accept;}public InventoryInsertionResult insert(Object t,int q){if(!insertSuccess)return InventoryInsertionResult.failure(true);int before=count;count+=q;return InventoryInsertionResult.success(()->{rollbacks++;count=before;return true;});}}
-        final class FakeAccounts implements PurchaseSalesOrderService.Accounts {int buyer=100,seller,transfers;BalanceTransferResult preview=BalanceTransferResult.SUCCESS,transfer=BalanceTransferResult.SUCCESS;public BalanceTransferResult preview(UUID s,int a){return preview;}public BalanceTransferResult transfer(UUID s,int a){transfers++;if(transfer==BalanceTransferResult.SUCCESS){buyer-=a;seller+=a;}return transfer;}}
-        final class FakeRepository implements PurchaseSalesOrderService.Repository {MarketOrder current,removedOverride;SalesOrderRemovalStatus removeStatus=SalesOrderRemovalStatus.REMOVED;boolean restoreSuccess=true;public MarketOrder find(UUID id){return current;}public SalesOrderRemovalResult removeSalesTransactional(UUID id){if(removeStatus!=SalesOrderRemovalStatus.REMOVED)return SalesOrderRemovalResult.failure(removeStatus);MarketOrder removed=removedOverride==null?current:removedOverride;current=null;return SalesOrderRemovalResult.removed(new MarketOrderRemoval(removed,()->{if(!restoreSuccess)return MarketOrderRestoreResult.PERSIST_FAILED;current=removed;return MarketOrderRestoreResult.RESTORED;}));}}
+class PurchaseSalesOrderServiceTest {
+  @Test
+  void successTransfersOnceInsertsAllAndRemovesOrder() {
+    Fixture f = new Fixture();
+    PurchaseSalesOrderOutcome out = f.execute();
+    assertEquals(PurchaseSalesOrderResult.SUCCESS, out.result());
+    assertEquals(MarketMutationState.CHANGED, out.mutationState());
+    assertEquals(3, f.inventory.count);
+    assertEquals(90, f.accounts.buyer);
+    assertEquals(10, f.accounts.seller);
+    assertNull(f.repository.current);
+    assertEquals(1, f.accounts.transfers);
+  }
+
+  @Test
+  void missingWrongTypeAndSelfPurchaseDoNotMutate() {
+    Fixture missing = new Fixture();
+    missing.repository.current = null;
+    assertEquals(PurchaseSalesOrderResult.NOT_FOUND, missing.execute().result());
+    Fixture wrong = new Fixture();
+    wrong.repository.current = wrong.order(MarketOrderType.DEMAND, wrong.seller);
+    assertEquals(PurchaseSalesOrderResult.WRONG_ORDER_TYPE, wrong.execute().result());
+    Fixture self = new Fixture();
+    self.repository.current = self.order(MarketOrderType.SALES, self.buyer);
+    assertEquals(PurchaseSalesOrderResult.SELF_PURCHASE, self.execute().result());
+    assertEquals(0, self.accounts.transfers);
+  }
+
+  @Test
+  void balanceAndInventoryPreviewsRunBeforeRemoval() {
+    Fixture funds = new Fixture();
+    funds.accounts.preview = BalanceTransferResult.INSUFFICIENT_FUNDS;
+    assertEquals(PurchaseSalesOrderResult.INSUFFICIENT_FUNDS, funds.execute().result());
+    assertNotNull(funds.repository.current);
+    Fixture limit = new Fixture();
+    limit.accounts.preview = BalanceTransferResult.RECIPIENT_BALANCE_LIMIT;
+    assertEquals(PurchaseSalesOrderResult.SELLER_BALANCE_LIMIT, limit.execute().result());
+    Fixture full = new Fixture();
+    full.inventory.accept = false;
+    assertEquals(PurchaseSalesOrderResult.INVENTORY_FULL, full.execute().result());
+    assertNotNull(full.repository.current);
+  }
+
+  @Test
+  void nullBalancePreviewFailsClosedBeforeRemoval() {
+    Fixture fixture = new Fixture();
+    fixture.accounts.preview = null;
+    PurchaseSalesOrderOutcome outcome = fixture.execute();
+    assertEquals(PurchaseSalesOrderResult.PAYMENT_FAILED, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertNotNull(fixture.repository.current);
+  }
+
+  @Test
+  void nullTransferRollsBackInventoryAndOrder() {
+    Fixture fixture = new Fixture();
+    fixture.accounts.transfer = null;
+    PurchaseSalesOrderOutcome outcome = fixture.execute();
+    assertEquals(PurchaseSalesOrderResult.PAYMENT_FAILED, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertEquals(0, fixture.inventory.count);
+    assertNotNull(fixture.repository.current);
+  }
+
+  @Test
+  void restoreFailureAndRemoveFailureAreReported() {
+    Fixture restore = new Fixture();
+    restore.inventory.restoreFails = true;
+    assertEquals(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED, restore.execute().result());
+    Fixture remove = new Fixture();
+    remove.repository.removeStatus = SalesOrderRemovalStatus.PERSIST_FAILED;
+    assertEquals(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, remove.execute().result());
+  }
+
+  @Test
+  void changedOrderIsRestoredWithoutPayment() {
+    Fixture f = new Fixture();
+    f.repository.removedOverride = f.order(MarketOrderType.SALES, UUID.randomUUID());
+    PurchaseSalesOrderOutcome out = f.execute();
+    assertEquals(PurchaseSalesOrderResult.ORDER_CHANGED, out.result());
+    assertEquals(MarketMutationState.UNCHANGED, out.mutationState());
+    assertEquals(0, f.accounts.transfers);
+    assertNotNull(f.repository.current);
+  }
+
+  @Test
+  void insertionFailureRestoresOrder() {
+    Fixture f = new Fixture();
+    f.inventory.insertSuccess = false;
+    PurchaseSalesOrderOutcome out = f.execute();
+    assertEquals(PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED, out.result());
+    assertEquals(MarketMutationState.UNCHANGED, out.mutationState());
+    assertNotNull(f.repository.current);
+    assertEquals(0, f.inventory.count);
+  }
+
+  @Test
+  void paymentFailureIndependentlyRollsBackInventoryAndOrder() {
+    Fixture f = new Fixture();
+    f.accounts.transfer = BalanceTransferResult.PERSIST_FAILED;
+    PurchaseSalesOrderOutcome out = f.execute();
+    assertEquals(PurchaseSalesOrderResult.PAYMENT_FAILED, out.result());
+    assertEquals(MarketMutationState.UNCHANGED, out.mutationState());
+    assertEquals(0, f.inventory.count);
+    assertNotNull(f.repository.current);
+    assertEquals(1, f.inventory.rollbacks);
+  }
+
+  @Test
+  void compensationFailureMarksMarketChangedAndReporterCannotChangeResult() {
+    Fixture f = new Fixture();
+    f.accounts.transfer = BalanceTransferResult.PERSIST_FAILED;
+    f.repository.restoreSuccess = false;
+    f.reporterThrows = true;
+    PurchaseSalesOrderOutcome out = f.execute();
+    assertEquals(PurchaseSalesOrderResult.ROLLBACK_FAILED, out.result());
+    assertEquals(MarketMutationState.CHANGED, out.mutationState());
+    assertNull(f.repository.current);
+    assertEquals(0, f.inventory.count);
+  }
+
+  @Test
+  void duplicatePurchaseCannotPayOrInsertTwice() {
+    Fixture f = new Fixture();
+    assertEquals(PurchaseSalesOrderResult.SUCCESS, f.execute().result());
+    assertEquals(PurchaseSalesOrderResult.NOT_FOUND, f.execute().result());
+    assertEquals(1, f.accounts.transfers);
+    assertEquals(3, f.inventory.count);
+  }
+
+  private static final class Fixture {
+    final UUID buyer = UUID.randomUUID(), seller = UUID.randomUUID(), trade = UUID.randomUUID();
+    final FakeInventory inventory = new FakeInventory();
+    final FakeAccounts accounts = new FakeAccounts();
+    final FakeRepository repository = new FakeRepository();
+    boolean reporterThrows;
+
+    Fixture() {
+      repository.current = order(MarketOrderType.SALES, seller);
     }
+
+    MarketOrder order(MarketOrderType type, UUID owner) {
+      return new MarketOrder(
+          type, trade, MarketOrderCodecTest.item(), 3, 10, "seller", owner, 1, 2, false);
+    }
+
+    PurchaseSalesOrderOutcome execute() {
+      return PurchaseSalesOrderService.execute(
+          new PurchaseSalesOrderMessage(trade),
+          new PurchaseSalesOrderService.Context(
+              buyer,
+              inventory,
+              inventory,
+              accounts,
+              repository,
+              (a, b, c, d, e, f, g, h) -> {
+                if (reporterThrows) throw new IllegalStateException();
+              }));
+    }
+
+    final class FakeInventory implements MarketItemMaterializer, TransactionalInventory {
+      int count, rollbacks;
+      boolean accept = true, restoreFails, insertSuccess = true;
+
+      public UUID ownerId() {
+        return buyer;
+      }
+
+      public Object restore(MarketOrder o) {
+        if (restoreFails) throw new IllegalStateException();
+        return new Object();
+      }
+
+      public boolean canAccept(Object t, int q) {
+        return accept;
+      }
+
+      public InventoryInsertionResult insert(Object t, int q) {
+        if (!insertSuccess) return InventoryInsertionResult.failure(true);
+        int before = count;
+        count += q;
+        return InventoryInsertionResult.success(
+            () -> {
+              rollbacks++;
+              count = before;
+              return true;
+            });
+      }
+    }
+
+    final class FakeAccounts implements PurchaseSalesOrderService.Accounts {
+      int buyer = 100, seller, transfers;
+      BalanceTransferResult preview = BalanceTransferResult.SUCCESS,
+          transfer = BalanceTransferResult.SUCCESS;
+
+      public BalanceTransferResult preview(UUID s, int a) {
+        return preview;
+      }
+
+      public BalanceTransferResult transfer(UUID s, int a) {
+        transfers++;
+        if (transfer == BalanceTransferResult.SUCCESS) {
+          buyer -= a;
+          seller += a;
+        }
+        return transfer;
+      }
+    }
+
+    final class FakeRepository implements PurchaseSalesOrderService.Repository {
+      MarketOrder current, removedOverride;
+      SalesOrderRemovalStatus removeStatus = SalesOrderRemovalStatus.REMOVED;
+      boolean restoreSuccess = true;
+
+      public MarketOrder find(UUID id) {
+        return current;
+      }
+
+      public SalesOrderRemovalResult removeSalesTransactional(UUID id) {
+        if (removeStatus != SalesOrderRemovalStatus.REMOVED)
+          return SalesOrderRemovalResult.failure(removeStatus);
+        MarketOrder removed = removedOverride == null ? current : removedOverride;
+        current = null;
+        return SalesOrderRemovalResult.removed(
+            new MarketOrderRemoval(
+                removed,
+                () -> {
+                  if (!restoreSuccess) return MarketOrderRestoreResult.PERSIST_FAILED;
+                  current = removed;
+                  return MarketOrderRestoreResult.RESTORED;
+                }));
+      }
+    }
+  }
 }

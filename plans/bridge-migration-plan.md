@@ -119,11 +119,11 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 协议 11 使用不可变 `MarketOrderSnapshot` 与 schema-v1 `ItemStackSnapshot`，不再传输动态 `MarketItem` NBT。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
-- 下一迁移切片是协议 `12` 购买销售订单；本轮未正式迁移协议 `12-16`。
-- 测试总数以本轮最终构建报告为准；协议 12、13、15 已迁移并加固。
+- 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
+- 验证套件包含 Forge 1.20.1 178 项测试和 NeoForge 1.21.1 179 项测试。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
-- 只有权威账本修改成功才广播失效；下一步仍是协议 `12`。
+- `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
 
 ### 市场余额事务加固（已完成）
 
@@ -171,7 +171,8 @@ git diff --check
 ## Protocol 13 completion
 
 - Canonical 12/13/14/15/16 discriminators remain fixed.
-- Protocol 12 and 15 post-transaction side effects are isolated and use registry-ID display fallback.
+- Protocol 12, 13 and 15 post-transaction side effects use `MarketActionPostPlan` and
+  `IsolatedPostActions`; all outcomes expose only explicit `MarketMutationState` factories.
 - Protocol 13 is a UUID-only common message backed by transactional delivered-demand removal.
 - Protocols 12/13/15 share one transactional main-inventory adapter per target.
 - Confirmation always delivers to the original online requester; operator actions never redirect items.

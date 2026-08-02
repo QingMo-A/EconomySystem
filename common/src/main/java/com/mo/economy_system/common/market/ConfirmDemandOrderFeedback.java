@@ -1,20 +1,22 @@
 package com.mo.economy_system.common.market;
+
 public final class ConfirmDemandOrderFeedback {
-    private ConfirmDemandOrderFeedback() {}
-    public static String key(ConfirmDemandOrderResult result) {
-        return switch (result) {
-            case SUCCESS -> "message.market.confirm_demand.success";
-            case NOT_FOUND -> "message.market.confirm_demand.not_found";
-            case WRONG_ORDER_TYPE -> "message.market.confirm_demand.wrong_type";
-            case NOT_DELIVERED -> "message.market.confirm_demand.not_delivered";
-            case NOT_OWNER -> "message.market.confirm_demand.not_owner";
-            case OWNER_OFFLINE -> "message.market.confirm_demand.owner_offline";
-            case INVENTORY_FULL -> "message.market.confirm_demand.inventory_full";
-            case ORDER_CHANGED -> "message.market.confirm_demand.order_changed";
-            case ORDER_REMOVE_FAILED -> "message.market.confirm_demand.persist_failed";
-            case ITEM_RESTORE_FAILED, INVALID_SNAPSHOT -> "message.market.confirm_demand.item_failed";
-            case ROLLBACK_FAILED -> "message.market.confirm_demand.rollback_failed";
-            default -> "message.market.confirm_demand.failed";
-        };
-    }
+  private ConfirmDemandOrderFeedback() {}
+
+  public static String key(ConfirmDemandOrderResult result) {
+    return switch (result) {
+      case SUCCESS -> "message.market.confirm_demand.success";
+      case NOT_FOUND -> "message.market.confirm_demand.not_found";
+      case WRONG_ORDER_TYPE -> "message.market.confirm_demand.wrong_type";
+      case NOT_DELIVERED -> "message.market.confirm_demand.not_delivered";
+      case NOT_OWNER -> "message.market.confirm_demand.not_owner";
+      case OWNER_OFFLINE -> "message.market.confirm_demand.owner_offline";
+      case INVENTORY_FULL -> "message.market.confirm_demand.inventory_full";
+      case ORDER_CHANGED -> "message.market.confirm_demand.order_changed";
+      case ORDER_REMOVE_FAILED -> "message.market.confirm_demand.persist_failed";
+      case ITEM_RESTORE_FAILED, INVALID_SNAPSHOT -> "message.market.confirm_demand.item_failed";
+      case ROLLBACK_FAILED -> "message.market.confirm_demand.rollback_failed";
+      default -> "message.market.confirm_demand.failed";
+    };
+  }
 }
