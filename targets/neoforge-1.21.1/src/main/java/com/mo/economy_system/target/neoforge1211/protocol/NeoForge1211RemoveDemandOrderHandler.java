@@ -1,4 +1,5 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
+
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
@@ -10,10 +11,68 @@ import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 final class NeoForge1211RemoveDemandOrderHandler {
-  static void handle(RemoveDemandOrderMessage m,IPayloadContext c){c.enqueueWork(()->execute(m,c));}
-  private static void execute(RemoveDemandOrderMessage m,IPayloadContext c){if(!(c.player() instanceof ServerPlayer p))return;try{EconomySavedData a=EconomySavedData.getInstance(p.serverLevel());MarketSavedData d=MarketSavedData.getInstance(p.serverLevel());CancelDemandOrderOutcome o=CancelDemandOrderService.execute(m,new CancelDemandOrderService.Context(p.getUUID(),Util_Player.isOP(p),new Account(a),new Repo(d),NeoForge1211RemoveDemandOrderHandler::report));IsolatedPostActions.runAll(MarketActionPostPlan.build(o.mutationState(),true,false,()->MarketInvalidationBroadcaster.broadcast(p),()->p.sendSystemMessage(Component.translatable(CancelDemandOrderFeedback.messageKey(o.result()))),()->{}),(stage,e)->EconomySystem.LOGGER.error("Demand cancellation post action failed stage={}",stage,e));}catch(RuntimeException e){EconomySystem.LOGGER.error("Demand cancellation infrastructure failed",e);try{p.sendSystemMessage(Component.translatable("message.request.cancel_failed"));}catch(RuntimeException ignored){}}}
-  private static void report(CancelDemandOrderFailure f){EconomySystem.LOGGER.error("Demand cancellation failed tradeId={} actorId={} requesterId={} operator={} stage={} result={} marketState={} removal={} refund={} restore={}",f.tradeId(),f.actorId(),f.requesterId(),f.operator(),f.stage(),f.result(),f.mutationState(),f.removalStatus(),f.refundResult(),f.restoreResult(),f.primaryError());}
-  private record Account(EconomySavedData d) implements CancelDemandOrderService.Account{public BalanceMutationResult previewCreditExact(UUID id,int n){return d.previewCreditExact(id,n);}public BalanceMutationResult creditExact(UUID id,int n){return d.creditExact(id,n,"市场","取消求购单退款");}}
-  private record Repo(MarketSavedData d) implements CancelDemandOrderService.Repository{public MarketOrder find(UUID id){return d.getOrder(id);}public DemandOrderRemovalResult removeUndeliveredDemandIfUnchanged(UUID id,MarketOrder e){return d.removeUndeliveredDemandIfUnchanged(id,e);}}
+  static void handle(RemoveDemandOrderMessage message, IPayloadContext context) {
+    context.enqueueWork(() -> execute(message, context));
+  }
+
+  private static void execute(RemoveDemandOrderMessage message, IPayloadContext context) {
+    if (!(context.player() instanceof ServerPlayer player)) return;
+    try {
+      EconomySavedData accounts = EconomySavedData.getInstance(player.serverLevel());
+      MarketSavedData market = MarketSavedData.getInstance(player.serverLevel());
+      CancelDemandOrderOutcome outcome = CancelDemandOrderService.execute(
+          message,
+          new CancelDemandOrderService.Context(
+              player.getUUID(), Util_Player.isOP(player), new Account(accounts),
+              new Repository(market), NeoForge1211RemoveDemandOrderHandler::report));
+      boolean success = outcome.result() == CancelDemandOrderResult.SUCCESS;
+      IsolatedPostActions.runAll(
+          MarketActionPostPlan.build(
+              outcome.mutationState(), success, false,
+              () -> MarketInvalidationBroadcaster.broadcast(player),
+              () -> player.sendSystemMessage(
+                  Component.translatable(CancelDemandOrderFeedback.messageKey(outcome.result()))),
+              () -> {}),
+          (stage, error) -> EconomySystem.LOGGER.error(
+              "Demand cancellation post action failed stage={}", stage, error));
+    } catch (RuntimeException error) {
+      EconomySystem.LOGGER.error("Demand cancellation infrastructure failed", error);
+      try { player.sendSystemMessage(Component.translatable("message.request.cancel_failed")); }
+      catch (RuntimeException ignored) { /* Feedback failure must not escape the network task. */ }
+    }
+  }
+
+  private static void report(CancelDemandOrderFailure failure) {
+    String message = "Demand cancellation failed tradeId={} actorId={} requesterId={} operator={} stage={} result={} marketState={} removal={} refund={} restore={}";
+    RuntimeException error = failure.combinedError();
+    if (error == null)
+      EconomySystem.LOGGER.error(message, failure.tradeId(), failure.actorId(),
+          failure.requesterId(), failure.operator(), failure.stage(), failure.result(),
+          failure.mutationState(), failure.removalStatus(), failure.refundResult(),
+          failure.restoreResult());
+    else
+      EconomySystem.LOGGER.error(message, failure.tradeId(), failure.actorId(),
+          failure.requesterId(), failure.operator(), failure.stage(), failure.result(),
+          failure.mutationState(), failure.removalStatus(), failure.refundResult(),
+          failure.restoreResult(), error);
+  }
+
+  private record Account(EconomySavedData data) implements CancelDemandOrderService.Account {
+    public BalanceMutationResult previewCreditExact(UUID ownerId, int amount) {
+      return data.previewCreditExact(ownerId, amount);
+    }
+    public BalanceMutationResult creditExact(UUID ownerId, int amount) {
+      return data.creditExact(ownerId, amount, "市场", "取消求购单退款");
+    }
+  }
+
+  private record Repository(MarketSavedData data) implements CancelDemandOrderService.Repository {
+    public MarketOrder find(UUID tradeId) { return data.getOrder(tradeId); }
+    public DemandOrderRemovalResult removeUndeliveredDemandIfUnchanged(
+        UUID tradeId, MarketOrder expectedOrder) {
+      return data.removeUndeliveredDemandIfUnchanged(tradeId, expectedOrder);
+    }
+  }
 }

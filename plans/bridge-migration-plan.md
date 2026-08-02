@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
-- 验证套件包含 Forge 1.20.1 199 项测试和 NeoForge 1.21.1 200 项测试。
+- 验证套件包含 Forge 1.20.1 212 项测试和 NeoForge 1.21.1 213 项测试。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -182,3 +182,6 @@ git diff --check
   exact supplier credit, independent payment/inventory compensation, and shared adapter contract
   coverage are complete. Protocol 16 now uses a UUID-only common request, expected-order removal,
   exact requester refund and explicit CHANGED/UNKNOWN invalidation.
+- Protocol 16 hardening is closed: result/outcome invariants reject illegal states, repository contract
+  violations attempt restoration, ORDER_CHANGED carries no stale expected order, and all transaction
+  exceptions reach structured target logs. Protocol 14 no longer reports restoration before compensation.

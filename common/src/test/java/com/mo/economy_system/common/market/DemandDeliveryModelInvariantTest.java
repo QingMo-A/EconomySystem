@@ -63,6 +63,18 @@ class DemandDeliveryModelInvariantTest {
     assertFalse(new DemandDeliveryCompensation(true, true, true, false, null, null).complete());
   }
 
+  @Test void preCompensationTelemetryDoesNotClaimInventoryRestoration() {
+    DemandOrderDeliveryFailure failure = new DemandOrderDeliveryFailure(
+        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "ledger-transition",
+        DemandOrderDeliveryResult.ORDER_CHANGED, MarketMutationState.CHANGED,
+        DemandDeliveryTransitionStatus.ORDER_CHANGED, null, null, true, null,
+        null, null, null, null);
+    assertNull(failure.inventoryRemovalFailureRestored());
+    assertNull(failure.inventoryRollbackSucceeded());
+    assertTrue(failure.paymentCreditSucceeded());
+    assertNull(failure.paymentReversalSucceeded());
+  }
+
   private static MarketOrder order(boolean delivered) {
     return new MarketOrder(MarketOrderType.DEMAND, UUID.randomUUID(), MarketOrderCodecTest.item(),
         3, 17, "requester", UUID.randomUUID(), 10, 99, delivered);

@@ -80,8 +80,9 @@ Protocols 12 through 16 are migrated on both targets. Protocols 17/18 have not s
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
-compensation, and CHANGED/UNKNOWN failures invalidate clients. The verified suite contains 199 Forge tests
-and 200 NeoForge tests.
+compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
+repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
+The verified suite contains 212 Forge tests and 213 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`

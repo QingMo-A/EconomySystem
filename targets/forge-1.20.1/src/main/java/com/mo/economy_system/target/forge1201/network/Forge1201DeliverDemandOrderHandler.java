@@ -98,9 +98,10 @@ final class Forge1201DeliverDemandOrderHandler {
 
   private static void reportFailure(DemandOrderDeliveryFailure failure) {
     LOGGER.error(
-        "Demand delivery failed tradeId={} supplierId={} requesterId={} stage={} result={} marketState={} transitionStatus={} paymentReverted={} inventoryRestored={}",
+        "Demand delivery failed tradeId={} supplierId={} requesterId={} stage={} result={} marketState={} transitionStatus={} inventoryRemovalFailureRestored={} paymentReverted={} inventoryRestored={}",
         failure.tradeId(), failure.supplierId(), failure.requesterId(), failure.stage(), failure.result(),
-        failure.mutationState(), failure.transitionStatus(), failure.paymentReversalSucceeded(),
+        failure.mutationState(), failure.transitionStatus(),
+        failure.inventoryRemovalFailureRestored(), failure.paymentReversalSucceeded(),
         failure.inventoryRollbackSucceeded());
     logError("primary", failure.primaryError());
     logError("inventory", failure.inventoryError());

@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 199
-  Forge 1.20.1 tests and 200 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 212
+  Forge 1.20.1 tests and 213 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -158,3 +158,7 @@ market invalidation steps are isolated. Canonical discriminators 12–16 remain 
 Protocol 16 cancellation resolves ownership, operator permission, refund recipient and the frozen total
 price exclusively on the server. Expected-order removal and exact refund form a compensating transaction;
 failed restoration reports CHANGED or UNKNOWN and broadcasts INVALIDATED. Protocols 17/18 remain untouched.
+Protocol 16 hardening closes construction invariants and repository-contract recovery: ORDER_CHANGED never
+carries a stale preview as authoritative data, mismatched removed orders are restored before failure, and
+all repository/refund/restore exceptions are combined for target logs. Protocol 14 pre-compensation telemetry
+now leaves inventory restoration fields unset until rollback actually runs.

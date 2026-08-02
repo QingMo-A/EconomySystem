@@ -10,7 +10,7 @@ public record DemandOrderDeliveryFailure(
     DemandOrderDeliveryResult result,
     MarketMutationState mutationState,
     DemandDeliveryTransitionStatus transitionStatus,
-    Boolean inventoryRemovalRestored,
+    Boolean inventoryRemovalFailureRestored,
     Boolean inventoryRollbackSucceeded,
     Boolean paymentCreditSucceeded,
     Boolean paymentReversalSucceeded,

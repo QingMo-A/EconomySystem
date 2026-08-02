@@ -2,6 +2,8 @@ package com.mo.economy_system.common.market;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import net.minecraft.nbt.CompoundTag;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -139,6 +141,74 @@ class MarketLedgerTest {
     assertEquals(DemandDeliveryTransitionStatus.PERSIST_FAILED, ledger.markDemandDeliveredIfUnchanged(demand.tradeId(), demand).status()); assertFalse(ledger.find(demand.tradeId()).delivered());
   }
 
+  @Test
+  void expectedDemandRemovalCommitsOnceAndRestoresAtOriginalIndex() {
+    MarketLedger ledger = new MarketLedger(() -> {});
+    MarketOrder first = order(MarketOrderType.SALES, false);
+    MarketOrder demand = order(MarketOrderType.DEMAND, false);
+    MarketOrder last = order(MarketOrderType.DEMAND, false);
+    ledger.loadFromPersistence(List.of(first, demand, last), 12);
+
+    DemandOrderRemovalResult result =
+        ledger.removeUndeliveredDemandIfUnchanged(demand.tradeId(), demand);
+
+    assertEquals(DemandOrderRemovalStatus.REMOVED, result.status());
+    assertEquals(List.of(first, last), ledger.orders());
+    assertEquals(13, ledger.revision());
+    assertEquals(MarketOrderRestoreResult.RESTORED, result.removal().restore().restore());
+    assertEquals(List.of(first, demand, last), ledger.orders());
+    assertEquals(14, ledger.revision());
+    assertEquals(MarketOrderRestoreResult.DUPLICATE_ID, result.removal().restore().restore());
+  }
+
+  @Test
+  void expectedDemandRemovalRejectsEveryStaleFieldWithoutMutation() {
+    AtomicInteger dirty = new AtomicInteger();
+    MarketLedger ledger = new MarketLedger(dirty::incrementAndGet);
+    MarketOrder current = order(MarketOrderType.DEMAND, false);
+    ledger.loadFromPersistence(List.of(current), 7);
+    List<MarketOrder> staleOrders =
+        List.of(
+            new MarketOrder(current.type(), current.tradeId(), differentItem(), current.quantity(),
+                current.totalPrice(), current.sellerName(), current.sellerId(),
+                current.listingTime(), current.expirationTime(), false),
+            new MarketOrder(current.type(), current.tradeId(), current.item(),
+                current.quantity() + 1, current.totalPrice(), current.sellerName(),
+                current.sellerId(), current.listingTime(), current.expirationTime(), false),
+            new MarketOrder(current.type(), current.tradeId(), current.item(), current.quantity(),
+                current.totalPrice() + 1, current.sellerName(), current.sellerId(),
+                current.listingTime(), current.expirationTime(), false),
+            new MarketOrder(current.type(), current.tradeId(), current.item(), current.quantity(),
+                current.totalPrice(), current.sellerName(), UUID.randomUUID(),
+                current.listingTime(), current.expirationTime(), false),
+            new MarketOrder(current.type(), current.tradeId(), current.item(), current.quantity(),
+                current.totalPrice(), current.sellerName(), current.sellerId(),
+                current.listingTime() + 1, current.expirationTime() + 1, false));
+
+    for (MarketOrder stale : staleOrders) {
+      assertEquals(
+          DemandOrderRemovalStatus.ORDER_CHANGED,
+          ledger.removeUndeliveredDemandIfUnchanged(current.tradeId(), stale).status());
+    }
+    assertEquals(List.of(current), ledger.orders());
+    assertEquals(7, ledger.revision());
+    assertEquals(0, dirty.get());
+  }
+
+  @Test
+  void expectedDemandRemovalDirtyFailureRestoresStateAndRevision() {
+    MarketOrder demand = order(MarketOrderType.DEMAND, false);
+    MarketLedger ledger = new MarketLedger(() -> { throw new IllegalStateException("dirty"); });
+    ledger.loadFromPersistence(List.of(demand), 5);
+
+    DemandOrderRemovalResult result =
+        ledger.removeUndeliveredDemandIfUnchanged(demand.tradeId(), demand);
+
+    assertEquals(DemandOrderRemovalStatus.PERSIST_FAILED, result.status());
+    assertEquals(List.of(demand), ledger.orders());
+    assertEquals(5, ledger.revision());
+  }
+
   private static MarketOrder order() {
     return new MarketOrder(
         MarketOrderType.DEMAND,
@@ -151,6 +221,27 @@ class MarketLedgerTest {
         1,
         2,
         false);
+  }
+
+  private static ItemStackSnapshot differentItem() {
+    return ItemStackSnapshot.create(
+            "minecraft:dirt",
+            1,
+            Optional.empty(),
+            List.of(),
+            Map.of(),
+            Map.of(),
+            true,
+            true,
+            0,
+            0,
+            false,
+            true,
+            OptionalInt.empty(),
+            true,
+            OptionalInt.empty(),
+            new CompoundTag())
+        .orElseThrow();
   }
 
   private static MarketOrder order(MarketOrderType type, boolean delivered) {

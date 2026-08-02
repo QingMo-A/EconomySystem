@@ -50,7 +50,9 @@ Protocols 12–16 are migrated. Do not renumber the append-only manifest; protoc
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-199 Forge 1.20.1 tests and 200 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+212 Forge 1.20.1 tests and 213 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
 shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
 refund semantics and invalidation on CHANGED/UNKNOWN. Do not start protocols 17/18 without a new task.
+Protocol 16 hardening is closed: illegal result/outcome combinations are rejected, mismatched removals are
+restored before failure, ORDER_CHANGED has no stale transaction order, and target logs combine all errors.

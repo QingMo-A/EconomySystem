@@ -130,7 +130,7 @@ public final class DemandOrderDeliveryService {
     DemandDeliveryTransitionStatus status = transition == null ? null : transition.status();
     safeReport(context, new DemandOrderDeliveryFailure(tradeId, context.supplierId(), requesterId,
         "ledger-transition", transition == null ? DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN
-            : map(transition.status()), marketState, status, true, null, true, null,
+            : map(transition.status()), marketState, status, null, null, true, null,
         repositoryError, null, null, repositoryError));
     DemandDeliveryCompensation compensation = compensate(context, order.totalPrice(), rollback);
     DemandOrderDeliveryResult result;
@@ -138,7 +138,7 @@ public final class DemandOrderDeliveryService {
     else if (transition == null) result = DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN;
     else result = map(transition.status());
     safeReport(context, new DemandOrderDeliveryFailure(tradeId, context.supplierId(), requesterId,
-        "compensation", result, marketState, status, true, compensation.inventoryRestored(), true,
+        "compensation", result, marketState, status, null, compensation.inventoryRestored(), true,
         compensation.paymentReverted(), repositoryError, compensation.inventoryError(),
         compensation.paymentError(), repositoryError));
     if (marketState == MarketMutationState.UNKNOWN)
