@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 160
-  Forge 1.20.1 tests and 161 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 195
+  Forge 1.20.1 tests and 196 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -96,6 +96,10 @@ maintaining independent registration order.
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
 - Protocols 12, 13, 14 and 15 are migrated; protocol 16 remains legacy and is next.
+- Protocol 14 hardening is complete: delivery uses expected-order atomic transition, exact supplier
+  credit without charging the requester again, transactional main-inventory removal, and independent
+  payment/inventory compensation. Failure reports carry the authoritative requester ID and per-stage
+  mutation/exception details. Both target adapters use the tested loader-neutral removal kernel.
 
 ## Exact market balance transactions
 

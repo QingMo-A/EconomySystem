@@ -77,6 +77,9 @@ refunds it if the atomic ledger add fails. Forge registers discriminator `9` exa
 later market discriminators remain unregistered.
 
 Protocols 12, 13, 14 and 15 are migrated on both targets. Protocol 16 remains legacy and is next.
+Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
+independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
+The verified suite contains 195 Forge tests and 196 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`

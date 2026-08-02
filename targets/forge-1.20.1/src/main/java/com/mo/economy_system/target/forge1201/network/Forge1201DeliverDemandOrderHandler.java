@@ -37,10 +37,14 @@ final class Forge1201DeliverDemandOrderHandler {
                   i,
                   new Account(a, p),
                   new Repo(d),
-                  DemandOrderDeliveryService.FailureReporter.noop()));
+                  Forge1201DeliverDemandOrderHandler::reportFailure));
     } catch (RuntimeException e) {
       LOGGER.error("Demand delivery infrastructure failed", e);
-      p.sendSystemMessage(Component.translatable("message.market.deliver_demand.failed"));
+      try {
+        p.sendSystemMessage(Component.translatable("message.market.deliver_demand.failed"));
+      } catch (RuntimeException feedbackError) {
+        LOGGER.error("Demand delivery infrastructure feedback failed", feedbackError);
+      }
       return;
     }
     IsolatedPostActions.runAll(
@@ -60,7 +64,7 @@ final class Forge1201DeliverDemandOrderHandler {
       p.sendSystemMessage(
           Component.translatable(
               DemandOrderDeliveryFeedback.translationKey(outcome.result()),
-              order.item().itemId(),
+              displayName(p, order),
               order.quantity(),
               order.totalPrice()));
       return;
@@ -74,11 +78,38 @@ final class Forge1201DeliverDemandOrderHandler {
         Component.translatable(
             "message.market.deliver_demand.requester_notice",
             p.getName(),
-            o.item().itemId(),
+            displayName(p, o),
             o.quantity());
     ServerPlayer r = p.server.getPlayerList().getPlayer(o.sellerId());
     if (r != null) r.sendSystemMessage(m);
     else a.storeOfflineMessage(o.sellerId(), m.getString());
+  }
+
+  private static Object displayName(ServerPlayer player, MarketOrder order) {
+    try {
+      return ((net.minecraft.world.item.ItemStack)
+              new Forge1201TransactionalInventoryAdapter(player).restore(order))
+          .getHoverName();
+    } catch (RuntimeException error) {
+      LOGGER.error("Demand delivery display name restore failed tradeId={}", order.tradeId(), error);
+      return order.item().itemId();
+    }
+  }
+
+  private static void reportFailure(DemandOrderDeliveryFailure failure) {
+    LOGGER.error(
+        "Demand delivery failed tradeId={} supplierId={} requesterId={} stage={} result={} marketState={} transitionStatus={} paymentReverted={} inventoryRestored={}",
+        failure.tradeId(), failure.supplierId(), failure.requesterId(), failure.stage(), failure.result(),
+        failure.mutationState(), failure.transitionStatus(), failure.paymentReversalSucceeded(),
+        failure.inventoryRollbackSucceeded());
+    logError("primary", failure.primaryError());
+    logError("inventory", failure.inventoryError());
+    logError("payment", failure.paymentError());
+    logError("repository", failure.repositoryError());
+  }
+
+  private static void logError(String kind, RuntimeException error) {
+    if (error != null) LOGGER.error("Demand delivery {} failure", kind, error);
   }
 
   private record Repo(MarketSavedData d) implements DemandOrderDeliveryService.Repository {

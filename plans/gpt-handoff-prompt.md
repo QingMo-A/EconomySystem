@@ -50,5 +50,7 @@ Continue next with canonical protocol 16 (`REMOVE_DEMAND_ORDER`); do not renumbe
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-160 Forge 1.20.1 tests and 161 NeoForge 1.21.1 tests. Continue with canonical protocol 16 only; keep protocol 16
+195 Forge 1.20.1 tests and 196 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+failure reporting, expected-order transition, exact supplier credit, independent compensation, and
+shared inventory transaction contract coverage. Continue with canonical protocol 16 only; keep protocol 16
 legacy and preserve all discriminator assignments.

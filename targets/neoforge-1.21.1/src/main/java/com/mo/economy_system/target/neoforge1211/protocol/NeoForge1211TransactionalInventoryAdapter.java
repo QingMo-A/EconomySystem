@@ -96,33 +96,28 @@ final class NeoForge1211TransactionalInventoryAdapter
   }
 
   public long countMatching(Object value) {
-    ItemStack template = (ItemStack) value;
-    long count = 0;
-    for (ItemStack stack : player.getInventory().items)
-      if (!stack.isEmpty()
-          && EconomyServices.platform().itemStacks().sameItemAndData(stack, template))
-        count += stack.getCount();
-    return count;
+    return new SlotInventoryTransactions<>(slots()).countMatching((ItemStack) value);
   }
 
   public InventoryRemovalResult removeMatching(Object value, int quantity) {
-    ItemStack template = (ItemStack) value;
-    List<ItemStack> before = player.getInventory().items.stream().map(ItemStack::copy).toList();
-    try {
-      int remaining = quantity;
-      for (ItemStack stack : player.getInventory().items)
-        if (remaining > 0
-            && !stack.isEmpty()
-            && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
-          int removed = Math.min(remaining, stack.getCount());
-          stack.shrink(removed);
-          remaining -= removed;
-        }
-      if (remaining != 0) return InventoryRemovalResult.failure(restoreSlots(before));
-      player.getInventory().setChanged();
-      return InventoryRemovalResult.success(() -> restoreSlots(before));
-    } catch (RuntimeException exception) {
-      return InventoryRemovalResult.failure(restoreSlots(before));
-    }
+    return new SlotInventoryTransactions<>(slots()).remove((ItemStack) value, quantity);
+  }
+
+  private SlotInventoryTransactions.Slots<ItemStack> slots() {
+    return new SlotInventoryTransactions.Slots<>() {
+      public int size() { return player.getInventory().items.size(); }
+      public ItemStack get(int index) { return player.getInventory().items.get(index); }
+      public void set(int index, ItemStack value) { player.getInventory().setItem(index, value); }
+      public ItemStack copy(ItemStack value) { return value.copy(); }
+      public boolean isEmpty(ItemStack value) { return value.isEmpty(); }
+      public boolean matches(ItemStack value, ItemStack template) { return EconomyServices.platform().itemStacks().sameItemAndData(value, template); }
+      public int count(ItemStack value) { return value.getCount(); }
+      public void setCount(ItemStack value, int count) { value.setCount(count); }
+      public int maxStackSize(ItemStack value) { return value.getMaxStackSize(); }
+      public void setChanged() { player.getInventory().setChanged(); }
+      public void rollbackError(int index, RuntimeException error) {
+        EconomySystem.LOGGER.error("Inventory rollback failed owner={} slot={}", player.getUUID(), index, error);
+      }
+    };
   }
 }

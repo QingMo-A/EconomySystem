@@ -51,7 +51,24 @@ class MarketActionLanguageResourcesTest {
           "message.market.remove_sales.item_failed",
           "message.market.remove_sales.rollback_failed",
           "message.market.remove_sales.failed",
-          "message.market.remove_sales.operator_notice");
+          "message.market.remove_sales.operator_notice",
+          "message.market.deliver_demand.success",
+          "message.market.deliver_demand.not_found",
+          "message.market.deliver_demand.wrong_type",
+          "message.market.deliver_demand.already_delivered",
+          "message.market.deliver_demand.self",
+          "message.market.deliver_demand.invalid_order",
+          "message.market.deliver_demand.item_failed",
+          "message.market.deliver_demand.insufficient_items",
+          "message.market.deliver_demand.balance_limit",
+          "message.market.deliver_demand.inventory_failed",
+          "message.market.deliver_demand.payment_failed",
+          "message.market.deliver_demand.order_changed",
+          "message.market.deliver_demand.persist_failed",
+          "message.market.deliver_demand.state_unknown",
+          "message.market.deliver_demand.rollback_failed",
+          "message.market.deliver_demand.failed",
+          "message.market.deliver_demand.requester_notice");
 
   @Test
   void generatedAndForgeLanguagesHaveSameMarketKeysAndPlaceholders() throws Exception {
@@ -85,7 +102,11 @@ class MarketActionLanguageResourcesTest {
           3, count(json.get("message.market.confirm_demand.operator_notice").getAsString()));
       assertEquals(2, count(json.get("message.market.remove_sales.success").getAsString()));
       assertEquals(3, count(json.get("message.market.remove_sales.operator_notice").getAsString()));
+      assertEquals(3, count(json.get("message.market.deliver_demand.success").getAsString()));
+      assertEquals(3, count(json.get("message.market.deliver_demand.requester_notice").getAsString()));
     }
+    for (DemandOrderDeliveryResult result : DemandOrderDeliveryResult.values())
+      assertTrue(KEYS.contains(DemandOrderDeliveryFeedback.translationKey(result)));
   }
 
   private static Set<String> marketKeys(JsonObject json) {
@@ -93,7 +114,8 @@ class MarketActionLanguageResourcesTest {
     for (String key : json.keySet())
       if (key.startsWith("message.market.purchase.")
           || key.startsWith("message.market.confirm_demand.")
-          || key.startsWith("message.market.remove_sales.")) keys.add(key);
+          || key.startsWith("message.market.remove_sales.")
+          || key.startsWith("message.market.deliver_demand.")) keys.add(key);
     return keys;
   }
 

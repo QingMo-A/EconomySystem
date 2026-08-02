@@ -27,6 +27,7 @@ public final class DemandOrderDeliveryOutcome {
   }
 
   public static DemandOrderDeliveryOutcome success(MarketOrder o) {
+    requireDemand(o, true);
     return new DemandOrderDeliveryOutcome(
         DemandOrderDeliveryResult.SUCCESS,
         Optional.of(Objects.requireNonNull(o)),
@@ -41,6 +42,7 @@ public final class DemandOrderDeliveryOutcome {
   public static DemandOrderDeliveryOutcome rolledBackFailure(
       DemandOrderDeliveryResult r, MarketOrder o) {
     failure(r);
+    requireDemand(o, false);
     return new DemandOrderDeliveryOutcome(
         r, Optional.of(Objects.requireNonNull(o)), MarketMutationState.UNCHANGED);
   }
@@ -48,6 +50,7 @@ public final class DemandOrderDeliveryOutcome {
   public static DemandOrderDeliveryOutcome changedFailure(
       DemandOrderDeliveryResult r, MarketOrder o) {
     failure(r);
+    requireDemand(o, false);
     return new DemandOrderDeliveryOutcome(
         r, Optional.of(Objects.requireNonNull(o)), MarketMutationState.CHANGED);
   }
@@ -60,5 +63,11 @@ public final class DemandOrderDeliveryOutcome {
   private static void failure(DemandOrderDeliveryResult r) {
     if (Objects.requireNonNull(r) == DemandOrderDeliveryResult.SUCCESS)
       throw new IllegalArgumentException();
+  }
+
+  private static void requireDemand(MarketOrder order, boolean delivered) {
+    Objects.requireNonNull(order, "order");
+    if (order.type() != MarketOrderType.DEMAND || order.delivered() != delivered)
+      throw new IllegalArgumentException("invalid demand delivery order state");
   }
 }
