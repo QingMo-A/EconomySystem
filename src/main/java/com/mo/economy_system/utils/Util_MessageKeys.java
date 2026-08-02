@@ -329,8 +329,29 @@ public class Util_MessageKeys {
     public static final String MARKET_PURCHASE_FAILED = "message.market.purchase.failed";
     public static final String MARKET_PURCHASE_SELLER_NOTICE = "message.market.purchase.seller_notice";
     public static final String MARKET_REMOVE_SALES_SUCCESS = "message.market.remove_sales.success";
+    public static final String MARKET_REMOVE_SALES_NOT_FOUND = "message.market.remove_sales.not_found";
+    public static final String MARKET_REMOVE_SALES_WRONG_TYPE = "message.market.remove_sales.wrong_type";
+    public static final String MARKET_REMOVE_SALES_NOT_OWNER = "message.market.remove_sales.not_owner";
+    public static final String MARKET_REMOVE_SALES_OWNER_OFFLINE = "message.market.remove_sales.owner_offline";
+    public static final String MARKET_REMOVE_SALES_INVENTORY_FULL = "message.market.remove_sales.inventory_full";
+    public static final String MARKET_REMOVE_SALES_ORDER_CHANGED = "message.market.remove_sales.order_changed";
+    public static final String MARKET_REMOVE_SALES_PERSIST_FAILED = "message.market.remove_sales.persist_failed";
+    public static final String MARKET_REMOVE_SALES_ITEM_FAILED = "message.market.remove_sales.item_failed";
+    public static final String MARKET_REMOVE_SALES_ROLLBACK_FAILED = "message.market.remove_sales.rollback_failed";
+    public static final String MARKET_REMOVE_SALES_FAILED = "message.market.remove_sales.failed";
     public static final String MARKET_REMOVE_SALES_OPERATOR_NOTICE = "message.market.remove_sales.operator_notice";
     public static final String MARKET_CONFIRM_DEMAND_SUCCESS = "message.market.confirm_demand.success";
+    public static final String MARKET_CONFIRM_DEMAND_NOT_FOUND = "message.market.confirm_demand.not_found";
+    public static final String MARKET_CONFIRM_DEMAND_WRONG_TYPE = "message.market.confirm_demand.wrong_type";
+    public static final String MARKET_CONFIRM_DEMAND_NOT_DELIVERED = "message.market.confirm_demand.not_delivered";
+    public static final String MARKET_CONFIRM_DEMAND_NOT_OWNER = "message.market.confirm_demand.not_owner";
+    public static final String MARKET_CONFIRM_DEMAND_OWNER_OFFLINE = "message.market.confirm_demand.owner_offline";
+    public static final String MARKET_CONFIRM_DEMAND_INVENTORY_FULL = "message.market.confirm_demand.inventory_full";
+    public static final String MARKET_CONFIRM_DEMAND_ORDER_CHANGED = "message.market.confirm_demand.order_changed";
+    public static final String MARKET_CONFIRM_DEMAND_PERSIST_FAILED = "message.market.confirm_demand.persist_failed";
+    public static final String MARKET_CONFIRM_DEMAND_ITEM_FAILED = "message.market.confirm_demand.item_failed";
+    public static final String MARKET_CONFIRM_DEMAND_ROLLBACK_FAILED = "message.market.confirm_demand.rollback_failed";
+    public static final String MARKET_CONFIRM_DEMAND_FAILED = "message.market.confirm_demand.failed";
     public static final String MARKET_CONFIRM_DEMAND_OPERATOR_NOTICE = "message.market.confirm_demand.operator_notice";
 }
 

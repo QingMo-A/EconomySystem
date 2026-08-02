@@ -13,42 +13,42 @@ public final class PurchaseSalesOrderService {
     private PurchaseSalesOrderService() {}
 
     public static PurchaseSalesOrderOutcome execute(PurchaseSalesOrderMessage message, Context context) {
-        if (message == null || context == null) return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.INVALID_CONTEXT);
+        if (message == null || context == null) return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVALID_CONTEXT);
         MarketOrder preview;
         try { preview = context.repository().find(message.tradeId()); }
         catch (RuntimeException exception) {
             report(context, message.tradeId(), null, "lookup", PurchaseSalesOrderResult.ORDER_REMOVE_FAILED,
                     null, null, exception);
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
         }
         PurchaseSalesOrderResult validation = validate(preview, context);
-        if (validation != PurchaseSalesOrderResult.SUCCESS) return PurchaseSalesOrderOutcome.failure(validation);
+        if (validation != PurchaseSalesOrderResult.SUCCESS) return PurchaseSalesOrderOutcome.validationFailure(validation);
 
         Object template;
         try { template = context.materializer().restore(preview); }
         catch (RuntimeException exception) {
             report(context, message.tradeId(), preview.sellerId(), "snapshot-restore",
                     PurchaseSalesOrderResult.ITEM_RESTORE_FAILED, null, null, exception);
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
         }
-        if (template == null) return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
+        if (template == null) return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
 
         BalanceTransferResult balancePreview;
         try { balancePreview = context.accounts().preview(preview.sellerId(), preview.totalPrice()); }
         catch (RuntimeException exception) {
             report(context, message.tradeId(), preview.sellerId(), "payment-preview", PurchaseSalesOrderResult.PAYMENT_FAILED, null, null, exception);
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.PAYMENT_FAILED);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.PAYMENT_FAILED);
         }
         PurchaseSalesOrderResult balanceFailure = mapBalanceFailure(balancePreview);
-        if (balanceFailure != PurchaseSalesOrderResult.SUCCESS) return PurchaseSalesOrderOutcome.failure(balanceFailure);
+        if (balanceFailure != PurchaseSalesOrderResult.SUCCESS) return PurchaseSalesOrderOutcome.validationFailure(balanceFailure);
         boolean accepts;
         try { accepts = context.inventory().canAccept(template, preview.quantity()); }
         catch (RuntimeException exception) {
             report(context, message.tradeId(), preview.sellerId(), "inventory-capacity", PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED, null, null, exception);
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED);
         }
         if (!accepts) {
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.INVENTORY_FULL);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVENTORY_FULL);
         }
 
         SalesOrderRemovalResult removalResult;
@@ -56,21 +56,22 @@ public final class PurchaseSalesOrderService {
         catch (RuntimeException exception) {
             report(context, message.tradeId(), preview.sellerId(), "order-remove",
                     PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, null, null, exception);
-            return PurchaseSalesOrderOutcome.failure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
+            return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
         }
         if (removalResult == null) {
             report(context, message.tradeId(), preview.sellerId(), "order-remove-null", PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, null, null, null);
-            return new PurchaseSalesOrderOutcome(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, Optional.empty(), true);
+            return PurchaseSalesOrderOutcome.uncertainFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
         }
         if (removalResult.status() != SalesOrderRemovalStatus.REMOVED) {
-            return PurchaseSalesOrderOutcome.failure(mapRemovalFailure(removalResult.status()));
+            return PurchaseSalesOrderOutcome.validationFailure(mapRemovalFailure(removalResult.status()));
         }
         MarketOrder authoritative = removalResult.removal().order();
         if (!preview.equals(authoritative)) {
             boolean restored = restoreOrder(removalResult.removal());
             PurchaseSalesOrderResult result = restored ? PurchaseSalesOrderResult.ORDER_CHANGED : PurchaseSalesOrderResult.ROLLBACK_FAILED;
             report(context, message.tradeId(), authoritative.sellerId(), "order-changed", result, null, restored, null);
-            return new PurchaseSalesOrderOutcome(result, Optional.of(authoritative), !restored);
+            return restored ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
+                    : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
         }
 
         InventoryInsertionResult insertion;
@@ -79,7 +80,8 @@ public final class PurchaseSalesOrderService {
             boolean orderRestored = restoreOrder(removalResult.removal());
             PurchaseSalesOrderResult result = orderRestored ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED : PurchaseSalesOrderResult.ROLLBACK_FAILED;
             report(context, message.tradeId(), authoritative.sellerId(), "inventory-insert", result, null, orderRestored, exception);
-            return new PurchaseSalesOrderOutcome(result, Optional.of(authoritative), !orderRestored);
+            return orderRestored ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
+                    : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
         }
         if (insertion == null || !insertion.succeeded() || insertion.rollback() == null) {
             boolean orderRestored = restoreOrder(removalResult.removal());
@@ -88,7 +90,8 @@ public final class PurchaseSalesOrderService {
                     ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED : PurchaseSalesOrderResult.ROLLBACK_FAILED;
             report(context, message.tradeId(), authoritative.sellerId(), "inventory-insert", result,
                     inventoryRestored, orderRestored, null);
-            return new PurchaseSalesOrderOutcome(result, Optional.of(authoritative), !orderRestored);
+            return orderRestored ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
+                    : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
         }
 
         BalanceTransferResult transfer;
@@ -102,7 +105,8 @@ public final class PurchaseSalesOrderService {
                     ? mapCommittedTransferFailure(transfer) : PurchaseSalesOrderResult.ROLLBACK_FAILED;
             report(context, message.tradeId(), authoritative.sellerId(), "payment", result,
                     inventoryRestored, orderRestored, transferException);
-            return new PurchaseSalesOrderOutcome(result, Optional.of(authoritative), !orderRestored);
+            return orderRestored ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
+                    : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
         }
         return PurchaseSalesOrderOutcome.success(authoritative);
     }

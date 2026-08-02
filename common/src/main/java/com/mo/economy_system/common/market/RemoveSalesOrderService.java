@@ -19,16 +19,28 @@ public final class RemoveSalesOrderService {
         catch(RuntimeException ex){report(context,message.tradeId(),preview.sellerId(),"materialize",RemoveSalesOrderResult.ITEM_RESTORE_FAILED,null,null,ex);return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.ITEM_RESTORE_FAILED);}
         if(template==null)return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.ITEM_RESTORE_FAILED);
         TransactionalInventory receiver;
-        try { receiver=context.receivers.resolve(preview.sellerId()).orElse(null); }
-        catch(RuntimeException ex){report(context,message.tradeId(),preview.sellerId(),"receiver",RemoveSalesOrderResult.OWNER_OFFLINE,null,null,ex);return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.OWNER_OFFLINE);}
+        try {
+            Optional<TransactionalInventory> resolved = context.receivers.resolve(preview.sellerId());
+            if (resolved == null) {
+                report(context,message.tradeId(),preview.sellerId(),"receiver",RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED,null,null,null);
+                return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED);
+            }
+            receiver = resolved.orElse(null);
+        }
+        catch(RuntimeException ex){report(context,message.tradeId(),preview.sellerId(),"receiver",RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED,null,null,ex);return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED);}
         if(receiver==null)return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.OWNER_OFFLINE);
-        if(!preview.sellerId().equals(receiver.ownerId()))return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.INVALID_CONTEXT);
+        try {
+            if(!preview.sellerId().equals(receiver.ownerId()))return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.INVALID_CONTEXT);
+        } catch (RuntimeException ex) {
+            report(context,message.tradeId(),preview.sellerId(),"receiver-owner",RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED,null,null,ex);
+            return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.RECEIVER_RESOLUTION_FAILED);
+        }
         try { if(!receiver.canAccept(template,preview.quantity()))return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.INVENTORY_FULL); }
         catch(RuntimeException ex){report(context,message.tradeId(),preview.sellerId(),"capacity",RemoveSalesOrderResult.INVENTORY_MUTATION_FAILED,null,null,ex);return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.INVENTORY_MUTATION_FAILED);}
         SalesOrderRemovalResult removed;
         try { removed=context.repository.removeSalesTransactional(message.tradeId()); }
         catch(RuntimeException ex){report(context,message.tradeId(),preview.sellerId(),"remove",RemoveSalesOrderResult.ORDER_REMOVE_FAILED,null,null,ex);return RemoveSalesOrderOutcome.failure(RemoveSalesOrderResult.ORDER_REMOVE_FAILED);}
-        if(removed==null)return new RemoveSalesOrderOutcome(RemoveSalesOrderResult.ORDER_REMOVE_FAILED,Optional.empty(),true);
+        if(removed==null)return RemoveSalesOrderOutcome.uncertainFailure(RemoveSalesOrderResult.ORDER_REMOVE_FAILED);
         if(removed.status()!=SalesOrderRemovalStatus.REMOVED)return RemoveSalesOrderOutcome.failure(map(removed.status()));
         MarketOrderRemoval removal=removed.removal(); MarketOrder authoritative=removal.order();
         if(!preview.equals(authoritative)){boolean order=restore(removal);return RemoveSalesOrderOutcome.afterRemoval(order?RemoveSalesOrderResult.ORDER_CHANGED:RemoveSalesOrderResult.ROLLBACK_FAILED,authoritative,!order);}

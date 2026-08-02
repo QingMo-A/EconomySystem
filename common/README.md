@@ -95,8 +95,7 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- The full suites now contain 141 passing Forge 1.20.1 tests and 142 passing NeoForge
-  1.21.1 tests. Protocols `8` through `11` are closed; protocol `12` is next.
+- Protocols 12, 13 and 15 are migrated and hardened; protocol 14 remains the next migration.
 
 ## Exact market balance transactions
 
@@ -133,7 +132,7 @@ order, validates/restores its schema-v1 Snapshot, checks exact buyer-to-seller p
 main-inventory capacity, then uses transactional order removal and inventory insertion.
 Insufficient space rejects the purchase without ground drops. Payment failure independently
 rolls back inventory and restores the order at its original index. Notifications and market
-invalidation occur only after commit. Protocol `13` is next.
+invalidation occur only after commit.
 # Bridge migration status (protocols 12 and sales-order removal)
 
 Sales-order purchase and removal now share loader-neutral transactional inventory ports and the single
@@ -144,7 +143,7 @@ rejected while that seller is offline, and insufficient capacity leaves the orde
 
 The canonical append-only wire manifest remains authoritative: sales-order removal retains discriminator
 15 (13 is already assigned to demand-order confirmation). Protocols 13, 14 and 16 in that manifest remain
-legacy/unmigrated; the next migration target is the existing protocol 13 demand-order confirmation.
+legacy/unmigrated; demand-order confirmation is migrated at its canonical discriminator 13.
 
 Protocol 13 demand-order confirmation is now migrated as a UUID-only common request. Confirming a delivered
 demand order transactionally removes it and inserts the item only into the original requester's online main

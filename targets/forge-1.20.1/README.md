@@ -76,9 +76,7 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-The current full target suite contains 141 passing tests. The paired NeoForge
-1.21.1 target contains 142 passing tests; `buildAllTargets --rerun-tasks` passes.
-Protocols `8` through `11` are closed. Protocol `12` is the next migration slice.
+Protocols 12, 13 and 15 are migrated and hardened on both targets. Protocol 14 remains the next migration slice.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -96,7 +94,7 @@ Protocol `12` is a real Forge C2S UUID-only message using the shared purchase tr
 It performs authoritative order/Snapshot validation, main-inventory capacity and atomic
 insertion, exact two-account payment, recoverable order removal, and independent rollback.
 A full inventory rejects the purchase without dropping items. Forge discriminators `13-16`
-remain unregistered; protocol `13` is next.
+remain unregistered as common bindings; protocol `14` is next.
 # Sales-order removal bridge
 
 Forge 1.20.1 now registers the common UUID-only sales-order removal message and routes it through the

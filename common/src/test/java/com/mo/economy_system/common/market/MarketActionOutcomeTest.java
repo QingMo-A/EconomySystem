@@ -1,0 +1,12 @@
+package com.mo.economy_system.common.market;
+
+import org.junit.jupiter.api.Test;
+import java.util.Optional;
+import static org.junit.jupiter.api.Assertions.*;
+
+class MarketActionOutcomeTest {
+    private static MarketOrder order(){return new MarketOrder(MarketOrderType.SALES,java.util.UUID.randomUUID(),MarketOrderCodecTest.item(),1,1,"seller",java.util.UUID.randomUUID(),1,2,false);}
+    @Test void purchaseFactoriesEnforceMutationMeaning(){MarketOrder o=order();assertEquals(MarketMutationState.CHANGED,PurchaseSalesOrderOutcome.success(o).mutationState());assertEquals(MarketMutationState.UNCHANGED,PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.NOT_FOUND).mutationState());assertEquals(MarketMutationState.UNCHANGED,PurchaseSalesOrderOutcome.rolledBackFailure(PurchaseSalesOrderResult.ORDER_CHANGED,o).mutationState());assertEquals(MarketMutationState.CHANGED,PurchaseSalesOrderOutcome.changedFailure(PurchaseSalesOrderResult.ROLLBACK_FAILED,o).mutationState());assertEquals(MarketMutationState.UNKNOWN,PurchaseSalesOrderOutcome.uncertainFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED).mutationState());assertThrows(IllegalArgumentException.class,()->PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.SUCCESS));assertThrows(IllegalArgumentException.class,()->new PurchaseSalesOrderOutcome(PurchaseSalesOrderResult.SUCCESS,Optional.empty(),MarketMutationState.CHANGED));}
+    @Test void confirmAndRemoveFactoriesRejectSuccessMisuse(){MarketOrder o=order();assertThrows(IllegalArgumentException.class,()->ConfirmDemandOrderOutcome.uncertainFailure(ConfirmDemandOrderResult.SUCCESS));assertThrows(IllegalArgumentException.class,()->RemoveSalesOrderOutcome.changedFailure(RemoveSalesOrderResult.SUCCESS,o));assertEquals(MarketMutationState.UNKNOWN,ConfirmDemandOrderOutcome.uncertainFailure(ConfirmDemandOrderResult.ORDER_REMOVE_FAILED).mutationState());assertEquals(MarketMutationState.CHANGED,RemoveSalesOrderOutcome.success(o).mutationState());}
+    @Test void nullOutcomeMembersAreRejected(){assertThrows(NullPointerException.class,()->new PurchaseSalesOrderOutcome(null,Optional.empty(),MarketMutationState.UNCHANGED));assertThrows(NullPointerException.class,()->new ConfirmDemandOrderOutcome(ConfirmDemandOrderResult.NOT_FOUND,null,MarketMutationState.UNCHANGED));assertThrows(NullPointerException.class,()->new RemoveSalesOrderOutcome(RemoveSalesOrderResult.NOT_FOUND,Optional.empty(),null));}
+}
