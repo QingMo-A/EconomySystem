@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 178
-  Forge 1.20.1 tests and 179 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 160
+  Forge 1.20.1 tests and 161 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -95,7 +95,7 @@ maintaining independent registration order.
   no sales tax. UUID, owner, timestamps, expiration, and initial `delivered=false` are
   server-owned. Repository failure refunds the complete frozen amount, with refund failure
   reported explicitly.
-- Protocols 12, 13 and 15 are migrated and hardened; protocol 14 remains the next migration.
+- Protocols 12, 13, 14 and 15 are migrated; protocol 16 remains legacy and is next.
 
 ## Exact market balance transactions
 
@@ -141,12 +141,12 @@ trade UUID; the server revalidates ownership/operator permission, snapshot, rece
 main-inventory capacity. Items are returned only to the original online seller. An operator request is
 rejected while that seller is offline, and insufficient capacity leaves the order unchanged without drops.
 
-The canonical append-only wire manifest remains authoritative: sales-order removal retains discriminator
-15 (13 is already assigned to demand-order confirmation). Protocols 13, 14 and 16 in that manifest remain
-legacy/unmigrated; demand-order confirmation is migrated at its canonical discriminator 13.
+The canonical append-only wire manifest remains authoritative: demand-order confirmation, demand-order
+delivery, and sales-order removal retain discriminators 13, 14, and 15. Protocols 12–15 are migrated on
+both targets; protocol 16 remains legacy/unmigrated.
 
 Protocol 13 demand-order confirmation is now migrated as a UUID-only common request. Confirming a delivered
 demand order transactionally removes it and inserts the item only into the original requester's online main
 inventory. Operators may act for an online owner but never receive that owner's item. Protocols 12, 13 and
 15 share one transactional inventory adapter per target; their post-transaction feedback, notification and
-market invalidation steps are isolated. Canonical discriminators 12–16 remain unchanged; protocol 14 is next.
+market invalidation steps are isolated. Canonical discriminators 12–16 remain unchanged; protocol 16 is next.

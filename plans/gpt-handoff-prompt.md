@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，decoder 会在读取 Snapshot NBT 前检查 768 KiB raw wire 大小。协议 12、13、15 已迁移；协议 14、16 仍为 legacy compatibility implementation。
+协议 10/11 已正式关闭，decoder 会在读取 Snapshot NBT 前检查 768 KiB raw wire 大小。协议 12、13、14、15 已迁移；协议 16 仍为 legacy compatibility implementation。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff
@@ -46,9 +46,9 @@ git diff --check
 Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Continue next with canonical protocol 14 (`DELIVER_DEMAND_ORDER`); do not renumber the append-only manifest.
+Continue next with canonical protocol 16 (`REMOVE_DEMAND_ORDER`); do not renumber the append-only manifest.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-178 Forge 1.20.1 tests and 179 NeoForge 1.21.1 tests. Continue with canonical protocol 14 only; keep protocol 16
+160 Forge 1.20.1 tests and 161 NeoForge 1.21.1 tests. Continue with canonical protocol 16 only; keep protocol 16
 legacy and preserve all discriminator assignments.

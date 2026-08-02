@@ -5,65 +5,63 @@ import com.mo.economy_system.protocol.EconomyProtocol;
 
 /** Stable common message types migrated away from loader payload classes. */
 public final class EconomyMessages {
-    public static final EconomyMessageType<BalanceRequestMessage> BALANCE_REQUEST =
-            new EconomyMessageType<>(EconomyProtocol.BALANCE_REQUEST, BalanceRequestMessage.class);
+  public static final EconomyMessageType<BalanceRequestMessage> BALANCE_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.BALANCE_REQUEST, BalanceRequestMessage.class);
 
-    public static final EconomyMessageType<BalanceResponseMessage> BALANCE_RESPONSE =
-            new EconomyMessageType<>(EconomyProtocol.BALANCE_RESPONSE, BalanceResponseMessage.class);
+  public static final EconomyMessageType<BalanceResponseMessage> BALANCE_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.BALANCE_RESPONSE, BalanceResponseMessage.class);
 
-    public static final EconomyMessageType<BalanceLogRequestMessage> BALANCE_LOG_REQUEST =
-            new EconomyMessageType<>(
-                    EconomyProtocol.BALANCE_LOG_REQUEST,
-                    BalanceLogRequestMessage.class
-            );
+  public static final EconomyMessageType<BalanceLogRequestMessage> BALANCE_LOG_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.BALANCE_LOG_REQUEST, BalanceLogRequestMessage.class);
 
-    public static final EconomyMessageType<BalanceLogResponseMessage> BALANCE_LOG_RESPONSE =
-            new EconomyMessageType<>(
-                    EconomyProtocol.BALANCE_LOG_RESPONSE,
-                    BalanceLogResponseMessage.class
-            );
+  public static final EconomyMessageType<BalanceLogResponseMessage> BALANCE_LOG_RESPONSE =
+      new EconomyMessageType<>(
+          EconomyProtocol.BALANCE_LOG_RESPONSE, BalanceLogResponseMessage.class);
 
-    public static final EconomyMessageType<TransferMessage> TRANSFER =
-            new EconomyMessageType<>(EconomyProtocol.TRANSFER, TransferMessage.class);
+  public static final EconomyMessageType<TransferMessage> TRANSFER =
+      new EconomyMessageType<>(EconomyProtocol.TRANSFER, TransferMessage.class);
 
-    public static final EconomyMessageType<ShopDataRequestMessage> SHOP_DATA_REQUEST =
-            new EconomyMessageType<>(EconomyProtocol.SHOP_DATA_REQUEST, ShopDataRequestMessage.class);
+  public static final EconomyMessageType<ShopDataRequestMessage> SHOP_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.SHOP_DATA_REQUEST, ShopDataRequestMessage.class);
 
-    public static final EconomyMessageType<ShopDataResponseMessage> SHOP_DATA_RESPONSE =
-            new EconomyMessageType<>(EconomyProtocol.SHOP_DATA_RESPONSE, ShopDataResponseMessage.class);
+  public static final EconomyMessageType<ShopDataResponseMessage> SHOP_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.SHOP_DATA_RESPONSE, ShopDataResponseMessage.class);
 
-    public static final EconomyMessageType<ShopBuyItemMessage> SHOP_BUY_ITEM =
-            new EconomyMessageType<>(EconomyProtocol.SHOP_BUY_ITEM, ShopBuyItemMessage.class);
+  public static final EconomyMessageType<ShopBuyItemMessage> SHOP_BUY_ITEM =
+      new EconomyMessageType<>(EconomyProtocol.SHOP_BUY_ITEM, ShopBuyItemMessage.class);
 
-    public static final EconomyMessageType<CreateSalesOrderMessage> CREATE_SALES_ORDER =
-            new EconomyMessageType<>(EconomyProtocol.CREATE_SALES_ORDER, CreateSalesOrderMessage.class);
+  public static final EconomyMessageType<CreateSalesOrderMessage> CREATE_SALES_ORDER =
+      new EconomyMessageType<>(EconomyProtocol.CREATE_SALES_ORDER, CreateSalesOrderMessage.class);
 
-    public static final EconomyMessageType<CreateDemandOrderMessage> CREATE_DEMAND_ORDER =
-            new EconomyMessageType<>(EconomyProtocol.CREATE_DEMAND_ORDER, CreateDemandOrderMessage.class);
+  public static final EconomyMessageType<CreateDemandOrderMessage> CREATE_DEMAND_ORDER =
+      new EconomyMessageType<>(EconomyProtocol.CREATE_DEMAND_ORDER, CreateDemandOrderMessage.class);
 
-    public static final EconomyMessageType<MarketDataRequestMessage> MARKET_DATA_REQUEST =
-            new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_REQUEST, MarketDataRequestMessage.class);
-    public static final EconomyMessageType<MarketDataResponseMessage> MARKET_DATA_RESPONSE =
-            new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_RESPONSE, MarketDataResponseMessage.class);
-    public static final EconomyMessageType<PurchaseSalesOrderMessage> PURCHASE_SALES_ORDER =
-            new EconomyMessageType<>(EconomyProtocol.PURCHASE_SALES_ORDER, PurchaseSalesOrderMessage.class);
-    public static final EconomyMessageType<RemoveSalesOrderMessage> REMOVE_SALES_ORDER =
-            new EconomyMessageType<>(EconomyProtocol.REMOVE_SALES_ORDER, RemoveSalesOrderMessage.class);
-    public static final EconomyMessageType<ConfirmDemandOrderMessage> CONFIRM_DEMAND_ORDER =
-            new EconomyMessageType<>(EconomyProtocol.CONFIRM_DEMAND_ORDER, ConfirmDemandOrderMessage.class);
+  public static final EconomyMessageType<MarketDataRequestMessage> MARKET_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_REQUEST, MarketDataRequestMessage.class);
+  public static final EconomyMessageType<MarketDataResponseMessage> MARKET_DATA_RESPONSE =
+      new EconomyMessageType<>(
+          EconomyProtocol.MARKET_DATA_RESPONSE, MarketDataResponseMessage.class);
+  public static final EconomyMessageType<PurchaseSalesOrderMessage> PURCHASE_SALES_ORDER =
+      new EconomyMessageType<>(
+          EconomyProtocol.PURCHASE_SALES_ORDER, PurchaseSalesOrderMessage.class);
+  public static final EconomyMessageType<RemoveSalesOrderMessage> REMOVE_SALES_ORDER =
+      new EconomyMessageType<>(EconomyProtocol.REMOVE_SALES_ORDER, RemoveSalesOrderMessage.class);
+  public static final EconomyMessageType<ConfirmDemandOrderMessage> CONFIRM_DEMAND_ORDER =
+      new EconomyMessageType<>(
+          EconomyProtocol.CONFIRM_DEMAND_ORDER, ConfirmDemandOrderMessage.class);
+  public static final EconomyMessageType<DeliverDemandOrderMessage> DELIVER_DEMAND_ORDER =
+      new EconomyMessageType<>(
+          EconomyProtocol.DELIVER_DEMAND_ORDER, DeliverDemandOrderMessage.class);
 
-    public static final EconomyMessageType<ServerPlayerListRequestMessage> SERVER_PLAYER_LIST_REQUEST =
-            new EconomyMessageType<>(
-                    EconomyProtocol.SERVER_PLAYER_LIST_REQUEST,
-                    ServerPlayerListRequestMessage.class
-            );
+  public static final EconomyMessageType<ServerPlayerListRequestMessage>
+      SERVER_PLAYER_LIST_REQUEST =
+          new EconomyMessageType<>(
+              EconomyProtocol.SERVER_PLAYER_LIST_REQUEST, ServerPlayerListRequestMessage.class);
 
-    public static final EconomyMessageType<ServerPlayerListResponseMessage> SERVER_PLAYER_LIST_RESPONSE =
-            new EconomyMessageType<>(
-                    EconomyProtocol.SERVER_PLAYER_LIST_RESPONSE,
-                    ServerPlayerListResponseMessage.class
-            );
+  public static final EconomyMessageType<ServerPlayerListResponseMessage>
+      SERVER_PLAYER_LIST_RESPONSE =
+          new EconomyMessageType<>(
+              EconomyProtocol.SERVER_PLAYER_LIST_RESPONSE, ServerPlayerListResponseMessage.class);
 
-    private EconomyMessages() {
-    }
+  private EconomyMessages() {}
 }
