@@ -5,7 +5,6 @@ import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
 import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
@@ -40,8 +39,8 @@ public final class NeoForge1211ProtocolRegistrar {
         bindCommon(registrar, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataHandlers::request);
         bindCommon(registrar, EconomyMessages.MARKET_DATA_RESPONSE, NeoForge1211MarketDataHandlers::response);
         bindCommon(registrar, EconomyMessages.PURCHASE_SALES_ORDER, NeoForge1211PurchaseSalesOrderHandler::handle);
+        bindCommon(registrar, EconomyMessages.CONFIRM_DEMAND_ORDER, NeoForge1211ConfirmDemandOrderHandler::handle);
         bindCommon(registrar, EconomyMessages.REMOVE_SALES_ORDER, NeoForge1211RemoveSalesOrderHandler::handle);
-        bind(registrar, EconomyProtocol.CONFIRM_DEMAND_ORDER, Packet_ConfirmDemandOrder.TYPE, Packet_ConfirmDemandOrder.STREAM_CODEC, Packet_ConfirmDemandOrder::handle);
         bind(registrar, EconomyProtocol.DELIVER_DEMAND_ORDER, Packet_DeliverDemandOrder.TYPE, Packet_DeliverDemandOrder.STREAM_CODEC, Packet_DeliverDemandOrder::handle);
         bind(registrar, EconomyProtocol.REMOVE_DEMAND_ORDER, Packet_RemoveDemandOrder.TYPE, Packet_RemoveDemandOrder.STREAM_CODEC, Packet_RemoveDemandOrder::handle);
         bind(registrar, EconomyProtocol.TERRITORY_DATA_REQUEST, Packet_TerritoryDataRequest.TYPE, Packet_TerritoryDataRequest.STREAM_CODEC, Packet_TerritoryDataRequest::handle);

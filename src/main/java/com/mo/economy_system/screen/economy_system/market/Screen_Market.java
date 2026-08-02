@@ -9,7 +9,7 @@ import com.mo.economy_system.common.client.ClientMarketState;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataRequestPurpose;
 import com.mo.economy_system.common.network.MarketOrderFilter;
-import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
+import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
 import com.mo.economy_system.screen.Screen_Home;
@@ -816,7 +816,7 @@ public class Screen_Market extends Screen {
             }
             case "confirm" -> {
                 if (item instanceof DemandOrder demandOrder) {
-                    EconomySystem_NetworkManager.sendToServer(new Packet_ConfirmDemandOrder(demandOrder.getTradeID()));
+                    EconomySystem_NetworkManager.sendToServer(new ConfirmDemandOrderMessage(demandOrder.getTradeID()));
                 }
             }
         }

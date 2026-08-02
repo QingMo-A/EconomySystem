@@ -47,3 +47,7 @@ Sales purchase and UUID-only sales-order removal are now migrated. Both use the 
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
 Continue next with canonical protocol 13 (`CONFIRM_DEMAND_ORDER`); do not renumber the append-only manifest.
+
+Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
+adapters and isolated post-transaction handling. Continue with canonical protocol 14 only; keep protocol 16
+legacy and preserve all discriminator assignments.

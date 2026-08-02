@@ -35,6 +35,7 @@ public final class MarketSavedData extends SavedData {
     public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
     public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) { return ledger.removeUndeliveredDemand(id); }
     public com.mo.economy_system.common.market.SalesOrderRemovalResult removeSalesTransactional(java.util.UUID id) { return ledger.removeSalesTransactional(id); }
+    public com.mo.economy_system.common.market.DeliveredDemandRemovalResult removeDeliveredDemandTransactional(java.util.UUID id) { return ledger.removeDeliveredDemandTransactional(id); }
 
     @Override public CompoundTag save(CompoundTag tag) {
         if (!pendingLegacy.isEmpty()) throw new IllegalStateException("unresolved legacy market data cannot be overwritten");

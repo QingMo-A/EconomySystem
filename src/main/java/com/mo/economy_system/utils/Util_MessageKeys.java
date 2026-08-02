@@ -328,5 +328,9 @@ public class Util_MessageKeys {
     public static final String MARKET_PURCHASE_ROLLBACK_FAILED = "message.market.purchase.rollback_failed";
     public static final String MARKET_PURCHASE_FAILED = "message.market.purchase.failed";
     public static final String MARKET_PURCHASE_SELLER_NOTICE = "message.market.purchase.seller_notice";
+    public static final String MARKET_REMOVE_SALES_SUCCESS = "message.market.remove_sales.success";
+    public static final String MARKET_REMOVE_SALES_OPERATOR_NOTICE = "message.market.remove_sales.operator_notice";
+    public static final String MARKET_CONFIRM_DEMAND_SUCCESS = "message.market.confirm_demand.success";
+    public static final String MARKET_CONFIRM_DEMAND_OPERATOR_NOTICE = "message.market.confirm_demand.operator_notice";
 }
 

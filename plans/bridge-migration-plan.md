@@ -167,3 +167,13 @@ git diff --check
 - Purchase and removal share `removeSalesTransactional`; the legacy removal packet has been deleted.
 - The append-only manifest is unchanged: removal is discriminator 15 because discriminator 13 is already
   demand-order confirmation. The next migration is protocol 13 (`CONFIRM_DEMAND_ORDER`); 14 and 16 remain legacy.
+
+## Protocol 13 completion
+
+- Canonical 12/13/14/15/16 discriminators remain fixed.
+- Protocol 12 and 15 post-transaction side effects are isolated and use registry-ID display fallback.
+- Protocol 13 is a UUID-only common message backed by transactional delivered-demand removal.
+- Protocols 12/13/15 share one transactional main-inventory adapter per target.
+- Confirmation always delivers to the original online requester; operator actions never redirect items.
+- Offline owners and insufficient inventory leave the delivered order unchanged; no item drops are created.
+- Next: protocol 14 `DELIVER_DEMAND_ORDER`.

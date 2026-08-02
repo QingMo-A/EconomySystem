@@ -22,6 +22,7 @@ import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -159,6 +160,9 @@ public final class Forge1201NetworkChannel {
         CHANNEL.messageBuilder(RemoveSalesOrderMessage.class, EconomyMessages.REMOVE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
                 .encoder(Forge1201RemoveSalesOrderCodec::encode).decoder(Forge1201RemoveSalesOrderCodec::decode)
                 .consumerMainThread(Forge1201RemoveSalesOrderHandler::handle).add();
+        CHANNEL.messageBuilder(ConfirmDemandOrderMessage.class, EconomyMessages.CONFIRM_DEMAND_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201ConfirmDemandOrderCodec::encode).decoder(Forge1201ConfirmDemandOrderCodec::decode)
+                .consumerMainThread(Forge1201ConfirmDemandOrderHandler::handle).add();
 
         CHANNEL.messageBuilder(
                         ServerPlayerListRequestMessage.class,
@@ -213,6 +217,7 @@ public final class Forge1201NetworkChannel {
     static void sendToServer(MarketDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(PurchaseSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(RemoveSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+    static void sendToServer(ConfirmDemandOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();

@@ -145,3 +145,9 @@ rejected while that seller is offline, and insufficient capacity leaves the orde
 The canonical append-only wire manifest remains authoritative: sales-order removal retains discriminator
 15 (13 is already assigned to demand-order confirmation). Protocols 13, 14 and 16 in that manifest remain
 legacy/unmigrated; the next migration target is the existing protocol 13 demand-order confirmation.
+
+Protocol 13 demand-order confirmation is now migrated as a UUID-only common request. Confirming a delivered
+demand order transactionally removes it and inserts the item only into the original requester's online main
+inventory. Operators may act for an online owner but never receive that owner's item. Protocols 12, 13 and
+15 share one transactional inventory adapter per target; their post-transaction feedback, notification and
+market invalidation steps are isolated. Canonical discriminators 12–16 remain unchanged; protocol 14 is next.

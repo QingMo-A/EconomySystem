@@ -349,6 +349,10 @@ public class ZhCnLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.MARKET_SELLER, "卖家");
         add(Util_MessageKeys.MARKET_REQUESTER, "求购者");
         add(Util_MessageKeys.MARKET_PURCHASE_SUCCESS, "成功购买 %s x%s，共支付 %s 梦鱼币");
+        add(Util_MessageKeys.MARKET_REMOVE_SALES_SUCCESS, "已下架 %s x%s");
+        add(Util_MessageKeys.MARKET_REMOVE_SALES_OPERATOR_NOTICE, "管理员 %s 已下架你的 %s x%s 销售订单");
+        add(Util_MessageKeys.MARKET_CONFIRM_DEMAND_SUCCESS, "已领取求购订单中的 %s x%s");
+        add(Util_MessageKeys.MARKET_CONFIRM_DEMAND_OPERATOR_NOTICE, "管理员 %s 已代你领取求购订单中的 %s x%s");
         add(Util_MessageKeys.MARKET_PURCHASE_NOT_FOUND, "该销售订单已不存在");
         add(Util_MessageKeys.MARKET_PURCHASE_WRONG_TYPE, "该订单不是销售订单");
         add(Util_MessageKeys.MARKET_PURCHASE_SELF, "不能购买自己的销售订单");

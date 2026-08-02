@@ -97,5 +97,7 @@ class MarketLedgerTest {
         SalesOrderRemovalResult removed=restoreFails.removeSalesTransactional(sale.tradeId());assertEquals(MarketOrderRestoreResult.PERSIST_FAILED,removed.removal().restore().restore());assertTrue(restoreFails.orders().isEmpty());assertEquals(8,restoreFails.revision());
     }
 
+    @Test void deliveredDemandRemovalIsTransactionalAndRejectsInvalidOrders(){MarketLedger ledger=new MarketLedger(()->{});MarketOrder sale=order(MarketOrderType.SALES,false),pending=order(MarketOrderType.DEMAND,false),delivered=order(MarketOrderType.DEMAND,true);ledger.loadFromPersistence(List.of(sale,pending,delivered),4);assertEquals(DeliveredDemandRemovalStatus.WRONG_ORDER_TYPE,ledger.removeDeliveredDemandTransactional(sale.tradeId()).status());assertEquals(DeliveredDemandRemovalStatus.NOT_DELIVERED,ledger.removeDeliveredDemandTransactional(pending.tradeId()).status());assertEquals(DeliveredDemandRemovalStatus.NOT_FOUND,ledger.removeDeliveredDemandTransactional(UUID.randomUUID()).status());DeliveredDemandRemovalResult removed=ledger.removeDeliveredDemandTransactional(delivered.tradeId());assertEquals(DeliveredDemandRemovalStatus.REMOVED,removed.status());assertEquals(5,ledger.revision());assertEquals(MarketOrderRestoreResult.RESTORED,removed.removal().restore().restore());assertEquals(List.of(sale,pending,delivered),ledger.orders());}
+
     private static MarketOrder order(MarketOrderType type,boolean delivered){return new MarketOrder(type,UUID.randomUUID(),MarketOrderCodecTest.item(),3,17,"seller",UUID.randomUUID(),10,99,delivered);}
 }

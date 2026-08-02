@@ -348,6 +348,10 @@ public class EnUsLanguageProvider extends LanguageProvider {
         add(Util_MessageKeys.MARKET_SELLER, "Seller");
         add(Util_MessageKeys.MARKET_REQUESTER, "Requester");
         add(Util_MessageKeys.MARKET_PURCHASE_SUCCESS, "Purchased %s x%s for %s MengYu Coins");
+        add(Util_MessageKeys.MARKET_REMOVE_SALES_SUCCESS, "Removed %s x%s from the market");
+        add(Util_MessageKeys.MARKET_REMOVE_SALES_OPERATOR_NOTICE, "%s removed your %s x%s sales order");
+        add(Util_MessageKeys.MARKET_CONFIRM_DEMAND_SUCCESS, "Claimed %s x%s from the delivered demand order");
+        add(Util_MessageKeys.MARKET_CONFIRM_DEMAND_OPERATOR_NOTICE, "%s claimed %s x%s from your delivered demand order");
         add(Util_MessageKeys.MARKET_PURCHASE_NOT_FOUND, "This sales order no longer exists");
         add(Util_MessageKeys.MARKET_PURCHASE_WRONG_TYPE, "This order is not a sales order");
         add(Util_MessageKeys.MARKET_PURCHASE_SELF, "You cannot purchase your own sales order");

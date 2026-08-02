@@ -76,6 +76,24 @@ public final class MarketLedger {
         };
     }
 
+    public synchronized DeliveredDemandRemovalResult removeDeliveredDemandTransactional(UUID tradeId) {
+        Objects.requireNonNull(tradeId, "tradeId");
+        for (int index = 0; index < orders.size(); index++) {
+            MarketOrder order = orders.get(index);
+            if (!order.tradeId().equals(tradeId)) continue;
+            if (order.type() != MarketOrderType.DEMAND) return DeliveredDemandRemovalResult.failure(DeliveredDemandRemovalStatus.WRONG_ORDER_TYPE);
+            if (!order.delivered()) return DeliveredDemandRemovalResult.failure(DeliveredDemandRemovalStatus.NOT_DELIVERED);
+            requireRevisionCapacity();
+            orders.remove(index);
+            try { dirtyCallback.run(); }
+            catch (RuntimeException exception) { orders.add(index, order); return DeliveredDemandRemovalResult.failure(DeliveredDemandRemovalStatus.PERSIST_FAILED); }
+            int originalIndex = index;
+            revision++;
+            return DeliveredDemandRemovalResult.removed(new MarketOrderRemoval(order, () -> restoreRemoval(order, originalIndex)));
+        }
+        return DeliveredDemandRemovalResult.failure(DeliveredDemandRemovalStatus.NOT_FOUND);
+    }
+
     private RemovalAttempt removeMatching(UUID tradeId, MarketOrderType expectedType) {
         for (int index = 0; index < orders.size(); index++) {
             MarketOrder order = orders.get(index);

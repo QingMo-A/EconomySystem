@@ -103,3 +103,7 @@ Forge 1.20.1 now registers the common UUID-only sales-order removal message and 
 same common transaction service as NeoForge 1.21.1. Its inventory adapter touches only main inventory,
 fills compatible stacks before empty slots, restores all captured slots on failure, and never drops items.
 The canonical wire discriminator remains 15; protocols 13, 14 and 16 are not registered by this bridge work.
+
+Demand-order confirmation is now registered at canonical discriminator 13. Purchase, confirmation and sales
+removal share `Forge1201TransactionalInventoryAdapter`; it operates only on main inventory and restores every
+slot independently on rollback. Protocols 14 and 16 remain on their legacy path and are not migrated here.
