@@ -97,3 +97,9 @@ It performs authoritative order/Snapshot validation, main-inventory capacity and
 insertion, exact two-account payment, recoverable order removal, and independent rollback.
 A full inventory rejects the purchase without dropping items. Forge discriminators `13-16`
 remain unregistered; protocol `13` is next.
+# Sales-order removal bridge
+
+Forge 1.20.1 now registers the common UUID-only sales-order removal message and routes it through the
+same common transaction service as NeoForge 1.21.1. Its inventory adapter touches only main inventory,
+fills compatible stacks before empty slots, restores all captured slots on failure, and never drops items.
+The canonical wire discriminator remains 15; protocols 13, 14 and 16 are not registered by this bridge work.

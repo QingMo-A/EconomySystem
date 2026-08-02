@@ -35,7 +35,7 @@ public class MarketSavedData extends SavedData {
     public boolean removeOrder(java.util.UUID id) { return ledger.remove(id); }
     public DemandDeliveryTransitionResult markDemandDelivered(java.util.UUID id) { return ledger.markDemandDelivered(id); }
     public DemandOrderRemovalResult removeUndeliveredDemand(java.util.UUID id) { return ledger.removeUndeliveredDemand(id); }
-    public com.mo.economy_system.common.market.SalesOrderRemovalResult removeSalesForPurchase(java.util.UUID id) { return ledger.removeSalesForPurchase(id); }
+    public com.mo.economy_system.common.market.SalesOrderRemovalResult removeSalesTransactional(java.util.UUID id) { return ledger.removeSalesTransactional(id); }
 
     public List<MarketItem> getMarketItems() {
         List<MarketItem> result = new ArrayList<>();

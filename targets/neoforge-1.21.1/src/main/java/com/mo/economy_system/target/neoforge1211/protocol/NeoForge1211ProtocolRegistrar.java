@@ -8,7 +8,6 @@ import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_ConfirmDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_DeliverDemandOrder;
 import com.mo.economy_system.network.packets.economy_system.demand_order.Packet_RemoveDemandOrder;
-import com.mo.economy_system.network.packets.economy_system.sales_order.Packet_RemoveSalesOrder;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.protocol.EconomyMessageDirection;
 import com.mo.economy_system.protocol.EconomyMessageSpec;
@@ -41,9 +40,9 @@ public final class NeoForge1211ProtocolRegistrar {
         bindCommon(registrar, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataHandlers::request);
         bindCommon(registrar, EconomyMessages.MARKET_DATA_RESPONSE, NeoForge1211MarketDataHandlers::response);
         bindCommon(registrar, EconomyMessages.PURCHASE_SALES_ORDER, NeoForge1211PurchaseSalesOrderHandler::handle);
+        bindCommon(registrar, EconomyMessages.REMOVE_SALES_ORDER, NeoForge1211RemoveSalesOrderHandler::handle);
         bind(registrar, EconomyProtocol.CONFIRM_DEMAND_ORDER, Packet_ConfirmDemandOrder.TYPE, Packet_ConfirmDemandOrder.STREAM_CODEC, Packet_ConfirmDemandOrder::handle);
         bind(registrar, EconomyProtocol.DELIVER_DEMAND_ORDER, Packet_DeliverDemandOrder.TYPE, Packet_DeliverDemandOrder.STREAM_CODEC, Packet_DeliverDemandOrder::handle);
-        bind(registrar, EconomyProtocol.REMOVE_SALES_ORDER, Packet_RemoveSalesOrder.TYPE, Packet_RemoveSalesOrder.STREAM_CODEC, Packet_RemoveSalesOrder::handle);
         bind(registrar, EconomyProtocol.REMOVE_DEMAND_ORDER, Packet_RemoveDemandOrder.TYPE, Packet_RemoveDemandOrder.STREAM_CODEC, Packet_RemoveDemandOrder::handle);
         bind(registrar, EconomyProtocol.TERRITORY_DATA_REQUEST, Packet_TerritoryDataRequest.TYPE, Packet_TerritoryDataRequest.STREAM_CODEC, Packet_TerritoryDataRequest::handle);
         bind(registrar, EconomyProtocol.TERRITORY_DATA_RESPONSE, Packet_TerritoryDataResponse.TYPE, Packet_TerritoryDataResponse.STREAM_CODEC, Packet_TerritoryDataResponse::handle);

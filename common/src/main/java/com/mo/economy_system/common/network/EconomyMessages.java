@@ -47,6 +47,8 @@ public final class EconomyMessages {
             new EconomyMessageType<>(EconomyProtocol.MARKET_DATA_RESPONSE, MarketDataResponseMessage.class);
     public static final EconomyMessageType<PurchaseSalesOrderMessage> PURCHASE_SALES_ORDER =
             new EconomyMessageType<>(EconomyProtocol.PURCHASE_SALES_ORDER, PurchaseSalesOrderMessage.class);
+    public static final EconomyMessageType<RemoveSalesOrderMessage> REMOVE_SALES_ORDER =
+            new EconomyMessageType<>(EconomyProtocol.REMOVE_SALES_ORDER, RemoveSalesOrderMessage.class);
 
     public static final EconomyMessageType<ServerPlayerListRequestMessage> SERVER_PLAYER_LIST_REQUEST =
             new EconomyMessageType<>(

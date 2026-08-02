@@ -158,3 +158,12 @@ git diff --check
 - 成功提交后才发送通知与 INVALIDATED；下一步为协议 13，Forge 仍未注册 13-16。
 
 若仅 ForgeGradle TLS 证书握手失败，当次命令可临时增加 `"-Dnet.minecraftforge.gradle.check.certs=false"`，禁止写入项目配置。每轮还要检查 Forge JAR 不包含 NeoForge target 类。
+# Protocol 12/removal checkpoint
+
+- Protocol 12 now uses shared materialization, transactional inventory insertion and rollback ports, with
+  fail-closed null handling for repository/insertion results and caught preview/capacity exceptions.
+- Sales-order removal is migrated to a UUID-only common message and a common service. The original seller
+  is the only receiver; offline-owner operator removal and insufficient inventory capacity are rejected.
+- Purchase and removal share `removeSalesTransactional`; the legacy removal packet has been deleted.
+- The append-only manifest is unchanged: removal is discriminator 15 because discriminator 13 is already
+  demand-order confirmation. The next migration is protocol 13 (`CONFIRM_DEMAND_ORDER`); 14 and 16 remain legacy.

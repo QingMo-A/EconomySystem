@@ -21,6 +21,7 @@ import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -155,6 +156,9 @@ public final class Forge1201NetworkChannel {
         CHANNEL.messageBuilder(PurchaseSalesOrderMessage.class, EconomyMessages.PURCHASE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
                 .encoder(Forge1201PurchaseSalesOrderCodec::encode).decoder(Forge1201PurchaseSalesOrderCodec::decode)
                 .consumerMainThread(Forge1201PurchaseSalesOrderHandler::handle).add();
+        CHANNEL.messageBuilder(RemoveSalesOrderMessage.class, EconomyMessages.REMOVE_SALES_ORDER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+                .encoder(Forge1201RemoveSalesOrderCodec::encode).decoder(Forge1201RemoveSalesOrderCodec::decode)
+                .consumerMainThread(Forge1201RemoveSalesOrderHandler::handle).add();
 
         CHANNEL.messageBuilder(
                         ServerPlayerListRequestMessage.class,
@@ -208,6 +212,7 @@ public final class Forge1201NetworkChannel {
     static void sendToServer(CreateDemandOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(MarketDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
     static void sendToServer(PurchaseSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+    static void sendToServer(RemoveSalesOrderMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
     static void sendToServer(ServerPlayerListRequestMessage message) {
         requireRegistered();

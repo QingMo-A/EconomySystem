@@ -65,7 +65,7 @@ public final class MarketLedger {
         return DemandOrderRemovalResult.failure(DemandOrderRemovalStatus.NOT_FOUND);
     }
 
-    public synchronized SalesOrderRemovalResult removeSalesForPurchase(UUID tradeId) {
+    public synchronized SalesOrderRemovalResult removeSalesTransactional(UUID tradeId) {
         Objects.requireNonNull(tradeId, "tradeId");
         RemovalAttempt attempt = removeMatching(tradeId, MarketOrderType.SALES);
         return switch (attempt.status()) {

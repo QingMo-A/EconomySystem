@@ -83,18 +83,18 @@ class MarketLedgerTest {
     @Test void transactionalSalesRemovalRestoresOriginalIndexAndAdvancesRevision() {
         MarketLedger ledger=new MarketLedger(()->{});MarketOrder first=order(MarketOrderType.DEMAND,false),sale=order(MarketOrderType.SALES,false),last=order(MarketOrderType.DEMAND,false);
         ledger.loadFromPersistence(List.of(first,sale,last),4);
-        assertEquals(SalesOrderRemovalStatus.WRONG_ORDER_TYPE,ledger.removeSalesForPurchase(first.tradeId()).status());
-        assertEquals(SalesOrderRemovalStatus.NOT_FOUND,ledger.removeSalesForPurchase(UUID.randomUUID()).status());
-        SalesOrderRemovalResult removed=ledger.removeSalesForPurchase(sale.tradeId());assertEquals(SalesOrderRemovalStatus.REMOVED,removed.status());assertEquals(5,ledger.revision());assertEquals(List.of(first,last),ledger.orders());
+        assertEquals(SalesOrderRemovalStatus.WRONG_ORDER_TYPE,ledger.removeSalesTransactional(first.tradeId()).status());
+        assertEquals(SalesOrderRemovalStatus.NOT_FOUND,ledger.removeSalesTransactional(UUID.randomUUID()).status());
+        SalesOrderRemovalResult removed=ledger.removeSalesTransactional(sale.tradeId());assertEquals(SalesOrderRemovalStatus.REMOVED,removed.status());assertEquals(5,ledger.revision());assertEquals(List.of(first,last),ledger.orders());
         assertEquals(MarketOrderRestoreResult.RESTORED,removed.removal().restore().restore());assertEquals(6,ledger.revision());assertEquals(List.of(first,sale,last),ledger.orders());
         assertEquals(MarketOrderRestoreResult.DUPLICATE_ID,removed.removal().restore().restore());
     }
 
     @Test void salesRemovalAndRestoreDirtyFailuresAreAtomic() {
         MarketOrder sale=order(MarketOrderType.SALES,false);MarketLedger removeFails=new MarketLedger(()->{throw new IllegalStateException();});removeFails.loadFromPersistence(List.of(sale),3);
-        assertEquals(SalesOrderRemovalStatus.PERSIST_FAILED,removeFails.removeSalesForPurchase(sale.tradeId()).status());assertEquals(List.of(sale),removeFails.orders());assertEquals(3,removeFails.revision());
+        assertEquals(SalesOrderRemovalStatus.PERSIST_FAILED,removeFails.removeSalesTransactional(sale.tradeId()).status());assertEquals(List.of(sale),removeFails.orders());assertEquals(3,removeFails.revision());
         AtomicInteger calls=new AtomicInteger();MarketLedger restoreFails=new MarketLedger(()->{if(calls.incrementAndGet()>1)throw new IllegalStateException();});restoreFails.loadFromPersistence(List.of(sale),7);
-        SalesOrderRemovalResult removed=restoreFails.removeSalesForPurchase(sale.tradeId());assertEquals(MarketOrderRestoreResult.PERSIST_FAILED,removed.removal().restore().restore());assertTrue(restoreFails.orders().isEmpty());assertEquals(8,restoreFails.revision());
+        SalesOrderRemovalResult removed=restoreFails.removeSalesTransactional(sale.tradeId());assertEquals(MarketOrderRestoreResult.PERSIST_FAILED,removed.removal().restore().restore());assertTrue(restoreFails.orders().isEmpty());assertEquals(8,restoreFails.revision());
     }
 
     private static MarketOrder order(MarketOrderType type,boolean delivered){return new MarketOrder(type,UUID.randomUUID(),MarketOrderCodecTest.item(),3,17,"seller",UUID.randomUUID(),10,99,delivered);}

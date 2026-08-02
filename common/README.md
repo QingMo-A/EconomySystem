@@ -134,3 +134,14 @@ main-inventory capacity, then uses transactional order removal and inventory ins
 Insufficient space rejects the purchase without ground drops. Payment failure independently
 rolls back inventory and restores the order at its original index. Notifications and market
 invalidation occur only after commit. Protocol `13` is next.
+# Bridge migration status (protocols 12 and sales-order removal)
+
+Sales-order purchase and removal now share loader-neutral transactional inventory ports and the single
+`MarketLedger.removeSalesTransactional` implementation. Removal requests carry only the authoritative
+trade UUID; the server revalidates ownership/operator permission, snapshot, receiver identity and full
+main-inventory capacity. Items are returned only to the original online seller. An operator request is
+rejected while that seller is offline, and insufficient capacity leaves the order unchanged without drops.
+
+The canonical append-only wire manifest remains authoritative: sales-order removal retains discriminator
+15 (13 is already assigned to demand-order confirmation). Protocols 13, 14 and 16 in that manifest remain
+legacy/unmigrated; the next migration target is the existing protocol 13 demand-order confirmation.
