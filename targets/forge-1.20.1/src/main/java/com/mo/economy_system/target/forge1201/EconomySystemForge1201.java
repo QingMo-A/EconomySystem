@@ -3,8 +3,10 @@ package com.mo.economy_system.target.forge1201;
 import com.mojang.logging.LogUtils;
 import com.mo.economy_system.EconomyConstants;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.item.Forge1201Items;
 import com.mo.economy_system.target.forge1201.network.Forge1201NetworkChannel;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 /**
@@ -20,6 +22,7 @@ public final class EconomySystemForge1201 {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public EconomySystemForge1201() {
+        Forge1201Items.register(FMLJavaModLoadingContext.get().getModEventBus());
         EconomyServices.init(new Forge1201Platform());
         Forge1201NetworkChannel.register();
         LOGGER.info("EconomySystem Forge 1.20.1 bridge target initialized");

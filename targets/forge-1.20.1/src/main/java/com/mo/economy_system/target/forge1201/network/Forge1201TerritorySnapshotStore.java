@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.network;
 
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
+import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +24,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
   private final List<Owned> territories;
 
   private Forge1201TerritorySnapshotStore() { this(List.of()); }
-  private Forge1201TerritorySnapshotStore(List<Owned> territories) { this.territories = List.copyOf(territories); }
+  Forge1201TerritorySnapshotStore(List<Owned> territories) { this.territories = List.copyOf(territories); }
 
   static Forge1201TerritorySnapshotStore get(ServerLevel level) {
     ServerLevel overworld = level.getServer().getLevel(Level.OVERWORLD);
@@ -40,6 +41,25 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     return territories.stream().filter(value -> !value.summary().ownerId().equals(requester)
         && value.authorizedMembers().stream().anyMatch(member -> member.playerId().equals(requester)))
         .map(Owned::summary).toList();
+  }
+
+  /** Resolves a complete teleport target without exposing the mutable NBT model. */
+  Optional<TerritoryTeleportTarget> find(UUID territoryId) {
+    if (territoryId == null) return Optional.empty();
+    return territories.stream()
+        .filter(value -> value.summary().territoryId().equals(territoryId))
+        .findFirst()
+        .map(Forge1201TerritorySnapshotStore::teleportTarget);
+  }
+
+  private static TerritoryTeleportTarget teleportTarget(Owned value) {
+    return new TerritoryTeleportTarget(
+        value.summary().territoryId(),
+        value.summary().name(),
+        value.summary().ownerId(),
+        value.authorizedMembers().stream().map(Member::playerId).collect(java.util.stream.Collectors.toUnmodifiableSet()),
+        value.summary().dimensionId(),
+        value.backpoint());
   }
 
   private static Forge1201TerritorySnapshotStore load(CompoundTag root) {

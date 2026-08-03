@@ -38,5 +38,17 @@
   "message.territory.sync_failed": "领地数据同步失败，请重试",
   "screen.territory.title": "我的领地",
   "key.categories.economy_system": "经济系统",
-  "key.economy_system.open_screen": "打开领地页面"
+  "key.economy_system.open_screen": "打开领地页面",
+  "button.territory.teleport": "传送",
+  "item.economy_system.recall_potion": "回忆药水",
+  "message.teleport.target_not_found": "未找到目标领地",
+  "message.teleport.no_permission": "你没有权限传送到该领地",
+  "message.teleport.no_backpoint": "该领地没有设置回城点",
+  "message.teleport.dimension_not_found": "目标维度不可用",
+  "message.teleport.unsafe_destination": "领地回城点不安全",
+  "message.teleport.no_potion": "传送需要一瓶回忆药水",
+  "message.teleport.cooldown": "请稍后再尝试传送",
+  "message.teleport.failed": "传送失败",
+  "message.teleport.rollback_failed": "传送失败且回忆药水无法恢复，请联系管理员",
+  "message.teleport.success": "已传送至 %s"
 }

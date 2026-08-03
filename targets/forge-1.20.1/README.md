@@ -76,17 +76,17 @@ generates identity and timestamps, freezes `totalPrice` once without listing tax
 refunds it if the atomic ledger add fails. Forge registers discriminator `9` exactly once;
 later market discriminators remain unregistered.
 
-Protocols 12 through 18 are migrated on both targets. Territory request 17 carries only
+Protocols 12 through 19 are migrated on both targets. Territory request 17 carries only
 the request ID and response 18 uses explicit, bounded snapshots instead of Territory NBT.
 Forge captures its existing `territory_data` persistence into full owned snapshots and
-minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19
-and later territory actions remain legacy.
+minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19 is the
+UUID-only teleport transaction described below; protocol 20 and later territory actions remain legacy.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
 compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
 repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
-The verified suite contains 199 shared-source tests, 243 Forge tests, and 244 NeoForge tests.
+The verified protocol-19 suite contains 211 shared-source tests, 257 Forge tests, and 257 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -126,7 +126,14 @@ Responses apply only to the current page request ID and commit after complete re
 or the 200-tick timeout exposes retry without clearing old page data.
 
 `Forge1201TerritorySnapshotStore` is the sole Forge `territory_data` SavedData type. It is an overworld-normalized,
-read-only compatibility adapter for protocols 17/18; there is no Forge territory create/delete/authorize write
-path before protocol 19. It no longer clamps invalid buff levels or upgrade steps, unknown/missing permissions
-retain the historical `MEMBERS` fallback, and non-canonical dimension IDs fail closed. Protocol 19 and later
-territory mutations remain legacy and are not supported by this adapter.
+read-only compatibility adapter for protocols 17/18 and the authoritative UUID lookup for protocol 19; there is
+still no Forge territory create/delete/authorize write path. It no longer clamps invalid buff levels or upgrade
+steps, unknown/missing permissions retain the historical `MEMBERS` fallback, and non-canonical dimension IDs
+fail closed.
+
+Protocol 19 is registered at canonical discriminator 19 as a UUID-only C2S message. Forge registers the missing
+`economy_system:recall_potion` as a stack-size-one, fire-resistant item and supplies its model, texture and names.
+The target-local read-only territory page adds an explicit translated teleport button to each owned/authorized
+row with client debounce. All authority remains server-side: the shared service re-reads the store, checks current
+owner/member access, validates the exact landing point, reserves one main-inventory potion, verifies arrival and
+rolls the potion back on failure. Only an expiring POST_TELEPORT ticket is used. Protocol 20+ remains legacy.

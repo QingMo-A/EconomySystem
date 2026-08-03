@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
+import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import org.junit.jupiter.api.Test;
 
 class Forge1201TerritorySnapshotStoreTest {
@@ -52,6 +55,32 @@ class Forge1201TerritorySnapshotStoreTest {
     buff.putInt("max_Level", 3);
     buff.putInt("level", 4);
     assertThrows(IllegalArgumentException.class, () -> Forge1201TerritorySnapshotStore.buff(buff));
+  }
+
+  @Test void findBuildsOwnerAndAuthorizedTeleportTarget() {
+    CompoundTag tag = validTerritory();
+    CompoundTag backpoint = new CompoundTag();
+    backpoint.putInt("BackX", 2);
+    backpoint.putInt("BackY", 64);
+    backpoint.putInt("BackZ", 3);
+    tag.put("Backpoint", backpoint);
+    UUID memberId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    CompoundTag member = new CompoundTag();
+    member.putUUID("PlayerUUID", memberId);
+    member.putString("PlayerName", "Member");
+    ListTag members = new ListTag();
+    members.add(member);
+    tag.put("AuthorizedPlayers", members);
+
+    var owned = Forge1201TerritorySnapshotStore.capture(tag);
+    var store = new Forge1201TerritorySnapshotStore(List.of(owned));
+    TerritoryTeleportTarget target = store.find(owned.summary().territoryId()).orElseThrow();
+    assertEquals(owned.summary().name(), target.territoryName());
+    assertEquals(owned.summary().ownerId(), target.ownerId());
+    assertTrue(target.permits(owned.summary().ownerId()));
+    assertTrue(target.permits(memberId));
+    assertTrue(target.backpoint().isPresent());
+    assertTrue(store.find(UUID.randomUUID()).isEmpty());
   }
 
   private static CompoundTag validTerritory() {

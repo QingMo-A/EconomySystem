@@ -276,7 +276,7 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 - `TerritoryDataResponseMessage`
 - `Packet_SingleTerritoryDataRequest`
 - `Packet_SingleTerritoryDataResponse`
-- `Packet_TeleportToTerritory`
+- `TeleportToTerritoryMessage`
 - `Packet_InvitePlayer`
 - `Packet_RemoveTerritory`
 - `Packet_RemovePlayer`
@@ -735,6 +735,8 @@ EconomySystem.LOGGER.error(..., e);
 - 将 `MarketItem.type` 改为稳定 ID 并兼容旧存档。
 
 ### 第三阶段：完善领地系统
+
+协议 17–19 已完成 bridge 迁移；协议 20 及之后仍保持 legacy，必须按单协议任务继续迁移。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
 - 将领地价格放入配置。

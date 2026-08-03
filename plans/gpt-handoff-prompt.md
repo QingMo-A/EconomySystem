@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，协议 12–18 已迁移；协议 19 及之后的领地操作尚未开始。
+协议 10/11 已正式关闭，协议 12–19 已迁移；协议 20 及之后的领地操作尚未开始。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff
@@ -46,16 +46,16 @@ git diff --check
 Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Protocols 12–18 are migrated. Do not renumber the append-only manifest; protocol 19 and later territory actions have not started.
+Protocols 12–19 are migrated. Protocol 19 is UUID-only and uses the shared safe-landing, cooldown and recall-potion transaction service. Do not renumber the append-only manifest; protocol 20 and later territory actions have not started.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-199 shared-source tests, 243 Forge 1.20.1 tests, and 244 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+211 shared-source tests, 257 Forge 1.20.1 tests, and 257 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
 shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
 refund semantics and invalidation on CHANGED/UNKNOWN. Territory response 18 is NBT-free,
 uses full owned/minimal authorized snapshots, enforces 1 MiB budgets, and commits only the
-active request ID after complete restore. Do not start protocol 19 without a new task.
+active request ID after complete restore. Protocol 19 is complete; do not start protocol 20 without a new task.
 Protocol 16 hardening is closed: illegal result/outcome combinations are rejected, mismatched removals are
 restored before failure, ORDER_CHANGED has no stale transaction order, and target logs combine all errors.
 
@@ -67,4 +67,4 @@ restore failure, and a 200-tick timeout end loading and allow a new-ID retry. Fo
 territory page because the NeoForge root UI is excluded from its build, and its client dispatch is hidden behind
 a physical-side-safe indirection. Forge `territory_data` remains a sole overworld read-only protocol-17/18
 adapter: invalid buffs/dimensions fail closed and unknown permissions fall back to MEMBERS. NeoForge treats
-historical null buff upgrade costs as empty. Do not migrate protocol 19 or later operations without a new task.
+historical null buff upgrade costs as empty. Protocol 19 now re-reads server territory authority, uses a 20-tick bounded limiter, validates `backpoint.above()`, reserves exactly one main-inventory recall potion, verifies arrival and rolls back on failure. Do not migrate protocol 20 or later operations without a new task.

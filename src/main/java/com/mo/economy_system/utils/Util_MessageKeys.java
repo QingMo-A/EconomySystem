@@ -357,6 +357,9 @@ public class Util_MessageKeys {
   public static final String TELEPORT_NO_POTION = "message.teleport.no_potion";
   public static final String TELEPORT_SUCCESS = "message.teleport.success";
   public static final String TELEPORT_FAILED = "message.teleport.failed";
+  public static final String TELEPORT_UNSAFE_DESTINATION = "message.teleport.unsafe_destination";
+  public static final String TELEPORT_COOLDOWN = "message.teleport.cooldown";
+  public static final String TELEPORT_ROLLBACK_FAILED = "message.teleport.rollback_failed";
 
   // Screen_About | 关于页
   public static final String ABOUT_TITLE_KEY = "screen.about.title";

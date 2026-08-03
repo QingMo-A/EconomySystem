@@ -315,6 +315,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.TELEPORT_NO_POTION, "§c传送失败，你没有足够的回忆药水！");
     add(Util_MessageKeys.TELEPORT_SUCCESS, "§a已成功传送到领地: %s");
     add(Util_MessageKeys.TELEPORT_FAILED, "§c传送失败，发生未知错误！");
+    add(Util_MessageKeys.TELEPORT_UNSAFE_DESTINATION, "§c领地回城点不安全，请联系领地主人修复！");
+    add(Util_MessageKeys.TELEPORT_COOLDOWN, "§e请稍后再尝试传送。");
+    add(Util_MessageKeys.TELEPORT_ROLLBACK_FAILED, "§c传送失败且回忆药水无法恢复，请联系管理员检查状态！");
 
     // Screen_About | 关于页
     add(Util_MessageKeys.ABOUT_TITLE_KEY, "关于");

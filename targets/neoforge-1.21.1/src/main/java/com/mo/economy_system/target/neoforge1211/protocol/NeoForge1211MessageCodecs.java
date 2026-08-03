@@ -24,7 +24,9 @@ import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
+import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
@@ -418,6 +420,17 @@ public final class NeoForge1211MessageCodecs {
           }
           public TerritoryDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
             return TerritoryDataWireCodec.decodeResponse(buffer);
+          }
+        });
+    register(
+        codecs,
+        EconomyMessages.TELEPORT_TO_TERRITORY,
+        new NeoForge1211MessageCodec<>() {
+          public void encode(TeleportToTerritoryMessage message, RegistryFriendlyByteBuf buffer) {
+            TerritoryTeleportWireCodec.encode(message, buffer);
+          }
+          public TeleportToTerritoryMessage decode(RegistryFriendlyByteBuf buffer) {
+            return TerritoryTeleportWireCodec.decode(buffer);
           }
         });
     register(

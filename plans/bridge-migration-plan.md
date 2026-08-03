@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
-- 验证套件包含 shared-source 199 项、Forge 1.20.1 243 项和 NeoForge 1.21.1 244 项测试。
+- 协议 19 完成后的验证套件包含 shared-source 211 项、Forge 1.20.1 257 项和 NeoForge 1.21.1 257 项测试，`buildAllTargets --rerun-tasks` 通过。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -135,7 +135,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 完整回归为 Forge 1.20.1 共 109 项、NeoForge 1.21.1 共 110 项，`buildAllTargets --rerun-tasks` 通过。
 
 - 阶段 C：订单成交、取消与配送箱 `12..18`、`31..33`；
-- 阶段 D：领地协议 `19..22`、`36..43`；
+- 阶段 D：领地协议 `19..22`、`36..43`（协议 19 已完成，下一项为 20）；
 - 阶段 E：安全重构后再处理 `23..30`。
 
 阶段 C 必须保证成交、取消和领取幂等；扣款、入账、订单移除和配送采用明确事务顺序及补偿路径；配送列表返回不可变副本，成功放入背包后才删除记录。阶段 D 继续以 NeoForge 1.21.1 权限行为为基线。阶段 E 开始前必须完成路径规范化、允许目录、会话所有权、单块/总大小/块数限制、超时清理、防重放、防跨请求拼接和服务端权限开关。
@@ -181,7 +181,7 @@ git diff --check
   C2S message and an NBT-free snapshot response. Owned territories contain complete
   members/rules/buffs/costs/backpoint data; authorized territories contain summaries
   only. Both targets enforce identical nested limits plus 1 MiB estimated/wire budgets,
-  and clients reject stale responses before atomic UI commit. Protocol 19+ remains legacy.
+  and clients reject stale responses before atomic UI commit. Protocol 19 is migrated below; protocol 20+ remains legacy.
 - Protocol 14 hardening is closed: authoritative requester reporting, expected-order transition,
   exact supplier credit, independent payment/inventory compensation, and shared adapter contract
   coverage are complete. Protocol 16 now uses a UUID-only common request, expected-order removal,
@@ -203,5 +203,8 @@ git diff --check
 - Forge reads the sole overworld `territory_data` SavedData through a read-only protocol-17/18 adapter.
 - Invalid Forge buffs and dimensions fail closed; unknown/missing permissions fall back to `MEMBERS`;
   NeoForge maps historical null upgrade-cost lists to empty lists.
-- Protocol 19 and every later territory operation remain unmigrated. The next migration is protocol 19 only
+- Protocol 19 is migrated and hardened: UUID-only wire data, authoritative owner/member checks, bounded server
+  cooldown, exact safe landing validation, POST_TELEPORT chunk preparation, verified arrival, and transactional
+  recall-potion rollback are shared across targets. Forge adds only the minimal read-only page teleport action.
+- Protocol 20 and every later territory operation remain unmigrated. The next migration is protocol 20 only.
   after a separate task.

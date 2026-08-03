@@ -64,7 +64,7 @@ maintaining independent registration order.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
   restored and recaptured by both targets. The complete verified suite runs 199 shared-source,
-  243 Forge 1.20.1, and 244 NeoForge 1.21.1 tests with no failures.
+  257 Forge 1.20.1, and 257 NeoForge 1.21.1 tests with no failures (211 shared-source tests).
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -100,7 +100,7 @@ maintaining independent registration order.
   18 uses bounded, NBT-free snapshots: owners receive complete management data while
   authorized members receive summary-only data. Both codecs enforce the same 1 MiB
   estimated and raw wire budgets, and clients reject stale request IDs before atomically
-  committing restored lists. Protocol 19 and later territory operations remain legacy.
+  committing restored lists. Protocol 19 is migrated separately; protocol 20 and later territory operations remain legacy.
 - Protocol 14 hardening is complete: delivery uses expected-order atomic transition, exact supplier
   credit without charging the requester again, transactional main-inventory removal, and independent
   payment/inventory compensation. Failure reports carry the authoritative requester ID and per-stage
@@ -175,8 +175,8 @@ now leaves inventory restoration fields unset until rollback actually runs.
 
 Protocol 18 now carries the explicit stable kind IDs `data` and `error`; enum ordinals are not wire data.
 `DATA` retains the complete-owned/minimal-authorized boundary, while `ERROR` is an empty, detail-free sync
-failure signal. The page request ID is the only stale-response authority. The dead global
-The dead global territory response tracker has been removed.
+failure signal. The page request ID is the only stale-response authority; the dead global
+territory response tracker has been removed.
 
 `TerritoryDataClientApplier` restores every owned and authorized entry before a single commit, so restore
 failure cannot publish a partial page. Current ERROR responses and 200-tick timeouts end loading without
@@ -185,5 +185,12 @@ capture, response construction, and DATA-send failures attempt exactly one ERROR
 
 `TerritoryDataWireCodec` is now the only NBT-free field implementation used by both targets. It writes to a
 temporary buffer, checks the 1 MiB raw budget, then copies into the destination, so a rejected encode leaves
-the destination unchanged. Stable DATA and ERROR golden fixtures run in both target suites. Protocol 19 and
-all later territory operations remain unmigrated.
+the destination unchanged. Stable DATA and ERROR golden fixtures run in both target suites.
+
+Protocol 19 is a common UUID-only C2S message with an exact 16-byte, NBT-free wire codec. The common teleport
+service re-reads the authoritative territory, permits only owner or current authorized members, validates the
+dimension and exact `backpoint.above()` destination, applies a bounded 20-tick server cooldown, and performs
+recall-potion removal/rollback as a transaction. It uses an expiring `POST_TELEPORT` ticket and never persists
+a forced chunk. Supported results are SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, NO_BACKPOINT,
+DIMENSION_NOT_FOUND, UNSAFE_DESTINATION, NO_RECALL_POTION, COOLDOWN, TELEPORT_FAILED and ROLLBACK_FAILED.
+Protocol 20 and later territory operations remain unmigrated.

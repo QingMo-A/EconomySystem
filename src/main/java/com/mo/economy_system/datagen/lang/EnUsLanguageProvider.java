@@ -363,6 +363,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.TELEPORT_NO_POTION, "Teleport No Potion");
     add(Util_MessageKeys.TELEPORT_SUCCESS, "Teleport Success: %s");
     add(Util_MessageKeys.TELEPORT_FAILED, "Teleport Failed");
+    add(Util_MessageKeys.TELEPORT_UNSAFE_DESTINATION, "The territory backpoint is unsafe. Ask its owner to repair it.");
+    add(Util_MessageKeys.TELEPORT_COOLDOWN, "Please wait before teleporting again.");
+    add(Util_MessageKeys.TELEPORT_ROLLBACK_FAILED, "Teleport failed and the recall potion could not be restored. Contact an administrator.");
 
     // Screen_About | 关于页
     add(Util_MessageKeys.ABOUT_TITLE_KEY, "About Title");

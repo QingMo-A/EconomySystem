@@ -74,12 +74,8 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(
         registrar, EconomyMessages.TERRITORY_DATA_RESPONSE,
         NeoForge1211TerritoryDataHandlers::handleResponse);
-    bind(
-        registrar,
-        EconomyProtocol.TELEPORT_TO_TERRITORY,
-        Packet_TeleportToTerritory.TYPE,
-        Packet_TeleportToTerritory.STREAM_CODEC,
-        Packet_TeleportToTerritory::handle);
+    bindCommon(registrar, EconomyMessages.TELEPORT_TO_TERRITORY,
+        NeoForge1211TerritoryTeleportHandler::handle);
     bind(
         registrar,
         EconomyProtocol.INVITE_PLAYER,

@@ -27,7 +27,9 @@ import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
+import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
@@ -235,6 +237,13 @@ public final class Forge1201NetworkChannel {
         .decoder(Forge1201TerritoryDataCodec::decodeResponse)
         .consumerMainThread(Forge1201TerritoryDataClientDispatch::handle)
         .add();
+    CHANNEL
+        .messageBuilder(TeleportToTerritoryMessage.class,
+            EconomyMessages.TELEPORT_TO_TERRITORY.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(TerritoryTeleportWireCodec::encode)
+        .decoder(TerritoryTeleportWireCodec::decode)
+        .consumerMainThread(Forge1201TerritoryTeleportHandler::handle)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -323,6 +332,11 @@ public final class Forge1201NetworkChannel {
     CHANNEL.sendToServer(message);
   }
   static void sendToServer(TerritoryDataRequestMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
+
+  static void sendToServer(TeleportToTerritoryMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }

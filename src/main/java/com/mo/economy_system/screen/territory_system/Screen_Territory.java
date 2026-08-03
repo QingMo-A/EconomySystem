@@ -2,7 +2,7 @@ package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.territory_system.Packet_TeleportToTerritory;
+import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.client.TerritoryDataClientApplier;
 import com.mo.economy_system.common.client.TerritoryRequestIds;
@@ -503,7 +503,7 @@ public class Screen_Territory extends Screen
                 Territory territory = filteredTerritories.get(btnArea.territoryIndex());
 
                 if ("teleport".equals(btnArea.actionType())) {
-                    EconomySystem_NetworkManager.sendToServer(new Packet_TeleportToTerritory(territory.getTerritoryID()));
+                    EconomySystem_NetworkManager.sendToServer(new TeleportToTerritoryMessage(territory.getTerritoryID()));
                 } else if ("manage".equals(btnArea.actionType())) {
                     if (this.minecraft != null) {
                         this.minecraft.setScreen(new Screen_ManageTerritory(territory));
