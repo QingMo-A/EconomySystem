@@ -1,5 +1,6 @@
 package com.mo.economy_system.target.forge1201.network;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +13,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.Level;
 
 /** Read-only 1.20.1 persistence adapter; NBT never crosses the network boundary. */
 final class Forge1201TerritorySnapshotStore extends SavedData {
@@ -23,7 +26,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
   private Forge1201TerritorySnapshotStore(List<Owned> territories) { this.territories = List.copyOf(territories); }
 
   static Forge1201TerritorySnapshotStore get(ServerLevel level) {
-    return level.getDataStorage().computeIfAbsent(
+    ServerLevel overworld = level.getServer().getLevel(Level.OVERWORLD);
+    if (overworld == null) throw new IllegalStateException("overworld is unavailable");
+    return overworld.getDataStorage().computeIfAbsent(
         Forge1201TerritorySnapshotStore::load, Forge1201TerritorySnapshotStore::new, DATA_NAME);
   }
 
@@ -44,11 +49,12 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     return new Forge1201TerritorySnapshotStore(territories);
   }
 
-  private static Owned capture(CompoundTag tag) {
+  static Owned capture(CompoundTag tag) {
+    String dimension = canonicalDimension(tag.getString("Dimension"));
     Summary summary = new Summary(tag.getUUID("TerritoryID"), tag.getUUID("OwnerUUID"),
         tag.getString("OwnerName"), tag.getString("Name"),
         new Position(tag.getInt("X1"), tag.getInt("Y1"), tag.getInt("Z1")),
-        new Position(tag.getInt("X2"), tag.getInt("Y2"), tag.getInt("Z2")), tag.getString("Dimension"));
+        new Position(tag.getInt("X2"), tag.getInt("Y2"), tag.getInt("Z2")), dimension);
     List<Member> members = new ArrayList<>();
     for (Tag value : tag.getList("AuthorizedPlayers", Tag.TAG_COMPOUND)) {
       CompoundTag member = (CompoundTag) value;
@@ -64,8 +70,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     if (tag.contains("Permissions", Tag.TAG_COMPOUND)) {
       CompoundTag permissions = tag.getCompound("Permissions");
       for (RuleAction action : RuleAction.values()) {
-        String stored = permissions.getString(action.name());
-        if (!stored.isEmpty()) levels.put(action, RuleLevel.valueOf(stored));
+        levels.put(action, permission(permissions.getString(action.name())));
       }
     }
     List<Rule> rules = levels.entrySet().stream().map(value -> new Rule(value.getKey(), value.getValue())).toList();
@@ -74,7 +79,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     return new Owned(summary, members, backpoint, rules, buffs);
   }
 
-  private static Buff buff(CompoundTag tag) {
+  static Buff buff(CompoundTag tag) {
     List<BuffUpgradeCost> costs = new ArrayList<>();
     for (Tag value : tag.getList("upgrade_Cost", Tag.TAG_COMPOUND)) {
       CompoundTag cost = (CompoundTag) value;
@@ -85,12 +90,31 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
       }
       costs.add(new BuffUpgradeCost(items, cost.getInt("xp"), cost.getInt("df_coin")));
     }
-    int maxLevel = tag.getInt("max_Level");
-    int level = tag.getInt("level");
-    int step = tag.getInt("single_Upgrade_Level");
     return new Buff(tag.getString("id"), tag.getString("displayText"), tag.getString("effectId"),
-        tag.getBoolean("initialUnlockState"), Math.min(tag.getInt("initialLevel"), maxLevel),
-        step <= 0 ? 1 : step, maxLevel, tag.getBoolean("unlocked"), Math.min(level, maxLevel), costs);
+        tag.getBoolean("initialUnlockState"), tag.getInt("initialLevel"),
+        tag.getInt("single_Upgrade_Level"), tag.getInt("max_Level"),
+        tag.getBoolean("unlocked"), tag.getInt("level"), costs);
+  }
+
+  static RuleLevel permission(String stored) {
+    return switch (stored) {
+      case "OWNER_ONLY" -> RuleLevel.OWNER_ONLY;
+      case "EVERYONE" -> RuleLevel.EVERYONE;
+      case "MEMBERS" -> RuleLevel.MEMBERS;
+      default -> RuleLevel.MEMBERS;
+    };
+  }
+
+  static String canonicalDimension(String value) {
+    if (value == null || value.isEmpty()
+        || value.length() > EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH) {
+      throw new IllegalArgumentException("invalid territory dimension");
+    }
+    ResourceLocation parsed = ResourceLocation.tryParse(value);
+    if (parsed == null || !parsed.toString().equals(value)) {
+      throw new IllegalArgumentException("invalid territory dimension: " + value);
+    }
+    return value;
   }
 
   @Override public CompoundTag save(CompoundTag tag) {

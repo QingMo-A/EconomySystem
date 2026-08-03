@@ -19,7 +19,7 @@ public final class TerritoryNetworkSnapshots {
     return new Summary(
         territory.getTerritoryID(), territory.getOwnerUUID(), territory.getOwnerName(),
         territory.getName(), position(territory.getPos1()), position(territory.getPos2()),
-        territory.getDimension().location().toString());
+        canonicalDimension(territory.getDimension() == null ? null : territory.getDimension().location().toString()));
   }
 
   public static Owned owned(Territory territory) {
@@ -65,10 +65,18 @@ public final class TerritoryNetworkSnapshots {
   private static BlockPos blockPos(Position value) { return new BlockPos(value.x(), value.y(), value.z()); }
 
   private static Buff buff(TerritoryBuff value) {
-    List<BuffUpgradeCost> costs = value.getUpgradeCost().stream().map(cost ->
-        new BuffUpgradeCost(cost.items.stream()
-            .map(item -> new ItemRequirement(item.item, item.count)).toList(), cost.xp, cost.df_coin))
-        .toList();
+    List<TerritoryBuffConfig.BuffUpgradeCost> rawCosts = value.getUpgradeCost();
+    if (rawCosts == null) rawCosts = List.of();
+    List<BuffUpgradeCost> costs = new ArrayList<>(rawCosts.size());
+    for (TerritoryBuffConfig.BuffUpgradeCost cost : rawCosts) {
+      if (cost == null || cost.items == null) throw new IllegalArgumentException("null territory buff cost");
+      List<ItemRequirement> items = new ArrayList<>(cost.items.size());
+      for (TerritoryBuffConfig.BuffUpgradeCost.ItemRequirement item : cost.items) {
+        if (item == null) throw new IllegalArgumentException("null territory buff cost item");
+        items.add(new ItemRequirement(item.item, item.count));
+      }
+      costs.add(new BuffUpgradeCost(items, cost.xp, cost.df_coin));
+    }
     return new Buff(value.getId(), value.getDisplayText(), value.getEffectId(),
         value.isInitialUnlockState(), value.getInitialLevel(), value.getSingleUpgradeLevel(),
         value.getMaxLevel(), value.isUnlocked(), value.getLevel(), costs);
@@ -122,5 +130,14 @@ public final class TerritoryNetworkSnapshots {
       case MEMBERS -> TerritoryPermissionLevel.MEMBERS;
       case EVERYONE -> TerritoryPermissionLevel.EVERYONE;
     };
+  }
+
+  private static String canonicalDimension(String value) {
+    if (value == null) throw new IllegalArgumentException("null territory dimension");
+    ResourceLocation location = ResourceLocation.tryParse(value);
+    if (location == null || !location.toString().equals(value)) {
+      throw new IllegalArgumentException("invalid territory dimension: " + value);
+    }
+    return value;
   }
 }

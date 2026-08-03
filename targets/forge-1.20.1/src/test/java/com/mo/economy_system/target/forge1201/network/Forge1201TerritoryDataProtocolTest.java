@@ -32,11 +32,21 @@ class Forge1201TerritoryDataProtocolTest {
     assertThrows(RuntimeException.class, () -> Forge1201TerritoryDataCodec.decodeRequest(
         new FriendlyByteBuf(Unpooled.buffer())));
     FriendlyByteBuf negative = new FriendlyByteBuf(Unpooled.buffer());
-    negative.writeLong(1); negative.writeInt(-1);
+    negative.writeUtf("data", 16); negative.writeLong(1); negative.writeInt(-1);
     assertThrows(RuntimeException.class, () -> Forge1201TerritoryDataCodec.decodeResponse(negative));
     FriendlyByteBuf trailing = new FriendlyByteBuf(Unpooled.buffer());
     Forge1201TerritoryDataCodec.encodeRequest(new TerritoryDataRequestMessage(1), trailing);
     trailing.writeByte(1);
     assertThrows(RuntimeException.class, () -> Forge1201TerritoryDataCodec.decodeRequest(trailing));
+  }
+
+  @Test void errorRoundTripAndUnknownKindAreRejected() {
+    FriendlyByteBuf error = new FriendlyByteBuf(Unpooled.buffer());
+    var expected = com.mo.economy_system.common.network.TerritoryDataResponseMessage.error(9);
+    Forge1201TerritoryDataCodec.encodeResponse(expected, error);
+    assertEquals(expected, Forge1201TerritoryDataCodec.decodeResponse(error));
+    FriendlyByteBuf unknown = new FriendlyByteBuf(Unpooled.buffer());
+    unknown.writeUtf("future", 16); unknown.writeLong(9);
+    assertThrows(RuntimeException.class, () -> Forge1201TerritoryDataCodec.decodeResponse(unknown));
   }
 }

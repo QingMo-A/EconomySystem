@@ -4,6 +4,7 @@ import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.territory.TerritoryDataQueryService;
+import com.mo.economy_system.common.territory.TerritoryDataServerService;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
@@ -19,13 +20,12 @@ public final class NeoForge1211TerritoryDataHandlers {
   public static void handleRequest(TerritoryDataRequestMessage message, IPayloadContext context) {
     context.enqueueWork(() -> {
       if (!(context.player() instanceof ServerPlayer player)) return;
-      try {
-        TerritoryDataResponseMessage response = TerritoryDataQueryService.query(
-            message, player.getUUID(), new Repository());
-        EconomySystem_NetworkManager.sendToClient(player, response);
-      } catch (RuntimeException error) {
-        EconomySystem.LOGGER.error("Territory sync failed player={} requestId={} stage=query",
-            player.getUUID(), message.requestId(), error);
+      boolean success = TerritoryDataServerService.serve(message, player.getUUID(), new Repository(),
+          response -> EconomySystem_NetworkManager.sendToClient(player, response),
+          (playerId, requestId, stage, owned, authorized, error) -> EconomySystem.LOGGER.error(
+              "Territory sync failed player={} requestId={} stage={} owned={} authorized={}",
+              playerId, requestId, stage, owned, authorized, error));
+      if (!success) {
         player.sendSystemMessage(Component.translatable("message.territory.sync_failed"));
       }
     });

@@ -233,7 +233,7 @@ public final class Forge1201NetworkChannel {
             EconomyMessages.TERRITORY_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
         .encoder(Forge1201TerritoryDataCodec::encodeResponse)
         .decoder(Forge1201TerritoryDataCodec::decodeResponse)
-        .consumerMainThread(Forge1201TerritoryDataHandlers::handleResponse)
+        .consumerMainThread(Forge1201TerritoryDataClientDispatch::handle)
         .add();
 
     CHANNEL

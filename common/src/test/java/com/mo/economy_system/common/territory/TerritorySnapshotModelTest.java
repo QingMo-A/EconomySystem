@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.common.network.TerritoryDataResponseKind;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,14 +46,29 @@ class TerritorySnapshotModelTest {
   @Test void responseIsDeeplyImmutableAndRejectsConflicts() {
     Owned owned = TerritoryTestFixtures.owned();
     ArrayList<Owned> source = new ArrayList<>(List.of(owned));
-    TerritoryDataResponseMessage response = new TerritoryDataResponseMessage(1, source, List.of());
+    TerritoryDataResponseMessage response = TerritoryDataResponseMessage.data(1, source, List.of());
     source.clear();
     assertEquals(1, response.owned().size());
     assertThrows(UnsupportedOperationException.class, () -> response.owned().clear());
-    assertThrows(IllegalArgumentException.class, () -> new TerritoryDataResponseMessage(1,
+    assertThrows(IllegalArgumentException.class, () -> TerritoryDataResponseMessage.data(1,
         List.of(owned, owned), List.of()));
-    assertThrows(IllegalArgumentException.class, () -> new TerritoryDataResponseMessage(1,
+    assertThrows(IllegalArgumentException.class, () -> TerritoryDataResponseMessage.data(1,
         List.of(owned), List.of(owned.summary())));
+  }
+
+  @Test void responseKindsUseStableIdsAndErrorCarriesNoData() {
+    assertEquals("data", TerritoryDataResponseKind.DATA.id());
+    assertEquals("error", TerritoryDataResponseKind.ERROR.id());
+    assertEquals(TerritoryDataResponseKind.DATA, TerritoryDataResponseKind.fromId("data"));
+    assertThrows(IllegalArgumentException.class, () -> TerritoryDataResponseKind.fromId("future"));
+    TerritoryDataResponseMessage error = TerritoryDataResponseMessage.error(3);
+    assertEquals(TerritoryDataResponseKind.ERROR, error.kind());
+    assertTrue(error.owned().isEmpty());
+    assertTrue(error.authorized().isEmpty());
+    assertThrows(IllegalArgumentException.class, () -> new TerritoryDataResponseMessage(
+        TerritoryDataResponseKind.ERROR, 3, List.of(TerritoryTestFixtures.owned()), List.of()));
+    assertThrows(NullPointerException.class, () -> new TerritoryDataResponseMessage(
+        null, 3, List.of(), List.of()));
   }
 
   @Test void nestedContentContributesToBudget() {

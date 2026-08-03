@@ -2,8 +2,10 @@ package com.mo.economy_system.network;
 
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.TerritoryDataResponseKind;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,14 +28,31 @@ public final class TerritoryDataWireCodec {
   }
 
   public static void encodeResponse(TerritoryDataResponseMessage message, FriendlyByteBuf buffer) {
-    int start = buffer.writerIndex();
-    buffer.writeLong(message.requestId());
-    buffer.writeInt(message.owned().size());
-    for (Owned value : message.owned()) writeOwned(buffer, value);
-    buffer.writeInt(message.authorized().size());
-    for (Summary value : message.authorized()) writeSummary(buffer, value);
-    if (buffer.writerIndex() - start > EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES) {
-      throw new IllegalArgumentException("territory response exceeds wire budget");
+    encodeResponse(message, buffer, EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES);
+  }
+
+  static void encodeResponse(
+      TerritoryDataResponseMessage message, FriendlyByteBuf buffer, int maximumBytes) {
+    if (maximumBytes < 0 || maximumBytes > EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES) {
+      throw new IllegalArgumentException("invalid territory wire budget");
+    }
+    FriendlyByteBuf temporary = new FriendlyByteBuf(Unpooled.buffer());
+    try {
+      temporary.writeUtf(message.kind().id(), 16);
+      temporary.writeLong(message.requestId());
+      if (message.kind() == TerritoryDataResponseKind.DATA) {
+        temporary.writeInt(message.owned().size());
+        for (Owned value : message.owned()) writeOwned(temporary, value);
+        temporary.writeInt(message.authorized().size());
+        for (Summary value : message.authorized()) writeSummary(temporary, value);
+      }
+      int length = temporary.readableBytes();
+      if (length > maximumBytes) {
+        throw new IllegalArgumentException("territory response exceeds wire budget");
+      }
+      buffer.writeBytes(temporary, temporary.readerIndex(), length);
+    } finally {
+      temporary.release();
     }
   }
 
@@ -41,7 +60,21 @@ public final class TerritoryDataWireCodec {
     if (buffer.readableBytes() > EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES) {
       throw new DecoderException("territory response exceeds wire budget");
     }
+    TerritoryDataResponseKind kind;
+    try {
+      kind = TerritoryDataResponseKind.fromId(buffer.readUtf(16));
+    } catch (IllegalArgumentException error) {
+      throw new DecoderException("invalid territory response kind", error);
+    }
     long requestId = buffer.readLong();
+    if (kind == TerritoryDataResponseKind.ERROR) {
+      requireConsumed(buffer);
+      try {
+        return TerritoryDataResponseMessage.error(requestId);
+      } catch (IllegalArgumentException error) {
+        throw new DecoderException("invalid territory error response", error);
+      }
+    }
     int ownedCount = count(buffer, EconomyNetworkLimits.MAX_TERRITORIES_PER_RESPONSE, "owned");
     List<Owned> owned = new ArrayList<>(ownedCount);
     for (int i = 0; i < ownedCount; i++) owned.add(readOwned(buffer));
@@ -51,7 +84,7 @@ public final class TerritoryDataWireCodec {
     for (int i = 0; i < authorizedCount; i++) authorized.add(readSummary(buffer));
     requireConsumed(buffer);
     try {
-      return new TerritoryDataResponseMessage(requestId, owned, authorized);
+      return TerritoryDataResponseMessage.data(requestId, owned, authorized);
     } catch (IllegalArgumentException error) {
       throw new DecoderException("invalid territory response", error);
     }

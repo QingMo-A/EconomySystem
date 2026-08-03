@@ -6,6 +6,7 @@ import com.mo.economy_system.common.territory.TerritoryTestFixtures;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Summary;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class TerritoryNetworkSnapshotsTest {
@@ -24,5 +25,17 @@ class TerritoryNetworkSnapshotsTest {
     Summary invalid = new Summary(snapshot.territoryId(), snapshot.ownerId(), snapshot.ownerName(),
         snapshot.name(), snapshot.pos1(), snapshot.pos2(), "not a resource id");
     assertThrows(IllegalArgumentException.class, () -> TerritoryNetworkSnapshots.restoreSummary(invalid));
+  }
+
+  @Test void nullUpgradeCostsUseHistoricalEmptyListSemantics() {
+    Territory restored = TerritoryNetworkSnapshots.restoreOwned(TerritoryTestFixtures.owned());
+    restored.getTerritoryBuffs().get(0).setUpgradeCost(null);
+    assertTrue(TerritoryNetworkSnapshots.owned(restored).buffs().get(0).upgradeCosts().isEmpty());
+  }
+
+  @Test void captureRejectsNullDimensionBeforeNetworkConstruction() {
+    Territory invalid = new Territory(UUID.randomUUID(), "Invalid", UUID.randomUUID(), "Owner",
+        0, 64, 0, 1, 65, 1, null, null);
+    assertThrows(IllegalArgumentException.class, () -> TerritoryNetworkSnapshots.summary(invalid));
   }
 }

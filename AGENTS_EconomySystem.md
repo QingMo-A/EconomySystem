@@ -272,8 +272,8 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 
 #### 领地系统
 
-- `Packet_TerritoryDataRequest`
-- `Packet_TerritoryDataResponse`
+- `TerritoryDataRequestMessage`
+- `TerritoryDataResponseMessage`
 - `Packet_SingleTerritoryDataRequest`
 - `Packet_SingleTerritoryDataResponse`
 - `Packet_TeleportToTerritory`

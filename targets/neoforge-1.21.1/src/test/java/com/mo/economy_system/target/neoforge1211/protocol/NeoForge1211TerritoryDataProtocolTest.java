@@ -39,8 +39,19 @@ class NeoForge1211TerritoryDataProtocolTest {
     assertThrows(RuntimeException.class, () -> NeoForge1211MessageCodecs.codec(
         EconomyMessages.TERRITORY_DATA_REQUEST).decode(buffer()));
     RegistryFriendlyByteBuf negative = buffer();
-    negative.writeLong(1); negative.writeInt(-1);
+    negative.writeUtf("data", 16); negative.writeLong(1); negative.writeInt(-1);
     assertThrows(RuntimeException.class, () -> NeoForge1211MessageCodecs.codec(
         EconomyMessages.TERRITORY_DATA_RESPONSE).decode(negative));
+  }
+
+  @Test void errorRoundTripAndUnknownKindAreRejected() {
+    var codec = NeoForge1211MessageCodecs.codec(EconomyMessages.TERRITORY_DATA_RESPONSE);
+    RegistryFriendlyByteBuf error = buffer();
+    var expected = com.mo.economy_system.common.network.TerritoryDataResponseMessage.error(9);
+    codec.encode(expected, error);
+    assertEquals(expected, codec.decode(error));
+    RegistryFriendlyByteBuf unknown = buffer();
+    unknown.writeUtf("future", 16); unknown.writeLong(9);
+    assertThrows(RuntimeException.class, () -> codec.decode(unknown));
   }
 }

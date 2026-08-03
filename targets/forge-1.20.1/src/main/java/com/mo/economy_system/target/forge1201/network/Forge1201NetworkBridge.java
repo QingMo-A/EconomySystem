@@ -21,7 +21,6 @@ import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
-import com.mo.economy_system.common.client.ClientTerritoryState;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import net.minecraft.server.level.ServerPlayer;
@@ -90,9 +89,7 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       return;
     }
     if (message.getClass() == TerritoryDataRequestMessage.class) {
-      TerritoryDataRequestMessage request = (TerritoryDataRequestMessage) message;
-      ClientTerritoryState.begin(request.requestId());
-      Forge1201NetworkChannel.sendToServer(request);
+      Forge1201NetworkChannel.sendToServer((TerritoryDataRequestMessage) message);
       return;
     }
     throw notPorted(message);

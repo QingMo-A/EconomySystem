@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
-- 验证套件包含 Forge 1.20.1 223 项测试和 NeoForge 1.21.1 226 项测试。
+- 验证套件包含 shared-source 199 项、Forge 1.20.1 243 项和 NeoForge 1.21.1 244 项测试。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -189,3 +189,19 @@ git diff --check
 - Protocol 16 hardening is closed: result/outcome invariants reject illegal states, repository contract
   violations attempt restoration, ORDER_CHANGED carries no stale expected order, and all transaction
   exceptions reach structured target logs. Protocol 14 no longer reports restoration before compensation.
+
+## Protocol 17/18 hardening completion
+
+- Canonical discriminators, IDs, directions, manifest order, and protocol version remain unchanged.
+- Response 18 uses explicit stable `data` / `error` kind IDs. ERROR carries no data or internal details.
+- The active page request ID is the only stale-response authority; the dead global tracker was deleted.
+- Both clients use one atomic applier. DATA restores completely before commit; stale DATA/ERROR is ignored.
+- Query/capture/response/DATA-send failure attempts one ERROR; ERROR-send failure is logged without recursion.
+- NeoForge and the target-local Forge page support retry and a 200-tick timeout with overflow-safe IDs.
+- Forge and NeoForge use the one common NBT-free codec, golden fixtures, and conservative 1 MiB budgets.
+- Oversized encode uses a temporary buffer and cannot change the destination writer index.
+- Forge reads the sole overworld `territory_data` SavedData through a read-only protocol-17/18 adapter.
+- Invalid Forge buffs and dimensions fail closed; unknown/missing permissions fall back to `MEMBERS`;
+  NeoForge maps historical null upgrade-cost lists to empty lists.
+- Protocol 19 and every later territory operation remain unmigrated. The next migration is protocol 19 only
+  after a separate task.

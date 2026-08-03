@@ -39,7 +39,7 @@ public final class TerritoryDataQueryService {
     sortedOwned.sort(Comparator.comparing(Owned::summary, order));
     List<Summary> sortedAuthorized = new ArrayList<>(authorized.values());
     sortedAuthorized.sort(order);
-    return new TerritoryDataResponseMessage(request.requestId(), sortedOwned, sortedAuthorized);
+    return TerritoryDataResponseMessage.data(request.requestId(), sortedOwned, sortedAuthorized);
   }
 
   public interface Repository {

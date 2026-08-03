@@ -9,7 +9,8 @@ public final class TerritoryResponseBudget {
   private TerritoryResponseBudget() {}
 
   public static int estimate(List<Owned> owned, List<Summary> authorized) {
-    long bytes = 16;
+    // Response kind, request id, both collection counts, and conservative framing slack.
+    long bytes = 32;
     for (Owned value : owned) {
       bytes += summary(value.summary()) + 8;
       for (Member member : value.authorizedMembers()) bytes += 16 + text(member.playerName());

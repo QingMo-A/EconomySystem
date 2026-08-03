@@ -63,8 +63,8 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 223
-  Forge 1.20.1 tests and 226 NeoForge 1.21.1 tests with no failures.
+  restored and recaptured by both targets. The complete verified suite runs 199 shared-source,
+  243 Forge 1.20.1, and 244 NeoForge 1.21.1 tests with no failures.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -170,3 +170,20 @@ Protocol 16 hardening closes construction invariants and repository-contract rec
 carries a stale preview as authoritative data, mismatched removed orders are restored before failure, and
 all repository/refund/restore exceptions are combined for target logs. Protocol 14 pre-compensation telemetry
 now leaves inventory restoration fields unset until rollback actually runs.
+
+## Territory protocols 17/18 hardening
+
+Protocol 18 now carries the explicit stable kind IDs `data` and `error`; enum ordinals are not wire data.
+`DATA` retains the complete-owned/minimal-authorized boundary, while `ERROR` is an empty, detail-free sync
+failure signal. The page request ID is the only stale-response authority. The dead global
+The dead global territory response tracker has been removed.
+
+`TerritoryDataClientApplier` restores every owned and authorized entry before a single commit, so restore
+failure cannot publish a partial page. Current ERROR responses and 200-tick timeouts end loading without
+clearing previously committed data, and retry allocates a new non-negative request ID. Server query,
+capture, response construction, and DATA-send failures attempt exactly one ERROR response.
+
+`TerritoryDataWireCodec` is now the only NBT-free field implementation used by both targets. It writes to a
+temporary buffer, checks the 1 MiB raw budget, then copies into the destination, so a rejected encode leaves
+the destination unchanged. Stable DATA and ERROR golden fixtures run in both target suites. Protocol 19 and
+all later territory operations remain unmigrated.

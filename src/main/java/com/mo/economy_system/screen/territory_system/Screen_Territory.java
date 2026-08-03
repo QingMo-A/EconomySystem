@@ -4,6 +4,8 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.territory_system.Packet_TeleportToTerritory;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
+import com.mo.economy_system.common.client.TerritoryDataClientApplier;
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -34,8 +36,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * - 中间：领地卡片网格
  * - 底部：翻页控制
  */
-public class Screen_Territory extends Screen {
+public class Screen_Territory extends Screen
+        implements TerritoryDataClientApplier.TerritoryScreenTarget<Territory, Territory> {
     private static final AtomicLong NEXT_REQUEST_ID = new AtomicLong();
+    private static final int SYNC_TIMEOUT_TICKS = 200;
 
     // ==================== 布局常量 ====================
     private static final int BASE_WIDTH = 640;
@@ -51,7 +55,10 @@ public class Screen_Territory extends Screen {
     // ==================== 数据 ====================
     private boolean dataLoaded = false;
     private boolean syncFailed;
+    private boolean requestStarted;
     private long activeRequestId = -1;
+    private int requestTicks;
+    private int retryX1, retryY1, retryX2, retryY2;
     private List<Territory> ownedTerritories = new ArrayList<>();
     private List<Territory> authorizedTerritories = new ArrayList<>();
     private List<Territory> allTerritories = new ArrayList<>();
@@ -102,6 +109,7 @@ public class Screen_Territory extends Screen {
         List<Territory> newAuthorized = List.copyOf(authorized);
         this.dataLoaded = true;
         this.syncFailed = false;
+        this.activeRequestId = -1;
         this.ownedTerritories = new ArrayList<>(newOwned);
         this.authorizedTerritories = new ArrayList<>(newAuthorized);
 
@@ -121,15 +129,13 @@ public class Screen_Territory extends Screen {
         if (!acceptsRequest(requestId)) return;
         syncFailed = true;
         dataLoaded = true;
+        activeRequestId = -1;
     }
 
     @Override
     protected void init() {
         super.init();
-        if (activeRequestId < 0) {
-            activeRequestId = NEXT_REQUEST_ID.getAndIncrement();
-            EconomySystem_NetworkManager.sendToServer(new TerritoryDataRequestMessage(activeRequestId));
-        }
+        if (!requestStarted) requestTerritoryData();
         calculateVirtualSize();
 
         // 创建搜索框（左上角）
@@ -145,6 +151,24 @@ public class Screen_Territory extends Screen {
         this.searchBox.setFocused(false);
         this.addRenderableWidget(this.searchBox);
         updateSearchBoxLayout();
+    }
+
+    private void requestTerritoryData() {
+        long requestId = TerritoryRequestIds.next(NEXT_REQUEST_ID);
+        requestStarted = true;
+        activeRequestId = requestId;
+        dataLoaded = false;
+        syncFailed = false;
+        requestTicks = 0;
+        EconomySystem_NetworkManager.sendToServer(new TerritoryDataRequestMessage(requestId));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (activeRequestId >= 0 && !dataLoaded && ++requestTicks >= SYNC_TIMEOUT_TICKS) {
+            territorySyncFailed(activeRequestId);
+        }
     }
 
     private void calculateVirtualSize() {
@@ -277,7 +301,15 @@ public class Screen_Territory extends Screen {
 
         if (syncFailed) {
             Component failed = Component.translatable("message.territory.sync_failed");
-            guiGraphics.drawCenteredString(font, failed, virtualWidth / 2, virtualHeight / 2, 0xFFFF8080);
+            int width = font.width(failed);
+            int x = (virtualWidth - width) / 2;
+            int y = virtualHeight / 2;
+            retryX1 = x - 8;
+            retryY1 = y - 6;
+            retryX2 = x + width + 8;
+            retryY2 = y + font.lineHeight + 6;
+            guiGraphics.drawString(font, failed, x, y, 0xFFFF8080);
+            guiGraphics.renderOutline(retryX1, retryY1, retryX2 - retryX1, retryY2 - retryY1, 0x80FF8080);
             return;
         }
 
@@ -456,6 +488,12 @@ public class Screen_Territory extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         float virtualMouseX = (float) mouseX / uiScale;
         float virtualMouseY = (float) mouseY / uiScale;
+
+        if (syncFailed && virtualMouseX >= retryX1 && virtualMouseX <= retryX2
+            && virtualMouseY >= retryY1 && virtualMouseY <= retryY2) {
+            requestTerritoryData();
+            return true;
+        }
 
         // 检查操作按钮点击
         for (ActionBtnArea btnArea : buttonAreas) {

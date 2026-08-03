@@ -86,7 +86,7 @@ independent payment/inventory compensation, display-name fallback, and shared in
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
 compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
 repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
-The verified suite contains 223 Forge tests and 226 NeoForge tests.
+The verified suite contains 199 shared-source tests, 243 Forge tests, and 244 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -115,3 +115,18 @@ The canonical wire discriminator remains 15; protocol 13 is registered, while pr
 Demand-order confirmation is now registered at canonical discriminator 13. Purchase, confirmation and sales
 removal share `Forge1201TransactionalInventoryAdapter`; it operates only on main inventory and restores every
 slot independently on rollback. Protocols 14 and 16 remain on their legacy path and are not migrated here.
+
+## Territory data hardening
+
+Forge protocols 17/18 use the common DATA/ERROR response model and the single shared wire codec. Because the
+NeoForge root UI is intentionally excluded from this target's source set, Forge supplies its own read-only
+`Screen_Territory` under the same target-specific FQCN and opens it with the existing `I` key. The physical-side
+dispatch layer keeps `Minecraft` and screen classes out of the dedicated-server handler linkage surface.
+Responses apply only to the current page request ID and commit after complete restore; ERROR, restore failure,
+or the 200-tick timeout exposes retry without clearing old page data.
+
+`Forge1201TerritorySnapshotStore` is the sole Forge `territory_data` SavedData type. It is an overworld-normalized,
+read-only compatibility adapter for protocols 17/18; there is no Forge territory create/delete/authorize write
+path before protocol 19. It no longer clamps invalid buff levels or upgrade steps, unknown/missing permissions
+retain the historical `MEMBERS` fallback, and non-canonical dimension IDs fail closed. Protocol 19 and later
+territory mutations remain legacy and are not supported by this adapter.

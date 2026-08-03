@@ -50,7 +50,7 @@ Protocols 12–18 are migrated. Do not renumber the append-only manifest; protoc
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-223 Forge 1.20.1 tests and 226 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+199 shared-source tests, 243 Forge 1.20.1 tests, and 244 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
 shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
 refund semantics and invalidation on CHANGED/UNKNOWN. Territory response 18 is NBT-free,
@@ -58,3 +58,13 @@ uses full owned/minimal authorized snapshots, enforces 1 MiB budgets, and commit
 active request ID after complete restore. Do not start protocol 19 without a new task.
 Protocol 16 hardening is closed: illegal result/outcome combinations are rejected, mismatched removals are
 restored before failure, ORDER_CHANGED has no stale transaction order, and target logs combine all errors.
+
+Territory protocols 17/18 are now hardened. Response 18 has stable `data` and `error` kind IDs, uses the one
+common NBT-free wire codec, and encodes through a temporary buffer before touching the destination. The active
+`Screen_Territory` request ID is the sole stale-response authority; the old global tracker no longer exists.
+Both targets use `TerritoryDataClientApplier` for complete restore followed by one atomic commit. ERROR,
+restore failure, and a 200-tick timeout end loading and allow a new-ID retry. Forge has a target-local read-only
+territory page because the NeoForge root UI is excluded from its build, and its client dispatch is hidden behind
+a physical-side-safe indirection. Forge `territory_data` remains a sole overworld read-only protocol-17/18
+adapter: invalid buffs/dimensions fail closed and unknown permissions fall back to MEMBERS. NeoForge treats
+historical null buff upgrade costs as empty. Do not migrate protocol 19 or later operations without a new task.
