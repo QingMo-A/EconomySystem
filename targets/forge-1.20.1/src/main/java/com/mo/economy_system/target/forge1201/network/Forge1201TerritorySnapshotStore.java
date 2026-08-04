@@ -67,11 +67,59 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
         .map(Forge1201TerritorySnapshotStore::teleportTarget);
   }
 
-  Optional<TerritoryInviteRequestService.Territory> inviteTerritory(UUID territoryId) {
-    return find(territoryId).map(target ->
-        new TerritoryInviteRequestService.Territory(
-            target.territoryId(), target.ownerId(), target.territoryName(),
-            target.authorizedPlayerIds()));
+  /**
+   * Reads the invitation view directly from the raw NBT record.  The parsed cache is deliberately
+   * not used here: a stale cache must never grant an invitation after an owner/member change.
+   * Duplicate territory IDs or malformed authorization entries make the lookup fail closed.
+   */
+  synchronized Optional<TerritoryInviteRequestService.Territory> inviteTerritory(UUID territoryId) {
+    if (territoryId == null || !raw.contains("Territories", Tag.TAG_LIST)) {
+      return Optional.empty();
+    }
+    ListTag records = raw.getList("Territories", Tag.TAG_COMPOUND);
+    CompoundTag target = null;
+    int matches = 0;
+    for (Tag value : records) {
+      if (!(value instanceof CompoundTag record) || !record.hasUUID("TerritoryID")) {
+        continue;
+      }
+      if (!territoryId.equals(record.getUUID("TerritoryID"))) {
+        continue;
+      }
+      matches++;
+      target = record;
+    }
+    if (matches != 1 || target == null || !target.hasUUID("OwnerUUID")) {
+      return Optional.empty();
+    }
+
+    Tag encodedMembers = target.get("AuthorizedPlayers");
+    if (!(encodedMembers instanceof ListTag membersTag)) {
+      return Optional.empty();
+    }
+    UUID ownerId = target.getUUID("OwnerUUID");
+    Set<UUID> members = new HashSet<>();
+    for (Tag value : membersTag) {
+      if (!(value instanceof CompoundTag member) || !member.hasUUID("PlayerUUID")
+          || !member.contains("PlayerName", Tag.TAG_STRING)) {
+        return Optional.empty();
+      }
+      String playerName = member.getString("PlayerName").trim();
+      if (playerName.isEmpty()
+          || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
+        return Optional.empty();
+      }
+      UUID memberId = member.getUUID("PlayerUUID");
+      if (!members.add(memberId) || ownerId.equals(memberId)) {
+        return Optional.empty();
+      }
+    }
+    try {
+      return Optional.of(new TerritoryInviteRequestService.Territory(
+          territoryId, ownerId, target.getString("Name"), members));
+    } catch (RuntimeException invalid) {
+      return Optional.empty();
+    }
   }
 
   /**

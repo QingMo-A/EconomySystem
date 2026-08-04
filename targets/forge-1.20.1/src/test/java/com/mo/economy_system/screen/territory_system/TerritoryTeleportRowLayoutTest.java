@@ -35,4 +35,21 @@ class TerritoryTeleportRowLayoutTest {
     assertEquals(1,TerritoryTeleportRowLayout.clampScroll(9,visible+1,125));
     assertEquals(0,TerritoryTeleportRowLayout.visibleCount(60));assertTrue(TerritoryTeleportRowLayout.layout(List.of(FIRST),0,320,60,72,20).isEmpty());
   }
+
+  @Test void ownedRowsHaveSeparateTeleportAndInviteHitboxes() {
+    var rows = List.of(new TerritoryTeleportRowLayout.TerritoryRow(FIRST, true),
+        new TerritoryTeleportRowLayout.TerritoryRow(SECOND, false));
+    var areas = TerritoryTeleportRowLayout.layoutActions(rows, 0, 320, 200, 72, 20);
+    assertEquals(3, areas.size());
+    var teleport = areas.get(0);
+    var invite = areas.get(1);
+    assertEquals(TerritoryTeleportRowLayout.Action.TELEPORT, teleport.action());
+    assertEquals(TerritoryTeleportRowLayout.Action.INVITE, invite.action());
+    assertEquals(FIRST, teleport.territoryId());
+    assertEquals(FIRST, invite.territoryId());
+    assertTrue(teleport.x() + teleport.width() <= invite.x());
+    assertFalse(teleport.contains(invite.x() + 1, invite.y() + 1));
+    assertEquals(TerritoryTeleportRowLayout.Action.TELEPORT, areas.get(2).action());
+    assertEquals(SECOND, areas.get(2).territoryId());
+  }
 }

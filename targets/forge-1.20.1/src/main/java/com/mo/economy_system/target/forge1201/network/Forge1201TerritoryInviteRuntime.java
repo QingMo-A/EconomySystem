@@ -9,9 +9,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.server.MinecraftServer;
+import com.mojang.logging.LogUtils;
+import org.slf4j.Logger;
 
 /** Server-session invitation state shared by the packet handler and commands. */
 public final class Forge1201TerritoryInviteRuntime {
+  private static final Logger LOGGER = LogUtils.getLogger();
   private static final TerritoryInviteStoreRegistry<MinecraftServer> STORES =
       new TerritoryInviteStoreRegistry<>();
   private static final Map<MinecraftServer, TerritoryInviteRateLimiter> LIMITERS =
@@ -32,7 +35,9 @@ public final class Forge1201TerritoryInviteRuntime {
         store(server),
         (territoryId, expectedOwner, playerId, playerName) ->
             Forge1201TerritorySnapshotStore.get(server.overworld())
-                .authorize(territoryId, expectedOwner, playerId, playerName));
+                .authorize(territoryId, expectedOwner, playerId, playerName),
+        (stage, invite, error) -> LOGGER.error("invite decision stage={} invite={} territory={}",
+            stage, invite.inviteId(), invite.territoryId(), error));
   }
 
   public static long tick(MinecraftServer server) {

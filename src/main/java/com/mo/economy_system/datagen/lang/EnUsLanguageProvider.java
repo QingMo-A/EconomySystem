@@ -297,10 +297,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("message.invite.persist_failed", "The membership change could not be saved; try again.");
     add("message.invite.state_unknown", "Membership state is uncertain; contact an administrator.");
     add("message.invite.busy", "This invitation is already being processed.");
-    add(Util_MessageKeys.INVITE_ALREADY_MEMBER, "Invite Already Member: %s");
-    add(Util_MessageKeys.INVITE_SENT, "Invite Sent");
-    add(Util_MessageKeys.INVITE_RECEIVED, "Invite Received: %s %s");
-    add(Util_MessageKeys.INVITE_INSTRUCTIONS, "Invite Instructions");
+    add(Util_MessageKeys.INVITE_ALREADY_MEMBER, "That player is already a territory member.");
+    add(Util_MessageKeys.INVITE_SENT, "Invitation sent to %s for territory %s.");
+    add(Util_MessageKeys.INVITE_RECEIVED, "%s invited you to join territory %s.");
     add(Util_MessageKeys.INVITE_SELF_ERROR, "Invite Self Error");
     add(Util_MessageKeys.INVITE_NOT_IN_TERRITORY, "Invite Not In Territory");
     add(Util_MessageKeys.INVITE_SENT_TO_PLAYER, "Invite Sent To Player: %s");
@@ -312,12 +311,16 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(
         Util_MessageKeys.TERRITORY_SETBACKPOINT_SUCCESS,
         "Territory Setbackpoint Success: %s %s %s");
-    add(Util_MessageKeys.INVITE_NO_PENDING, "Invite No Pending");
+    add(Util_MessageKeys.INVITE_NO_PENDING, "You have no pending territory invitations.");
     add(Util_MessageKeys.INVITE_TARGET_NOT_FOUND, "Invite Target Not Found");
-    add(Util_MessageKeys.INVITE_ACCEPTED, "Invite Accepted: %s");
+    add(Util_MessageKeys.INVITE_ACCEPTED, "Accepted the invitation to territory %s.");
     add(Util_MessageKeys.INVITE_DECLINE_NO_PENDING, "Invite Decline No Pending");
-    add(Util_MessageKeys.INVITE_DECLINED, "Invite Declined");
-    add(Util_MessageKeys.INVITE_BACK_BUTTON, "Invite Back Button");
+    add(Util_MessageKeys.INVITE_DECLINED, "Declined the invitation to territory %s.");
+    add("message.invite.accepted_by", "%s accepted the invitation to territory %s.");
+    add("message.invite.declined_by", "%s declined the invitation to territory %s.");
+    add("screen.invite.loading", "Loading players...");
+    add("screen.invite.empty", "No eligible online players.");
+    add(Util_MessageKeys.INVITE_BACK_BUTTON, "Back");
     add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "Invite Accept Button");
     add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "Invite Decline Button");
 

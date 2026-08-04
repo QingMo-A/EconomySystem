@@ -121,7 +121,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
 - 协议 19 最终加固后的验证套件包含 shared-source 228 项、Forge 1.20.1 280 项和 NeoForge 1.21.1 274 项测试。
-- 协议 20 迁移后的实际回归为 shared-source 237 项、Forge 1.20.1 295 项、NeoForge 1.21.1 283 项，且 `buildAllTargets` 通过。
+- 协议 20 最终加固后的实际回归为 shared-source 246 项、Forge 1.20.1 307 项、NeoForge 1.21.1 292 项。store 使用 claim token 验证 complete/release；ID 碰撞最多重试八次。PERSIST_FAILED 安全释放，STATE_UNKNOWN 消费终止。NeoForge 写入检查 savedData 并验证添加/回滚；Forge 继续 raw NBT copy-on-write，且 owned 行已有邀请入口。协议 21+ 未迁移。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。

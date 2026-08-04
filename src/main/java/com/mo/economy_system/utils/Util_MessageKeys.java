@@ -274,7 +274,6 @@ public class Util_MessageKeys {
   public static final String INVITE_ALREADY_MEMBER = "message.invite.already_member";
   public static final String INVITE_SENT = "message.invite.sent";
   public static final String INVITE_RECEIVED = "message.invite.received";
-  public static final String INVITE_INSTRUCTIONS = "message.invite.instructions";
   public static final String INVITE_SELF_ERROR = "message.invite.self_error";
   public static final String INVITE_NOT_IN_TERRITORY = "message.invite.not_in_territory";
   public static final String INVITE_SENT_TO_PLAYER = "message.invite.sent_to_player";

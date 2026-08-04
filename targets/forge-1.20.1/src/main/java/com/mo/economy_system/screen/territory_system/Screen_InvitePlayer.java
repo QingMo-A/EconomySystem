@@ -6,8 +6,10 @@ import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.platform.EconomyServices;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -19,17 +21,35 @@ import net.minecraft.network.chat.Component;
 public final class Screen_InvitePlayer extends Screen {
   private static final int BUTTON_WIDTH = 72;
   private static final int BUTTON_HEIGHT = 20;
+  private static final int BACK_BUTTON_WIDTH = 64;
+  private static final int BACK_BUTTON_HEIGHT = 20;
 
   private final UUID territoryId;
   private final String territoryName;
+  private final UUID ownerId;
+  private final Set<UUID> existingMemberIds;
+  private final Screen returnScreen;
   private EditBox search;
   private int scrollRow;
   private List<TerritoryInviteRowLayout.ButtonArea> inviteButtons = List.of();
 
   public Screen_InvitePlayer(UUID territoryId, String territoryName) {
+    this(territoryId, territoryName, null, Set.of(), null);
+  }
+
+  public Screen_InvitePlayer(UUID territoryId, String territoryName, UUID ownerId,
+      Collection<UUID> existingMemberIds) {
+    this(territoryId, territoryName, ownerId, existingMemberIds, null);
+  }
+
+  public Screen_InvitePlayer(UUID territoryId, String territoryName, UUID ownerId,
+      Collection<UUID> existingMemberIds, Screen returnScreen) {
     super(Component.translatable("screen.invite.title"));
     this.territoryId = territoryId;
     this.territoryName = territoryName;
+    this.ownerId = ownerId;
+    this.existingMemberIds = existingMemberIds == null ? Set.of() : Set.copyOf(existingMemberIds);
+    this.returnScreen = returnScreen;
     EconomyServices.platform().network().sendToServer(ServerPlayerListRequestMessage.INSTANCE);
   }
 
@@ -56,6 +76,11 @@ public final class Screen_InvitePlayer extends Screen {
     graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
     graphics.drawString(font, Component.translatable("screen.invite.territory", territoryName),
         24, 48, 0xBBBBBB);
+    int backX = width - BACK_BUTTON_WIDTH - 20;
+    int backY = 24;
+    graphics.fill(backX, backY, backX + BACK_BUTTON_WIDTH, backY + BACK_BUTTON_HEIGHT, 0xFF4D4D4D);
+    graphics.drawCenteredString(font, Component.translatable("button.invite.back"),
+        backX + BACK_BUTTON_WIDTH / 2, backY + 6, 0xFFFFFFFF);
 
     List<PlayerSummary> players = visiblePlayers();
     scrollRow = TerritoryInviteRowLayout.clampScroll(scrollRow, players.size(), height);
@@ -85,6 +110,12 @@ public final class Screen_InvitePlayer extends Screen {
   @Override
   public boolean mouseClicked(double mouseX, double mouseY, int button) {
     if (button == 0) {
+      int backX = width - BACK_BUTTON_WIDTH - 20;
+      if (mouseX >= backX && mouseX < backX + BACK_BUTTON_WIDTH
+          && mouseY >= 24 && mouseY < 24 + BACK_BUTTON_HEIGHT) {
+        onClose();
+        return true;
+      }
       for (TerritoryInviteRowLayout.ButtonArea area : inviteButtons) {
         if (area.contains(mouseX, mouseY)) {
           EconomyServices.platform().network().sendToServer(
@@ -113,6 +144,8 @@ public final class Screen_InvitePlayer extends Screen {
     List<PlayerSummary> result = new ArrayList<>();
     for (PlayerSummary player : ClientPlayerListState.snapshot().players()) {
       if (self != null && self.equals(player.playerId())) continue;
+      if (ownerId != null && ownerId.equals(player.playerId())) continue;
+      if (existingMemberIds.contains(player.playerId())) continue;
       if (query.isEmpty() || player.playerName().toLowerCase(Locale.ROOT).contains(query)) {
         result.add(player);
       }
@@ -127,6 +160,15 @@ public final class Screen_InvitePlayer extends Screen {
       return true;
     }
     return super.keyPressed(keyCode, scanCode, modifiers);
+  }
+
+  @Override
+  public void onClose() {
+    if (returnScreen != null) {
+      Minecraft.getInstance().setScreen(returnScreen);
+    } else {
+      super.onClose();
+    }
   }
 
   @Override

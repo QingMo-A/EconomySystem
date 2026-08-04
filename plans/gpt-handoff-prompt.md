@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，协议 12–20 已迁移；协议 21 及之后的领地操作尚未开始。协议 20 wire 仅为 territoryId 与 targetPlayerId；邀请 ID、名字和有效期均由服务端生成。邀请是 1200 tick、最大 4096 条的 server-scoped 临时数据。
+协议 10/11 已正式关闭，协议 12–20 已迁移并完成协议 20 加固；协议 21 及之后尚未开始。协议 20 wire 仅为 territoryId 与 targetPlayerId。邀请 store 以 token claim 控制 complete/release，ID 碰撞最多重试八次；PERSIST_FAILED 可重试，STATE_UNKNOWN 必须消费。邀请仍是 1200 tick、最大 4096 条的 server-scoped 临时数据。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff

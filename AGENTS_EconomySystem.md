@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–20 已完成 bridge 迁移。协议 20 固定发送 territory UUID 与 target UUID；inviter 始终取真实 sender。邀请 ID 由服务端生成，pending store 按服务器弱引用隔离、1200 tick 过期、最多 4096 条，并按 target+territory 去重。接受时重新验证 owner/member，inviteId 只消费一次；Forge 仅更新原始 NBT 的 `AuthorizedPlayers` 并保留未知字段。协议 21 及之后仍保持 legacy，必须按单协议任务继续迁移。
+协议 17–20 已完成 bridge 迁移与协议 20 最终加固。协议 20 固定发送 territory UUID 与 target UUID；inviter 取真实 sender。邀请 store 按服务器弱引用隔离、1200 tick/4096 条上限，并使用 claim token 保证 complete/release 归属。ID collision 最多重试八次。PERSIST_FAILED 释放重试，STATE_UNKNOWN 消费终止。NeoForge 写入要求 savedData 可用并验证添加/回滚；Forge raw NBT 写回保留未知字段，owned 行提供邀请入口。协议 21+ 仍为 legacy。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
 - 将领地价格放入配置。

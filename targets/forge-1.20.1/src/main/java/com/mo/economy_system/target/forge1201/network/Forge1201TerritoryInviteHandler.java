@@ -41,11 +41,15 @@ final class Forge1201TerritoryInviteHandler {
                   target.getUUID(), target.getGameProfile().getName())),
           Forge1201TerritoryInviteRuntime.store(server),
           Forge1201TerritoryInviteRuntime.limiter(server),
-          Forge1201TerritoryInviteRuntime::nextInviteId);
+          Forge1201TerritoryInviteRuntime::nextInviteId,
+          (stage, inviter, territory, target, error) -> LOGGER.warn(
+              "invite stage={} inviter={} territory={} target={}",
+              stage, inviter, territory, target, error), 1200);
       TerritoryInviteRequestService.Outcome outcome = service.create(
           sender.getUUID(), sender.getGameProfile().getName(), message.territoryId(),
           message.targetPlayerId(), tick);
-      sendOutcome(sender, server, outcome);
+      try { sendOutcome(sender, server, outcome); }
+      catch (RuntimeException notificationError) { LOGGER.warn("invite notification failed", notificationError); }
     } catch (Exception error) {
       LOGGER.error("Territory invite request failed player={} territory={} target={}",
           sender.getUUID(), message.territoryId(), message.targetPlayerId(), error);
@@ -62,7 +66,7 @@ final class Forge1201TerritoryInviteHandler {
     }
 
     sender.sendSystemMessage(Component.translatable(
-        "message.invite.sent", invite.targetPlayerName()));
+        "message.invite.sent", invite.targetPlayerName(), invite.territoryName()));
     ServerPlayer target = server.getPlayerList().getPlayer(invite.targetPlayerId());
     if (target == null) return;
     Component accept = Component.translatable("button.invite.accept")
@@ -87,11 +91,11 @@ final class Forge1201TerritoryInviteHandler {
   static Component message(TerritoryInviteResult result) {
     return switch (result) {
       case SUCCESS -> Component.translatable("message.invite.sent");
-      case TERRITORY_NOT_FOUND -> Component.translatable("message.invite.target_not_found");
+      case TERRITORY_NOT_FOUND -> Component.translatable("message.invite.territory_not_found");
       case NO_PERMISSION -> Component.translatable("message.invite.no_permission");
-      case TARGET_OFFLINE -> Component.translatable("message.invite.player_offline");
+      case TARGET_OFFLINE -> Component.translatable("message.invite.target_offline");
       case CANNOT_INVITE_OWNER -> Component.translatable("message.invite.cannot_invite_owner");
-      case CANNOT_INVITE_SELF -> Component.translatable("message.invite.self_error");
+      case CANNOT_INVITE_SELF -> Component.translatable("message.invite.cannot_invite_self");
       case ALREADY_MEMBER -> Component.translatable("message.invite.already_member");
       case ALREADY_PENDING -> Component.translatable("message.invite.already_pending");
       case RATE_LIMITED -> Component.translatable("message.invite.rate_limited");

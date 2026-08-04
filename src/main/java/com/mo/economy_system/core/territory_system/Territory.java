@@ -141,6 +141,20 @@ public class Territory {
         authorizedPlayers.add(new PlayerInfo(playerUUID, playerName));
     }
 
+    public boolean addAuthorizedPlayerIfAbsent(UUID playerUUID, String playerName) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        Objects.requireNonNull(playerName, "playerName");
+        String validName = playerName.trim();
+        if (validName.isEmpty() || validName.length() > 64 || isOwner(playerUUID) || hasPermission(playerUUID)) return false;
+        authorizedPlayers.add(new PlayerInfo(playerUUID, validName));
+        return authorizedPlayers.stream().filter(info -> info.getUuid().equals(playerUUID)).count() == 1;
+    }
+
+    public long authorizedPlayerCount(UUID playerUUID) {
+        Objects.requireNonNull(playerUUID, "playerUUID");
+        return authorizedPlayers.stream().filter(info -> info.getUuid().equals(playerUUID)).count();
+    }
+
     public void removeAuthorizedPlayer(UUID playerUUID) {
         authorizedPlayers.removeIf(playerInfo -> playerInfo.getUuid().equals(playerUUID));
     }

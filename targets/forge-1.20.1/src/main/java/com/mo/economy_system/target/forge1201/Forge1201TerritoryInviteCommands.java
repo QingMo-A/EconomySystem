@@ -6,7 +6,6 @@ import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.target.forge1201.network.Forge1201TerritoryInviteRuntime;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -49,15 +48,21 @@ public final class Forge1201TerritoryInviteCommands {
     TerritoryInviteDecisionService service = Forge1201TerritoryInviteRuntime.decisions(server);
     UUID inviteId = resolveInviteId(context.getSource(), service, player.getUUID(), rawId, tick);
     if (inviteId == null) return 0;
-    TerritoryInvite invite = Forge1201TerritoryInviteRuntime.store(server).find(inviteId, tick).orElse(null);
-    TerritoryInviteDecisionService.Result result = accept
+    TerritoryInviteDecisionService.DecisionOutcome outcome = accept
         ? service.accept(inviteId, player.getUUID(), player.getGameProfile().getName(), tick)
         : service.decline(inviteId, player.getUUID(), tick);
+    TerritoryInviteDecisionService.Result result = outcome.result();
     if ((accept && result == TerritoryInviteDecisionService.Result.ACCEPTED)
         || (!accept && result == TerritoryInviteDecisionService.Result.DECLINED)) {
       String key = accept ? "message.invite.accepted" : "message.invite.declined";
-      String name = invite == null ? "" : invite.territoryName();
+      String name = outcome.invite().territoryName();
       context.getSource().sendSuccess(() -> Component.translatable(key, name), false);
+      try {
+        ServerPlayer inviter = server.getPlayerList().getPlayer(outcome.invite().inviterId());
+        if (inviter != null) inviter.sendSystemMessage(Component.translatable(
+            accept ? "message.invite.accepted_by" : "message.invite.declined_by",
+            player.getGameProfile().getName(), name));
+      } catch (RuntimeException ignored) {}
       return 1;
     }
     context.getSource().sendFailure(message(result));
@@ -74,25 +79,25 @@ public final class Forge1201TerritoryInviteCommands {
         return null;
       }
     }
-    int count = service.pending(playerId, tick);
-    if (count == 0) {
+    var resolved = service.resolveSole(playerId, tick);
+    if (resolved.status() == com.mo.economy_system.common.territory.TerritoryInviteStore.SoleStatus.NONE) {
       source.sendFailure(Component.translatable("message.invite.no_pending"));
       return null;
     }
-    if (count > 1) {
+    if (resolved.status() == com.mo.economy_system.common.territory.TerritoryInviteStore.SoleStatus.MULTIPLE) {
       source.sendFailure(Component.translatable("message.invite.multiple_pending"));
       return null;
     }
-    return service.sole(playerId, tick).orElse(null);
+    return resolved.inviteId();
   }
 
   static Component message(TerritoryInviteDecisionService.Result result) {
     return switch (result) {
       case ACCEPTED -> Component.translatable("message.invite.accepted");
       case DECLINED -> Component.translatable("message.invite.declined");
-      case NOT_FOUND -> Component.translatable("message.invite.no_pending");
+      case NOT_FOUND -> Component.translatable("message.invite.not_found");
       case NOT_TARGET -> Component.translatable("message.invite.not_target");
-      case TERRITORY_NOT_FOUND -> Component.translatable("message.invite.target_not_found");
+      case TERRITORY_NOT_FOUND -> Component.translatable("message.invite.territory_not_found");
       case OWNER_CHANGED -> Component.translatable("message.invite.owner_changed");
       case ALREADY_MEMBER -> Component.translatable("message.invite.already_member");
       case PERSIST_FAILED -> Component.translatable("message.invite.persist_failed");

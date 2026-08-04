@@ -139,6 +139,34 @@ class Forge1201TerritorySnapshotStoreTest {
         .getCompound(0).getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
   }
 
+  @Test void inviteLookupReadsRawAndFailsClosedForDuplicateTerritoryIds() {
+    CompoundTag first = validTerritory();
+    first.put("AuthorizedPlayers", new ListTag());
+    CompoundTag duplicate = validTerritory();
+    duplicate.putString("Name", "Duplicate");
+    duplicate.put("AuthorizedPlayers", new ListTag());
+    ListTag records = new ListTag();
+    records.add(first);
+    records.add(duplicate);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    var store = Forge1201TerritorySnapshotStore.load(root);
+    assertTrue(store.inviteTerritory(first.getUUID("TerritoryID")).isEmpty());
+  }
+
+  @Test void inviteLookupRejectsMalformedAuthorizationEntries() {
+    CompoundTag territory = validTerritory();
+    ListTag members = new ListTag();
+    members.add(net.minecraft.nbt.StringTag.valueOf("not-a-player-record"));
+    territory.put("AuthorizedPlayers", members);
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    var store = Forge1201TerritorySnapshotStore.load(root);
+    assertTrue(store.inviteTerritory(territory.getUUID("TerritoryID")).isEmpty());
+  }
+
   private static CompoundTag validTerritory() {
     CompoundTag tag = new CompoundTag();
     tag.putUUID("TerritoryID", UUID.fromString("10000000-0000-0000-0000-000000000001"));
