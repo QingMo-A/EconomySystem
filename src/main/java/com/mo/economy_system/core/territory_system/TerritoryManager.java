@@ -274,19 +274,8 @@ public class TerritoryManager {
         Territory territory = getTerritoryByID(territoryID);
         if (territory == null) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.TERRITORY_NOT_FOUND;
         if (!territory.getOwnerUUID().equals(expectedOwner)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED;
-        if (territory.isOwner(playerUUID)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED;
-        if (territory.hasPermission(playerUUID)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.ALREADY_MEMBER;
-        try {
-            if (!territory.addAuthorizedPlayerIfAbsent(playerUUID, playerName)
-                    || !territory.hasPermission(playerUUID) || territory.authorizedPlayerCount(playerUUID) != 1)
-                return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN;
-            savedData.setDirty();
-            return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.ADDED;
-        } catch (RuntimeException failure) {
-            if (!territory.hasPermission(playerUUID)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.PERSIST_FAILED;
-            try { territory.removeAuthorizedPlayer(playerUUID); if (territory.hasPermission(playerUUID) || territory.authorizedPlayerCount(playerUUID) != 0) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN; savedData.setDirty(); return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.PERSIST_FAILED; }
-            catch (RuntimeException rollbackFailure) { failure.addSuppressed(rollbackFailure); return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN; }
-        }
+        return TerritoryInviteMembershipMutation.mutate(
+                territory, expectedOwner, playerUUID, playerName, savedData::setDirty);
     }
 
     public static boolean setTerritoryRule(UUID territoryID, TerritoryPermissionAction action, TerritoryPermissionLevel level) {

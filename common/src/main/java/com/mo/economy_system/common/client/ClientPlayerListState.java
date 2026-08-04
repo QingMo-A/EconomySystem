@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class ClientPlayerListState {
     private static final AtomicReference<Snapshot> CURRENT =
-            new AtomicReference<>(new Snapshot(List.of()));
+            new AtomicReference<>(new Snapshot(0, List.of()));
 
     private ClientPlayerListState() {
     }
@@ -25,7 +25,8 @@ public final class ClientPlayerListState {
     }
 
     public static void update(List<PlayerSummary> players) {
-        CURRENT.set(new Snapshot(players));
+        List<PlayerSummary> copy = List.copyOf(Objects.requireNonNull(players, "players"));
+        CURRENT.updateAndGet(previous -> new Snapshot(nextRevision(previous.revision()), copy));
     }
 
     public static void update(ServerPlayerListResponseMessage message) {
@@ -34,8 +35,18 @@ public final class ClientPlayerListState {
     }
 
     /** One atomically published, immutable view of the known player list. */
-    public record Snapshot(List<PlayerSummary> players) {
+    private static long nextRevision(long revision) {
+        if (revision == Long.MAX_VALUE) {
+            throw new IllegalStateException("player-list revision exhausted");
+        }
+        return revision + 1;
+    }
+
+    public record Snapshot(long revision, List<PlayerSummary> players) {
         public Snapshot {
+            if (revision < 0) {
+                throw new IllegalArgumentException("revision");
+            }
             players = List.copyOf(Objects.requireNonNull(players, "players"));
         }
     }

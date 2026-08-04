@@ -73,53 +73,65 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
    * Duplicate territory IDs or malformed authorization entries make the lookup fail closed.
    */
   synchronized Optional<TerritoryInviteRequestService.Territory> inviteTerritory(UUID territoryId) {
-    if (territoryId == null || !raw.contains("Territories", Tag.TAG_LIST)) {
+    Objects.requireNonNull(territoryId, "territoryId");
+    Tag encodedTerritories = raw.get("Territories");
+    if (encodedTerritories == null) {
       return Optional.empty();
     }
-    ListTag records = raw.getList("Territories", Tag.TAG_COMPOUND);
+    if (!(encodedTerritories instanceof ListTag records)) {
+      throw integrity("Territories is not a list");
+    }
     CompoundTag target = null;
     int matches = 0;
     for (Tag value : records) {
-      if (!(value instanceof CompoundTag record) || !record.hasUUID("TerritoryID")) {
-        continue;
-      }
+      if (!(value instanceof CompoundTag record)) throw integrity("territory record is not a compound");
+      if (!record.hasUUID("TerritoryID")) continue;
       if (!territoryId.equals(record.getUUID("TerritoryID"))) {
         continue;
       }
       matches++;
       target = record;
     }
-    if (matches != 1 || target == null || !target.hasUUID("OwnerUUID")) {
-      return Optional.empty();
+    if (matches == 0) return Optional.empty();
+    if (matches != 1) throw integrity("duplicate territory UUID " + territoryId);
+    if (!target.hasUUID("OwnerUUID")) throw integrity("matching territory has no owner");
+    if (!target.contains("Name", Tag.TAG_STRING)) throw integrity("matching territory has no name");
+    String territoryName = target.getString("Name").trim();
+    if (territoryName.isEmpty()
+        || territoryName.length() > EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH) {
+      throw integrity("matching territory has an invalid name");
     }
 
     Tag encodedMembers = target.get("AuthorizedPlayers");
-    if (!(encodedMembers instanceof ListTag membersTag)) {
-      return Optional.empty();
-    }
+    if (!(encodedMembers instanceof ListTag membersTag)) throw integrity("AuthorizedPlayers is not a list");
     UUID ownerId = target.getUUID("OwnerUUID");
     Set<UUID> members = new HashSet<>();
     for (Tag value : membersTag) {
       if (!(value instanceof CompoundTag member) || !member.hasUUID("PlayerUUID")
           || !member.contains("PlayerName", Tag.TAG_STRING)) {
-        return Optional.empty();
+        throw integrity("authorized member is malformed");
       }
       String playerName = member.getString("PlayerName").trim();
       if (playerName.isEmpty()
           || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
-        return Optional.empty();
+        throw integrity("authorized member name is invalid");
       }
       UUID memberId = member.getUUID("PlayerUUID");
       if (!members.add(memberId) || ownerId.equals(memberId)) {
-        return Optional.empty();
+        throw integrity("authorized member UUID is duplicate or owner");
       }
     }
     try {
       return Optional.of(new TerritoryInviteRequestService.Territory(
-          territoryId, ownerId, target.getString("Name"), members));
+          territoryId, ownerId, territoryName, members));
     } catch (RuntimeException invalid) {
-      return Optional.empty();
+      if (invalid instanceof TerritorySnapshotIntegrityException integrity) throw integrity;
+      throw new TerritorySnapshotIntegrityException("matching territory snapshot is invalid");
     }
+  }
+
+  private static TerritorySnapshotIntegrityException integrity(String message) {
+    return new TerritorySnapshotIntegrityException(message);
   }
 
   /**

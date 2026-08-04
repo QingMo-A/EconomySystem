@@ -6,6 +6,10 @@ import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
+import com.mo.economy_system.common.territory.TerritoryInviteRateLimiter;
+import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
+import com.mo.economy_system.common.territory.TerritoryInviteResult;
+import com.mo.economy_system.common.territory.TerritoryInviteStore;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
@@ -151,7 +155,8 @@ class Forge1201TerritorySnapshotStoreTest {
     CompoundTag root = new CompoundTag();
     root.put("Territories", records);
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertTrue(store.inviteTerritory(first.getUUID("TerritoryID")).isEmpty());
+    assertThrows(TerritorySnapshotIntegrityException.class,
+        () -> store.inviteTerritory(first.getUUID("TerritoryID")));
   }
 
   @Test void inviteLookupRejectsMalformedAuthorizationEntries() {
@@ -164,7 +169,40 @@ class Forge1201TerritorySnapshotStoreTest {
     CompoundTag root = new CompoundTag();
     root.put("Territories", records);
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertTrue(store.inviteTerritory(territory.getUUID("TerritoryID")).isEmpty());
+    assertThrows(TerritorySnapshotIntegrityException.class,
+        () -> store.inviteTerritory(territory.getUUID("TerritoryID")));
+  }
+
+  @Test void inviteLookupDistinguishesMissingFromMalformedRoot() {
+    CompoundTag emptyRoot = new CompoundTag();
+    assertTrue(Forge1201TerritorySnapshotStore.load(emptyRoot)
+        .inviteTerritory(UUID.randomUUID()).isEmpty());
+    CompoundTag malformed = new CompoundTag();
+    malformed.putString("Territories", "not-a-list");
+    assertThrows(TerritorySnapshotIntegrityException.class,
+        () -> Forge1201TerritorySnapshotStore.load(malformed).inviteTerritory(UUID.randomUUID()));
+  }
+
+  @Test void duplicateTerritoryIsCreateFailedWithRepositoryDiagnostics() {
+    CompoundTag first = validTerritory();
+    first.put("AuthorizedPlayers", new ListTag());
+    CompoundTag duplicate = first.copy();
+    ListTag records = new ListTag();
+    records.add(first);
+    records.add(duplicate);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    var store = Forge1201TerritorySnapshotStore.load(root);
+    List<String> stages = new java.util.ArrayList<>();
+    var service = new TerritoryInviteRequestService(store::inviteTerritory,
+        id -> java.util.Optional.of(new TerritoryInviteRequestService.Player(id, "Target")),
+        new TerritoryInviteStore(), new TerritoryInviteRateLimiter(), UUID::randomUUID,
+        (stage, inviter, territory, target, error) -> stages.add(stage), 1200);
+    UUID owner = first.getUUID("OwnerUUID");
+    var outcome = service.create(owner, "Owner", first.getUUID("TerritoryID"),
+        UUID.randomUUID(), 10);
+    assertEquals(TerritoryInviteResult.CREATE_FAILED, outcome.result());
+    assertEquals(List.of("repository"), stages);
   }
 
   private static CompoundTag validTerritory() {

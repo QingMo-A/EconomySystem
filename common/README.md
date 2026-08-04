@@ -204,4 +204,10 @@ effort and JVM Errors are never swallowed. It uses an expiring `POST_TELEPORT` t
 a forced chunk. Supported results are SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, NO_BACKPOINT,
 DIMENSION_NOT_FOUND, UNSAFE_DESTINATION, NO_RECALL_POTION, COOLDOWN, TELEPORT_FAILED,
 TELEPORT_STATE_UNKNOWN and ROLLBACK_FAILED.
-Protocol 20 and later territory operations remain unmigrated.
+Protocol 20 is complete with the unchanged 32-byte UUID-only request. The invitation store rejects
+already-expired/future-created inserts, keeps claim construction and completion package-local, and maps
+PERSIST_FAILED to a safe release while consuming STATE_UNKNOWN. Client player-list responses atomically publish
+an immutable snapshot with a monotonic local revision, allowing Forge to distinguish a fresh response from stale
+cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21 and
+later territory operations remain unmigrated. The final suites contain 252 shared-source, 315 Forge and 305
+NeoForge tests.

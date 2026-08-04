@@ -239,13 +239,14 @@ public class ZhCnLanguageProvider extends LanguageProvider {
 
     // Screen_InvitePlayer | 邀请玩家
     add(Util_MessageKeys.INVITE_TITLE_KEY, "邀请玩家");
+    add("screen.invite.search", "搜索玩家");
+    add("screen.invite.territory", "领地：%s");
+    add("button.territory.invite", "邀请");
     add(Util_MessageKeys.INVITE_INVITE_BUTTON_KEY, "发送邀请");
     add(Util_MessageKeys.INVITE_NO_NAME_KEY, "请输入玩家名称");
-    add(Util_MessageKeys.INVITE_NO_PERMISSION, "§c你没有权限邀请玩家加入此领地！");
-    add(Util_MessageKeys.INVITE_PLAYER_OFFLINE, "§c玩家 %s 不在线！");
+    add(Util_MessageKeys.INVITE_NO_PERMISSION, "你没有权限邀请玩家加入此领地！");
     add("message.invite.accept", "[接受]");
     add("message.invite.decline", "[拒绝]");
-    add("message.invite.success", "邀请已创建。");
     add("message.invite.territory_not_found", "领地不存在。");
     add("message.invite.target_offline", "目标玩家不在线。");
     add("message.invite.cannot_invite_owner", "不能邀请领地主人。");
@@ -264,25 +265,20 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.INVITE_ALREADY_MEMBER, "该玩家已经是领地成员。");
     add(Util_MessageKeys.INVITE_SENT, "已向 %s 发送领地 %s 的邀请。");
     add(Util_MessageKeys.INVITE_RECEIVED, "%s 邀请你加入领地 %s。");
-    add(Util_MessageKeys.INVITE_SELF_ERROR, "§c你不能向自己发出邀请!");
     add(Util_MessageKeys.INVITE_NOT_IN_TERRITORY, "你不在自己的领地范围内，无法发送邀请！");
-    add(Util_MessageKeys.INVITE_SENT_TO_PLAYER, "邀请已发送给 %s");
-    add(Util_MessageKeys.INVITE_RECEIVED_PLAYER, "%s 邀请你加入领地: %s");
     add(Util_MessageKeys.COMMAND_PLAYER_ONLY, "此指令仅能由玩家执行！");
     add(Util_MessageKeys.TERRITORY_SETBACKPOINT_NO_PERMISSION, "你不在自己的领地范围内，无法设置回城点！");
     add(Util_MessageKeys.TERRITORY_SETBACKPOINT_SUCCESS, "成功设置回城点为: %s, %s, %s");
     add(Util_MessageKeys.INVITE_NO_PENDING, "你没有待处理的领地邀请。");
-    add(Util_MessageKeys.INVITE_TARGET_NOT_FOUND, "目标领地不存在！");
     add(Util_MessageKeys.INVITE_ACCEPTED, "已接受领地 %s 的邀请。");
-    add(Util_MessageKeys.INVITE_DECLINE_NO_PENDING, "没有待拒绝的领地邀请！");
     add(Util_MessageKeys.INVITE_DECLINED, "已拒绝领地 %s 的邀请。");
     add("message.invite.accepted_by", "%s 已接受领地 %s 的邀请。");
     add("message.invite.declined_by", "%s 已拒绝领地 %s 的邀请。");
     add("screen.invite.loading", "正在加载玩家……");
     add("screen.invite.empty", "没有可邀请的在线玩家。");
     add(Util_MessageKeys.INVITE_BACK_BUTTON, "返回");
-    add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "§a[同意]");
-    add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "§c[拒绝]");
+    add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "接受");
+    add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "拒绝");
 
     // Screen_TerritoryBuff | 领地增益
     add(Util_MessageKeys.TERRITORY_BUFF_TITLE_KEY, "领地增益");

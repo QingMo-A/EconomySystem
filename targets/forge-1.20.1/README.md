@@ -81,7 +81,7 @@ the request ID and response 18 uses explicit, bounded snapshots instead of Terri
 Forge captures its existing `territory_data` persistence into full owned snapshots and
 minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19 is the
 UUID-only teleport transaction described below. Protocol 20 uses the common 32-byte territory/target UUID invite request and a server-scoped expiring store. Forge invite acceptance performs a guarded raw-NBT `AuthorizedPlayers` mutation while retaining unknown fields. Protocol 21 and later territory actions remain legacy.
-Protocol-20 hardening uses token claims, raw-NBT exact request lookup, canonical bilingual keys, and an owned-row invite button. The final regression contains 246 shared-source tests, 307 Forge tests, and 292 NeoForge tests.
+Protocol-20 finalization uses token claims, raw-NBT exact request lookup, canonical bilingual keys, and an owned-row invite button. Player-list revision drives fresh loading/empty state and a 15-tick debounce blocks duplicate sends. Malformed or duplicate raw territory records map to CREATE_FAILED. Forge Chinese non-invite translations were restored from the pre-protocol-20 baseline. The final regression contains 252 shared-source tests, 315 Forge tests, and 305 NeoForge tests.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
@@ -146,4 +146,4 @@ The page uses non-overlapping 26-pixel rows, render-owned UUID hitboxes and whee
 is reachable, including zero visible rows in tiny windows. Arrival UNKNOWN keeps the removed potion and reports
 state uncertainty; the limiter is weakly scoped to each MinecraftServer and resets on tick epoch rollback.
 Full player AABB world-border/collision checks precede teleport. Only an expiring POST_TELEPORT
-ticket is used. Protocol 20+ remains legacy.
+ticket is used. Protocol 20 is complete; protocol 21+ remains legacy.

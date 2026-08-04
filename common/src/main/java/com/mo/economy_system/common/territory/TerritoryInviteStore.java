@@ -5,18 +5,18 @@ import java.util.*;
 /** Bounded, expiring, server-session invitation state machine. */
 public final class TerritoryInviteStore {
   public enum PutResult { CREATED, ALREADY_PENDING, ID_COLLISION, FULL }
-  public enum ClaimStatus { CLAIMED, NOT_FOUND, NOT_TARGET, BUSY }
-  public enum CompleteResult { COMPLETED, INVALID_CLAIM }
-  public enum ReleaseResult { RELEASED, EXPIRED, INVALID_CLAIM }
+  enum ClaimStatus { CLAIMED, NOT_FOUND, NOT_TARGET, BUSY }
+  enum CompleteResult { COMPLETED, INVALID_CLAIM }
+  enum ReleaseResult { RELEASED, EXPIRED, INVALID_CLAIM }
   public enum SoleStatus { NONE, SOLE, MULTIPLE }
   public record Key(UUID targetPlayerId, UUID territoryId) {
     public Key { Objects.requireNonNull(targetPlayerId); Objects.requireNonNull(territoryId); }
   }
-  public record Claim(long token, TerritoryInvite invite) {
-    public Claim { if (token <= 0) throw new IllegalArgumentException("token"); Objects.requireNonNull(invite); }
+  record Claim(long token, TerritoryInvite invite) {
+    Claim { if (token <= 0) throw new IllegalArgumentException("token"); Objects.requireNonNull(invite); }
   }
-  public record ClaimResult(ClaimStatus status, Claim claim) {
-    public ClaimResult { Objects.requireNonNull(status); if ((status == ClaimStatus.CLAIMED) != (claim != null)) throw new IllegalArgumentException("claim/status"); }
+  record ClaimResult(ClaimStatus status, Claim claim) {
+    ClaimResult { Objects.requireNonNull(status); if ((status == ClaimStatus.CLAIMED) != (claim != null)) throw new IllegalArgumentException("claim/status"); }
   }
   public record SoleResult(SoleStatus status, UUID inviteId) {
     public SoleResult { Objects.requireNonNull(status); if ((status == SoleStatus.SOLE) != (inviteId != null)) throw new IllegalArgumentException("id/status"); }
@@ -33,7 +33,9 @@ public final class TerritoryInviteStore {
   public TerritoryInviteStore(int capacity) { if (capacity < 1) throw new IllegalArgumentException("capacity"); this.capacity = capacity; }
 
   public synchronized PutResult put(TerritoryInvite invite, long tick) {
-    Objects.requireNonNull(invite, "invite"); cleanup(tick);
+    Objects.requireNonNull(invite, "invite");
+    if (tick < 0 || invite.createdTick() > tick || tick >= invite.expiresTick()) throw new IllegalArgumentException("invite/tick");
+    cleanup(tick);
     if (invites.containsKey(invite.inviteId())) return PutResult.ID_COLLISION;
     Key key = new Key(invite.targetPlayerId(), invite.territoryId());
     if (keys.containsKey(key)) return PutResult.ALREADY_PENDING;
@@ -46,7 +48,7 @@ public final class TerritoryInviteStore {
   public synchronized List<TerritoryInvite> listForTarget(UUID target, long tick) { Objects.requireNonNull(target); cleanup(tick); return invites.values().stream().filter(i -> i.targetPlayerId().equals(target)).sorted(Comparator.comparing(TerritoryInvite::createdTick)).toList(); }
   public synchronized SoleResult resolveSole(UUID target, long tick) { List<TerritoryInvite> found=listForTarget(target,tick); return found.isEmpty()?new SoleResult(SoleStatus.NONE,null):found.size()==1?new SoleResult(SoleStatus.SOLE,found.get(0).inviteId()):new SoleResult(SoleStatus.MULTIPLE,null); }
 
-  public synchronized ClaimResult claim(UUID id, UUID actor, long tick) {
+  synchronized ClaimResult claim(UUID id, UUID actor, long tick) {
     Objects.requireNonNull(id); Objects.requireNonNull(actor); cleanup(tick);
     TerritoryInvite invite=invites.get(id); if(invite==null||tick>=invite.expiresTick())return new ClaimResult(ClaimStatus.NOT_FOUND,null);
     if(!invite.targetPlayerId().equals(actor))return new ClaimResult(ClaimStatus.NOT_TARGET,null);
@@ -55,13 +57,13 @@ public final class TerritoryInviteStore {
     return new ClaimResult(ClaimStatus.CLAIMED,new Claim(token,invite));
   }
 
-  public synchronized CompleteResult complete(Claim claim) {
+  synchronized CompleteResult complete(Claim claim) {
     if (!valid(claim)) return CompleteResult.INVALID_CLAIM;
     TerritoryInvite invite=invites.remove(claim.invite().inviteId()); processing.remove(invite.inviteId());
     keys.remove(new Key(invite.targetPlayerId(),invite.territoryId()),invite.inviteId());
     return CompleteResult.COMPLETED;
   }
-  public synchronized ReleaseResult release(Claim claim) {
+  synchronized ReleaseResult release(Claim claim) {
     if (!valid(claim)) return ReleaseResult.INVALID_CLAIM;
     processing.remove(claim.invite().inviteId());
     if(lastTick>=claim.invite().expiresTick()){remove(claim.invite());return ReleaseResult.EXPIRED;}

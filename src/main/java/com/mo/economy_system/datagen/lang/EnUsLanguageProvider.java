@@ -275,13 +275,14 @@ public class EnUsLanguageProvider extends LanguageProvider {
 
     // Screen_InvitePlayer | 邀请玩家
     add(Util_MessageKeys.INVITE_TITLE_KEY, "Invite Title");
+    add("screen.invite.search", "Search player");
+    add("screen.invite.territory", "Territory: %s");
+    add("button.territory.invite", "Invite");
     add(Util_MessageKeys.INVITE_INVITE_BUTTON_KEY, "Invite Invite");
     add(Util_MessageKeys.INVITE_NO_NAME_KEY, "Invite No Name");
     add(Util_MessageKeys.INVITE_NO_PERMISSION, "Invite No Permission");
-    add(Util_MessageKeys.INVITE_PLAYER_OFFLINE, "Invite Player Offline: %s");
     add("message.invite.accept", "[Accept]");
     add("message.invite.decline", "[Decline]");
-    add("message.invite.success", "Invitation created.");
     add("message.invite.territory_not_found", "Territory not found.");
     add("message.invite.target_offline", "That player is offline.");
     add("message.invite.cannot_invite_owner", "The territory owner cannot be invited.");
@@ -300,10 +301,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.INVITE_ALREADY_MEMBER, "That player is already a territory member.");
     add(Util_MessageKeys.INVITE_SENT, "Invitation sent to %s for territory %s.");
     add(Util_MessageKeys.INVITE_RECEIVED, "%s invited you to join territory %s.");
-    add(Util_MessageKeys.INVITE_SELF_ERROR, "Invite Self Error");
     add(Util_MessageKeys.INVITE_NOT_IN_TERRITORY, "Invite Not In Territory");
-    add(Util_MessageKeys.INVITE_SENT_TO_PLAYER, "Invite Sent To Player: %s");
-    add(Util_MessageKeys.INVITE_RECEIVED_PLAYER, "Invite Received Player: %s %s");
     add(Util_MessageKeys.COMMAND_PLAYER_ONLY, "Command Player Only");
     add(
         Util_MessageKeys.TERRITORY_SETBACKPOINT_NO_PERMISSION,
@@ -312,17 +310,15 @@ public class EnUsLanguageProvider extends LanguageProvider {
         Util_MessageKeys.TERRITORY_SETBACKPOINT_SUCCESS,
         "Territory Setbackpoint Success: %s %s %s");
     add(Util_MessageKeys.INVITE_NO_PENDING, "You have no pending territory invitations.");
-    add(Util_MessageKeys.INVITE_TARGET_NOT_FOUND, "Invite Target Not Found");
     add(Util_MessageKeys.INVITE_ACCEPTED, "Accepted the invitation to territory %s.");
-    add(Util_MessageKeys.INVITE_DECLINE_NO_PENDING, "Invite Decline No Pending");
     add(Util_MessageKeys.INVITE_DECLINED, "Declined the invitation to territory %s.");
     add("message.invite.accepted_by", "%s accepted the invitation to territory %s.");
     add("message.invite.declined_by", "%s declined the invitation to territory %s.");
     add("screen.invite.loading", "Loading players...");
     add("screen.invite.empty", "No eligible online players.");
     add(Util_MessageKeys.INVITE_BACK_BUTTON, "Back");
-    add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "Invite Accept Button");
-    add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "Invite Decline Button");
+    add(Util_MessageKeys.INVITE_ACCEPT_BUTTON, "Accept");
+    add(Util_MessageKeys.INVITE_DECLINE_BUTTON, "Decline");
 
     // Screen_TerritoryBuff | 领地增益
     add(Util_MessageKeys.TERRITORY_BUFF_TITLE_KEY, "Territory Buffs");

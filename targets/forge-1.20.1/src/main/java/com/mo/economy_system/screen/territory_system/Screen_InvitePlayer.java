@@ -1,6 +1,8 @@
 package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.common.client.ClientPlayerListState;
+import com.mo.economy_system.common.client.TerritoryInviteClickDebounce;
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -29,27 +32,28 @@ public final class Screen_InvitePlayer extends Screen {
   private final UUID ownerId;
   private final Set<UUID> existingMemberIds;
   private final Screen returnScreen;
+  private final long baselineRevision;
+  private final TerritoryInviteClickDebounce debounce = new TerritoryInviteClickDebounce(15);
   private EditBox search;
   private int scrollRow;
+  private long clientTick;
   private List<TerritoryInviteRowLayout.ButtonArea> inviteButtons = List.of();
-
-  public Screen_InvitePlayer(UUID territoryId, String territoryName) {
-    this(territoryId, territoryName, null, Set.of(), null);
-  }
-
-  public Screen_InvitePlayer(UUID territoryId, String territoryName, UUID ownerId,
-      Collection<UUID> existingMemberIds) {
-    this(territoryId, territoryName, ownerId, existingMemberIds, null);
-  }
 
   public Screen_InvitePlayer(UUID territoryId, String territoryName, UUID ownerId,
       Collection<UUID> existingMemberIds, Screen returnScreen) {
     super(Component.translatable("screen.invite.title"));
-    this.territoryId = territoryId;
-    this.territoryName = territoryName;
-    this.ownerId = ownerId;
-    this.existingMemberIds = existingMemberIds == null ? Set.of() : Set.copyOf(existingMemberIds);
-    this.returnScreen = returnScreen;
+    this.territoryId = Objects.requireNonNull(territoryId, "territoryId");
+    this.territoryName = Objects.requireNonNull(territoryName, "territoryName").trim();
+    if (this.territoryName.isEmpty()
+        || this.territoryName.length() > EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH) {
+      throw new IllegalArgumentException("territoryName");
+    }
+    this.ownerId = Objects.requireNonNull(ownerId, "ownerId");
+    this.existingMemberIds = Set.copyOf(Objects.requireNonNull(existingMemberIds,
+        "existingMemberIds"));
+    if (this.existingMemberIds.contains(ownerId)) throw new IllegalArgumentException("owner member");
+    this.returnScreen = Objects.requireNonNull(returnScreen, "returnScreen");
+    this.baselineRevision = ClientPlayerListState.snapshot().revision();
     EconomyServices.platform().network().sendToServer(ServerPlayerListRequestMessage.INSTANCE);
   }
 
@@ -60,13 +64,17 @@ public final class Screen_InvitePlayer extends Screen {
         Component.translatable("screen.invite.search"));
     search.setMaxLength(64);
     search.setValue(value);
+    search.setResponder(ignored -> {
+      scrollRow = 0;
+      inviteButtons = List.of();
+    });
     addRenderableWidget(search);
   }
 
   @Override
   public void tick() {
     super.tick();
-    // The directory response is atomically replaced by ClientPlayerListState.
+    clientTick++;
   }
 
   @Override
@@ -82,7 +90,20 @@ public final class Screen_InvitePlayer extends Screen {
     graphics.drawCenteredString(font, Component.translatable("button.invite.back"),
         backX + BACK_BUTTON_WIDTH / 2, backY + 6, 0xFFFFFFFF);
 
-    List<PlayerSummary> players = visiblePlayers();
+    ClientPlayerListState.Snapshot snapshot = ClientPlayerListState.snapshot();
+    if (snapshot.revision() <= baselineRevision) {
+      graphics.drawCenteredString(font, Component.translatable("screen.invite.loading"),
+          width / 2, 76, 0xAAAAAA);
+      super.render(graphics, mouseX, mouseY, partialTick);
+      return;
+    }
+    List<PlayerSummary> players = visiblePlayers(snapshot);
+    if (players.isEmpty()) {
+      graphics.drawCenteredString(font, Component.translatable("screen.invite.empty"),
+          width / 2, 76, 0xAAAAAA);
+      super.render(graphics, mouseX, mouseY, partialTick);
+      return;
+    }
     scrollRow = TerritoryInviteRowLayout.clampScroll(scrollRow, players.size(), height);
     inviteButtons = TerritoryInviteRowLayout.layout(
         players.stream().map(PlayerSummary::playerId).toList(), scrollRow, width, height,
@@ -91,8 +112,9 @@ public final class Screen_InvitePlayer extends Screen {
       PlayerSummary player = players.get(scrollRow + index);
       TerritoryInviteRowLayout.ButtonArea area = inviteButtons.get(index);
       graphics.drawString(font, player.playerName(), 24, area.y() + 5, 0xFFFFFF);
+      boolean available = debounce.available(clientTick);
       graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(),
-          0xFF3D6F4A);
+          available ? 0xFF3D6F4A : 0xFF555555);
       graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + 1, 0xFF9BC8A4);
       graphics.fill(area.x(), area.y() + area.height() - 1,
           area.x() + area.width(), area.y() + area.height(), 0xFF1B3322);
@@ -118,8 +140,10 @@ public final class Screen_InvitePlayer extends Screen {
       }
       for (TerritoryInviteRowLayout.ButtonArea area : inviteButtons) {
         if (area.contains(mouseX, mouseY)) {
-          EconomyServices.platform().network().sendToServer(
-              new InvitePlayerMessage(territoryId, area.playerId()));
+          if (debounce.tryAcquire(clientTick)) {
+            EconomyServices.platform().network().sendToServer(
+                new InvitePlayerMessage(territoryId, area.playerId()));
+          }
           return true;
         }
       }
@@ -131,20 +155,21 @@ public final class Screen_InvitePlayer extends Screen {
   public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
     if (delta != 0) {
       scrollRow = TerritoryInviteRowLayout.clampScroll(
-          scrollRow + (delta < 0 ? 1 : -1), visiblePlayers().size(), height);
+          scrollRow + (delta < 0 ? 1 : -1), visiblePlayers(ClientPlayerListState.snapshot()).size(), height);
+      inviteButtons = List.of();
       return true;
     }
     return super.mouseScrolled(mouseX, mouseY, delta);
   }
 
-  private List<PlayerSummary> visiblePlayers() {
+  private List<PlayerSummary> visiblePlayers(ClientPlayerListState.Snapshot snapshot) {
     String query = search == null ? "" : search.getValue().toLowerCase(Locale.ROOT);
     UUID self = Minecraft.getInstance().player == null
         ? null : Minecraft.getInstance().player.getUUID();
     List<PlayerSummary> result = new ArrayList<>();
-    for (PlayerSummary player : ClientPlayerListState.snapshot().players()) {
+    for (PlayerSummary player : snapshot.players()) {
       if (self != null && self.equals(player.playerId())) continue;
-      if (ownerId != null && ownerId.equals(player.playerId())) continue;
+      if (ownerId.equals(player.playerId())) continue;
       if (existingMemberIds.contains(player.playerId())) continue;
       if (query.isEmpty() || player.playerName().toLowerCase(Locale.ROOT).contains(query)) {
         result.add(player);
@@ -164,11 +189,7 @@ public final class Screen_InvitePlayer extends Screen {
 
   @Override
   public void onClose() {
-    if (returnScreen != null) {
-      Minecraft.getInstance().setScreen(returnScreen);
-    } else {
-      super.onClose();
-    }
+    Minecraft.getInstance().setScreen(returnScreen);
   }
 
   @Override

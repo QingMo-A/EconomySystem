@@ -270,24 +270,18 @@ public class Util_MessageKeys {
   public static final String INVITE_NO_NAME_KEY = "message.invite.no_name";
   public static final String INVITE_BACK_BUTTON = "button.invite.back";
   public static final String INVITE_NO_PERMISSION = "message.invite.no_permission";
-  public static final String INVITE_PLAYER_OFFLINE = "message.invite.player_offline";
   public static final String INVITE_ALREADY_MEMBER = "message.invite.already_member";
   public static final String INVITE_SENT = "message.invite.sent";
   public static final String INVITE_RECEIVED = "message.invite.received";
-  public static final String INVITE_SELF_ERROR = "message.invite.self_error";
   public static final String INVITE_NOT_IN_TERRITORY = "message.invite.not_in_territory";
-  public static final String INVITE_SENT_TO_PLAYER = "message.invite.sent_to_player";
-  public static final String INVITE_RECEIVED_PLAYER = "message.invite.received_player";
   public static final String COMMAND_PLAYER_ONLY = "message.command.player_only";
   public static final String TERRITORY_SETBACKPOINT_NO_PERMISSION =
       "message.territory.setbackpoint.no_permission";
   public static final String TERRITORY_SETBACKPOINT_SUCCESS =
       "message.territory.setbackpoint.success";
   public static final String INVITE_NO_PENDING = "message.invite.no_pending";
-  public static final String INVITE_TARGET_NOT_FOUND = "message.invite.target_not_found";
   public static final String INVITE_ACCEPTED = "message.invite.accepted";
   public static final String INVITE_ACCEPT_BUTTON = "button.invite.accept";
-  public static final String INVITE_DECLINE_NO_PENDING = "message.invite.decline_no_pending";
   public static final String INVITE_DECLINED = "message.invite.declined";
   public static final String INVITE_DECLINE_BUTTON = "button.invite.decline";
 

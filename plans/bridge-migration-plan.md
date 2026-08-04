@@ -121,7 +121,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
 - 协议 19 最终加固后的验证套件包含 shared-source 228 项、Forge 1.20.1 280 项和 NeoForge 1.21.1 274 项测试。
-- 协议 20 最终加固后的实际回归为 shared-source 246 项、Forge 1.20.1 307 项、NeoForge 1.21.1 292 项。store 使用 claim token 验证 complete/release；ID 碰撞最多重试八次。PERSIST_FAILED 安全释放，STATE_UNKNOWN 消费终止。NeoForge 写入检查 savedData 并验证添加/回滚；Forge 继续 raw NBT copy-on-write，且 owned 行已有邀请入口。协议 21+ 未迁移。
+- 协议 20 最终收尾后的实际回归为 shared-source 252 项、Forge 1.20.1 315 项、NeoForge 1.21.1 305 项。store 使用包内 claim token 验证 complete/release，并拒绝未来创建或已过期邀请；ID 碰撞最多重试八次。PERSIST_FAILED 安全释放，STATE_UNKNOWN 消费终止。NeoForge 真实成员写入具备 dirty/添加/回滚故障注入；Forge raw NBT 损坏或重复 UUID 映射 CREATE_FAILED。玩家目录本地 revision 驱动 Forge loading/empty，邀请按钮使用 15 tick debounce；Forge 中文资源已恢复且四份资源通过 canonical key、占位符和重复键测试。协议 21+ 未迁移。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -182,7 +182,7 @@ git diff --check
   C2S message and an NBT-free snapshot response. Owned territories contain complete
   members/rules/buffs/costs/backpoint data; authorized territories contain summaries
   only. Both targets enforce identical nested limits plus 1 MiB estimated/wire budgets,
-  and clients reject stale responses before atomic UI commit. Protocol 19 is migrated below; protocol 20+ remains legacy.
+  and clients reject stale responses before atomic UI commit. Protocols 19/20 are migrated below; protocol 21+ remains legacy.
 - Protocol 14 hardening is closed: authoritative requester reporting, expected-order transition,
   exact supplier credit, independent payment/inventory compensation, and shared adapter contract
   coverage are complete. Protocol 16 now uses a UUID-only common request, expected-order removal,
