@@ -50,5 +50,6 @@
   "message.teleport.cooldown": "Please wait before teleporting again",
   "message.teleport.failed": "Teleport failed",
   "message.teleport.rollback_failed": "Teleport failed and the recall potion could not be restored",
+  "message.teleport.state_unknown": "Teleport status could not be confirmed. The recall potion was not refunded; contact an administrator",
   "message.teleport.success": "Teleported to %s"
 }

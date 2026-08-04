@@ -27,4 +27,12 @@ class TerritoryTeleportRowLayoutTest {
     assertEquals(5-visible,end);
     assertEquals(5,TerritoryTeleportRowLayout.layout(List.of(FIRST,SECOND,THIRD,UUID.randomUUID(),UUID.randomUUID()),end,320,125,72,20).size()+end);
   }
+  @Test void emptyExactOverflowAndTinyLayoutsAreBounded() {
+    assertTrue(TerritoryTeleportRowLayout.layout(List.of(),0,320,125,72,20).isEmpty());
+    assertEquals(1,TerritoryTeleportRowLayout.layout(List.of(FIRST),0,320,125,72,20).size());
+    int visible=TerritoryTeleportRowLayout.visibleCount(125);List<UUID> exact=java.util.stream.IntStream.range(0,visible).mapToObj(i->UUID.randomUUID()).toList();
+    assertEquals(visible,TerritoryTeleportRowLayout.layout(exact,0,320,125,72,20).size());
+    assertEquals(1,TerritoryTeleportRowLayout.clampScroll(9,visible+1,125));
+    assertEquals(0,TerritoryTeleportRowLayout.visibleCount(60));assertTrue(TerritoryTeleportRowLayout.layout(List.of(FIRST),0,320,60,72,20).isEmpty());
+  }
 }

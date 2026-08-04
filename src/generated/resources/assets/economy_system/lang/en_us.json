@@ -221,6 +221,7 @@
   "message.teleport.unsafe_destination": "The territory backpoint is unsafe. Ask its owner to repair it.",
   "message.teleport.cooldown": "Please wait before teleporting again.",
   "message.teleport.rollback_failed": "Teleport failed and the recall potion could not be restored. Contact an administrator.",
+  "message.teleport.state_unknown": "Teleport status could not be confirmed. The recall potion was not refunded; contact an administrator.",
   "message.teleport.no_backpoint": "Teleport No Backpoint",
   "message.teleport.no_permission": "Teleport No Permission",
   "message.teleport.no_potion": "Teleport No Potion",

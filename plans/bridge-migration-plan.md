@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
-- 协议 19 加固后的验证套件包含 shared-source 220 项、Forge 1.20.1 271 项和 NeoForge 1.21.1 266 项测试。
+- 协议 19 最终加固后的验证套件包含 shared-source 228 项、Forge 1.20.1 280 项和 NeoForge 1.21.1 274 项测试。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -210,5 +210,11 @@ git diff --check
   Both loaders mark/synchronize removal and restoration, repository/infrastructure exceptions remain generic,
   rollback errors are suppressed onto the primary error, and JVM Errors escape. Forge uses non-overlapping rows,
   render-owned UUID hitboxes and wheel scrolling for its minimal read-only page teleport action.
+- Final protocol-19 inventory hardening moves the remaining-stack write and dirty mark into the common reserve
+  factory, compensates failure before returning, and distinguishes compensation failure as ROLLBACK_FAILED.
+  Dirty marking is transactional while client synchronization is best effort. Commit cannot perform I/O;
+  arrival UNKNOWN commits without refund and reports TELEPORT_STATE_UNKNOWN. Weak server-scoped limiters plus
+  tick-epoch reset prevent cooldown leakage across server lifetimes. Target inventory helpers contain all
+  version-specific ItemStack equality and main-inventory access.
 - Protocol 20 and every later territory operation remain unmigrated. The next migration is protocol 20 only.
   after a separate task.

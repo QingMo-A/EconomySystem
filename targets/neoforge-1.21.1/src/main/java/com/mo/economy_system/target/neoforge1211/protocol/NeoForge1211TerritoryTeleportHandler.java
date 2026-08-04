@@ -3,11 +3,9 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.territory.*;
-import com.mo.economy_system.common.territory.RecallPotionReservation;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
-import com.mo.economy_system.item.EconomySystem_Items;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -22,7 +20,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
@@ -32,7 +29,7 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public final class NeoForge1211TerritoryTeleportHandler {
-  private static final TerritoryTeleportRateLimiter LIMITER = new TerritoryTeleportRateLimiter();
+  private static final TerritoryTeleportLimiterRegistry<net.minecraft.server.MinecraftServer> LIMITERS = new TerritoryTeleportLimiterRegistry<>();
   private NeoForge1211TerritoryTeleportHandler() {}
 
   public static void handle(TeleportToTerritoryMessage message, IPayloadContext context) {
@@ -42,17 +39,17 @@ public final class NeoForge1211TerritoryTeleportHandler {
         Adapter adapter = new Adapter(player);
         TerritoryTeleportService<ServerLevel> service = new TerritoryTeleportService<>(
             id -> Optional.ofNullable(TerritoryManager.getTerritoryByID(id)).map(Adapter::target),
-            adapter, adapter, LIMITER,
+            adapter, new NeoForge1211RecallPotionInventory(player), LIMITERS.forServer(player.server),
             (stage, playerId, territoryId, slot, primary, secondary) ->
                 EconomySystem.LOGGER.warn("Territory teleport issue stage={} result={} player={} territory={} slot={}",
                     stage, stage.equals("rollback") ? "ROLLBACK_FAILED" : "TELEPORT_FAILED",
                     playerId, territoryId, slot, primary));
         TerritoryTeleportOutcome outcome = service.execute(player.getUUID(), message.territoryId(), player.server.getTickCount());
-        player.sendSystemMessage(message(outcome));
+        try{player.sendSystemMessage(message(outcome));}catch(Exception messageError){EconomySystem.LOGGER.warn("Territory teleport result message failed player={} territory={} result={}",player.getUUID(),message.territoryId(),outcome.result(),messageError);}
       } catch (Exception error) {
         EconomySystem.LOGGER.error("Territory teleport request failed stage=handler player={} territory={}",
             player.getUUID(), message.territoryId(), error);
-        player.sendSystemMessage(Component.translatable("message.teleport.failed"));
+        try{player.sendSystemMessage(Component.translatable("message.teleport.failed"));}catch(Exception messageError){EconomySystem.LOGGER.warn("Territory teleport failure message failed player={} territory={}",player.getUUID(),message.territoryId(),messageError);}
       }
     });
   }
@@ -69,10 +66,11 @@ public final class NeoForge1211TerritoryTeleportHandler {
       case COOLDOWN -> Component.translatable("message.teleport.cooldown");
       case ROLLBACK_FAILED -> Component.translatable("message.teleport.rollback_failed");
       case TELEPORT_FAILED -> Component.translatable("message.teleport.failed");
+      case TELEPORT_STATE_UNKNOWN -> Component.translatable("message.teleport.state_unknown");
     };
   }
 
-  private static final class Adapter implements TerritoryTeleportService.DestinationAdapter<ServerLevel>, TerritoryTeleportService.Inventory {
+  private static final class Adapter implements TerritoryTeleportService.DestinationAdapter<ServerLevel> {
     private final ServerPlayer player;
     Adapter(ServerPlayer player) { this.player = player; }
     static TerritoryTeleportTarget target(Territory territory) {
@@ -115,9 +113,9 @@ public final class NeoForge1211TerritoryTeleportHandler {
     public void teleport(ServerLevel level, Position backpoint) {
       BlockPos p = pos(backpoint); player.teleportTo(level, p.getX() + .5, p.getY(), p.getZ() + .5, player.getYRot(), player.getXRot());
     }
-    public boolean arrived(ServerLevel level, Position backpoint) {
+    public TerritoryTeleportArrival arrival(ServerLevel level, Position backpoint) {
       BlockPos p = pos(backpoint); double x=p.getX()+.5,y=p.getY(),z=p.getZ()+.5;
-      return player.serverLevel() == level && player.distanceToSqr(x,y,z) <= .25;
+      return player.serverLevel() == level && player.distanceToSqr(x,y,z) <= .25 ? TerritoryTeleportArrival.ARRIVED : TerritoryTeleportArrival.NOT_ARRIVED;
     }
     public void particles(ServerLevel level, Position backpoint) {
       BlockPos p=pos(backpoint); level.sendParticles(ParticleTypes.PORTAL,p.getX()+.5,p.getY()+1,p.getZ()+.5,32,.4,.8,.4,.1);
@@ -125,33 +123,6 @@ public final class NeoForge1211TerritoryTeleportHandler {
     public void sound(ServerLevel level, Position backpoint) {
       BlockPos p=pos(backpoint); level.playSound(null,p,SoundEvents.ENDERMAN_TELEPORT,SoundSource.PLAYERS,1,1);
     }
-    public Optional<TerritoryTeleportService.Reservation> reserveRecallPotion() {
-      for (int slot=0; slot<player.getInventory().items.size(); slot++) {
-        ItemStack stack=player.getInventory().items.get(slot);
-        if (stack.is(EconomySystem_Items.RECALL_POTION.get())) {
-          ItemStack removed=stack.copyWithCount(1); stack.shrink(1);
-          ItemStack expected=stack.copy(); changed();
-          return Optional.of(new RecallPotionReservation<>(slot, removed, expected, slots()));
-        }
-      }
-      return Optional.empty();
-    }
-    private RecallPotionReservation.Slots<ItemStack> slots() {
-      return new RecallPotionReservation.Slots<>() {
-        public int size(){return player.getInventory().items.size();}
-        public ItemStack get(int slot){return player.getInventory().items.get(slot);}
-        public void set(int slot,ItemStack value){player.getInventory().items.set(slot,value);}
-        public ItemStack copy(ItemStack value){return value.copy();}
-        public boolean equivalent(ItemStack a,ItemStack b){return a.getCount()==b.getCount() && ItemStack.isSameItemSameComponents(a,b);}
-        public boolean empty(ItemStack value){return value.isEmpty();}
-        public boolean canMerge(ItemStack a,ItemStack b){return !a.isEmpty() && ItemStack.isSameItemSameComponents(a,b);}
-        public int count(ItemStack value){return value.getCount();}
-        public int maximum(ItemStack value){return value.getMaxStackSize();}
-        public ItemStack withAddedOne(ItemStack existing,ItemStack one){ItemStack result=existing.isEmpty()?one.copy():existing.copy();if(!existing.isEmpty())result.grow(1);return result;}
-        public void changed(){Adapter.this.changed();}
-      };
-    }
-    private void changed(){player.getInventory().setChanged();player.containerMenu.broadcastChanges();}
     private static BlockPos pos(Position p) { return new BlockPos(p.x(), p.y()+1, p.z()); }
   }
 }

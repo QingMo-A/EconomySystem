@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–19 已完成 bridge 迁移与加固。协议 19 的药水 reservation 是 one-shot：两端扣除后都标记/同步物品栏，成功 commit，失败只安全恢复一瓶且不得覆盖冲突槽位；arrival 只读且不抛异常，基础设施异常 fail closed，JVM Error 不得吞掉。Forge 只读页使用不重叠 UUID hitbox 与滚轮滚动。协议 20 及之后仍保持 legacy，必须按单协议任务继续迁移。
+协议 17–19 已完成 bridge 迁移与最终加固。协议 19 的 common reserve 工厂在返回前完成写入与 dirty mark，并自行补偿失败；客户端同步是 best-effort。reservation 是 one-shot，commit 不做 I/O；arrival UNKNOWN 不自动退款并返回状态不确定。限流器按服务器弱引用隔离且支持 tick epoch reset。Forge/NeoForge 生产库存 helper 只扫描 `inventory.items`。Forge 只读页保留不重叠 UUID hitbox 与滚轮滚动。协议 20 及之后仍保持 legacy，必须按单协议任务继续迁移。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
 - 将领地价格放入配置。

@@ -11,12 +11,12 @@ public final class TerritoryTeleportService<D> {
     Optional<D> resolve(String dimensionId);
     boolean prepareAndValidate(D dimension, TerritorySnapshots.Position backpoint) throws Exception;
     void teleport(D dimension, TerritorySnapshots.Position backpoint) throws Exception;
-    boolean arrived(D dimension, TerritorySnapshots.Position backpoint);
+    TerritoryTeleportArrival arrival(D dimension, TerritorySnapshots.Position backpoint);
     void particles(D dimension, TerritorySnapshots.Position backpoint) throws Exception;
     void sound(D dimension, TerritorySnapshots.Position backpoint) throws Exception;
   }
   public interface Inventory { Optional<Reservation> reserveRecallPotion() throws Exception; }
-  public interface Reservation { int slot(); void commit() throws Exception; void rollback() throws Exception; }
+  public interface Reservation { int slot(); void commit(); void rollback() throws Exception; }
   public interface Diagnostics { void warning(String stage, UUID playerId, UUID territoryId, int slot, Throwable primary, Throwable secondary); }
 
   private final Repository repository; private final DestinationAdapter<D> destination;
@@ -70,13 +70,23 @@ public final class TerritoryTeleportService<D> {
     }
     Reservation reservation;
     try { reservation = inventory.reserveRecallPotion().orElse(null); }
+    catch (RecallPotionReserveException error) {
+      warn("reserve",requesterId,territoryId,error.slot(),error,error.getCause() instanceof Exception cause?cause:null);
+      return TerritoryTeleportOutcome.of(error.rollbackFailed()?TerritoryTeleportResult.ROLLBACK_FAILED:TerritoryTeleportResult.TELEPORT_FAILED);
+    }
     catch (Exception error) { warn("reserve", requesterId, territoryId, -1, error, null); return TerritoryTeleportOutcome.of(TerritoryTeleportResult.TELEPORT_FAILED); }
     if (reservation == null) return TerritoryTeleportOutcome.of(TerritoryTeleportResult.NO_RECALL_POTION);
-    Exception teleportError = null; boolean arrived;
+    Exception teleportError = null; TerritoryTeleportArrival arrival;
     try { destination.teleport(dimension, target.backpoint().get()); }
     catch (Exception error) { teleportError = error; }
-    arrived = destination.arrived(dimension, target.backpoint().get());
-    if (!arrived) {
+    try{arrival=Objects.requireNonNull(destination.arrival(dimension,target.backpoint().get()),"arrival");}
+    catch(RuntimeException error){
+      try{reservation.commit();}catch(RuntimeException commitError){if(commitError!=error)error.addSuppressed(commitError);}
+      warn("arrival-unknown",requesterId,territoryId,reservation.slot(),error,null);
+      return TerritoryTeleportOutcome.of(TerritoryTeleportResult.TELEPORT_STATE_UNKNOWN);
+    }
+    if(arrival==TerritoryTeleportArrival.UNKNOWN){reservation.commit();warn("arrival-unknown",requesterId,territoryId,reservation.slot(),new IllegalStateException("adapter reported UNKNOWN"),null);return TerritoryTeleportOutcome.of(TerritoryTeleportResult.TELEPORT_STATE_UNKNOWN);}
+    if (arrival == TerritoryTeleportArrival.NOT_ARRIVED) {
       if (teleportError == null) teleportError = new IllegalStateException("player did not arrive at destination");
       try { reservation.rollback(); }
       catch (Exception rollbackError) {
@@ -88,10 +98,7 @@ public final class TerritoryTeleportService<D> {
       return TerritoryTeleportOutcome.of(TerritoryTeleportResult.TELEPORT_FAILED);
     }
     if (teleportError != null) warn("teleport-arrived", requesterId, territoryId, reservation.slot(), teleportError, null);
-    try { reservation.commit(); } catch (Exception error) {
-      warn("commit", requesterId, territoryId, reservation.slot(), error, null);
-      return TerritoryTeleportOutcome.of(TerritoryTeleportResult.TELEPORT_FAILED);
-    }
+    try { reservation.commit(); } catch (RuntimeException error) { warn("commit-after-arrival", requesterId, territoryId, reservation.slot(), error, null); }
     try { destination.particles(dimension, target.backpoint().get()); } catch (Exception error) { warn("particles", requesterId, territoryId, reservation.slot(), error, null); }
     try { destination.sound(dimension, target.backpoint().get()); } catch (Exception error) { warn("sound", requesterId, territoryId, reservation.slot(), error, null); }
     return TerritoryTeleportOutcome.success(target.territoryName());

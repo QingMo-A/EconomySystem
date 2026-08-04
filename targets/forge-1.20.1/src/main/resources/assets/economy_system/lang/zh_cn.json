@@ -50,5 +50,6 @@
   "message.teleport.cooldown": "请稍后再尝试传送",
   "message.teleport.failed": "传送失败",
   "message.teleport.rollback_failed": "传送失败且回忆药水无法恢复，请联系管理员",
+  "message.teleport.state_unknown": "传送状态无法确认，回忆药水未自动退还，请联系管理员检查",
   "message.teleport.success": "已传送至 %s"
 }

@@ -63,7 +63,7 @@ class TerritoryTeleportServiceTest {
     assertTrue(limiter.tryAcquire(a,0));assertTrue(limiter.tryAcquire(b,10));assertTrue(limiter.tryAcquire(a,20));
     assertTrue(limiter.tryAcquire(c,91));assertEquals(2,limiter.size());
     assertFalse(limiter.tryAcquire(c,92));assertTrue(limiter.tryAcquire(c,111));
-    assertFalse(limiter.tryAcquire(c,110));
+    assertTrue(limiter.tryAcquire(c,110));assertEquals(1,limiter.size());
   }
   @Test void validatesInputsAndDependencies() {
     assertThrows(NullPointerException.class,()->new TerritoryTeleportService<>(null,fake,fake,new TerritoryTeleportRateLimiter(),fake));
@@ -86,17 +86,23 @@ class TerritoryTeleportServiceTest {
     fake.prepareError=false;fake.inventoryError=true;assertEquals(TerritoryTeleportResult.TELEPORT_FAILED,service().execute(OWNER,ID,1).result());
   }
   @Test void jvmErrorsAreNotCaught() { fake.repositoryJvmError=true; assertThrows(AssertionError.class,()->service().execute(OWNER,ID,1)); }
+  @Test void unknownArrivalCommitsWithoutRefund() {
+    fake.arrivalError=true;assertEquals(TerritoryTeleportResult.TELEPORT_STATE_UNKNOWN,service().execute(OWNER,ID,1).result());assertEquals(1,fake.commits);assertEquals(0,fake.rollbacks);
+  }
+  @Test void commitRuntimeAfterArrivalDoesNotChangeSuccessFact() {
+    fake.commitError=true;assertEquals(TerritoryTeleportResult.SUCCESS,service().execute(OWNER,ID,1).result());assertEquals(0,fake.rollbacks);
+  }
   private static final class Fake implements TerritoryTeleportService.DestinationAdapter<String>, TerritoryTeleportService.Inventory, TerritoryTeleportService.Diagnostics {
     boolean exists=true,backpoint=true,dimension=true,safe=true,potion=true,arrived=true,teleportThrows,rollbackThrows,effectsThrow;
-    boolean repositoryError,nullOptional,mismatch,resolveError,prepareError,inventoryError,repositoryJvmError;
+    boolean repositoryError,nullOptional,mismatch,resolveError,prepareError,inventoryError,repositoryJvmError,arrivalError,unknown,commitError;
     int reserves,rollbacks,commits; Throwable primary,secondary;
     public Optional<String> resolve(String id){if(resolveError)throw new IllegalStateException();return dimension?Optional.of(id):Optional.empty();}
     public boolean prepareAndValidate(String d,Position p){if(prepareError)throw new IllegalStateException();return safe;}
     public void teleport(String d,Position p){if(teleportThrows)throw new IllegalStateException("teleport");}
-    public boolean arrived(String d,Position p){return arrived;}
+    public TerritoryTeleportArrival arrival(String d,Position p){if(arrivalError)throw new IllegalStateException("arrival");return unknown?TerritoryTeleportArrival.UNKNOWN:(arrived?TerritoryTeleportArrival.ARRIVED:TerritoryTeleportArrival.NOT_ARRIVED);}
     public void particles(String d,Position p){if(effectsThrow)throw new IllegalStateException();}
     public void sound(String d,Position p){if(effectsThrow)throw new IllegalStateException();}
-    public Optional<TerritoryTeleportService.Reservation> reserveRecallPotion(){if(inventoryError)throw new IllegalStateException();reserves++; if(!potion)return Optional.empty(); return Optional.of(new TerritoryTeleportService.Reservation(){public int slot(){return 0;}public void commit(){commits++;}public void rollback(){rollbacks++;if(rollbackThrows)throw new IllegalStateException("rollback");}});}
+    public Optional<TerritoryTeleportService.Reservation> reserveRecallPotion(){if(inventoryError)throw new IllegalStateException();reserves++; if(!potion)return Optional.empty(); return Optional.of(new TerritoryTeleportService.Reservation(){public int slot(){return 0;}public void commit(){commits++;if(commitError)throw new IllegalStateException("commit");}public void rollback(){rollbacks++;if(rollbackThrows)throw new IllegalStateException("rollback");}});}
     public void warning(String s,UUID p,UUID t,int slot,Throwable a,Throwable b){primary=a;secondary=b;}
   }
 }

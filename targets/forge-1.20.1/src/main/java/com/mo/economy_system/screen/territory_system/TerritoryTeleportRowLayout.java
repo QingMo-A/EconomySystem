@@ -21,7 +21,7 @@ final class TerritoryTeleportRowLayout {
       result.add(new ButtonArea(x, 53 + index * ROW_HEIGHT, buttonWidth, buttonHeight, ids.get(first + index)));
     return List.copyOf(result);
   }
-  static int visibleCount(int screenHeight) { return Math.max(1, (screenHeight - 73) / ROW_HEIGHT); }
+  static int visibleCount(int screenHeight) { return Math.max(0, (screenHeight - 73) / ROW_HEIGHT); }
   static int clampScroll(int scroll, int rowCount, int screenHeight) {
     return Math.max(0, Math.min(scroll, Math.max(0, rowCount - visibleCount(screenHeight))));
   }

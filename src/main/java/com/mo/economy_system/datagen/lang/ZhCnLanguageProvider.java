@@ -318,6 +318,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.TELEPORT_UNSAFE_DESTINATION, "§c领地回城点不安全，请联系领地主人修复！");
     add(Util_MessageKeys.TELEPORT_COOLDOWN, "§e请稍后再尝试传送。");
     add(Util_MessageKeys.TELEPORT_ROLLBACK_FAILED, "§c传送失败且回忆药水无法恢复，请联系管理员检查状态！");
+    add(Util_MessageKeys.TELEPORT_STATE_UNKNOWN, "§c传送状态无法确认，回忆药水未自动退还，请联系管理员检查！");
 
     // Screen_About | 关于页
     add(Util_MessageKeys.ABOUT_TITLE_KEY, "关于");

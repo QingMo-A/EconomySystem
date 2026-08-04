@@ -64,7 +64,7 @@ maintaining independent registration order.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
   restored and recaptured by both targets. The complete verified suite runs 199 shared-source,
-  271 Forge 1.20.1 and 266 NeoForge 1.21.1 tests with no failures (220 shared-source tests).
+  280 Forge 1.20.1 and 274 NeoForge 1.21.1 tests with no failures (228 shared-source tests).
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -190,13 +190,18 @@ the destination unchanged. Stable DATA and ERROR golden fixtures run in both tar
 Protocol 19 is a common UUID-only C2S message with an exact 16-byte, NBT-free wire codec. The common teleport
 service re-reads the authoritative territory, permits only owner or current authorized members, validates the
 dimension and exact `backpoint.above()` destination, applies a bounded 20-tick server cooldown, and performs
-recall-potion removal/commit/rollback as a one-shot transaction. Both targets mark and synchronize inventory
-immediately after removing exactly one main-inventory potion. Rollback restores only that potion: it uses the
+recall-potion removal/commit/rollback as a one-shot transaction. `RecallPotionReservation.reserve` owns the
+remaining-stack write and dirty mark before returning; a reserve failure restores the original stack or reports
+ROLLBACK_FAILED with the compensation error suppressed. Both targets separate required server dirty marking from
+best-effort client synchronization, so sync failure cannot reverse a confirmed inventory fact. Rollback restores only that potion: it uses the
 original slot only while its expected remainder is unchanged, otherwise selects a mergeable stack or empty slot,
 and fails without overwriting unrelated items when neither exists. Repository, capture, dimension, preparation
 and inventory exceptions become a logged generic failure; rollback exceptions are suppressed onto the primary
-failure. Arrival is a non-throwing state read, while ordinary effect failures remain best effort and JVM Errors
-are never swallowed. It uses an expiring `POST_TELEPORT` ticket and never persists
+failure. Commit is an in-memory, unchecked state transition. Arrival reports ARRIVED/NOT_ARRIVED/UNKNOWN;
+UNKNOWN commits the removal without automatic refund and returns TELEPORT_STATE_UNKNOWN to avoid duplication.
+Limiters are weakly server-scoped and also reset on tick epoch rollback. Ordinary effect failures remain best
+effort and JVM Errors are never swallowed. It uses an expiring `POST_TELEPORT` ticket and never persists
 a forced chunk. Supported results are SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, NO_BACKPOINT,
-DIMENSION_NOT_FOUND, UNSAFE_DESTINATION, NO_RECALL_POTION, COOLDOWN, TELEPORT_FAILED and ROLLBACK_FAILED.
+DIMENSION_NOT_FOUND, UNSAFE_DESTINATION, NO_RECALL_POTION, COOLDOWN, TELEPORT_FAILED,
+TELEPORT_STATE_UNKNOWN and ROLLBACK_FAILED.
 Protocol 20 and later territory operations remain unmigrated.

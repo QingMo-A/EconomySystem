@@ -221,6 +221,7 @@
   "message.teleport.unsafe_destination": "§c领地回城点不安全，请联系领地主人修复！",
   "message.teleport.cooldown": "§e请稍后再尝试传送。",
   "message.teleport.rollback_failed": "§c传送失败且回忆药水无法恢复，请联系管理员检查状态！",
+  "message.teleport.state_unknown": "§c传送状态无法确认，回忆药水未自动退还，请联系管理员检查！",
   "message.teleport.no_backpoint": "§c该领地没有设置回城点，无法传送！",
   "message.teleport.no_permission": "§c你没有权限传送到此领地！",
   "message.teleport.no_potion": "§c传送失败，你没有足够的回忆药水！",

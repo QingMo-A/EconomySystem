@@ -360,6 +360,7 @@ public class Util_MessageKeys {
   public static final String TELEPORT_UNSAFE_DESTINATION = "message.teleport.unsafe_destination";
   public static final String TELEPORT_COOLDOWN = "message.teleport.cooldown";
   public static final String TELEPORT_ROLLBACK_FAILED = "message.teleport.rollback_failed";
+  public static final String TELEPORT_STATE_UNKNOWN = "message.teleport.state_unknown";
 
   // Screen_About | 关于页
   public static final String ABOUT_TITLE_KEY = "screen.about.title";

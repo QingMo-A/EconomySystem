@@ -3,11 +3,10 @@ package com.mo.economy_system.target.forge1201.network;
 import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.territory.TerritoryTeleportOutcome;
-import com.mo.economy_system.common.territory.TerritoryTeleportRateLimiter;
+import com.mo.economy_system.common.territory.TerritoryTeleportLimiterRegistry;
+import com.mo.economy_system.common.territory.TerritoryTeleportArrival;
 import com.mo.economy_system.common.territory.TerritoryTeleportService;
-import com.mo.economy_system.common.territory.RecallPotionReservation;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
-import com.mo.economy_system.target.forge1201.item.Forge1201Items;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -24,7 +23,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -37,7 +35,7 @@ import org.slf4j.Logger;
 /** Server-side Forge adapter for the common territory teleport transaction. */
 final class Forge1201TerritoryTeleportHandler {
   private static final Logger LOGGER = LogUtils.getLogger();
-  private static final TerritoryTeleportRateLimiter LIMITER = new TerritoryTeleportRateLimiter();
+  private static final TerritoryTeleportLimiterRegistry<net.minecraft.server.MinecraftServer> LIMITERS = new TerritoryTeleportLimiterRegistry<>();
 
   private Forge1201TerritoryTeleportHandler() {}
 
@@ -51,11 +49,12 @@ final class Forge1201TerritoryTeleportHandler {
   private static void execute(ServerPlayer player, TeleportToTerritoryMessage message) {
     try {
       Adapter adapter = new Adapter(player);
+      Forge1201RecallPotionInventory inventory = new Forge1201RecallPotionInventory(player);
       TerritoryTeleportService<ServerLevel> service = new TerritoryTeleportService<>(
           id -> Forge1201TerritorySnapshotStore.get(player.serverLevel()).find(id),
           adapter,
-          adapter,
-          LIMITER,
+          inventory,
+          LIMITERS.forServer(player.serverLevel().getServer()),
           (stage, playerId, territoryId, slot, primary, secondary) -> LOGGER.warn(
               "Territory teleport issue stage={} result={} player={} territory={} slot={}",
               stage, stage.equals("rollback") ? "ROLLBACK_FAILED" : "TELEPORT_FAILED",
@@ -63,11 +62,12 @@ final class Forge1201TerritoryTeleportHandler {
       long serverTick = player.serverLevel().getServer().getTickCount();
       TerritoryTeleportOutcome outcome = service.execute(
           player.getUUID(), message.territoryId(), serverTick);
-      player.sendSystemMessage(message(outcome));
+      try { player.sendSystemMessage(message(outcome)); }
+      catch (Exception messageError) { LOGGER.warn("Territory teleport result message failed player={} territory={} result={}", player.getUUID(), message.territoryId(), outcome.result(), messageError); }
     } catch (Exception error) {
       LOGGER.error("Territory teleport request failed player={} territory={}",
           player.getUUID(), message.territoryId(), error);
-      player.sendSystemMessage(Component.translatable("message.teleport.failed"));
+      try{player.sendSystemMessage(Component.translatable("message.teleport.failed"));}catch(Exception messageError){LOGGER.warn("Territory teleport failure message failed player={} territory={}",player.getUUID(),message.territoryId(),messageError);}
     }
   }
 
@@ -82,12 +82,13 @@ final class Forge1201TerritoryTeleportHandler {
       case NO_RECALL_POTION -> Component.translatable("message.teleport.no_potion");
       case COOLDOWN -> Component.translatable("message.teleport.cooldown");
       case TELEPORT_FAILED -> Component.translatable("message.teleport.failed");
+      case TELEPORT_STATE_UNKNOWN -> Component.translatable("message.teleport.state_unknown");
       case ROLLBACK_FAILED -> Component.translatable("message.teleport.rollback_failed");
     };
   }
 
   private static final class Adapter
-      implements TerritoryTeleportService.DestinationAdapter<ServerLevel>, TerritoryTeleportService.Inventory {
+      implements TerritoryTeleportService.DestinationAdapter<ServerLevel> {
     private final ServerPlayer player;
 
     private Adapter(ServerPlayer player) {
@@ -150,12 +151,12 @@ final class Forge1201TerritoryTeleportHandler {
     }
 
     @Override
-    public boolean arrived(ServerLevel level, Position backpoint) {
+    public TerritoryTeleportArrival arrival(ServerLevel level, Position backpoint) {
       BlockPos feet = position(backpoint);
       double x = feet.getX() + 0.5;
       double y = feet.getY();
       double z = feet.getZ() + 0.5;
-      return player.serverLevel() == level && player.distanceToSqr(x, y, z) <= 0.25;
+      return player.serverLevel() == level && player.distanceToSqr(x, y, z) <= 0.25 ? TerritoryTeleportArrival.ARRIVED : TerritoryTeleportArrival.NOT_ARRIVED;
     }
 
     @Override
@@ -171,37 +172,6 @@ final class Forge1201TerritoryTeleportHandler {
           SoundSource.PLAYERS, 1.0F, 1.0F);
     }
 
-    @Override
-    public Optional<TerritoryTeleportService.Reservation> reserveRecallPotion() {
-      // Only the 36 main-inventory slots are a valid transaction source.
-      int limit = player.getInventory().items.size();
-      for (int slot = 0; slot < limit; slot++) {
-        ItemStack stack = player.getInventory().items.get(slot);
-        if (!stack.is(Forge1201Items.RECALL_POTION.get())) continue;
-        ItemStack removed = stack.copy(); removed.setCount(1); stack.shrink(1);
-        ItemStack expected = stack.copy(); changed();
-        return Optional.of(new RecallPotionReservation<>(slot, removed, expected, slots()));
-      }
-      return Optional.empty();
-    }
-
-    private RecallPotionReservation.Slots<ItemStack> slots() {
-      return new RecallPotionReservation.Slots<>() {
-        public int size() { return player.getInventory().items.size(); }
-        public ItemStack get(int slot) { return player.getInventory().items.get(slot); }
-        public void set(int slot, ItemStack value) { player.getInventory().items.set(slot, value); }
-        public ItemStack copy(ItemStack value) { return value.copy(); }
-        public boolean equivalent(ItemStack a, ItemStack b) { return a.getCount() == b.getCount() && ItemStack.isSameItemSameTags(a, b); }
-        public boolean empty(ItemStack value) { return value.isEmpty(); }
-        public boolean canMerge(ItemStack a, ItemStack b) { return !a.isEmpty() && ItemStack.isSameItemSameTags(a, b); }
-        public int count(ItemStack value) { return value.getCount(); }
-        public int maximum(ItemStack value) { return value.getMaxStackSize(); }
-        public ItemStack withAddedOne(ItemStack existing, ItemStack one) { ItemStack result = existing.isEmpty() ? one.copy() : existing.copy(); if (!existing.isEmpty()) result.grow(1); return result; }
-        public void changed() { Adapter.this.changed(); }
-      };
-    }
-
-    private void changed() { player.getInventory().setChanged(); player.containerMenu.broadcastChanges(); }
 
     /** Backpoints are saved at the player's feet block; stand one block above them. */
     private static BlockPos position(Position backpoint) {
