@@ -10,8 +10,10 @@ import com.mo.economy_system.common.territory.TerritoryInviteRateLimiter;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryInviteResult;
 import com.mo.economy_system.common.territory.TerritoryInviteStore;
+import com.mo.economy_system.common.territory.TerritoryRemovalService;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -141,6 +143,94 @@ class Forge1201TerritorySnapshotStoreTest {
             territory.getUUID("OwnerUUID"), UUID.randomUUID(), "new"));
     assertEquals(2, duplicateStore.rawCopy().getList("Territories", Tag.TAG_COMPOUND)
         .getCompound(0).getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
+  }
+
+  @Test void removeUsesRawCopyOnWriteAndPreservesUnknownFieldsAndOrder() {
+    CompoundTag first = validTerritory();
+    first.putString("FutureTerritoryField", "keep-first");
+    CompoundTag second = validTerritory();
+    second.putUUID("TerritoryID", UUID.fromString("10000000-0000-0000-0000-000000000002"));
+    second.putString("Name", "Second");
+    second.putString("FutureTerritoryField", "keep-second");
+    ListTag records = new ListTag();
+    records.add(first);
+    records.add(second);
+    CompoundTag root = new CompoundTag();
+    root.putString("FutureRootField", "keep-root");
+    root.put("Territories", records);
+
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+    TerritoryRemovalService.RepositoryOutcome outcome =
+        store.remove(first.getUUID("TerritoryID"), first.getUUID("OwnerUUID"));
+    assertEquals(TerritoryRemovalService.RepositoryResult.REMOVED, outcome.result());
+    assertEquals(first.getUUID("TerritoryID"), outcome.removedTerritory().territoryId());
+    assertEquals(first.getUUID("OwnerUUID"), outcome.removedTerritory().ownerId());
+    assertEquals("Home", outcome.removedTerritory().territoryName());
+
+    CompoundTag saved = store.save(new CompoundTag());
+    assertEquals("keep-root", saved.getString("FutureRootField"));
+    ListTag remaining = saved.getList("Territories", Tag.TAG_COMPOUND);
+    assertEquals(1, remaining.size());
+    assertEquals(second.getUUID("TerritoryID"), remaining.getCompound(0).getUUID("TerritoryID"));
+    assertEquals("keep-second", remaining.getCompound(0).getString("FutureTerritoryField"));
+    assertTrue(Forge1201TerritorySnapshotStore.load(saved)
+        .find(first.getUUID("TerritoryID")).isEmpty());
+  }
+
+  @Test void removeRejectsMissingOwnerMalformedRootAndDuplicateRecordsWithoutMutation() {
+    CompoundTag territory = validTerritory();
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+    CompoundTag before = store.rawCopy();
+
+    assertEquals(TerritoryRemovalService.RepositoryResult.OWNER_MISMATCH,
+        store.remove(territory.getUUID("TerritoryID"), UUID.randomUUID()).result());
+    assertEquals(before, store.rawCopy());
+    assertEquals(TerritoryRemovalService.RepositoryResult.NOT_FOUND,
+        store.remove(UUID.randomUUID(), territory.getUUID("OwnerUUID")).result());
+    assertEquals(before, store.rawCopy());
+
+    CompoundTag duplicateRoot = new CompoundTag();
+    ListTag duplicateRecords = new ListTag();
+    duplicateRecords.add(territory);
+    duplicateRecords.add(territory.copy());
+    duplicateRoot.put("Territories", duplicateRecords);
+    Forge1201TerritorySnapshotStore duplicateStore = Forge1201TerritorySnapshotStore.load(duplicateRoot);
+    CompoundTag duplicateBefore = duplicateStore.rawCopy();
+    assertEquals(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+        duplicateStore.remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
+            .result());
+    assertEquals(duplicateBefore, duplicateStore.rawCopy());
+
+    CompoundTag malformedRoot = new CompoundTag();
+    malformedRoot.putString("Territories", "not-a-list");
+    Forge1201TerritorySnapshotStore malformedStore = Forge1201TerritorySnapshotStore.load(malformedRoot);
+    assertEquals(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+        malformedStore.remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
+            .result());
+  }
+
+  @Test void removeDirtyFailureRollsBackRawAndParsedSnapshots() {
+    CompoundTag territory = validTerritory();
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    AtomicInteger marks = new AtomicInteger();
+    DirtyMarker marker = () -> {
+      if (marks.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+    };
+    Forge1201TerritorySnapshotStore store = new Forge1201TerritorySnapshotStore(root, marker);
+    CompoundTag before = store.rawCopy();
+    TerritoryRemovalService.RepositoryOutcome outcome =
+        store.remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"));
+    assertEquals(TerritoryRemovalService.RepositoryResult.PERSIST_FAILED, outcome.result());
+    assertEquals(before, store.rawCopy());
+    assertEquals(1, store.owned(territory.getUUID("OwnerUUID")).size());
+    assertEquals(2, marks.get());
   }
 
   @Test void inviteLookupReadsRawAndFailsClosedForDuplicateTerritoryIds() {

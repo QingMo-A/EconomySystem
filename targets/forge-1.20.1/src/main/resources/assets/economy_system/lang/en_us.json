@@ -88,5 +88,11 @@
   "message.invite.persist_failed": "Could not save the territory membership",
   "message.invite.state_unknown": "Territory state is uncertain; contact an administrator",
   "message.invite.busy": "That invitation is already being processed",
-  "message.invite.multiple_pending": "You have multiple invitations; specify an invitation ID"
+  "message.invite.multiple_pending": "You have multiple invitations; specify an invitation ID",
+  "message.territory.remove.success": "Deleted territory %s.",
+  "message.territory.remove.not_found": "Territory not found.",
+  "message.territory.remove.no_permission": "Only the current owner can delete this territory.",
+  "message.territory.remove.rate_limited": "Please wait before trying again.",
+  "message.territory.remove.persist_failed": "Deletion was rolled back; you may retry.",
+  "message.territory.remove.state_unknown": "Territory state is uncertain; contact an administrator."
 }

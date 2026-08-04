@@ -6,6 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class QuadTree {
+    public int countTerritory(java.util.UUID territoryId) {
+        if (territoryId == null) return 0;
+        int count = 0;
+        for (Territory territory : territories) {
+            if (territoryId.equals(territory.getTerritoryID())) count++;
+        }
+        if (nodes != null) for (QuadTree node : nodes) if (node != null) count += node.countTerritory(territoryId);
+        return count;
+    }
+
+    public boolean containsTerritory(java.util.UUID territoryId) {
+        return countTerritory(territoryId) > 0;
+    }
 
     private static final int MAX_CAPACITY = 4; // 每个节点最多存储的领地数
     private static final int MAX_LEVELS = 10;  // 四叉树的最大深度

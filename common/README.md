@@ -211,3 +211,8 @@ an immutable snapshot with a monotonic local revision, allowing Forge to disting
 cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21 and
 later territory operations remain unmigrated. The final suites contain 252 shared-source, 315 Forge and 305
 NeoForge tests.
+
+Protocol 21 uses the loader-neutral `RemoveTerritoryMessage` and the shared 16-byte UUID codec. The service
+derives authority from the authenticated sender, applies a bounded 20-tick server-scoped limiter, never refunds,
+and exposes SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, RATE_LIMITED, PERSIST_FAILED and STATE_UNKNOWN.
+`PERSIST_FAILED` guarantees rollback and safe retry; `STATE_UNKNOWN` does not. Protocol 22+ remains legacy.

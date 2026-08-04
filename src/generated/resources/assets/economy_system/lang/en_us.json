@@ -367,5 +367,16 @@
   "message.invite.accepted_by": "%s accepted the invitation to territory %s.",
   "message.invite.declined_by": "%s declined the invitation to territory %s.",
   "screen.invite.loading": "Loading players...",
-  "screen.invite.empty": "No eligible online players."
+  "screen.invite.empty": "No eligible online players.",
+  "button.territory.delete_confirm": "Delete",
+  "button.territory.delete_cancel": "Cancel",
+  "screen.territory_remove.title": "Delete territory?",
+  "screen.territory_remove.irreversible": "This action cannot be undone.",
+  "screen.territory_remove.no_refund": "Deleting does not issue a refund.",
+  "message.territory.remove.success": "Deleted territory %s.",
+  "message.territory.remove.not_found": "Territory not found.",
+  "message.territory.remove.no_permission": "Only the current owner can delete this territory.",
+  "message.territory.remove.rate_limited": "Please wait before trying again.",
+  "message.territory.remove.persist_failed": "Deletion was rolled back; you may retry.",
+  "message.territory.remove.state_unknown": "Territory state is uncertain; contact an administrator."
 }

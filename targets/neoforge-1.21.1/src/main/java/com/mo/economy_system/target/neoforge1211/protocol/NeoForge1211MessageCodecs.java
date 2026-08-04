@@ -26,6 +26,8 @@ import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMessage;
+import com.mo.economy_system.network.TerritoryRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
@@ -66,6 +68,10 @@ public final class NeoForge1211MessageCodecs {
     register(codecs, EconomyMessages.INVITE_PLAYER, new NeoForge1211MessageCodec<>() {
       public void encode(InvitePlayerMessage message, RegistryFriendlyByteBuf buffer) { TerritoryInviteWireCodec.encode(message, buffer); }
       public InvitePlayerMessage decode(RegistryFriendlyByteBuf buffer) { return TerritoryInviteWireCodec.decode(buffer); }
+    });
+    register(codecs, EconomyMessages.REMOVE_TERRITORY, new NeoForge1211MessageCodec<>() {
+      public void encode(RemoveTerritoryMessage message, RegistryFriendlyByteBuf buffer) { TerritoryRemovalWireCodec.encode(message, buffer); }
+      public RemoveTerritoryMessage decode(RegistryFriendlyByteBuf buffer) { return TerritoryRemovalWireCodec.decode(buffer); }
     });
     register(
         codecs,

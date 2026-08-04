@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201.network;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
+import com.mo.economy_system.common.territory.TerritoryRemovalService;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import java.util.ArrayList;
@@ -23,22 +24,38 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.Level;
 
 /** Read-only 1.20.1 persistence adapter; NBT never crosses the network boundary. */
-final class Forge1201TerritorySnapshotStore extends SavedData {
+final class Forge1201TerritorySnapshotStore extends SavedData
+    implements TerritoryRemovalService.Repository {
   private static final String DATA_NAME = "territory_data";
   private CompoundTag raw;
   private List<Owned> territories;
+  /**
+   * The dirty marker is injectable for package-private transaction tests.  Production stores use
+   * SavedData#setDirty; tests can make the first or rollback mark fail without mutating NBT.
+   */
+  private final DirtyMarker dirtyMarker;
 
   private Forge1201TerritorySnapshotStore() { this(new CompoundTag()); }
 
   /** Test and adapter constructor retained for callers that already have snapshots. */
   Forge1201TerritorySnapshotStore(List<Owned> territories) {
-    this.territories = List.copyOf(Objects.requireNonNull(territories, "territories"));
-    this.raw = encodeSnapshots(this.territories);
+    this(territories, null);
   }
 
-  private Forge1201TerritorySnapshotStore(CompoundTag root) {
+  Forge1201TerritorySnapshotStore(List<Owned> territories, DirtyMarker dirtyMarker) {
+    this.territories = List.copyOf(Objects.requireNonNull(territories, "territories"));
+    this.raw = encodeSnapshots(this.territories);
+    this.dirtyMarker = dirtyMarker == null ? this::setDirty : dirtyMarker;
+  }
+
+  Forge1201TerritorySnapshotStore(CompoundTag root) {
+    this(root, null);
+  }
+
+  Forge1201TerritorySnapshotStore(CompoundTag root, DirtyMarker dirtyMarker) {
     this.raw = Objects.requireNonNull(root, "root").copy();
     this.territories = parseLenient(this.raw);
+    this.dirtyMarker = dirtyMarker == null ? this::setDirty : dirtyMarker;
   }
 
   static Forge1201TerritorySnapshotStore get(ServerLevel level) {
@@ -217,10 +234,267 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     return TerritoryInviteDecisionService.WriteResult.ADDED;
   }
 
+  /**
+   * Removes exactly one territory from the authoritative raw NBT document.
+   *
+   * <p>The parsed {@link Owned} list is only a cache.  Removal therefore validates the complete
+   * raw document first, identifies the target by UUID, and then performs a copy-on-write update.
+   * No snapshot re-encoding is used, which keeps unknown fields, list order, and future schema
+   * additions intact.</p>
+   */
+  @Override public synchronized TerritoryRemovalService.RepositoryOutcome remove(
+      UUID territoryId, UUID expectedOwnerId) {
+    if (territoryId == null || expectedOwnerId == null) {
+      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+    }
+
+    final StrictRoot source;
+    try {
+      source = parseStrictRoot(raw);
+    } catch (RuntimeException malformed) {
+      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+    }
+
+    int targetIndex = -1;
+    Owned targetSnapshot = null;
+    for (int index = 0; index < source.snapshots().size(); index++) {
+      Owned snapshot = source.snapshots().get(index);
+      if (!territoryId.equals(snapshot.summary().territoryId())) continue;
+      if (targetIndex >= 0) {
+        // parseStrictRoot already rejects duplicates, but keep this guard next to the mutation.
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      targetIndex = index;
+      targetSnapshot = snapshot;
+    }
+    if (targetIndex < 0 || targetSnapshot == null) {
+      return repositoryState(TerritoryRemovalService.RepositoryResult.NOT_FOUND);
+    }
+    if (!expectedOwnerId.equals(targetSnapshot.summary().ownerId())) {
+      return repositoryState(TerritoryRemovalService.RepositoryResult.OWNER_MISMATCH);
+    }
+
+    final CompoundTag originalRaw = raw;
+    final List<Owned> originalSnapshots = territories;
+    final CompoundTag candidateRoot;
+    final List<Owned> candidateSnapshots;
+    try {
+      candidateRoot = originalRaw.copy();
+      Tag candidateEncoded = candidateRoot.get("Territories");
+      if (!(candidateEncoded instanceof ListTag sourceList)) {
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      ListTag candidateList = sourceList.copy();
+      if (targetIndex >= candidateList.size()) {
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      candidateList.remove(targetIndex);
+      candidateRoot.put("Territories", candidateList);
+
+      // Parse the candidate before publishing it.  This validates every remaining record and
+      // proves that the requested UUID is no longer present.
+      StrictRoot reparsed = parseStrictRoot(candidateRoot);
+      if (reparsed.snapshots().stream()
+          .anyMatch(value -> territoryId.equals(value.summary().territoryId()))) {
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      candidateSnapshots = reparsed.snapshots();
+    } catch (RuntimeException invalidCandidate) {
+      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+    }
+
+    // Publish both representations together.  A dirty-marker failure rolls both back before the
+    // result is exposed to the caller.
+    raw = candidateRoot;
+    territories = candidateSnapshots;
+    try {
+      dirtyMarker.markDirty();
+    } catch (RuntimeException persistFailure) {
+      raw = originalRaw;
+      territories = originalSnapshots;
+      try {
+        dirtyMarker.markDirty();
+      } catch (RuntimeException rollbackFailure) {
+        persistFailure.addSuppressed(rollbackFailure);
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      try {
+        // The original source was strict-parsed above.  Re-parse the restored document as a
+        // defensive check so a faulty marker cannot leave a partially restored cache unnoticed.
+        StrictRoot restored = parseStrictRoot(raw);
+        if (restored.snapshots().size() != originalSnapshots.size()
+            || restored.snapshots().stream().noneMatch(
+                value -> territoryId.equals(value.summary().territoryId()))) {
+          return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        }
+      } catch (RuntimeException restorationFailure) {
+        persistFailure.addSuppressed(restorationFailure);
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      }
+      return repositoryState(TerritoryRemovalService.RepositoryResult.PERSIST_FAILED);
+    }
+
+    TerritoryRemovalService.RemovedTerritory removed =
+        new TerritoryRemovalService.RemovedTerritory(
+            targetSnapshot.summary().territoryId(),
+            targetSnapshot.summary().ownerId(),
+            targetSnapshot.summary().name());
+    return new TerritoryRemovalService.RepositoryOutcome(
+        TerritoryRemovalService.RepositoryResult.REMOVED, removed);
+  }
+
+  /** Explicitly named alias for adapters that prefer the authoritative operation name. */
+  synchronized TerritoryRemovalService.RepositoryOutcome removeTerritory(
+      UUID territoryId, UUID expectedOwnerId) {
+    return remove(territoryId, expectedOwnerId);
+  }
+
+  /** Explicitly named alias used by network/runtime integration code. */
+  synchronized TerritoryRemovalService.RepositoryOutcome removeTerritoryAuthoritatively(
+      UUID territoryId, UUID expectedOwnerId) {
+    return remove(territoryId, expectedOwnerId);
+  }
+
+  private static TerritoryRemovalService.RepositoryOutcome repositoryState(
+      TerritoryRemovalService.RepositoryResult result) {
+    return new TerritoryRemovalService.RepositoryOutcome(result, null);
+  }
+
   /** Returns a deep copy for persistence tests; callers cannot mutate store state. */
   CompoundTag rawCopy() {
     synchronized (this) {
       return raw.copy();
+    }
+  }
+
+  private static StrictRoot parseStrictRoot(CompoundTag root) {
+    if (root == null) throw integrity("root is null");
+    Tag encoded = root.get("Territories");
+    if (!(encoded instanceof ListTag values)) {
+      throw integrity("Territories is not a list");
+    }
+    List<Owned> parsed = new ArrayList<>(values.size());
+    Set<UUID> ids = new HashSet<>();
+    for (Tag value : values) {
+      if (!(value instanceof CompoundTag record)) {
+        throw integrity("territory record is not a compound");
+      }
+      Owned snapshot = captureStrict(record);
+      UUID id = snapshot.summary().territoryId();
+      if (!ids.add(id)) throw integrity("duplicate territory UUID " + id);
+      parsed.add(snapshot);
+    }
+    return new StrictRoot(List.copyOf(parsed));
+  }
+
+  /**
+   * Strictly validates the schema needed to produce an {@link Owned} snapshot.  Optional legacy
+   * fields remain optional, but when present they must have the expected NBT type; this prevents
+   * CompoundTag#getList's permissive empty-list fallback from hiding corrupt records.
+   */
+  private static Owned captureStrict(CompoundTag tag) {
+    requireUuid(tag, "TerritoryID");
+    requireUuid(tag, "OwnerUUID");
+    requireString(tag, "OwnerName");
+    requireString(tag, "Name");
+    requireString(tag, "Dimension");
+    for (String coordinate : new String[] {"X1", "Y1", "Z1", "X2", "Y2", "Z2"}) {
+      requireType(tag, coordinate, Tag.TAG_INT);
+    }
+
+    if (tag.contains("AuthorizedPlayers")) {
+      Tag encodedMembers = tag.get("AuthorizedPlayers");
+      if (!(encodedMembers instanceof ListTag members)) {
+        throw integrity("AuthorizedPlayers is not a list");
+      }
+      for (Tag value : members) {
+        if (!(value instanceof CompoundTag member)) {
+          throw integrity("authorized member is not a compound");
+        }
+        requireUuid(member, "PlayerUUID");
+        requireString(member, "PlayerName");
+      }
+    }
+
+    if (tag.contains("Backpoint")) {
+      Tag encodedBackpoint = tag.get("Backpoint");
+      if (!(encodedBackpoint instanceof CompoundTag point)) {
+        throw integrity("Backpoint is not a compound");
+      }
+      for (String coordinate : new String[] {"BackX", "BackY", "BackZ"}) {
+        requireType(point, coordinate, Tag.TAG_INT);
+      }
+    }
+
+    if (tag.contains("Permissions")) {
+      Tag encodedPermissions = tag.get("Permissions");
+      if (!(encodedPermissions instanceof CompoundTag permissions)) {
+        throw integrity("Permissions is not a compound");
+      }
+      for (RuleAction action : RuleAction.values()) {
+        if (permissions.contains(action.name())) requireString(permissions, action.name());
+      }
+    }
+
+    if (tag.contains("TerritoryBuffs")) {
+      Tag encodedBuffs = tag.get("TerritoryBuffs");
+      if (!(encodedBuffs instanceof ListTag buffs)) {
+        throw integrity("TerritoryBuffs is not a list");
+      }
+      for (Tag value : buffs) {
+        if (!(value instanceof CompoundTag buff)) {
+          throw integrity("territory buff is not a compound");
+        }
+        if (buff.contains("upgrade_Cost")) {
+          Tag encodedCosts = buff.get("upgrade_Cost");
+          if (!(encodedCosts instanceof ListTag costs)) {
+            throw integrity("buff upgrade_Cost is not a list");
+          }
+          for (Tag costValue : costs) {
+            if (!(costValue instanceof CompoundTag cost)) {
+              throw integrity("buff cost is not a compound");
+            }
+            if (cost.contains("items")) {
+              Tag encodedItems = cost.get("items");
+              if (!(encodedItems instanceof ListTag items)) {
+                throw integrity("buff cost items is not a list");
+              }
+              for (Tag itemValue : items) {
+                if (!(itemValue instanceof CompoundTag)) {
+                  throw integrity("buff cost item is not a compound");
+                }
+              }
+            }
+          }
+        }
+        // Invoke the normal bounded model validation after the structural checks above.
+        buff(buff);
+      }
+    }
+
+    try {
+      return capture(tag);
+    } catch (RuntimeException invalid) {
+      if (invalid instanceof TerritorySnapshotIntegrityException integrity) throw integrity;
+      throw new TerritorySnapshotIntegrityException("territory snapshot is invalid");
+    }
+  }
+
+  private static void requireUuid(CompoundTag tag, String key) {
+    if (!tag.hasUUID(key)) throw integrity("missing UUID field " + key);
+  }
+
+  private static void requireString(CompoundTag tag, String key) {
+    requireType(tag, key, Tag.TAG_STRING);
+  }
+
+  private static void requireType(CompoundTag tag, String key, int type) {
+    if (!tag.contains(key, type)) throw integrity("invalid field " + key);
+  }
+
+  private record StrictRoot(List<Owned> snapshots) {
+    private StrictRoot {
+      snapshots = List.copyOf(Objects.requireNonNull(snapshots, "snapshots"));
     }
   }
 
@@ -342,6 +616,10 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     return new Forge1201TerritorySnapshotStore(root);
   }
 
+  static Forge1201TerritorySnapshotStore load(CompoundTag root, DirtyMarker dirtyMarker) {
+    return new Forge1201TerritorySnapshotStore(root, dirtyMarker);
+  }
+
   static Owned capture(CompoundTag tag) {
     String dimension = canonicalDimension(tag.getString("Dimension"));
     Summary summary = new Summary(tag.getUUID("TerritoryID"), tag.getUUID("OwnerUUID"),
@@ -415,4 +693,10 @@ final class Forge1201TerritorySnapshotStore extends SavedData {
     tag.merge(raw.copy());
     return tag;
   }
+}
+
+/** Package-private dirty hook used to inject persistence failures in transaction tests. */
+@FunctionalInterface
+interface DirtyMarker {
+  void markDirty();
 }

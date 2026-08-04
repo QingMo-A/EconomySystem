@@ -5,7 +5,6 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.packets.territory_system.Packet_ModifyMode;
 import com.mo.economy_system.network.packets.territory_system.Packet_RemovePlayer;
-import com.mo.economy_system.network.packets.territory_system.Packet_RemoveTerritory;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -430,10 +429,7 @@ public class Screen_ManageTerritory extends Screen {
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY, actionDangerStyle, () -> {
-            EconomySystem_NetworkManager.sendToServer(new Packet_RemoveTerritory(territory.getTerritoryID()));
-            if (this.minecraft != null) {
-                this.minecraft.setScreen(null);
-            }
+            Minecraft.getInstance().setScreen(new Screen_ConfirmTerritoryRemoval(territory));
         }));
     }
 

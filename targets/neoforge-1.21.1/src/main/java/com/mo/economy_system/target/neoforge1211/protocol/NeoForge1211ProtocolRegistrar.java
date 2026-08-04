@@ -77,12 +77,7 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(registrar, EconomyMessages.TELEPORT_TO_TERRITORY,
         NeoForge1211TerritoryTeleportHandler::handle);
     bindCommon(registrar, EconomyMessages.INVITE_PLAYER, NeoForge1211TerritoryInviteHandler::handle);
-    bind(
-        registrar,
-        EconomyProtocol.REMOVE_TERRITORY,
-        Packet_RemoveTerritory.TYPE,
-        Packet_RemoveTerritory.STREAM_CODEC,
-        Packet_RemoveTerritory::handle);
+    bindCommon(registrar, EconomyMessages.REMOVE_TERRITORY, NeoForge1211TerritoryRemovalHandler::handle);
     bind(
         registrar,
         EconomyProtocol.REMOVE_PLAYER,

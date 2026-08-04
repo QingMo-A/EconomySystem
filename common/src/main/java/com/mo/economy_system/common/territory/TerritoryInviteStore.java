@@ -9,6 +9,7 @@ public final class TerritoryInviteStore {
   enum CompleteResult { COMPLETED, INVALID_CLAIM }
   enum ReleaseResult { RELEASED, EXPIRED, INVALID_CLAIM }
   public enum SoleStatus { NONE, SOLE, MULTIPLE }
+  public record DiscardResult(int discarded,int processingSkipped){public DiscardResult{if(discarded<0||processingSkipped<0)throw new IllegalArgumentException();}}
   public record Key(UUID targetPlayerId, UUID territoryId) {
     public Key { Objects.requireNonNull(targetPlayerId); Objects.requireNonNull(territoryId); }
   }
@@ -70,6 +71,7 @@ public final class TerritoryInviteStore {
     return ReleaseResult.RELEASED;
   }
   public synchronized int size(long tick){cleanup(tick);return invites.size();}
+  public synchronized DiscardResult discardPendingForTerritory(UUID territoryId,long tick){Objects.requireNonNull(territoryId);cleanup(tick);int discarded=0,skipped=0;for(TerritoryInvite invite:new ArrayList<>(invites.values()))if(invite.territoryId().equals(territoryId)){if(processing.containsKey(invite.inviteId()))skipped++;else{remove(invite);discarded++;}}return new DiscardResult(discarded,skipped);}
   synchronized boolean consistent(){return invites.size()==keys.size()&&processing.keySet().stream().allMatch(invites::containsKey)&&invites.values().stream().allMatch(i->Objects.equals(keys.get(new Key(i.targetPlayerId(),i.territoryId())),i.inviteId()));}
   private boolean valid(Claim claim){return claim!=null&&Objects.equals(processing.get(claim.invite().inviteId()),claim.token())&&Objects.equals(invites.get(claim.invite().inviteId()),claim.invite());}
   private void remove(TerritoryInvite invite){invites.remove(invite.inviteId());processing.remove(invite.inviteId());keys.remove(new Key(invite.targetPlayerId(),invite.territoryId()),invite.inviteId());}

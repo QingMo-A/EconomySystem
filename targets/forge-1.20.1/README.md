@@ -146,4 +146,7 @@ The page uses non-overlapping 26-pixel rows, render-owned UUID hitboxes and whee
 is reachable, including zero visible rows in tiny windows. Arrival UNKNOWN keeps the removed potion and reports
 state uncertainty; the limiter is weakly scoped to each MinecraftServer and resets on tick epoch rollback.
 Full player AABB world-border/collision checks precede teleport. Only an expiring POST_TELEPORT
-ticket is used. Protocol 20 is complete; protocol 21+ remains legacy.
+ticket is used. Protocol 20 is complete. Protocol 21 removes a territory from the authoritative raw
+`territory_data` NBT with strict copy-on-write validation, preserving unknown fields and record order; dirty-mark
+failure rolls back before reporting retry-safe failure. The wire is only the 16-byte UUID and the server sender
+is the owner authority. Protocol 22+ remains legacy.

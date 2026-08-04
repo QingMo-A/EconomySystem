@@ -89,4 +89,10 @@
   "message.invite.state_unknown": "成员状态无法确认，请联系管理员。",
   "message.invite.busy": "该邀请正在处理中。",
   "message.invite.multiple_pending": "你有多条邀请，请使用带邀请 ID 的命令。"
+  ,"message.territory.remove.success": "已删除领地 %s。",
+  "message.territory.remove.not_found": "领地不存在。",
+  "message.territory.remove.no_permission": "只有当前领地主人可以删除。",
+  "message.territory.remove.rate_limited": "操作过于频繁，请稍后再试。",
+  "message.territory.remove.persist_failed": "删除已回滚，可以安全重试。",
+  "message.territory.remove.state_unknown": "领地状态不确定，请联系管理员。"
 }

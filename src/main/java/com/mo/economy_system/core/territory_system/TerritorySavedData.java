@@ -46,13 +46,21 @@ public class TerritorySavedData extends SavedData {
         setDirty();
     }
 
-    public void removeTerritory(UUID territoryID) {
-        territoryByID.remove(territoryID);
+    public Territory removeTerritory(UUID territoryID) {
+        Territory removed = territoryByID.remove(territoryID);
+        if (removed != null) setDirty();
+        return removed;
+    }
+
+    void restoreTerritory(Territory territory) {
+        if (territoryByID.putIfAbsent(territory.getTerritoryID(), territory) != null) {
+            throw new IllegalStateException("territory already exists");
+        }
         setDirty();
     }
 
     public Collection<Territory> getAllTerritories() {
-        return territoryByID.values();
+        return List.copyOf(territoryByID.values());
     }
 
     public Territory getTerritoryByID(UUID territoryID) {
