@@ -50,7 +50,7 @@ Protocols 12–19 are migrated. Protocol 19 is UUID-only and uses the shared saf
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain
-211 shared-source tests, 257 Forge 1.20.1 tests, and 257 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
+220 shared-source tests, 271 Forge 1.20.1 tests, and 266 NeoForge 1.21.1 tests. Protocol 14 hardening is complete, including real
 failure reporting, expected-order transition, exact supplier credit, independent compensation, and
 shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
 refund semantics and invalidation on CHANGED/UNKNOWN. Territory response 18 is NBT-free,
@@ -67,4 +67,4 @@ restore failure, and a 200-tick timeout end loading and allow a new-ID retry. Fo
 territory page because the NeoForge root UI is excluded from its build, and its client dispatch is hidden behind
 a physical-side-safe indirection. Forge `territory_data` remains a sole overworld read-only protocol-17/18
 adapter: invalid buffs/dimensions fail closed and unknown permissions fall back to MEMBERS. NeoForge treats
-historical null buff upgrade costs as empty. Protocol 19 now re-reads server territory authority, uses a 20-tick bounded limiter, validates `backpoint.above()`, reserves exactly one main-inventory recall potion, verifies arrival and rolls back on failure. Do not migrate protocol 20 or later operations without a new task.
+historical null buff upgrade costs as empty. Protocol 19 now re-reads server territory authority, uses a fully-cleaning bounded 20-tick limiter, validates the full player AABB at `backpoint.above()`, and reserves exactly one main-inventory recall potion. Removal is marked/synchronized on both targets; success commits, while conflict-safe one-shot rollback restores only into an unchanged, mergeable or empty slot and otherwise returns ROLLBACK_FAILED. Arrival is non-throwing, repository/infrastructure exceptions become generic failure, rollback errors are suppressed, and JVM Errors are not caught. Forge row hitboxes are non-overlapping and wheel-scrollable. Do not migrate protocol 20 or later operations without a new task.

@@ -3,6 +3,7 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.territory.*;
+import com.mo.economy_system.common.territory.RecallPotionReservation;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
@@ -37,15 +38,22 @@ public final class NeoForge1211TerritoryTeleportHandler {
   public static void handle(TeleportToTerritoryMessage message, IPayloadContext context) {
     context.enqueueWork(() -> {
       if (!(context.player() instanceof ServerPlayer player)) return;
-      Adapter adapter = new Adapter(player);
-      TerritoryTeleportService<ServerLevel> service = new TerritoryTeleportService<>(
-          id -> Optional.ofNullable(TerritoryManager.getTerritoryByID(id)).map(Adapter::target),
-          adapter, adapter, LIMITER,
-          (stage, playerId, territoryId, slot, primary, secondary) ->
-              EconomySystem.LOGGER.warn("Territory teleport issue stage={} player={} territory={} slot={} secondary={}",
-                  stage, playerId, territoryId, slot, secondary == null ? "none" : secondary.toString(), primary));
-      TerritoryTeleportOutcome outcome = service.execute(player.getUUID(), message.territoryId(), player.server.getTickCount());
-      player.sendSystemMessage(message(outcome));
+      try {
+        Adapter adapter = new Adapter(player);
+        TerritoryTeleportService<ServerLevel> service = new TerritoryTeleportService<>(
+            id -> Optional.ofNullable(TerritoryManager.getTerritoryByID(id)).map(Adapter::target),
+            adapter, adapter, LIMITER,
+            (stage, playerId, territoryId, slot, primary, secondary) ->
+                EconomySystem.LOGGER.warn("Territory teleport issue stage={} result={} player={} territory={} slot={}",
+                    stage, stage.equals("rollback") ? "ROLLBACK_FAILED" : "TELEPORT_FAILED",
+                    playerId, territoryId, slot, primary));
+        TerritoryTeleportOutcome outcome = service.execute(player.getUUID(), message.territoryId(), player.server.getTickCount());
+        player.sendSystemMessage(message(outcome));
+      } catch (Exception error) {
+        EconomySystem.LOGGER.error("Territory teleport request failed stage=handler player={} territory={}",
+            player.getUUID(), message.territoryId(), error);
+        player.sendSystemMessage(Component.translatable("message.teleport.failed"));
+      }
     });
   }
 
@@ -85,7 +93,7 @@ public final class NeoForge1211TerritoryTeleportHandler {
           || !level.getWorldBorder().isWithinBounds(feet)) return false;
       ChunkPos chunk = new ChunkPos(feet);
       level.getChunkSource().addRegionTicket(TicketType.POST_TELEPORT, chunk, 1, player.getId());
-      level.getChunk(chunk.x, chunk.z, ChunkStatus.FULL, true);
+      if (level.getChunk(chunk.x, chunk.z, ChunkStatus.FULL, true) == null) return false;
       BlockState footState = level.getBlockState(feet), headState = level.getBlockState(head), support = level.getBlockState(below);
       if (!safeSpace(level, feet, footState) || !safeSpace(level, head, headState)
           || !support.isFaceSturdy(level, below, Direction.UP)
@@ -93,11 +101,16 @@ public final class NeoForge1211TerritoryTeleportHandler {
           || support.is(Blocks.SOUL_CAMPFIRE) || support.is(Blocks.CACTUS)) return false;
       double x = feet.getX() + .5, y = feet.getY(), z = feet.getZ() + .5;
       AABB box = player.getBoundingBox().move(x - player.getX(), y - player.getY(), z - player.getZ());
-      return level.noCollision(player, box);
+      return withinBorder(level, box) && level.noCollision(player, box);
     }
     private boolean safeSpace(ServerLevel level, BlockPos pos, BlockState state) {
       return state.getCollisionShape(level, pos).isEmpty() && !state.is(BlockTags.FIRE)
           && !state.getFluidState().is(FluidTags.LAVA);
+    }
+    private boolean withinBorder(ServerLevel level, AABB box) {
+      var border=level.getWorldBorder();
+      return box.minX>=border.getMinX() && box.maxX<=border.getMaxX()
+          && box.minZ>=border.getMinZ() && box.maxZ<=border.getMaxZ();
     }
     public void teleport(ServerLevel level, Position backpoint) {
       BlockPos p = pos(backpoint); player.teleportTo(level, p.getX() + .5, p.getY(), p.getZ() + .5, player.getYRot(), player.getXRot());
@@ -116,15 +129,29 @@ public final class NeoForge1211TerritoryTeleportHandler {
       for (int slot=0; slot<player.getInventory().items.size(); slot++) {
         ItemStack stack=player.getInventory().items.get(slot);
         if (stack.is(EconomySystem_Items.RECALL_POTION.get())) {
-          int selected=slot; ItemStack original=stack.copy(); stack.shrink(1);
-          return Optional.of(new TerritoryTeleportService.Reservation() {
-            public int slot(){return selected;}
-            public void rollback(){ player.getInventory().items.set(selected, original.copy()); player.getInventory().setChanged(); }
-          });
+          ItemStack removed=stack.copyWithCount(1); stack.shrink(1);
+          ItemStack expected=stack.copy(); changed();
+          return Optional.of(new RecallPotionReservation<>(slot, removed, expected, slots()));
         }
       }
       return Optional.empty();
     }
+    private RecallPotionReservation.Slots<ItemStack> slots() {
+      return new RecallPotionReservation.Slots<>() {
+        public int size(){return player.getInventory().items.size();}
+        public ItemStack get(int slot){return player.getInventory().items.get(slot);}
+        public void set(int slot,ItemStack value){player.getInventory().items.set(slot,value);}
+        public ItemStack copy(ItemStack value){return value.copy();}
+        public boolean equivalent(ItemStack a,ItemStack b){return a.getCount()==b.getCount() && ItemStack.isSameItemSameComponents(a,b);}
+        public boolean empty(ItemStack value){return value.isEmpty();}
+        public boolean canMerge(ItemStack a,ItemStack b){return !a.isEmpty() && ItemStack.isSameItemSameComponents(a,b);}
+        public int count(ItemStack value){return value.getCount();}
+        public int maximum(ItemStack value){return value.getMaxStackSize();}
+        public ItemStack withAddedOne(ItemStack existing,ItemStack one){ItemStack result=existing.isEmpty()?one.copy():existing.copy();if(!existing.isEmpty())result.grow(1);return result;}
+        public void changed(){Adapter.this.changed();}
+      };
+    }
+    private void changed(){player.getInventory().setChanged();player.containerMenu.broadcastChanges();}
     private static BlockPos pos(Position p) { return new BlockPos(p.x(), p.y()+1, p.z()); }
   }
 }

@@ -29,7 +29,9 @@ public final class Screen_Territory extends Screen
   private List<Owned> owned = List.of();
   private List<Summary> authorized = List.of();
   private EditBox search;
-  private int teleportDebounceTicks;
+  private final TerritoryTeleportClickDebounce teleportDebounce = new TerritoryTeleportClickDebounce(8);
+  private int scrollRow;
+  private List<TerritoryTeleportRowLayout.ButtonArea> teleportButtons = List.of();
 
   private static final int TELEPORT_BUTTON_WIDTH = 72;
   private static final int TELEPORT_BUTTON_HEIGHT = 20;
@@ -59,13 +61,14 @@ public final class Screen_Territory extends Screen
 
   @Override public void tick() {
     super.tick();
-    if (teleportDebounceTicks > 0) teleportDebounceTicks--;
+    teleportDebounce.tick();
     if (activeRequestId >= 0 && !loaded && ++waitTicks >= TIMEOUT_TICKS) {
       territorySyncFailed(activeRequestId);
     }
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    teleportButtons = List.of();
     renderBackground(graphics);
     graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
     if (!loaded) {
@@ -73,23 +76,26 @@ public final class Screen_Territory extends Screen
     } else if (failed) {
       graphics.drawCenteredString(font, Component.translatable("message.territory.sync_failed"), width / 2, height / 2, 0xFF8080);
     } else {
-      int y = 58;
-      for (Summary value : visibleRows()) {
+      List<Summary> rows = visibleRows();
+      scrollRow = TerritoryTeleportRowLayout.clampScroll(scrollRow, rows.size(), height);
+      teleportButtons = TerritoryTeleportRowLayout.layout(rows.stream().map(Summary::territoryId).toList(),
+          scrollRow, width, height, TELEPORT_BUTTON_WIDTH, TELEPORT_BUTTON_HEIGHT);
+      for (int index = 0; index < teleportButtons.size(); index++) {
+        Summary value = rows.get(scrollRow + index);
+        TerritoryTeleportRowLayout.ButtonArea area = teleportButtons.get(index);
+        int y = area.y() + 5;
         graphics.drawString(font, value.name() + " - " + value.ownerName(), 24, y, 0xFFFFFF);
-        int buttonX = width - TELEPORT_BUTTON_WIDTH - 24;
-        int buttonY = y - 5;
-        int buttonColor = teleportDebounceTicks == 0 ? 0xFF3D6F4A : 0xFF555555;
-        graphics.fill(buttonX, buttonY, buttonX + TELEPORT_BUTTON_WIDTH,
-            buttonY + TELEPORT_BUTTON_HEIGHT, buttonColor);
-        graphics.fill(buttonX, buttonY, buttonX + TELEPORT_BUTTON_WIDTH, buttonY + 1, 0xFF9BC8A4);
-        graphics.fill(buttonX, buttonY + TELEPORT_BUTTON_HEIGHT - 1,
-            buttonX + TELEPORT_BUTTON_WIDTH, buttonY + TELEPORT_BUTTON_HEIGHT, 0xFF1B3322);
+        int buttonColor = teleportDebounce.ready() ? 0xFF3D6F4A : 0xFF555555;
+        graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), buttonColor);
+        graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + 1, 0xFF9BC8A4);
+        graphics.fill(area.x(), area.y() + area.height() - 1,
+            area.x() + area.width(), area.y() + area.height(), 0xFF1B3322);
         graphics.drawCenteredString(font, Component.translatable("button.territory.teleport"),
-            buttonX + TELEPORT_BUTTON_WIDTH / 2, buttonY + 6,
-            teleportDebounceTicks == 0 ? 0xFFFFFFFF : 0xFFAAAAAA);
-        y += font.lineHeight + 4;
-        if (y > height - 20) break;
+            area.x() + area.width() / 2, area.y() + 6,
+            teleportDebounce.ready() ? 0xFFFFFFFF : 0xFFAAAAAA);
       }
+      if (rows.size() > teleportButtons.size()) graphics.drawString(font,
+          Component.literal((scrollRow + 1) + "-" + (scrollRow + teleportButtons.size()) + "/" + rows.size()), 24, height - 14, 0xAAAAAA);
     }
     super.render(graphics, mouseX, mouseY, partialTick);
   }
@@ -100,24 +106,26 @@ public final class Screen_Territory extends Screen
       return true;
     }
     if (button == 0 && loaded && !failed) {
-      int y = 58;
-      int buttonX = width - TELEPORT_BUTTON_WIDTH - 24;
-      for (Summary value : visibleRows()) {
-        int buttonY = y - 5;
-        if (mouseX >= buttonX && mouseX <= buttonX + TELEPORT_BUTTON_WIDTH
-            && mouseY >= buttonY && mouseY <= buttonY + TELEPORT_BUTTON_HEIGHT) {
-          if (teleportDebounceTicks == 0) {
-            teleportDebounceTicks = 8;
+      for (TerritoryTeleportRowLayout.ButtonArea area : teleportButtons) {
+        if (area.contains(mouseX, mouseY)) {
+          if (teleportDebounce.tryAcquire()) {
             EconomyServices.platform().network().sendToServer(
-                new TeleportToTerritoryMessage(value.territoryId()));
+                new TeleportToTerritoryMessage(area.territoryId()));
           }
           return true;
         }
-        y += font.lineHeight + 4;
-        if (y > height - 20) break;
       }
     }
     return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  @Override public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    if (loaded && !failed && delta != 0) {
+      List<Summary> rows = visibleRows();
+      scrollRow = TerritoryTeleportRowLayout.clampScroll(scrollRow + (delta < 0 ? 1 : -1), rows.size(), height);
+      return true;
+    }
+    return super.mouseScrolled(mouseX, mouseY, delta);
   }
 
   private List<Summary> visibleRows() {

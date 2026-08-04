@@ -5,6 +5,7 @@ import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.territory.TerritoryTeleportOutcome;
 import com.mo.economy_system.common.territory.TerritoryTeleportRateLimiter;
 import com.mo.economy_system.common.territory.TerritoryTeleportService;
+import com.mo.economy_system.common.territory.RecallPotionReservation;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.target.forge1201.item.Forge1201Items;
 import java.util.Optional;
@@ -56,14 +57,14 @@ final class Forge1201TerritoryTeleportHandler {
           adapter,
           LIMITER,
           (stage, playerId, territoryId, slot, primary, secondary) -> LOGGER.warn(
-              "Territory teleport issue stage={} player={} territory={} slot={} secondary={}",
-              stage, playerId, territoryId, slot,
-              secondary == null ? "none" : secondary.toString(), primary));
+              "Territory teleport issue stage={} result={} player={} territory={} slot={}",
+              stage, stage.equals("rollback") ? "ROLLBACK_FAILED" : "TELEPORT_FAILED",
+              playerId, territoryId, slot, primary));
       long serverTick = player.serverLevel().getServer().getTickCount();
       TerritoryTeleportOutcome outcome = service.execute(
           player.getUUID(), message.territoryId(), serverTick);
       player.sendSystemMessage(message(outcome));
-    } catch (Throwable error) {
+    } catch (Exception error) {
       LOGGER.error("Territory teleport request failed player={} territory={}",
           player.getUUID(), message.territoryId(), error);
       player.sendSystemMessage(Component.translatable("message.teleport.failed"));
@@ -113,7 +114,7 @@ final class Forge1201TerritoryTeleportHandler {
       ChunkPos chunk = new ChunkPos(feet);
       // Keep the target chunk loaded through the cross-dimension move.
       level.getChunkSource().addRegionTicket(TicketType.POST_TELEPORT, chunk, 1, player.getId());
-      level.getChunk(chunk.x, chunk.z, ChunkStatus.FULL, true);
+      if (level.getChunk(chunk.x, chunk.z, ChunkStatus.FULL, true) == null) return false;
 
       BlockState footState = level.getBlockState(feet);
       BlockState headState = level.getBlockState(head);
@@ -127,13 +128,18 @@ final class Forge1201TerritoryTeleportHandler {
       double y = feet.getY();
       double z = feet.getZ() + 0.5;
       AABB box = player.getBoundingBox().move(x - player.getX(), y - player.getY(), z - player.getZ());
-      return level.noCollision(player, box);
+      return withinBorder(level, box) && level.noCollision(player, box);
     }
 
     private static boolean safeSpace(ServerLevel level, BlockPos pos, BlockState state) {
       return state.getCollisionShape(level, pos).isEmpty()
           && !state.is(BlockTags.FIRE)
           && !state.getFluidState().is(FluidTags.LAVA);
+    }
+    private static boolean withinBorder(ServerLevel level, AABB box) {
+      var border = level.getWorldBorder();
+      return box.minX >= border.getMinX() && box.maxX <= border.getMaxX()
+          && box.minZ >= border.getMinZ() && box.maxZ <= border.getMaxZ();
     }
 
     @Override
@@ -172,21 +178,30 @@ final class Forge1201TerritoryTeleportHandler {
       for (int slot = 0; slot < limit; slot++) {
         ItemStack stack = player.getInventory().items.get(slot);
         if (!stack.is(Forge1201Items.RECALL_POTION.get())) continue;
-        ItemStack original = stack.copy();
-        stack.shrink(1);
-        player.getInventory().setChanged();
-        int selected = slot;
-        return Optional.of(new TerritoryTeleportService.Reservation() {
-          @Override public int slot() { return selected; }
-
-          @Override public void rollback() {
-            player.getInventory().items.set(selected, original.copy());
-            player.getInventory().setChanged();
-          }
-        });
+        ItemStack removed = stack.copy(); removed.setCount(1); stack.shrink(1);
+        ItemStack expected = stack.copy(); changed();
+        return Optional.of(new RecallPotionReservation<>(slot, removed, expected, slots()));
       }
       return Optional.empty();
     }
+
+    private RecallPotionReservation.Slots<ItemStack> slots() {
+      return new RecallPotionReservation.Slots<>() {
+        public int size() { return player.getInventory().items.size(); }
+        public ItemStack get(int slot) { return player.getInventory().items.get(slot); }
+        public void set(int slot, ItemStack value) { player.getInventory().items.set(slot, value); }
+        public ItemStack copy(ItemStack value) { return value.copy(); }
+        public boolean equivalent(ItemStack a, ItemStack b) { return a.getCount() == b.getCount() && ItemStack.isSameItemSameTags(a, b); }
+        public boolean empty(ItemStack value) { return value.isEmpty(); }
+        public boolean canMerge(ItemStack a, ItemStack b) { return !a.isEmpty() && ItemStack.isSameItemSameTags(a, b); }
+        public int count(ItemStack value) { return value.getCount(); }
+        public int maximum(ItemStack value) { return value.getMaxStackSize(); }
+        public ItemStack withAddedOne(ItemStack existing, ItemStack one) { ItemStack result = existing.isEmpty() ? one.copy() : existing.copy(); if (!existing.isEmpty()) result.grow(1); return result; }
+        public void changed() { Adapter.this.changed(); }
+      };
+    }
+
+    private void changed() { player.getInventory().setChanged(); player.containerMenu.broadcastChanges(); }
 
     /** Backpoints are saved at the player's feet block; stand one block above them. */
     private static BlockPos position(Position backpoint) {

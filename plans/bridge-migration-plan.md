@@ -120,7 +120,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - `ClientMarketState` 以递增 requestId 拒绝过期页面；`INVALIDATED` 保留旧页并标记 stale。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
-- 协议 19 完成后的验证套件包含 shared-source 211 项、Forge 1.20.1 257 项和 NeoForge 1.21.1 257 项测试，`buildAllTargets --rerun-tasks` 通过。
+- 协议 19 加固后的验证套件包含 shared-source 220 项、Forge 1.20.1 271 项和 NeoForge 1.21.1 266 项测试。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -205,6 +205,10 @@ git diff --check
   NeoForge maps historical null upgrade-cost lists to empty lists.
 - Protocol 19 is migrated and hardened: UUID-only wire data, authoritative owner/member checks, bounded server
   cooldown, exact safe landing validation, POST_TELEPORT chunk preparation, verified arrival, and transactional
-  recall-potion rollback are shared across targets. Forge adds only the minimal read-only page teleport action.
+  recall-potion rollback are shared across targets. The one-shot reservation commits on arrival and never
+  overwrites a slot changed by another event; conflicts use a mergeable/empty main-inventory slot or fail closed.
+  Both loaders mark/synchronize removal and restoration, repository/infrastructure exceptions remain generic,
+  rollback errors are suppressed onto the primary error, and JVM Errors escape. Forge uses non-overlapping rows,
+  render-owned UUID hitboxes and wheel scrolling for its minimal read-only page teleport action.
 - Protocol 20 and every later territory operation remain unmigrated. The next migration is protocol 20 only.
   after a separate task.

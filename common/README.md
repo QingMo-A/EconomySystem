@@ -64,7 +64,7 @@ maintaining independent registration order.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
   restored and recaptured by both targets. The complete verified suite runs 199 shared-source,
-  257 Forge 1.20.1, and 257 NeoForge 1.21.1 tests with no failures (211 shared-source tests).
+  271 Forge 1.20.1 and 266 NeoForge 1.21.1 tests with no failures (220 shared-source tests).
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -190,7 +190,13 @@ the destination unchanged. Stable DATA and ERROR golden fixtures run in both tar
 Protocol 19 is a common UUID-only C2S message with an exact 16-byte, NBT-free wire codec. The common teleport
 service re-reads the authoritative territory, permits only owner or current authorized members, validates the
 dimension and exact `backpoint.above()` destination, applies a bounded 20-tick server cooldown, and performs
-recall-potion removal/rollback as a transaction. It uses an expiring `POST_TELEPORT` ticket and never persists
+recall-potion removal/commit/rollback as a one-shot transaction. Both targets mark and synchronize inventory
+immediately after removing exactly one main-inventory potion. Rollback restores only that potion: it uses the
+original slot only while its expected remainder is unchanged, otherwise selects a mergeable stack or empty slot,
+and fails without overwriting unrelated items when neither exists. Repository, capture, dimension, preparation
+and inventory exceptions become a logged generic failure; rollback exceptions are suppressed onto the primary
+failure. Arrival is a non-throwing state read, while ordinary effect failures remain best effort and JVM Errors
+are never swallowed. It uses an expiring `POST_TELEPORT` ticket and never persists
 a forced chunk. Supported results are SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, NO_BACKPOINT,
 DIMENSION_NOT_FOUND, UNSAFE_DESTINATION, NO_RECALL_POTION, COOLDOWN, TELEPORT_FAILED and ROLLBACK_FAILED.
 Protocol 20 and later territory operations remain unmigrated.

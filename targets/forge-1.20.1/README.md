@@ -86,7 +86,7 @@ independent payment/inventory compensation, display-name fallback, and shared in
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
 compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
 repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
-The verified protocol-19 suite contains 211 shared-source tests, 257 Forge tests, and 257 NeoForge tests.
+The verified hardened protocol-19 suite contains 220 shared-source tests, 271 Forge tests, and 266 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -136,4 +136,9 @@ Protocol 19 is registered at canonical discriminator 19 as a UUID-only C2S messa
 The target-local read-only territory page adds an explicit translated teleport button to each owned/authorized
 row with client debounce. All authority remains server-side: the shared service re-reads the store, checks current
 owner/member access, validates the exact landing point, reserves one main-inventory potion, verifies arrival and
-rolls the potion back on failure. Only an expiring POST_TELEPORT ticket is used. Protocol 20+ remains legacy.
+commits it on success. Removal always marks and synchronizes inventory. Conflict-safe rollback restores exactly
+one potion without overwriting a changed slot; it scans mergeable stacks then empty slots and returns
+ROLLBACK_FAILED if no safe destination exists. Secondary rollback errors are suppressed onto the primary error.
+The page uses non-overlapping 26-pixel rows, render-owned UUID hitboxes and wheel scrolling so every filtered row
+is reachable. Full player AABB world-border/collision checks precede teleport. Only an expiring POST_TELEPORT
+ticket is used. Protocol 20+ remains legacy.

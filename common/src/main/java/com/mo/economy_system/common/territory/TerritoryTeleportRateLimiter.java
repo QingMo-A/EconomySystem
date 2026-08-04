@@ -14,14 +14,18 @@ public final class TerritoryTeleportRateLimiter {
     this.cooldownTicks = cooldownTicks; this.maximumEntries = maximumEntries;
   }
   public synchronized boolean tryAcquire(UUID playerId, long tick) {
+    if (playerId == null || tick < 0) throw new IllegalArgumentException("invalid limiter input");
     Long previous = accepted.get(playerId);
-    if (previous != null && tick >= previous && tick - previous < cooldownTicks) return false;
+    if (previous != null && (tick < previous || tick - previous < cooldownTicks)) return false;
     accepted.put(playerId, tick);
     Iterator<Map.Entry<UUID, Long>> iterator = accepted.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry<UUID, Long> entry = iterator.next();
-      if (accepted.size() > maximumEntries || (tick >= entry.getValue() && tick - entry.getValue() >= cooldownTicks * 4)) iterator.remove();
-      else break;
+      if (tick >= entry.getValue() && tick - entry.getValue() >= cooldownTicks * 4) iterator.remove();
+    }
+    iterator = accepted.entrySet().iterator();
+    while (accepted.size() > maximumEntries && iterator.hasNext()) {
+      iterator.next(); iterator.remove();
     }
     return true;
   }
