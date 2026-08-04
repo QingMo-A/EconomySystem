@@ -22,6 +22,13 @@ public final class TerritoryRemovalService {
     STATE_UNKNOWN
   }
 
+  public enum RepositoryFailureKind {
+    NONE,
+    INTEGRITY,
+    PERSISTENCE,
+    UNKNOWN
+  }
+
   public record RemovedTerritory(UUID territoryId, UUID ownerId, String territoryName) {
     public RemovedTerritory {
       Objects.requireNonNull(territoryId);
@@ -35,20 +42,33 @@ public final class TerritoryRemovalService {
   }
 
   public record RepositoryOutcome(
-      RepositoryResult result, RemovedTerritory removedTerritory, Throwable failure) {
+      RepositoryResult result,
+      RemovedTerritory removedTerritory,
+      RepositoryFailureKind failureKind,
+      Throwable failure) {
     public RepositoryOutcome {
       Objects.requireNonNull(result);
+      Objects.requireNonNull(failureKind);
       if ((result == RepositoryResult.REMOVED) != (removedTerritory != null))
         throw new IllegalArgumentException("result/snapshot");
-      if ((result == RepositoryResult.REMOVED
-              || result == RepositoryResult.NOT_FOUND
-              || result == RepositoryResult.OWNER_MISMATCH)
-          && failure != null) throw new IllegalArgumentException("unexpected failure");
+      if (result == RepositoryResult.PERSIST_FAILED
+          && failureKind != RepositoryFailureKind.PERSISTENCE)
+        throw new IllegalArgumentException("persist failure kind");
+      if (result == RepositoryResult.STATE_UNKNOWN
+          && failureKind != RepositoryFailureKind.INTEGRITY
+          && failureKind != RepositoryFailureKind.UNKNOWN)
+        throw new IllegalArgumentException("unknown failure kind");
+      if (result != RepositoryResult.PERSIST_FAILED
+          && result != RepositoryResult.STATE_UNKNOWN
+          && failureKind != RepositoryFailureKind.NONE)
+        throw new IllegalArgumentException("unexpected failure kind");
+      if ((failureKind == RepositoryFailureKind.NONE) != (failure == null))
+        throw new IllegalArgumentException("failure/kind");
       if (failure instanceof Error error) throw error;
     }
 
     public RepositoryOutcome(RepositoryResult result, RemovedTerritory removedTerritory) {
-      this(result, removedTerritory, null);
+      this(result, removedTerritory, RepositoryFailureKind.NONE, null);
     }
   }
 
@@ -154,15 +174,12 @@ public final class TerritoryRemovalService {
   }
 
   private static String repositoryStage(RepositoryOutcome outcome) {
-    if (outcome.result() == RepositoryResult.PERSIST_FAILED) return "repository-persist-failed";
-    String message = outcome.failure().getMessage();
-    return message != null
-            && (message.contains("mismatch")
-                || message.contains("malformed")
-                || message.contains("duplicate")
-                || message.contains("invariant"))
-        ? "repository-integrity"
-        : "repository-state-unknown";
+    return switch (outcome.failureKind()) {
+      case INTEGRITY -> "repository-integrity";
+      case PERSISTENCE -> "repository-persist-failed";
+      case UNKNOWN -> "repository-state-unknown";
+      case NONE -> throw new IllegalArgumentException("outcome has no failure");
+    };
   }
 
   private static Outcome out(Result result) {

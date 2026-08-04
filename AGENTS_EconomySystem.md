@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–21 已完成 bridge 迁移。协议 21 固定发送 16 字节 territory UUID，删除身份来自真实 sender，实时 owner 校验且不退款。NeoForge 对 primary map、owner bucket、QuadTree 与 SavedData 做事务删除和补偿，并在成功后清理 pending invite 与 resize session；Forge 对 raw NBT 做 copy-on-write 删除并保留未知字段和顺序。PERSIST_FAILED 表示完整回滚可重试，STATE_UNKNOWN 表示最终状态无法证明。双端均有确认 UI。协议 22+ 仍为 legacy。
+协议 17–21 已完成 bridge 迁移。协议 21 固定发送 16 字节 territory UUID，删除身份来自真实 sender，实时 owner 校验且不退款。NeoForge 对 primary map、owner bucket、QuadTree 与 SavedData 做事务删除和补偿，并在成功后清理 pending invite 与 resize session；Forge 对 raw NBT 做 copy-on-write 删除并保留未知字段和顺序。PERSIST_FAILED 表示完整回滚可重试，STATE_UNKNOWN 表示最终状态无法证明。resize session 面积差仅用于预览；最终价格由同步 prepare 从实时 Territory 计算，commit 重验实例、owner、旧边界/backpoint、索引与 overlap。等面积 reshape 免费，完全相同返回 UNCHANGED，STATE_UNKNOWN 不自动退款。QuadTree 还须证明节点路径与代表点查询正确。repository failure kind 为显式枚举，双端 handler 对 limiter 与 cleanup 共用一次 overworld gameTime。协议 22+ 仍为 legacy。
 领地 resize 不再 remove/add Territory：权威事务保持 primary、owner bucket 与 SavedData 的同一实例，只重建 QuadTree；扩容精确扣费，明确失败或完整回滚后精确退款，STATE_UNKNOWN 不自动退款。删除后的 resize cleanup 使用删除快照中的服务端名称。
 
 - 将“面积”命名修正，避免 volume 概念混乱。

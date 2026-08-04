@@ -1,5 +1,6 @@
 package com.mo.economy_system.item.items;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
@@ -226,7 +227,8 @@ public class Item_ClaimWand extends Item {
     java.util.Objects.requireNonNull(server, "server");
     java.util.Objects.requireNonNull(territoryId, "territoryId");
     territoryName = java.util.Objects.requireNonNull(territoryName, "territoryName").trim();
-    if (territoryName.isEmpty() || territoryName.length() > 128)
+    if (territoryName.isEmpty()
+        || territoryName.length() > EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH)
       throw new IllegalArgumentException("territoryName");
     if (!server.isSameThread())
       throw new IllegalStateException("resize cleanup must run on server thread");

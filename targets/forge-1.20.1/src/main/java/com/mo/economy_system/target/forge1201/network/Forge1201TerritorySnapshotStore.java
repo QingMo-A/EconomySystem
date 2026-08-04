@@ -348,8 +348,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         dirtyMarker.markDirty();
       } catch (RuntimeException rollbackFailure) {
         persistFailure.addSuppressed(rollbackFailure);
-        return repositoryState(
-            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
+        return repositoryUnknown(persistFailure);
       }
       try {
         // The original source was strict-parsed above.  Re-parse the restored document as a
@@ -358,13 +357,11 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         if (restored.snapshots().size() != originalSnapshots.size()
             || restored.snapshots().stream()
                 .noneMatch(value -> territoryId.equals(value.summary().territoryId()))) {
-          return repositoryState(
-              TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
+          return repositoryUnknown(persistFailure);
         }
       } catch (RuntimeException restorationFailure) {
         persistFailure.addSuppressed(restorationFailure);
-        return repositoryState(
-            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
+        return repositoryUnknown(persistFailure);
       }
       return repositoryState(
           TerritoryRemovalService.RepositoryResult.PERSIST_FAILED, persistFailure);
@@ -386,7 +383,19 @@ final class Forge1201TerritorySnapshotStore extends SavedData
 
   private static TerritoryRemovalService.RepositoryOutcome repositoryState(
       TerritoryRemovalService.RepositoryResult result, Throwable failure) {
-    return new TerritoryRemovalService.RepositoryOutcome(result, null, failure);
+    TerritoryRemovalService.RepositoryFailureKind kind =
+        result == TerritoryRemovalService.RepositoryResult.PERSIST_FAILED
+            ? TerritoryRemovalService.RepositoryFailureKind.PERSISTENCE
+            : TerritoryRemovalService.RepositoryFailureKind.INTEGRITY;
+    return new TerritoryRemovalService.RepositoryOutcome(result, null, kind, failure);
+  }
+
+  private static TerritoryRemovalService.RepositoryOutcome repositoryUnknown(Throwable failure) {
+    return new TerritoryRemovalService.RepositoryOutcome(
+        TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+        null,
+        TerritoryRemovalService.RepositoryFailureKind.UNKNOWN,
+        failure);
   }
 
   /** Returns a deep copy for persistence tests; callers cannot mutate store state. */

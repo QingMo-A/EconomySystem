@@ -150,3 +150,9 @@ ticket is used. Protocol 20 is complete. Protocol 21 removes a territory from th
 `territory_data` NBT with strict copy-on-write validation, preserving unknown fields and record order; dirty-mark
 failure rolls back before reporting retry-safe failure. The wire is only the 16-byte UUID and the server sender
 is the owner authority. Protocol 22+ remains legacy.
+
+Protocol-21 final integration classifies repository failures explicitly instead of parsing exception text. The
+removal limiter and invitation cleanup share one overworld game-time value. NeoForge's resize transaction uses
+an authoritative prepare/commit plan: cached session area is preview-only, equal-area reshapes are free,
+UNCHANGED avoids persistence, and uncertain mutation is never refunded. QuadTree validation includes storage
+path and representative spatial queries. Forge has no legacy resize-session state. Protocol 22+ remains legacy.

@@ -229,6 +229,8 @@ public class TerritoryManager {
           com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult
               .STATE_UNKNOWN,
           null,
+          com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryFailureKind
+              .UNKNOWN,
           new IllegalStateException("SavedData unavailable or removal input invalid"));
     Territory territory = territoryByID.get(territoryID);
     if (territory == null)
@@ -255,11 +257,14 @@ public class TerritoryManager {
     if (ownerMatches != 1
         || wrongBucket
         || savedData.getTerritoryByID(territoryID) != territory
-        || quadTree.countTerritory(territoryID) != 1)
+        || quadTree.countTerritory(territoryID) != 1
+        || !quadTree.isIndexedCorrectly(territory))
       return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(
           com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult
               .STATE_UNKNOWN,
           null,
+          com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryFailureKind
+              .INTEGRITY,
           new IllegalStateException("territory removal invariant mismatch"));
     var snapshot =
         new com.mo.economy_system.common.territory.TerritoryRemovalService.RemovedTerritory(
@@ -333,6 +338,7 @@ public class TerritoryManager {
               && territoryByID.get(territoryID) == territory
               && savedData.getTerritoryByID(territoryID) == territory
               && quadTree.countTerritory(territoryID) == 1
+              && quadTree.isIndexedCorrectly(territory)
               && restoredOwnerMatches == 1
               && !wrongRestoredBucket;
       return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(
@@ -342,18 +348,65 @@ public class TerritoryManager {
               : com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult
                   .STATE_UNKNOWN,
           null,
+          verified
+              ? com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryFailureKind
+                  .PERSISTENCE
+              : com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryFailureKind
+                  .UNKNOWN,
           failure);
     }
   }
 
   public enum ResizeResult {
     RESIZED,
+    UNCHANGED,
+    CHANGED,
     TERRITORY_NOT_FOUND,
     OWNER_MISMATCH,
     INVALID_BOUNDS,
     OVERLAP,
     PERSIST_FAILED,
     STATE_UNKNOWN
+  }
+
+  public enum ResizePrepareResult {
+    READY,
+    UNCHANGED,
+    TERRITORY_NOT_FOUND,
+    OWNER_MISMATCH,
+    INVALID_BOUNDS,
+    OVERLAP,
+    PRICE_OVERFLOW,
+    STATE_UNKNOWN
+  }
+
+  public record ResizePlan(
+      UUID territoryId,
+      UUID expectedOwnerId,
+      Territory expectedInstance,
+      net.minecraft.core.BlockPos oldPos1,
+      net.minecraft.core.BlockPos oldPos2,
+      net.minecraft.core.BlockPos oldBackpoint,
+      net.minecraft.core.BlockPos newPos1,
+      net.minecraft.core.BlockPos newPos2,
+      net.minecraft.core.BlockPos newBackpoint,
+      long oldArea,
+      long newArea,
+      long areaDifference,
+      int charge) {}
+
+  public record ResizePrepareOutcome(
+      ResizePrepareResult result, ResizePlan plan, Throwable failure) {
+    public ResizePrepareOutcome {
+      Objects.requireNonNull(result);
+      if ((result == ResizePrepareResult.READY) != (plan != null))
+        throw new IllegalArgumentException("prepare result/plan");
+      if (failure instanceof Error error) throw error;
+    }
+
+    static ResizePrepareOutcome of(ResizePrepareResult result) {
+      return new ResizePrepareOutcome(result, null, null);
+    }
   }
 
   public record ResizeOutcome(ResizeResult result, Throwable failure) {
@@ -365,6 +418,110 @@ public class TerritoryManager {
     static ResizeOutcome of(ResizeResult result) {
       return new ResizeOutcome(result, null);
     }
+  }
+
+  public static synchronized ResizePrepareOutcome prepareTerritoryResize(
+      UUID territoryID,
+      UUID expectedOwner,
+      net.minecraft.core.BlockPos newPos1,
+      net.minecraft.core.BlockPos newPos2,
+      net.minecraft.core.BlockPos newBackpoint) {
+    if (territoryID == null
+        || expectedOwner == null
+        || newPos1 == null
+        || newPos2 == null
+        || newBackpoint == null
+        || newPos1.getY() != newPos2.getY()
+        || !validCoordinate(newPos1)
+        || !validCoordinate(newPos2))
+      return ResizePrepareOutcome.of(ResizePrepareResult.INVALID_BOUNDS);
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null) return ResizePrepareOutcome.of(ResizePrepareResult.TERRITORY_NOT_FOUND);
+    if (!expectedOwner.equals(territory.getOwnerUUID()))
+      return ResizePrepareOutcome.of(ResizePrepareResult.OWNER_MISMATCH);
+    IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
+    if (invariant != null)
+      return new ResizePrepareOutcome(ResizePrepareResult.STATE_UNKNOWN, null, invariant);
+    if (overlapsOther(territory, Bounds.calculateBounds(newPos1, newPos2)))
+      return ResizePrepareOutcome.of(ResizePrepareResult.OVERLAP);
+    net.minecraft.core.BlockPos oldPos1 = territory.getPos1();
+    net.minecraft.core.BlockPos oldPos2 = territory.getPos2();
+    net.minecraft.core.BlockPos oldBackpoint = territory.getBackpoint();
+    if (oldPos1.equals(newPos1)
+        && oldPos2.equals(newPos2)
+        && Objects.equals(oldBackpoint, newBackpoint))
+      return ResizePrepareOutcome.of(ResizePrepareResult.UNCHANGED);
+    try {
+      long oldArea = calculateArea(oldPos1, oldPos2);
+      long newArea = calculateArea(newPos1, newPos2);
+      long difference = Math.subtractExact(newArea, oldArea);
+      long rawCharge = difference <= 0 ? 0 : Math.multiplyExact(difference, 20L);
+      if (rawCharge > Integer.MAX_VALUE)
+        return ResizePrepareOutcome.of(ResizePrepareResult.PRICE_OVERFLOW);
+      return new ResizePrepareOutcome(
+          ResizePrepareResult.READY,
+          new ResizePlan(
+              territoryID,
+              expectedOwner,
+              territory,
+              oldPos1,
+              oldPos2,
+              oldBackpoint,
+              newPos1,
+              newPos2,
+              newBackpoint,
+              oldArea,
+              newArea,
+              difference,
+              (int) rawCharge),
+          null);
+    } catch (ArithmeticException failure) {
+      return new ResizePrepareOutcome(ResizePrepareResult.PRICE_OVERFLOW, null, failure);
+    }
+  }
+
+  public static synchronized ResizeOutcome commitTerritoryResize(ResizePlan plan) {
+    Objects.requireNonNull(plan);
+    Territory current = territoryByID.get(plan.territoryId());
+    if (current == null) return ResizeOutcome.of(ResizeResult.TERRITORY_NOT_FOUND);
+    if (current != plan.expectedInstance()
+        || !plan.expectedOwnerId().equals(current.getOwnerUUID())
+        || !plan.oldPos1().equals(current.getPos1())
+        || !plan.oldPos2().equals(current.getPos2())
+        || !Objects.equals(plan.oldBackpoint(), current.getBackpoint()))
+      return ResizeOutcome.of(ResizeResult.CHANGED);
+    IllegalStateException invariant =
+        resizeInvariant(plan.territoryId(), plan.expectedOwnerId(), current);
+    if (invariant != null) return new ResizeOutcome(ResizeResult.STATE_UNKNOWN, invariant);
+    if (overlapsOther(current, Bounds.calculateBounds(plan.newPos1(), plan.newPos2())))
+      return ResizeOutcome.of(ResizeResult.OVERLAP);
+    return resizeTerritoryAuthoritatively(
+        plan.territoryId(),
+        plan.expectedOwnerId(),
+        plan.newPos1(),
+        plan.newPos2(),
+        plan.newBackpoint());
+  }
+
+  private static long calculateArea(
+      net.minecraft.core.BlockPos first, net.minecraft.core.BlockPos second) {
+    long width = Math.abs((long) first.getX() - second.getX()) + 1L;
+    long height = Math.abs((long) first.getZ() - second.getZ()) + 1L;
+    return Math.multiplyExact(width, height);
+  }
+
+  private static boolean overlapsOther(Territory territory, Bounds candidate) {
+    return territoryByID.values().stream()
+        .filter(
+            other -> other != territory && other.getDimension().equals(territory.getDimension()))
+        .anyMatch(
+            other -> {
+              Bounds existing = other.getBounds();
+              return candidate.x <= existing.x + existing.width
+                  && candidate.x + candidate.width >= existing.x
+                  && candidate.z <= existing.z + existing.height
+                  && candidate.z + candidate.height >= existing.z;
+            });
   }
 
   public static synchronized ResizeOutcome resizeTerritoryAuthoritatively(
@@ -392,12 +549,7 @@ public class TerritoryManager {
     IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
     if (invariant != null) return new ResizeOutcome(ResizeResult.STATE_UNKNOWN, invariant);
     Bounds candidate = Bounds.calculateBounds(newPos1, newPos2);
-    boolean overlaps =
-        territoryByID.values().stream()
-            .filter(
-                other ->
-                    other != territory && other.getDimension().equals(territory.getDimension()))
-            .anyMatch(other -> other.getBounds().intersects(candidate));
+    boolean overlaps = overlapsOther(territory, candidate);
     if (overlaps) return ResizeOutcome.of(ResizeResult.OVERLAP);
 
     net.minecraft.core.BlockPos oldPos1 = territory.getPos1();
@@ -410,8 +562,8 @@ public class TerritoryManager {
       }
       applyBounds(territory, newPos1, newPos2, newBackpoint);
       quadTree.insert(territory);
-      if (quadTree.countTerritory(territoryID) != 1)
-        throw new IllegalStateException("new QuadTree entry count is not one");
+      if (!spatiallyVerified(territory, oldPos1, oldPos2))
+        throw new IllegalStateException("new QuadTree spatial verification failed");
       IllegalStateException finalInvariant = resizeInvariant(territoryID, expectedOwner, territory);
       if (finalInvariant != null) throw finalInvariant;
       savedData.setDirty();
@@ -449,7 +601,8 @@ public class TerritoryManager {
     boolean oldState =
         oldPos1.equals(territory.getPos1())
             && oldPos2.equals(territory.getPos2())
-            && Objects.equals(oldBackpoint, territory.getBackpoint());
+            && Objects.equals(oldBackpoint, territory.getBackpoint())
+            && spatiallyVerified(territory, newPos1, newPos2);
     if (!restored || restoredInvariant != null || !oldState) {
       if (restoredInvariant != null) failure.addSuppressed(restoredInvariant);
       return new ResizeOutcome(ResizeResult.STATE_UNKNOWN, failure);
@@ -459,6 +612,29 @@ public class TerritoryManager {
 
   private static boolean validCoordinate(net.minecraft.core.BlockPos pos) {
     return Math.abs((long) pos.getX()) <= 30_000_000L && Math.abs((long) pos.getZ()) <= 30_000_000L;
+  }
+
+  private static boolean spatiallyVerified(
+      Territory territory,
+      net.minecraft.core.BlockPos excludedFirst,
+      net.minecraft.core.BlockPos excludedSecond) {
+    if (quadTree.countTerritory(territory.getTerritoryID()) != 1
+        || !quadTree.isIndexedCorrectly(territory)) return false;
+    Bounds bounds = territory.getBounds();
+    int maxX = bounds.x + bounds.width;
+    int maxZ = bounds.z + bounds.height;
+    if (!queryContains(territory, bounds.x + bounds.width / 2, bounds.z + bounds.height / 2)
+        || !queryContains(territory, bounds.x, bounds.z)
+        || !queryContains(territory, maxX, maxZ)) return false;
+    for (net.minecraft.core.BlockPos point : List.of(excludedFirst, excludedSecond)) {
+      if (!territory.isWithinBoundsIgnoreY(point.getX(), point.getZ())
+          && queryContains(territory, point.getX(), point.getZ())) return false;
+    }
+    return true;
+  }
+
+  private static boolean queryContains(Territory territory, int x, int z) {
+    return quadTree.query(x, z).stream().anyMatch(candidate -> candidate == territory);
   }
 
   private static void applyBounds(
@@ -483,8 +659,7 @@ public class TerritoryManager {
           correct == null
               ? 0
               : correct.stream()
-                  .filter(
-                      value -> value != null && territoryID.equals(value.getTerritoryID()))
+                  .filter(value -> value != null && territoryID.equals(value.getTerritoryID()))
                   .count();
       boolean wrongBucket =
           territoriesByOwner.entrySet().stream()
@@ -495,16 +670,15 @@ public class TerritoryManager {
                           && entry.getValue().stream()
                               .anyMatch(
                                   value ->
-                                      value != null
-                                          && territoryID.equals(value.getTerritoryID())));
+                                      value != null && territoryID.equals(value.getTerritoryID())));
       if (territoryByID.get(territoryID) != territory)
         return new IllegalStateException("primary map instance mismatch");
       if (correctCount != 1 || wrongBucket)
         return new IllegalStateException("owner index mismatch");
       if (savedData == null || savedData.getTerritoryByID(territoryID) != territory)
         return new IllegalStateException("SavedData instance mismatch");
-      if (quadTree.countTerritory(territoryID) != 1)
-        return new IllegalStateException("QuadTree count mismatch");
+      if (quadTree.countTerritory(territoryID) != 1 || !quadTree.isIndexedCorrectly(territory))
+        return new IllegalStateException("QuadTree spatial index mismatch");
       return null;
     } catch (RuntimeException failure) {
       return new IllegalStateException("resize invariant inspection failed", failure);

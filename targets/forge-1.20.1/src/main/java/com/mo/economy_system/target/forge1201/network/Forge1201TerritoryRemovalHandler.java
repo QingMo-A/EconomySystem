@@ -6,6 +6,7 @@ import com.mojang.logging.LogUtils;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 import org.slf4j.Logger;
@@ -28,7 +29,8 @@ final class Forge1201TerritoryRemovalHandler {
 
   private static void remove(ServerPlayer sender, RemoveTerritoryMessage message) {
     MinecraftServer server = sender.getServer();
-    if (server.overworld() == null) {
+    ServerLevel overworld = server.overworld();
+    if (overworld == null) {
       LOGGER.warn(
           "territory removal has no overworld player={} territory={}",
           sender.getUUID(),
@@ -50,8 +52,8 @@ final class Forge1201TerritoryRemovalHandler {
             (stage, player, id, error) ->
                 LOGGER.warn(
                     "territory removal stage={} player={} territory={}", stage, player, id, error));
-    var outcome =
-        service.remove(sender.getUUID(), message.territoryId(), server.getTickCount());
+    long tick = overworld.getGameTime();
+    var outcome = service.remove(sender.getUUID(), message.territoryId(), tick);
     String key =
         switch (outcome.result()) {
           case SUCCESS -> "message.territory.remove.success";

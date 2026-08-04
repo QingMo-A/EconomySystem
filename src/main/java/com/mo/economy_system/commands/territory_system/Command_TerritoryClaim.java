@@ -1,5 +1,6 @@
 package com.mo.economy_system.commands.territory_system;
 
+import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
@@ -95,7 +96,7 @@ public class Command_TerritoryClaim {
                   if (!Item_ClaimWand.isResizing(playerUUID)
                       || Item_ClaimWand.getFirstModifyPosition(playerUUID) == null
                       || Item_ClaimWand.getSecondModifyPosition(playerUUID) == null
-                      || Item_ClaimWand.getModifyVolume(playerUUID) == 0L) {
+                      || Item_ClaimWand.getResizingTerritoryID(player) == null) {
                     player.sendSystemMessage(
                         Component.translatable(Util_MessageKeys.CLAIM_RESIZE_FAILED));
                     return 0;
@@ -126,10 +127,17 @@ public class Command_TerritoryClaim {
                           t.getTerritoryID(),
                           firstPos,
                           secondPos,
-                          Item_ClaimWand.getModifyVolume(playerUUID));
+                          (stage, owner, territory, failure) ->
+                              EconomySystem.LOGGER.warn(
+                                  "territory resize stage={} player={} territory={}",
+                                  stage,
+                                  owner,
+                                  territory,
+                                  failure));
                   String key =
                       switch (outcome.result()) {
                         case SUCCESS -> Util_MessageKeys.CLAIM_RESIZE_SUCCESS;
+                        case UNCHANGED -> "message.claim.resize.unchanged";
                         case INSUFFICIENT_FUNDS ->
                             Util_MessageKeys.CLAIM_RESIZE_INSUFFICIENT_BALANCE;
                         case OVERLAP -> "message.claim.resize.overlap";
@@ -140,11 +148,13 @@ public class Command_TerritoryClaim {
                       };
                   player.sendSystemMessage(Component.translatable(key));
                   if (outcome.result() == TerritoryResizeTransactionService.Result.SUCCESS
+                      || outcome.result() == TerritoryResizeTransactionService.Result.UNCHANGED
                       || outcome.result()
                           == TerritoryResizeTransactionService.Result.STATE_UNKNOWN) {
                     Item_ClaimWand.clearPositions(playerUUID);
                   }
                   return outcome.result() == TerritoryResizeTransactionService.Result.SUCCESS
+                          || outcome.result() == TerritoryResizeTransactionService.Result.UNCHANGED
                       ? 1
                       : 0;
                 }));

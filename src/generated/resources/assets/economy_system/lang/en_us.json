@@ -386,5 +386,6 @@
   "message.claim.resize.persist_failed": "Resize failed and was rolled back; you may retry.",
   "message.claim.resize.state_unknown": "Territory resize state is uncertain; contact an administrator.",
   "message.claim.resize.refund_failed": "Resize failed and the payment could not be refunded.",
-  "message.claim.resize.overlap": "The new territory bounds overlap another territory."
+  "message.claim.resize.overlap": "The new territory bounds overlap another territory.",
+  "message.claim.resize.unchanged": "The territory bounds have not changed."
 }

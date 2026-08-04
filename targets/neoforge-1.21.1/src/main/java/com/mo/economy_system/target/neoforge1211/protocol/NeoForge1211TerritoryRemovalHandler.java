@@ -55,8 +55,9 @@ public final class NeoForge1211TerritoryRemovalHandler {
       sender.sendSystemMessage(Component.translatable("message.territory.remove.state_unknown"));
       return;
     }
+    long tick = overworld.getGameTime();
     TerritoryRemovalService.Outcome outcome =
-        service.remove(sender.getUUID(), message.territoryId(), server.getTickCount());
+        service.remove(sender.getUUID(), message.territoryId(), tick);
     try {
       String key =
           switch (outcome.result()) {

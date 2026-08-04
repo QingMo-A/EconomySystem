@@ -62,7 +62,10 @@ class TerritoryRemovalCleanupSnapshotTest {
         new TerritoryRemovalService(
             (id, owner) ->
                 new TerritoryRemovalService.RepositoryOutcome(
-                    TerritoryRemovalService.RepositoryResult.PERSIST_FAILED, null, failure),
+                    TerritoryRemovalService.RepositoryResult.PERSIST_FAILED,
+                    null,
+                    TerritoryRemovalService.RepositoryFailureKind.PERSISTENCE,
+                    failure),
             new TerritoryRemovalRateLimiter(),
             (snapshot, tick) -> {},
             (snapshot, tick) -> {},
@@ -71,6 +74,64 @@ class TerritoryRemovalCleanupSnapshotTest {
         TerritoryRemovalService.Result.PERSIST_FAILED,
         service.remove(PLAYER, TERRITORY, 0).result());
     assertEquals(List.of("repository-persist-failed"), stages);
+  }
+
+  @Test
+  void explicitFailureKindsSelectStableStages() {
+    for (var entry :
+        java.util.Map.of(
+                TerritoryRemovalService.RepositoryFailureKind.INTEGRITY,
+                "repository-integrity",
+                TerritoryRemovalService.RepositoryFailureKind.UNKNOWN,
+                "repository-state-unknown")
+            .entrySet()) {
+      List<String> stages = new ArrayList<>();
+      TerritoryRemovalService service =
+          new TerritoryRemovalService(
+              (id, owner) ->
+                  new TerritoryRemovalService.RepositoryOutcome(
+                      TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+                      null,
+                      entry.getKey(),
+                      new IllegalStateException("message is irrelevant")),
+              new TerritoryRemovalRateLimiter(),
+              (snapshot, tick) -> {},
+              (snapshot, tick) -> {},
+              (stage, player, territory, error) -> stages.add(stage));
+      assertEquals(
+          TerritoryRemovalService.Result.STATE_UNKNOWN,
+          service.remove(PLAYER, TERRITORY, 0).result());
+      assertEquals(List.of(entry.getValue()), stages);
+    }
+  }
+
+  @Test
+  void invalidFailureKindCombinationsAndJvmErrorsAreRejected() {
+    RuntimeException failure = new IllegalStateException("failure");
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new TerritoryRemovalService.RepositoryOutcome(
+                TerritoryRemovalService.RepositoryResult.PERSIST_FAILED,
+                null,
+                TerritoryRemovalService.RepositoryFailureKind.UNKNOWN,
+                failure));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new TerritoryRemovalService.RepositoryOutcome(
+                TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+                null,
+                TerritoryRemovalService.RepositoryFailureKind.PERSISTENCE,
+                failure));
+    assertThrows(
+        AssertionError.class,
+        () ->
+            new TerritoryRemovalService.RepositoryOutcome(
+                TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+                null,
+                TerritoryRemovalService.RepositoryFailureKind.UNKNOWN,
+                new AssertionError("fatal")));
   }
 
   private static TerritoryRemovalService successful(

@@ -107,5 +107,6 @@
   "message.claim.resize.persist_failed": "领地修改失败且已回滚，可以重试。",
   "message.claim.resize.state_unknown": "领地修改状态不确定，请联系管理员。",
   "message.claim.resize.refund_failed": "领地修改失败且费用退款失败。",
-  "message.claim.resize.overlap": "新的领地范围与其他领地重叠。"
+  "message.claim.resize.overlap": "新的领地范围与其他领地重叠。",
+  "message.claim.resize.unchanged": "领地范围没有变化。"
 }

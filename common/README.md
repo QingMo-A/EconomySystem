@@ -210,7 +210,7 @@ PERSIST_FAILED to a safe release while consuming STATE_UNKNOWN. Client player-li
 an immutable snapshot with a monotonic local revision, allowing Forge to distinguish a fresh response from stale
 cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21
 removal is now migrated and hardened as described below; protocol 22 and later territory operations remain
-legacy. The current suites contain 263 shared-source, 330 Forge and 317 NeoForge tests.
+legacy. The current suites contain 266 shared-source, 333 Forge and 349 NeoForge tests.
 
 Protocol 21 uses the loader-neutral `RemoveTerritoryMessage` and the shared 16-byte UUID codec. The service
 derives authority from the authenticated sender, applies a bounded 20-tick server-scoped limiter, never refunds,
@@ -219,3 +219,12 @@ and exposes SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, RATE_LIMITED, PERSIST_F
 Successful removal cleanup receives the immutable server-side removed snapshot, so dependent invitation and
 NeoForge resize-session cleanup never re-read deleted state. NeoForge resize preserves primary/owner/SavedData
 identity, rebuilds only QuadTree, and refunds an expansion debit only when failure or rollback is proven.
+
+Final protocol-21 integration uses an immutable prepare/commit resize plan. Prepare reads the live Territory,
+validates every index and overlap, and derives the charge from live old/new inclusive X/Z areas; the session
+difference is preview-only. Commit revalidates identity, owner, old bounds/backpoint, indexes and overlap before
+mutation. Equal-area reshapes are free, identical bounds are UNCHANGED, and STATE_UNKNOWN never auto-refunds.
+QuadTree verification proves identity count, expected storage path and representative point queries. Removal
+repositories carry an explicit NONE/INTEGRITY/PERSISTENCE/UNKNOWN failure kind, and both handlers use one
+overworld game-time value for the limiter and cleanup. The request wire remains one UUID (16 bytes); protocol
+22+ remains legacy.
