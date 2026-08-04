@@ -80,7 +80,8 @@ Protocols 12 through 19 are migrated on both targets. Territory request 17 carri
 the request ID and response 18 uses explicit, bounded snapshots instead of Territory NBT.
 Forge captures its existing `territory_data` persistence into full owned snapshots and
 minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19 is the
-UUID-only teleport transaction described below; protocol 20 and later territory actions remain legacy.
+UUID-only teleport transaction described below. Protocol 20 uses the common 32-byte territory/target UUID invite request and a server-scoped expiring store. Forge invite acceptance performs a guarded raw-NBT `AuthorizedPlayers` mutation while retaining unknown fields. Protocol 21 and later territory actions remain legacy.
+The protocol-20 regression run contains 237 shared-source tests, 295 Forge tests, and 283 NeoForge tests.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use

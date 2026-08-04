@@ -350,5 +350,22 @@
   "tooltip.territory_buff.buff_id": "增益ID: %s",
   "tooltip.territory_buff.buff_max_level": "最大等级: %s",
   "tooltip.territory_buff.buff_name": "增益名称: %s",
-  "tooltip.territory_buff.buff_unlock_state": "解锁状态: %s"
+  "tooltip.territory_buff.buff_unlock_state": "解锁状态: %s",
+  "message.invite.accept": "[接受]",
+  "message.invite.decline": "[拒绝]",
+  "message.invite.territory_not_found": "领地不存在。",
+  "message.invite.target_offline": "目标玩家不在线。",
+  "message.invite.cannot_invite_owner": "不能邀请领地主人。",
+  "message.invite.cannot_invite_self": "不能邀请自己。",
+  "message.invite.already_pending": "该邀请已在等待处理。",
+  "message.invite.rate_limited": "邀请发送过快。",
+  "message.invite.store_full": "邀请队列已满。",
+  "message.invite.create_failed": "邀请创建失败。",
+  "message.invite.not_found": "没有待处理邀请。",
+  "message.invite.not_target": "该邀请并非发送给你。",
+  "message.invite.multiple_pending": "请指定邀请 ID。",
+  "message.invite.owner_changed": "领地主人已改变。",
+  "message.invite.persist_failed": "成员变更保存失败。",
+  "message.invite.state_unknown": "成员状态无法确认。",
+  "message.invite.busy": "邀请正在处理中。"
 }

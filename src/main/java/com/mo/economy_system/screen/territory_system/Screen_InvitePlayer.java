@@ -2,8 +2,9 @@ package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
+import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.territory_system.Packet_InvitePlayer;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.HighLevelTextField;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -32,7 +33,7 @@ public class Screen_InvitePlayer extends Screen {
     private static final int BUTTON_SPACING = 8;
 
     private final Territory territory;
-    private final List<UUID> uuids = new ArrayList<>();
+    private final List<PlayerSummary> players = new ArrayList<>();
     private final List<String> names = new ArrayList<>();
 
     private HighLevelTextField playerNameField;
@@ -214,12 +215,12 @@ public class Screen_InvitePlayer extends Screen {
         guiGraphics.drawString(font, hint, x, y, 0x90FFFFFF);
     }
 
-    public void update(List<Map.Entry<UUID, String>> accounts) {
+    public void update(List<PlayerSummary> accounts) {
         names.clear();
-        uuids.clear();
-        for (Map.Entry<UUID, String> entry : accounts) {
-            uuids.add(entry.getKey());
-            names.add(entry.getValue());
+        players.clear();
+        for (PlayerSummary entry : accounts) {
+            players.add(entry);
+            names.add(entry.playerName());
         }
         if (playerNameField != null) {
             playerNameField.setSuggestions(names);
@@ -253,9 +254,10 @@ public class Screen_InvitePlayer extends Screen {
             return;
         }
         String playerName = playerNameField == null ? "" : playerNameField.getValue();
-        if (!playerName.isEmpty()) {
+        List<PlayerSummary> matches=players.stream().filter(p->p.playerName().equalsIgnoreCase(playerName.trim())).toList();
+        if (matches.size()==1) {
             EconomySystem_NetworkManager.sendToServer(
-                new Packet_InvitePlayer(territory.getTerritoryID(), playerName));
+                new InvitePlayerMessage(territory.getTerritoryID(), matches.get(0).playerId()));
             this.minecraft.setScreen(null);
         } else {
             this.minecraft.player.sendSystemMessage(Component.translatable(Util_MessageKeys.INVITE_NO_NAME_KEY));

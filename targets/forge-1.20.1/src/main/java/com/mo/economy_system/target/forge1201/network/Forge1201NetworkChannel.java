@@ -28,7 +28,9 @@ import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
+import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -244,6 +246,13 @@ public final class Forge1201NetworkChannel {
         .decoder(TerritoryTeleportWireCodec::decode)
         .consumerMainThread(Forge1201TerritoryTeleportHandler::handle)
         .add();
+    CHANNEL
+        .messageBuilder(InvitePlayerMessage.class,
+            EconomyProtocol.INVITE_PLAYER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(TerritoryInviteWireCodec::encode)
+        .decoder(TerritoryInviteWireCodec::decode)
+        .consumerMainThread(Forge1201TerritoryInviteHandler::handle)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -337,6 +346,11 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToServer(TeleportToTerritoryMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
+
+  static void sendToServer(InvitePlayerMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }

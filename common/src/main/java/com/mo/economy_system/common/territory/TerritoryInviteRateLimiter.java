@@ -1,0 +1,4 @@
+package com.mo.economy_system.common.territory;
+import java.util.*;
+/** Bounded successful-attempt limiter; validation failures do not consume cooldown. */
+public final class TerritoryInviteRateLimiter {private final int max;private final Map<UUID,Long> accepted=new LinkedHashMap<>();private long last=-1;public TerritoryInviteRateLimiter(){this(4096);}public TerritoryInviteRateLimiter(int max){this.max=max;}public synchronized boolean allowed(UUID inviter,long tick){reset(tick);Long at=accepted.get(inviter);return at==null||tick-at>=40;}public synchronized void record(UUID inviter,long tick){reset(tick);accepted.put(inviter,tick);while(accepted.size()>max)accepted.remove(accepted.keySet().iterator().next());}private void reset(long tick){if(tick<0)throw new IllegalArgumentException("tick");if(last>=0&&tick<last)accepted.clear();last=tick;}}

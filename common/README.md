@@ -100,7 +100,7 @@ maintaining independent registration order.
   18 uses bounded, NBT-free snapshots: owners receive complete management data while
   authorized members receive summary-only data. Both codecs enforce the same 1 MiB
   estimated and raw wire budgets, and clients reject stale request IDs before atomically
-  committing restored lists. Protocol 19 is migrated separately; protocol 20 and later territory operations remain legacy.
+  committing restored lists. Protocol 19 is migrated separately. Protocol 20 now uses a 32-byte `territoryId + targetPlayerId` common message. Invitations are server-session scoped, expire after 1200 ticks, are capped at 4096 entries, and are deduplicated per target/territory. Server-generated invite IDs drive exact accept/decline commands; protocol 21 and later remain legacy.
 - Protocol 14 hardening is complete: delivery uses expected-order atomic transition, exact supplier
   credit without charging the requester again, transactional main-inventory removal, and independent
   payment/inventory compensation. Failure reports carry the authoritative requester ID and per-stage

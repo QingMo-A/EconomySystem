@@ -277,7 +277,7 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 - `Packet_SingleTerritoryDataRequest`
 - `Packet_SingleTerritoryDataResponse`
 - `TeleportToTerritoryMessage`
-- `Packet_InvitePlayer`
+- `InvitePlayerMessage`
 - `Packet_RemoveTerritory`
 - `Packet_RemovePlayer`
 - `Packet_ModifyMode`
@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–19 已完成 bridge 迁移与最终加固。协议 19 的 common reserve 工厂在返回前完成写入与 dirty mark，并自行补偿失败；客户端同步是 best-effort。reservation 是 one-shot，commit 不做 I/O；arrival UNKNOWN 不自动退款并返回状态不确定。限流器按服务器弱引用隔离且支持 tick epoch reset。Forge/NeoForge 生产库存 helper 只扫描 `inventory.items`。Forge 只读页保留不重叠 UUID hitbox 与滚轮滚动。协议 20 及之后仍保持 legacy，必须按单协议任务继续迁移。
+协议 17–20 已完成 bridge 迁移。协议 20 固定发送 territory UUID 与 target UUID；inviter 始终取真实 sender。邀请 ID 由服务端生成，pending store 按服务器弱引用隔离、1200 tick 过期、最多 4096 条，并按 target+territory 去重。接受时重新验证 owner/member，inviteId 只消费一次；Forge 仅更新原始 NBT 的 `AuthorizedPlayers` 并保留未知字段。协议 21 及之后仍保持 legacy，必须按单协议任务继续迁移。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
 - 将领地价格放入配置。

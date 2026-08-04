@@ -38,7 +38,7 @@ MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，协议 12–19 已迁移；协议 20 及之后的领地操作尚未开始。
+协议 10/11 已正式关闭，协议 12–20 已迁移；协议 21 及之后的领地操作尚未开始。协议 20 wire 仅为 territoryId 与 targetPlayerId；邀请 ID、名字和有效期均由服务端生成。邀请是 1200 tick、最大 4096 条的 server-scoped 临时数据。
 并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
 ```
 # Current bridge handoff
@@ -46,7 +46,7 @@ git diff --check
 Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
 inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
 Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Protocols 12–19 are migrated. Protocol 19 is UUID-only and uses the shared safe-landing, cooldown and recall-potion transaction service. Do not renumber the append-only manifest; protocol 20 and later territory actions have not started.
+Protocols 12–20 are migrated. Protocol 20 is a 32-byte UUID-only invite request; accept revalidates owner/member state and consumes a server-generated invite ID exactly once. Do not renumber the append-only manifest; protocol 21 and later territory actions have not started.
 
 Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
 adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. The verified suites contain

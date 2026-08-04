@@ -11,6 +11,7 @@ import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
@@ -27,6 +28,7 @@ import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
+import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
@@ -61,6 +63,10 @@ public final class NeoForge1211MessageCodecs {
 
   private static Map<EconomyMessageType<?>, NeoForge1211MessageCodec<?>> createCodecs() {
     Map<EconomyMessageType<?>, NeoForge1211MessageCodec<?>> codecs = new HashMap<>();
+    register(codecs, EconomyMessages.INVITE_PLAYER, new NeoForge1211MessageCodec<>() {
+      public void encode(InvitePlayerMessage message, RegistryFriendlyByteBuf buffer) { TerritoryInviteWireCodec.encode(message, buffer); }
+      public InvitePlayerMessage decode(RegistryFriendlyByteBuf buffer) { return TerritoryInviteWireCodec.decode(buffer); }
+    });
     register(
         codecs,
         EconomyMessages.BALANCE_REQUEST,

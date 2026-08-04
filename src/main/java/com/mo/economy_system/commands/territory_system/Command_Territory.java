@@ -1,12 +1,14 @@
 package com.mo.economy_system.commands.territory_system;
 
-import com.mo.economy_system.core.territory_system.InviteManager;
+import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
+import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211TerritoryInviteHandler;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import com.mo.economy_system.utils.Util_Player;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -16,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import java.util.UUID;
 
 public class Command_Territory {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -25,12 +28,14 @@ public class Command_Territory {
         );
         dispatcher.register(
                 Commands.literal("accept_invite")
-                        .executes(context -> handleAccept(context.getSource()))
+                        .executes(context -> handleAccept(context.getSource(), null))
+                        .then(Commands.argument("inviteId", StringArgumentType.word()).executes(context -> handleAccept(context.getSource(), StringArgumentType.getString(context, "inviteId"))))
         );
 
         dispatcher.register(
                 Commands.literal("decline_invite")
-                        .executes(context -> handleDecline(context.getSource()))
+                        .executes(context -> handleDecline(context.getSource(), null))
+                        .then(Commands.argument("inviteId", StringArgumentType.word()).executes(context -> handleDecline(context.getSource(), StringArgumentType.getString(context, "inviteId"))))
         );
         dispatcher.register(
                 Commands.literal("invite")
@@ -49,7 +54,9 @@ public class Command_Territory {
                                         return 0;
                                     }
 
-                                    InviteManager.sendInvite(sender.getUUID(), target.getUUID(), territory.getTerritoryID());
+                                    NeoForge1211TerritoryInviteHandler.request(sender, territory.getTerritoryID(), target.getUUID());
+                                    // The shared service already sends inviteId-bearing actions.
+                                    if (sender != null) return 1;
 
                                     Component acceptButton = Component.translatable(Util_MessageKeys.INVITE_ACCEPT_BUTTON)
                                             .withStyle(style -> style
@@ -104,48 +111,29 @@ public class Command_Territory {
         return 1;
     }
 
-    private static int handleAccept(CommandSourceStack source) {
+    private static int handleAccept(CommandSourceStack source, String rawId) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
                 source.sendFailure(Component.translatable(Util_MessageKeys.COMMAND_PLAYER_ONLY));
             return 0;
         }
 
-        InviteManager.Invite invite = InviteManager.getInvite(player.getUUID());
-        if (invite == null) {
-            source.sendFailure(Component.translatable(Util_MessageKeys.INVITE_NO_PENDING));
-            return 0;
-        }
-
-        Territory territory = TerritoryManager.getTerritoryByID(invite.getTerritoryID());
-        if (territory == null) {
-            source.sendFailure(Component.translatable(Util_MessageKeys.INVITE_TARGET_NOT_FOUND));
-            InviteManager.removeInvite(player.getUUID());
-            return 0;
-        }
-
-        territory.addAuthorizedPlayer(player.getUUID(), Util_Player.getPlayerNameByUUID(source.getServer(), player.getUUID()));
-        TerritoryManager.markDirty();
-        InviteManager.removeInvite(player.getUUID());
-
-        source.sendSuccess(() -> Component.translatable(Util_MessageKeys.INVITE_ACCEPTED, territory.getName()), true);
-        return 1;
+        long tick=source.getServer().overworld().getGameTime();
+        TerritoryInviteDecisionService service=new TerritoryInviteDecisionService(NeoForge1211TerritoryInviteHandler.store(source.getServer()),TerritoryManager::authorizeInvitedPlayer);
+        UUID id=resolveInviteId(service,player.getUUID(),rawId,tick,source);if(id==null)return 0;
+        TerritoryInviteDecisionService.Result result=service.accept(id,player.getUUID(),player.getGameProfile().getName(),tick);
+        if(result==TerritoryInviteDecisionService.Result.ACCEPTED){source.sendSuccess(()->Component.translatable("message.invite.accepted"),false);return 1;}
+        source.sendFailure(Component.translatable("message.invite."+result.name().toLowerCase(java.util.Locale.ROOT)));return 0;
     }
 
-    private static int handleDecline(CommandSourceStack source) {
+    private static int handleDecline(CommandSourceStack source, String rawId) {
         if (!(source.getEntity() instanceof ServerPlayer player)) {
             source.sendFailure(Component.translatable(Util_MessageKeys.COMMAND_PLAYER_ONLY));
             return 0;
         }
 
-        InviteManager.Invite invite = InviteManager.getInvite(player.getUUID());
-        if (invite == null) {
-            source.sendFailure(Component.translatable(Util_MessageKeys.INVITE_DECLINE_NO_PENDING));
-            return 0;
-        }
-
-        InviteManager.removeInvite(player.getUUID());
-        source.sendSuccess(() -> Component.translatable(Util_MessageKeys.INVITE_DECLINED), true);
-        return 1;
+        long tick=source.getServer().overworld().getGameTime();TerritoryInviteDecisionService service=new TerritoryInviteDecisionService(NeoForge1211TerritoryInviteHandler.store(source.getServer()),TerritoryManager::authorizeInvitedPlayer);UUID id=resolveInviteId(service,player.getUUID(),rawId,tick,source);if(id==null)return 0;TerritoryInviteDecisionService.Result result=service.decline(id,player.getUUID(),tick);if(result==TerritoryInviteDecisionService.Result.DECLINED){source.sendSuccess(()->Component.translatable("message.invite.declined"),false);return 1;}source.sendFailure(Component.translatable("message.invite."+result.name().toLowerCase(java.util.Locale.ROOT)));return 0;
     }
+
+    private static UUID resolveInviteId(TerritoryInviteDecisionService service,UUID player,String raw,long tick,CommandSourceStack source){if(raw!=null){try{return UUID.fromString(raw);}catch(IllegalArgumentException e){source.sendFailure(Component.translatable("message.invite.not_found"));return null;}}int count=service.pending(player,tick);if(count==0){source.sendFailure(Component.translatable("message.invite.not_found"));return null;}if(count>1){source.sendFailure(Component.translatable("message.invite.multiple_pending"));return null;}return service.sole(player,tick).orElse(null);}
 }
 

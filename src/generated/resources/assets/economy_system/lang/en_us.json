@@ -350,5 +350,22 @@
   "tooltip.territory_buff.buff_id": "Buff ID: %s",
   "tooltip.territory_buff.buff_max_level": "Max Level: %s",
   "tooltip.territory_buff.buff_name": "Buff Name: %s",
-  "tooltip.territory_buff.buff_unlock_state": "Unlocked: %s"
+  "tooltip.territory_buff.buff_unlock_state": "Unlocked: %s",
+  "message.invite.accept": "[Accept]",
+  "message.invite.decline": "[Decline]",
+  "message.invite.territory_not_found": "Territory not found.",
+  "message.invite.target_offline": "That player is offline.",
+  "message.invite.cannot_invite_owner": "The territory owner cannot be invited.",
+  "message.invite.cannot_invite_self": "You cannot invite yourself.",
+  "message.invite.already_pending": "An invitation is already pending.",
+  "message.invite.rate_limited": "Please wait before inviting again.",
+  "message.invite.store_full": "The invitation queue is full.",
+  "message.invite.create_failed": "Invitation creation failed.",
+  "message.invite.not_found": "No pending invitation was found.",
+  "message.invite.not_target": "This invitation is not addressed to you.",
+  "message.invite.multiple_pending": "Specify an invitation ID.",
+  "message.invite.owner_changed": "The territory owner changed.",
+  "message.invite.persist_failed": "Membership could not be saved.",
+  "message.invite.state_unknown": "Membership state is uncertain.",
+  "message.invite.busy": "Invitation is being processed."
 }

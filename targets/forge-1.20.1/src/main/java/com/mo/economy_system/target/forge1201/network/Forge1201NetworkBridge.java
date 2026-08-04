@@ -22,6 +22,7 @@ import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import net.minecraft.server.level.ServerPlayer;
@@ -95,6 +96,10 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     }
     if (message.getClass() == TeleportToTerritoryMessage.class) {
       Forge1201NetworkChannel.sendToServer((TeleportToTerritoryMessage) message);
+      return;
+    }
+    if (message.getClass() == InvitePlayerMessage.class) {
+      Forge1201NetworkChannel.sendToServer((InvitePlayerMessage) message);
       return;
     }
     throw notPorted(message);

@@ -63,6 +63,8 @@ public final class EconomyMessages {
           EconomyProtocol.TERRITORY_DATA_RESPONSE, TerritoryDataResponseMessage.class);
   public static final EconomyMessageType<TeleportToTerritoryMessage> TELEPORT_TO_TERRITORY =
       new EconomyMessageType<>(EconomyProtocol.TELEPORT_TO_TERRITORY, TeleportToTerritoryMessage.class);
+  public static final EconomyMessageType<InvitePlayerMessage> INVITE_PLAYER =
+      new EconomyMessageType<>(EconomyProtocol.INVITE_PLAYER, InvitePlayerMessage.class);
 
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =

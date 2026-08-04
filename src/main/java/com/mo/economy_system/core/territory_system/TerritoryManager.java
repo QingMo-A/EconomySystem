@@ -265,6 +265,24 @@ public class TerritoryManager {
         return true;
     }
 
+    /** Authoritative invite acceptance mutation with an owner compare-and-set guard. */
+    public static synchronized com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult authorizeInvitedPlayer(
+            UUID territoryID, UUID expectedOwner, UUID playerUUID, String playerName) {
+        Territory territory = getTerritoryByID(territoryID);
+        if (territory == null) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.TERRITORY_NOT_FOUND;
+        if (!territory.getOwnerUUID().equals(expectedOwner)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED;
+        if (territory.hasPermission(playerUUID)) return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.ALREADY_MEMBER;
+        territory.addAuthorizedPlayer(playerUUID, playerName);
+        try {
+            markDirty();
+            return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.ADDED;
+        } catch (RuntimeException failure) {
+            territory.removeAuthorizedPlayer(playerUUID);
+            try { markDirty(); } catch (RuntimeException rollbackFailure) { failure.addSuppressed(rollbackFailure); return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN; }
+            return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult.PERSIST_FAILED;
+        }
+    }
+
     public static boolean setTerritoryRule(UUID territoryID, TerritoryPermissionAction action, TerritoryPermissionLevel level) {
         Territory territory = getTerritoryByID(territoryID);
         if (territory == null || action == null || level == null) {

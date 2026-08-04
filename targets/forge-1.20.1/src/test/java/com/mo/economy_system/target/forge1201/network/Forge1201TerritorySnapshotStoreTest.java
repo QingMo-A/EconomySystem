@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
+import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import org.junit.jupiter.api.Test;
 
 class Forge1201TerritorySnapshotStoreTest {
@@ -81,6 +83,60 @@ class Forge1201TerritorySnapshotStoreTest {
     assertTrue(target.permits(memberId));
     assertTrue(target.backpoint().isPresent());
     assertTrue(store.find(UUID.randomUUID()).isEmpty());
+  }
+
+  @Test void authorizeCopyOnWritePreservesUnknownNbtAndReloads() {
+    CompoundTag root = new CompoundTag();
+    CompoundTag territory = validTerritory();
+    territory.putString("FutureTerritoryField", "keep-me");
+    territory.put("AuthorizedPlayers", new ListTag());
+    root.putString("FutureRootField", "keep-root");
+    ListTag territories = new ListTag();
+    territories.add(territory);
+    root.put("Territories", territories);
+
+    UUID owner = territory.getUUID("OwnerUUID");
+    UUID member = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    var store = Forge1201TerritorySnapshotStore.load(root);
+    assertEquals(TerritoryInviteDecisionService.WriteResult.ADDED,
+        store.authorize(territory.getUUID("TerritoryID"), owner, member, "Member"));
+
+    CompoundTag saved = store.save(new CompoundTag());
+    assertEquals("keep-root", saved.getString("FutureRootField"));
+    assertEquals("keep-me", saved.getList("Territories", Tag.TAG_COMPOUND)
+        .getCompound(0).getString("FutureTerritoryField"));
+    assertEquals(1, saved.getList("Territories", Tag.TAG_COMPOUND).getCompound(0)
+        .getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
+    assertTrue(Forge1201TerritorySnapshotStore.load(saved).authorized(member).size() == 1);
+  }
+
+  @Test void authorizeRechecksOwnerAndRejectsDuplicateUuidFailClosed() {
+    CompoundTag root = new CompoundTag();
+    CompoundTag territory = validTerritory();
+    territory.put("AuthorizedPlayers", new ListTag());
+    ListTag territories = new ListTag();
+    territories.add(territory);
+    root.put("Territories", territories);
+    var store = Forge1201TerritorySnapshotStore.load(root);
+    assertEquals(TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED,
+        store.authorize(territory.getUUID("TerritoryID"), UUID.randomUUID(), UUID.randomUUID(), "x"));
+
+    UUID duplicate = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    ListTag members = new ListTag();
+    for (int i = 0; i < 2; i++) {
+      CompoundTag member = new CompoundTag();
+      member.putUUID("PlayerUUID", duplicate);
+      member.putString("PlayerName", "Duplicate");
+      members.add(member);
+    }
+    territory.put("AuthorizedPlayers", members);
+    root.put("Territories", territories);
+    var duplicateStore = Forge1201TerritorySnapshotStore.load(root);
+    assertEquals(TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN,
+        duplicateStore.authorize(territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"), UUID.randomUUID(), "new"));
+    assertEquals(2, duplicateStore.rawCopy().getList("Territories", Tag.TAG_COMPOUND)
+        .getCompound(0).getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
   }
 
   private static CompoundTag validTerritory() {

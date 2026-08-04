@@ -68,7 +68,7 @@ public final class NeoForge1211PlayerListHandlers {
             net.minecraft.client.gui.screens.Screen screen =
                     net.minecraft.client.Minecraft.getInstance().screen;
             if (screen instanceof com.mo.economy_system.screen.territory_system.Screen_InvitePlayer invitePlayer) {
-                invitePlayer.update(players);
+                invitePlayer.update(message.players());
             } else if (screen instanceof com.mo.economy_system.screen.territory_system.Screen_TerritoryPlayerAction playerAction) {
                 playerAction.update(players);
             }

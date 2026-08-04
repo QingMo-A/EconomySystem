@@ -121,6 +121,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 首页只请求 summary；市场变更向在线玩家广播只含实时统计的轻量失效通知。
 - 协议 `12/13/15` 已迁移并完成质量加固；协议 `14/16` 仍为 legacy，下一迁移切片是协议 `14`。
 - 协议 19 最终加固后的验证套件包含 shared-source 228 项、Forge 1.20.1 280 项和 NeoForge 1.21.1 274 项测试。
+- 协议 20 迁移后的实际回归为 shared-source 237 项、Forge 1.20.1 295 项、NeoForge 1.21.1 283 项，且 `buildAllTargets` 通过。
 - 初始迁移提交为 `666fccc`；后续加固加入持久化单调 revision 和 768 KiB 整包估算预算。
 - SUMMARY/PAGE 使用独立 requestId；INVALIDATED 的 revision 会使旧响应失效，NeoForge 页面先完整恢复 Snapshot 再原子提交。
 - `CHANGED/UNKNOWN` 广播失效，`UNCHANGED` 不广播；下一步是协议 `14`。
@@ -135,7 +136,7 @@ discriminator `14`，下一迁移切片仍是协议 `9`。
 - 完整回归为 Forge 1.20.1 共 109 项、NeoForge 1.21.1 共 110 项，`buildAllTargets --rerun-tasks` 通过。
 
 - 阶段 C：订单成交、取消与配送箱 `12..18`、`31..33`；
-- 阶段 D：领地协议 `19..22`、`36..43`（协议 19 已完成，下一项为 20）；
+- 阶段 D：领地协议 `19..22`、`36..43`（协议 19、20 已完成，下一项为 21）；
 - 阶段 E：安全重构后再处理 `23..30`。
 
 阶段 C 必须保证成交、取消和领取幂等；扣款、入账、订单移除和配送采用明确事务顺序及补偿路径；配送列表返回不可变副本，成功放入背包后才删除记录。阶段 D 继续以 NeoForge 1.21.1 权限行为为基线。阶段 E 开始前必须完成路径规范化、允许目录、会话所有权、单块/总大小/块数限制、超时清理、防重放、防跨请求拼接和服务端权限开关。
@@ -216,5 +217,5 @@ git diff --check
   arrival UNKNOWN commits without refund and reports TELEPORT_STATE_UNKNOWN. Weak server-scoped limiters plus
   tick-epoch reset prevent cooldown leakage across server lifetimes. Target inventory helpers contain all
   version-specific ItemStack equality and main-inventory access.
-- Protocol 20 and every later territory operation remain unmigrated. The next migration is protocol 20 only.
+- Protocol 20 is migrated with an exact 32-byte UUID-only wire. Pending invites are non-persistent server-session data (1200 ticks, maximum 4096), use server-generated UUID invite IDs, and revalidate owner/member state on accept. Forge updates only `AuthorizedPlayers` inside a defensive raw-NBT copy and preserves unknown root/territory fields. Protocol 21 and every later territory operation remain unmigrated.
   after a separate task.
