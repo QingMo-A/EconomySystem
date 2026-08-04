@@ -126,16 +126,16 @@ dispatch layer keeps `Minecraft` and screen classes out of the dedicated-server 
 Responses apply only to the current page request ID and commit after complete restore; ERROR, restore failure,
 or the 200-tick timeout exposes retry without clearing old page data.
 
-`Forge1201TerritorySnapshotStore` is the sole Forge `territory_data` SavedData type. It is an overworld-normalized,
-read-only compatibility adapter for protocols 17/18 and the authoritative UUID lookup for protocol 19; there is
-still no Forge territory create/delete/authorize write path. It no longer clamps invalid buff levels or upgrade
+`Forge1201TerritorySnapshotStore` is the sole Forge `territory_data` SavedData type. It provides overworld-normalized
+reads for protocols 17-19 and guarded raw-NBT writes for protocol 20 authorization and protocol 21 deletion.
+Copy-on-write mutations retain unknown fields and list order. It no longer clamps invalid buff levels or upgrade
 steps, unknown/missing permissions retain the historical `MEMBERS` fallback, and non-canonical dimension IDs
 fail closed.
 
 Protocol 19 is registered at canonical discriminator 19 as a UUID-only C2S message. Forge registers the missing
 `economy_system:recall_potion` as a stack-size-one, fire-resistant item and supplies its model, texture and names.
-The target-local read-only territory page adds an explicit translated teleport button to each owned/authorized
-row with client debounce. All authority remains server-side: the shared service re-reads the store, checks current
+The target-local territory page provides teleport for every row and invite/delete actions for owned rows; delete
+uses a separate two-step confirmation page. All authority remains server-side: the shared service re-reads the store, checks current
 owner/member access, validates the exact landing point, reserves one main-inventory potion, verifies arrival and
 commits it on success. `Forge1201RecallPotionInventory` scans only `inventory.items` and delegates removal to the
 common reserve factory, so dirty-mark failure is compensated before a reservation is returned. Required

@@ -2,8 +2,8 @@ package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.common.client.TerritoryDataClientApplier;
 import com.mo.economy_system.common.client.TerritoryRequestIds;
-import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
+import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Summary;
 import com.mo.economy_system.platform.EconomyServices;
@@ -32,7 +32,8 @@ public final class Screen_Territory extends Screen
   private List<Owned> owned = List.of();
   private List<Summary> authorized = List.of();
   private EditBox search;
-  private final TerritoryTeleportClickDebounce teleportDebounce = new TerritoryTeleportClickDebounce(8);
+  private final TerritoryTeleportClickDebounce teleportDebounce =
+      new TerritoryTeleportClickDebounce(8);
   private int scrollRow;
   private List<TerritoryTeleportRowLayout.ActionArea> actionButtons = List.of();
 
@@ -43,7 +44,8 @@ public final class Screen_Territory extends Screen
     super(Component.translatable("screen.territory.title"));
   }
 
-  @Override protected void init() {
+  @Override
+  protected void init() {
     String value = search == null ? "" : search.getValue();
     search = new EditBox(font, width / 2 - 100, 24, 200, 20, Component.empty());
     search.setMaxLength(50);
@@ -64,7 +66,8 @@ public final class Screen_Territory extends Screen
     EconomyServices.platform().network().sendToServer(new TerritoryDataRequestMessage(requestId));
   }
 
-  @Override public void tick() {
+  @Override
+  public void tick() {
     super.tick();
     teleportDebounce.tick();
     if (activeRequestId >= 0 && !loaded && ++waitTicks >= TIMEOUT_TICKS) {
@@ -72,26 +75,47 @@ public final class Screen_Territory extends Screen
     }
   }
 
-  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+  @Override
+  public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     actionButtons = List.of();
     renderBackground(graphics);
     graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
     if (!loaded) {
-      graphics.drawCenteredString(font, Component.translatable("gui.loadingDotDotDot"), width / 2, height / 2, 0xAAAAAA);
+      graphics.drawCenteredString(
+          font, Component.translatable("gui.loadingDotDotDot"), width / 2, height / 2, 0xAAAAAA);
     } else if (failed) {
-      graphics.drawCenteredString(font, Component.translatable("message.territory.sync_failed"), width / 2, height / 2, 0xFF8080);
+      graphics.drawCenteredString(
+          font,
+          Component.translatable("message.territory.sync_failed"),
+          width / 2,
+          height / 2,
+          0xFF8080);
     } else {
       List<TerritoryRow> rows = visibleRows();
       if (rows.isEmpty()) {
-        graphics.drawCenteredString(font, Component.translatable("screen.territory.empty"),
-            width / 2, height / 2, 0xAAAAAA);
+        graphics.drawCenteredString(
+            font,
+            Component.translatable("screen.territory.empty"),
+            width / 2,
+            height / 2,
+            0xAAAAAA);
       }
       scrollRow = TerritoryTeleportRowLayout.clampScroll(scrollRow, rows.size(), height);
-      actionButtons = TerritoryTeleportRowLayout.layoutActions(
-          rows.stream().map(value -> new TerritoryTeleportRowLayout.TerritoryRow(
-              value.summary().territoryId(), value.owned())).toList(),
-          scrollRow, width, height, TELEPORT_BUTTON_WIDTH, TELEPORT_BUTTON_HEIGHT);
-      int visibleRows = Math.min(TerritoryTeleportRowLayout.visibleCount(height), rows.size() - scrollRow);
+      actionButtons =
+          TerritoryTeleportRowLayout.layoutActions(
+              rows.stream()
+                  .map(
+                      value ->
+                          new TerritoryTeleportRowLayout.TerritoryRow(
+                              value.summary().territoryId(), value.owned()))
+                  .toList(),
+              scrollRow,
+              width,
+              height,
+              TELEPORT_BUTTON_WIDTH,
+              TELEPORT_BUTTON_HEIGHT);
+      int visibleRows =
+          Math.min(TerritoryTeleportRowLayout.visibleCount(height), rows.size() - scrollRow);
       for (int index = 0; index < visibleRows; index++) {
         TerritoryRow row = rows.get(scrollRow + index);
         Summary value = row.summary();
@@ -101,24 +125,52 @@ public final class Screen_Territory extends Screen
       for (TerritoryTeleportRowLayout.ActionArea area : actionButtons) {
         boolean teleport = area.action() == TerritoryTeleportRowLayout.Action.TELEPORT;
         boolean ready = !teleport || teleportDebounce.ready();
-        int buttonColor = ready ? 0xFF3D6F4A : 0xFF555555;
-        graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), buttonColor);
-        graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + 1, 0xFF9BC8A4);
-        graphics.fill(area.x(), area.y() + area.height() - 1,
-            area.x() + area.width(), area.y() + area.height(), 0xFF1B3322);
-        String actionKey=teleport?"button.territory.teleport":area.action()==TerritoryTeleportRowLayout.Action.INVITE?"button.territory.invite":"button.territory.delete_short";
-        graphics.drawCenteredString(font, Component.translatable(actionKey),
-            area.x() + area.width() / 2, area.y() + 6,
+        boolean delete = area.action() == TerritoryTeleportRowLayout.Action.DELETE;
+        int buttonColor = delete ? 0xFF8B2525 : ready ? 0xFF3D6F4A : 0xFF555555;
+        graphics.fill(
+            area.x(), area.y(), area.x() + area.width(), area.y() + area.height(), buttonColor);
+        graphics.fill(
+            area.x(),
+            area.y(),
+            area.x() + area.width(),
+            area.y() + 1,
+            delete ? 0xFFFF8888 : 0xFF9BC8A4);
+        graphics.fill(
+            area.x(),
+            area.y() + area.height() - 1,
+            area.x() + area.width(),
+            area.y() + area.height(),
+            0xFF1B3322);
+        String actionKey =
+            teleport
+                ? "button.territory.teleport"
+                : area.action() == TerritoryTeleportRowLayout.Action.INVITE
+                    ? "button.territory.invite"
+                    : "button.territory.delete_short";
+        graphics.drawCenteredString(
+            font,
+            Component.translatable(actionKey),
+            area.x() + area.width() / 2,
+            area.y() + 6,
             ready ? 0xFFFFFFFF : 0xFFAAAAAA);
+        if (delete && area.contains(mouseX, mouseY))
+          graphics.renderTooltip(
+              font, Component.translatable("button.territory.delete"), mouseX, mouseY);
       }
-      if (rows.size() > visibleRows) graphics.drawString(font,
-          Component.literal((scrollRow + 1) + "-" + (scrollRow + visibleRows) + "/" + rows.size()),
-          24, height - 14, 0xAAAAAA);
+      if (rows.size() > visibleRows)
+        graphics.drawString(
+            font,
+            Component.literal(
+                (scrollRow + 1) + "-" + (scrollRow + visibleRows) + "/" + rows.size()),
+            24,
+            height - 14,
+            0xAAAAAA);
     }
     super.render(graphics, mouseX, mouseY, partialTick);
   }
 
-  @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+  @Override
+  public boolean mouseClicked(double mouseX, double mouseY, int button) {
     if (failed && mouseY >= height / 2 - 10 && mouseY <= height / 2 + 14) {
       requestTerritoryData();
       return true;
@@ -128,19 +180,38 @@ public final class Screen_Territory extends Screen
         if (area.contains(mouseX, mouseY)) {
           if (area.action() == TerritoryTeleportRowLayout.Action.TELEPORT) {
             if (teleportDebounce.tryAcquire()) {
-              EconomyServices.platform().network().sendToServer(
-                  new TeleportToTerritoryMessage(area.territoryId()));
+              EconomyServices.platform()
+                  .network()
+                  .sendToServer(new TeleportToTerritoryMessage(area.territoryId()));
             }
-          } else if(area.action()==TerritoryTeleportRowLayout.Action.INVITE) {
-            TerritoryRow row = visibleRows().stream()
-                .filter(value -> value.summary().territoryId().equals(area.territoryId()))
-                .findFirst().orElse(null);
+          } else if (area.action() == TerritoryTeleportRowLayout.Action.INVITE) {
+            TerritoryRow row =
+                visibleRows().stream()
+                    .filter(value -> value.summary().territoryId().equals(area.territoryId()))
+                    .findFirst()
+                    .orElse(null);
             if (row != null && row.owned()) {
-              Minecraft.getInstance().setScreen(new Screen_InvitePlayer(
-                  row.summary().territoryId(), row.summary().name(), row.summary().ownerId(),
-                  row.members(), this));
+              Minecraft.getInstance()
+                  .setScreen(
+                      new Screen_InvitePlayer(
+                          row.summary().territoryId(),
+                          row.summary().name(),
+                          row.summary().ownerId(),
+                          row.members(),
+                          this));
             }
-          } else {TerritoryRow row=visibleRows().stream().filter(value->value.summary().territoryId().equals(area.territoryId())).findFirst().orElse(null);if(row!=null&&row.owned())Minecraft.getInstance().setScreen(new Screen_ConfirmTerritoryRemoval(row.summary().territoryId(),row.summary().name(),this));}
+          } else {
+            TerritoryRow row =
+                visibleRows().stream()
+                    .filter(value -> value.summary().territoryId().equals(area.territoryId()))
+                    .findFirst()
+                    .orElse(null);
+            if (row != null && row.owned())
+              Minecraft.getInstance()
+                  .setScreen(
+                      new Screen_ConfirmTerritoryRemoval(
+                          row.summary().territoryId(), row.summary().name(), this));
+          }
           return true;
         }
       }
@@ -148,10 +219,13 @@ public final class Screen_Territory extends Screen
     return super.mouseClicked(mouseX, mouseY, button);
   }
 
-  @Override public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+  @Override
+  public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
     if (loaded && !failed && delta != 0) {
       List<TerritoryRow> rows = visibleRows();
-      scrollRow = TerritoryTeleportRowLayout.clampScroll(scrollRow + (delta < 0 ? 1 : -1), rows.size(), height);
+      scrollRow =
+          TerritoryTeleportRowLayout.clampScroll(
+              scrollRow + (delta < 0 ? 1 : -1), rows.size(), height);
       return true;
     }
     return super.mouseScrolled(mouseX, mouseY, delta);
@@ -161,19 +235,31 @@ public final class Screen_Territory extends Screen
     String query = search == null ? "" : search.getValue().toLowerCase(Locale.ROOT);
     List<TerritoryRow> rows = new ArrayList<>();
     for (Owned value : owned) {
-      rows.add(new TerritoryRow(value.summary(), true,
-          value.authorizedMembers().stream()
-              .map(member -> member.playerId()).collect(java.util.stream.Collectors.toUnmodifiableSet())));
+      rows.add(
+          new TerritoryRow(
+              value.summary(),
+              true,
+              value.authorizedMembers().stream()
+                  .map(member -> member.playerId())
+                  .collect(java.util.stream.Collectors.toUnmodifiableSet())));
     }
     for (Summary value : authorized) rows.add(new TerritoryRow(value, false, Set.of()));
     if (query.isEmpty()) return rows;
-    return rows.stream().filter(value -> value.summary().name().toLowerCase(Locale.ROOT).contains(query)
-        || value.summary().ownerName().toLowerCase(Locale.ROOT).contains(query)).toList();
+    return rows.stream()
+        .filter(
+            value ->
+                value.summary().name().toLowerCase(Locale.ROOT).contains(query)
+                    || value.summary().ownerName().toLowerCase(Locale.ROOT).contains(query))
+        .toList();
   }
 
-  @Override public boolean acceptsRequest(long requestId) { return requestId == activeRequestId; }
+  @Override
+  public boolean acceptsRequest(long requestId) {
+    return requestId == activeRequestId;
+  }
 
-  @Override public void commitTerritoryData(long requestId, List<Owned> owned, List<Summary> authorized) {
+  @Override
+  public void commitTerritoryData(long requestId, List<Owned> owned, List<Summary> authorized) {
     if (!acceptsRequest(requestId)) return;
     this.owned = List.copyOf(owned);
     this.authorized = List.copyOf(authorized);
@@ -184,7 +270,8 @@ public final class Screen_Territory extends Screen
     this.actionButtons = List.of();
   }
 
-  @Override public void territorySyncFailed(long requestId) {
+  @Override
+  public void territorySyncFailed(long requestId) {
     if (!acceptsRequest(requestId)) return;
     activeRequestId = -1;
     loaded = true;
@@ -194,5 +281,8 @@ public final class Screen_Territory extends Screen
 
   private record TerritoryRow(Summary summary, boolean owned, Set<UUID> members) {}
 
-  @Override public boolean isPauseScreen() { return false; }
+  @Override
+  public boolean isPauseScreen() {
+    return false;
+  }
 }

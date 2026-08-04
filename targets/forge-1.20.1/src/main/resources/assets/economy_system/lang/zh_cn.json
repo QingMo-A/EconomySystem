@@ -103,5 +103,9 @@
   "screen.territory_remove.warning": "请确认永久删除该领地。",
   "screen.territory_remove.no_refund": "删除领地不会退款。",
   "screen.territory_remove.irreversible": "此操作不可撤销。",
-  "message.territory.remove.resize_cancelled": "领地 %s 已删除，修改模式已取消。"
+  "message.territory.remove.resize_cancelled": "领地 %s 已删除，修改模式已取消。",
+  "message.claim.resize.persist_failed": "领地修改失败且已回滚，可以重试。",
+  "message.claim.resize.state_unknown": "领地修改状态不确定，请联系管理员。",
+  "message.claim.resize.refund_failed": "领地修改失败且费用退款失败。",
+  "message.claim.resize.overlap": "新的领地范围与其他领地重叠。"
 }

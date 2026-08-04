@@ -208,11 +208,14 @@ Protocol 20 is complete with the unchanged 32-byte UUID-only request. The invita
 already-expired/future-created inserts, keeps claim construction and completion package-local, and maps
 PERSIST_FAILED to a safe release while consuming STATE_UNKNOWN. Client player-list responses atomically publish
 an immutable snapshot with a monotonic local revision, allowing Forge to distinguish a fresh response from stale
-cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21 and
-later territory operations remain unmigrated. The final suites contain 252 shared-source, 315 Forge and 305
-NeoForge tests.
+cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21
+removal is now migrated and hardened as described below; protocol 22 and later territory operations remain
+legacy. The current suites contain 263 shared-source, 330 Forge and 317 NeoForge tests.
 
 Protocol 21 uses the loader-neutral `RemoveTerritoryMessage` and the shared 16-byte UUID codec. The service
 derives authority from the authenticated sender, applies a bounded 20-tick server-scoped limiter, never refunds,
 and exposes SUCCESS, TERRITORY_NOT_FOUND, NO_PERMISSION, RATE_LIMITED, PERSIST_FAILED and STATE_UNKNOWN.
 `PERSIST_FAILED` guarantees rollback and safe retry; `STATE_UNKNOWN` does not. Protocol 22+ remains legacy.
+Successful removal cleanup receives the immutable server-side removed snapshot, so dependent invitation and
+NeoForge resize-session cleanup never re-read deleted state. NeoForge resize preserves primary/owner/SavedData
+identity, rebuilds only QuadTree, and refunds an expansion debit only when failure or rollback is proven.

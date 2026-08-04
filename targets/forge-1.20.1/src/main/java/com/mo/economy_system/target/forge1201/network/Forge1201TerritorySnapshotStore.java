@@ -4,8 +4,8 @@ import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
-import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
+import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -18,10 +18,10 @@ import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
 
 /** Read-only 1.20.1 persistence adapter; NBT never crosses the network boundary. */
 final class Forge1201TerritorySnapshotStore extends SavedData
@@ -29,13 +29,16 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   private static final String DATA_NAME = "territory_data";
   private CompoundTag raw;
   private List<Owned> territories;
+
   /**
-   * The dirty marker is injectable for package-private transaction tests.  Production stores use
+   * The dirty marker is injectable for package-private transaction tests. Production stores use
    * SavedData#setDirty; tests can make the first or rollback mark fail without mutating NBT.
    */
   private final DirtyMarker dirtyMarker;
 
-  private Forge1201TerritorySnapshotStore() { this(new CompoundTag()); }
+  private Forge1201TerritorySnapshotStore() {
+    this(new CompoundTag());
+  }
 
   /** Test and adapter constructor retained for callers that already have snapshots. */
   Forge1201TerritorySnapshotStore(List<Owned> territories) {
@@ -61,18 +64,27 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   static Forge1201TerritorySnapshotStore get(ServerLevel level) {
     ServerLevel overworld = level.getServer().getLevel(Level.OVERWORLD);
     if (overworld == null) throw new IllegalStateException("overworld is unavailable");
-    return overworld.getDataStorage().computeIfAbsent(
-        Forge1201TerritorySnapshotStore::load, Forge1201TerritorySnapshotStore::new, DATA_NAME);
+    return overworld
+        .getDataStorage()
+        .computeIfAbsent(
+            Forge1201TerritorySnapshotStore::load, Forge1201TerritorySnapshotStore::new, DATA_NAME);
   }
 
   List<Owned> owned(UUID requester) {
-    return territories.stream().filter(value -> value.summary().ownerId().equals(requester)).toList();
+    return territories.stream()
+        .filter(value -> value.summary().ownerId().equals(requester))
+        .toList();
   }
 
   List<Summary> authorized(UUID requester) {
-    return territories.stream().filter(value -> !value.summary().ownerId().equals(requester)
-        && value.authorizedMembers().stream().anyMatch(member -> member.playerId().equals(requester)))
-        .map(Owned::summary).toList();
+    return territories.stream()
+        .filter(
+            value ->
+                !value.summary().ownerId().equals(requester)
+                    && value.authorizedMembers().stream()
+                        .anyMatch(member -> member.playerId().equals(requester)))
+        .map(Owned::summary)
+        .toList();
   }
 
   /** Resolves a complete teleport target without exposing the mutable NBT model. */
@@ -85,7 +97,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   }
 
   /**
-   * Reads the invitation view directly from the raw NBT record.  The parsed cache is deliberately
+   * Reads the invitation view directly from the raw NBT record. The parsed cache is deliberately
    * not used here: a stale cache must never grant an invitation after an owner/member change.
    * Duplicate territory IDs or malformed authorization entries make the lookup fail closed.
    */
@@ -101,7 +113,8 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     CompoundTag target = null;
     int matches = 0;
     for (Tag value : records) {
-      if (!(value instanceof CompoundTag record)) throw integrity("territory record is not a compound");
+      if (!(value instanceof CompoundTag record))
+        throw integrity("territory record is not a compound");
       if (!record.hasUUID("TerritoryID")) continue;
       if (!territoryId.equals(record.getUUID("TerritoryID"))) {
         continue;
@@ -120,11 +133,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     }
 
     Tag encodedMembers = target.get("AuthorizedPlayers");
-    if (!(encodedMembers instanceof ListTag membersTag)) throw integrity("AuthorizedPlayers is not a list");
+    if (!(encodedMembers instanceof ListTag membersTag))
+      throw integrity("AuthorizedPlayers is not a list");
     UUID ownerId = target.getUUID("OwnerUUID");
     Set<UUID> members = new HashSet<>();
     for (Tag value : membersTag) {
-      if (!(value instanceof CompoundTag member) || !member.hasUUID("PlayerUUID")
+      if (!(value instanceof CompoundTag member)
+          || !member.hasUUID("PlayerUUID")
           || !member.contains("PlayerName", Tag.TAG_STRING)) {
         throw integrity("authorized member is malformed");
       }
@@ -139,8 +154,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       }
     }
     try {
-      return Optional.of(new TerritoryInviteRequestService.Territory(
-          territoryId, ownerId, territoryName, members));
+      return Optional.of(
+          new TerritoryInviteRequestService.Territory(
+              territoryId, ownerId, territoryName, members));
     } catch (RuntimeException invalid) {
       if (invalid instanceof TerritorySnapshotIntegrityException integrity) throw integrity;
       throw new TerritorySnapshotIntegrityException("matching territory snapshot is invalid");
@@ -152,15 +168,18 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   }
 
   /**
-   * Adds one member using a copy-on-write raw NBT transaction.  The expected owner is checked
+   * Adds one member using a copy-on-write raw NBT transaction. The expected owner is checked
    * against the current raw record, rather than the previously parsed snapshot, so an owner
-   * transfer racing an invite cannot be overwritten.  All fields except AuthorizedPlayers are
+   * transfer racing an invite cannot be overwritten. All fields except AuthorizedPlayers are
    * retained byte-for-byte by the defensive copy.
    */
   synchronized TerritoryInviteDecisionService.WriteResult authorize(
       UUID territoryId, UUID expectedOwner, UUID playerId, String playerName) {
-    if (territoryId == null || expectedOwner == null || playerId == null
-        || playerName == null || playerName.trim().isEmpty()
+    if (territoryId == null
+        || expectedOwner == null
+        || playerId == null
+        || playerName == null
+        || playerName.trim().isEmpty()
         || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
       return TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN;
     }
@@ -213,7 +232,8 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     CompoundTag candidateRoot = raw.copy();
     ListTag candidateTerritories = candidateRoot.getList("Territories", Tag.TAG_COMPOUND).copy();
     CompoundTag candidateTarget = candidateTerritories.getCompound(targetIndex).copy();
-    ListTag candidateMembers = candidateTarget.getList("AuthorizedPlayers", Tag.TAG_COMPOUND).copy();
+    ListTag candidateMembers =
+        candidateTarget.getList("AuthorizedPlayers", Tag.TAG_COMPOUND).copy();
     CompoundTag added = new CompoundTag();
     added.putUUID("PlayerUUID", playerId);
     added.putString("PlayerName", playerName.trim());
@@ -237,22 +257,25 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   /**
    * Removes exactly one territory from the authoritative raw NBT document.
    *
-   * <p>The parsed {@link Owned} list is only a cache.  Removal therefore validates the complete
-   * raw document first, identifies the target by UUID, and then performs a copy-on-write update.
-   * No snapshot re-encoding is used, which keeps unknown fields, list order, and future schema
-   * additions intact.</p>
+   * <p>The parsed {@link Owned} list is only a cache. Removal therefore validates the complete raw
+   * document first, identifies the target by UUID, and then performs a copy-on-write update. No
+   * snapshot re-encoding is used, which keeps unknown fields, list order, and future schema
+   * additions intact.
    */
-  @Override public synchronized TerritoryRemovalService.RepositoryOutcome remove(
+  @Override
+  public synchronized TerritoryRemovalService.RepositoryOutcome remove(
       UUID territoryId, UUID expectedOwnerId) {
     if (territoryId == null || expectedOwnerId == null) {
-      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      return repositoryState(
+          TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+          new IllegalStateException("territory removal input is null"));
     }
 
     final StrictRoot source;
     try {
       source = parseStrictRoot(raw);
     } catch (RuntimeException malformed) {
-      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, malformed);
     }
 
     int targetIndex = -1;
@@ -262,7 +285,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       if (!territoryId.equals(snapshot.summary().territoryId())) continue;
       if (targetIndex >= 0) {
         // parseStrictRoot already rejects duplicates, but keep this guard next to the mutation.
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+            new IllegalStateException("duplicate territory UUID"));
       }
       targetIndex = index;
       targetSnapshot = snapshot;
@@ -282,11 +307,15 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       candidateRoot = originalRaw.copy();
       Tag candidateEncoded = candidateRoot.get("Territories");
       if (!(candidateEncoded instanceof ListTag sourceList)) {
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+            new IllegalStateException("candidate Territories is malformed"));
       }
       ListTag candidateList = sourceList.copy();
       if (targetIndex >= candidateList.size()) {
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+            new IllegalStateException("candidate target index mismatch"));
       }
       candidateList.remove(targetIndex);
       candidateRoot.put("Territories", candidateList);
@@ -296,11 +325,14 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       StrictRoot reparsed = parseStrictRoot(candidateRoot);
       if (reparsed.snapshots().stream()
           .anyMatch(value -> territoryId.equals(value.summary().territoryId()))) {
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+            new IllegalStateException("candidate still contains removed territory"));
       }
       candidateSnapshots = reparsed.snapshots();
     } catch (RuntimeException invalidCandidate) {
-      return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+      return repositoryState(
+          TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, invalidCandidate);
     }
 
     // Publish both representations together.  A dirty-marker failure rolls both back before the
@@ -316,22 +348,26 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         dirtyMarker.markDirty();
       } catch (RuntimeException rollbackFailure) {
         persistFailure.addSuppressed(rollbackFailure);
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
       }
       try {
         // The original source was strict-parsed above.  Re-parse the restored document as a
         // defensive check so a faulty marker cannot leave a partially restored cache unnoticed.
         StrictRoot restored = parseStrictRoot(raw);
         if (restored.snapshots().size() != originalSnapshots.size()
-            || restored.snapshots().stream().noneMatch(
-                value -> territoryId.equals(value.summary().territoryId()))) {
-          return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
+            || restored.snapshots().stream()
+                .noneMatch(value -> territoryId.equals(value.summary().territoryId()))) {
+          return repositoryState(
+              TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
         }
       } catch (RuntimeException restorationFailure) {
         persistFailure.addSuppressed(restorationFailure);
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
+        return repositoryState(
+            TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, persistFailure);
       }
-      return repositoryState(TerritoryRemovalService.RepositoryResult.PERSIST_FAILED,persistFailure);
+      return repositoryState(
+          TerritoryRemovalService.RepositoryResult.PERSIST_FAILED, persistFailure);
     }
 
     TerritoryRemovalService.RemovedTerritory removed =
@@ -347,9 +383,10 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       TerritoryRemovalService.RepositoryResult result) {
     return new TerritoryRemovalService.RepositoryOutcome(result, null);
   }
+
   private static TerritoryRemovalService.RepositoryOutcome repositoryState(
-      TerritoryRemovalService.RepositoryResult result,Throwable failure) {
-    return new TerritoryRemovalService.RepositoryOutcome(result,null,failure);
+      TerritoryRemovalService.RepositoryResult result, Throwable failure) {
+    return new TerritoryRemovalService.RepositoryOutcome(result, null, failure);
   }
 
   /** Returns a deep copy for persistence tests; callers cannot mutate store state. */
@@ -380,7 +417,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   }
 
   /**
-   * Strictly validates the schema needed to produce an {@link Owned} snapshot.  Optional legacy
+   * Strictly validates the schema needed to produce an {@link Owned} snapshot. Optional legacy
    * fields remain optional, but when present they must have the expected NBT type; this prevents
    * CompoundTag#getList's permissive empty-list fallback from hiding corrupt records.
    */
@@ -548,15 +585,19 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       members.add(encoded);
     }
     tag.put("AuthorizedPlayers", members);
-    value.backpoint().ifPresent(point -> {
-      CompoundTag backpoint = new CompoundTag();
-      backpoint.putInt("BackX", point.x());
-      backpoint.putInt("BackY", point.y());
-      backpoint.putInt("BackZ", point.z());
-      tag.put("Backpoint", backpoint);
-    });
+    value
+        .backpoint()
+        .ifPresent(
+            point -> {
+              CompoundTag backpoint = new CompoundTag();
+              backpoint.putInt("BackX", point.x());
+              backpoint.putInt("BackY", point.y());
+              backpoint.putInt("BackZ", point.z());
+              tag.put("Backpoint", backpoint);
+            });
     CompoundTag permissions = new CompoundTag();
-    for (Rule rule : value.rules()) permissions.putString(rule.action().name(), rule.level().name());
+    for (Rule rule : value.rules())
+      permissions.putString(rule.action().name(), rule.level().name());
     tag.put("Permissions", permissions);
     ListTag buffs = new ListTag();
     for (Buff buff : value.buffs()) buffs.add(encodeBuff(buff));
@@ -599,7 +640,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         value.summary().territoryId(),
         value.summary().name(),
         value.summary().ownerId(),
-        value.authorizedMembers().stream().map(Member::playerId).collect(java.util.stream.Collectors.toUnmodifiableSet()),
+        value.authorizedMembers().stream()
+            .map(Member::playerId)
+            .collect(java.util.stream.Collectors.toUnmodifiableSet()),
         value.summary().dimensionId(),
         value.backpoint());
   }
@@ -614,10 +657,15 @@ final class Forge1201TerritorySnapshotStore extends SavedData
 
   static Owned capture(CompoundTag tag) {
     String dimension = canonicalDimension(tag.getString("Dimension"));
-    Summary summary = new Summary(tag.getUUID("TerritoryID"), tag.getUUID("OwnerUUID"),
-        tag.getString("OwnerName"), tag.getString("Name"),
-        new Position(tag.getInt("X1"), tag.getInt("Y1"), tag.getInt("Z1")),
-        new Position(tag.getInt("X2"), tag.getInt("Y2"), tag.getInt("Z2")), dimension);
+    Summary summary =
+        new Summary(
+            tag.getUUID("TerritoryID"),
+            tag.getUUID("OwnerUUID"),
+            tag.getString("OwnerName"),
+            tag.getString("Name"),
+            new Position(tag.getInt("X1"), tag.getInt("Y1"), tag.getInt("Z1")),
+            new Position(tag.getInt("X2"), tag.getInt("Y2"), tag.getInt("Z2")),
+            dimension);
     List<Member> members = new ArrayList<>();
     for (Tag value : tag.getList("AuthorizedPlayers", Tag.TAG_COMPOUND)) {
       CompoundTag member = (CompoundTag) value;
@@ -626,7 +674,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     Optional<Position> backpoint = Optional.empty();
     if (tag.contains("Backpoint", Tag.TAG_COMPOUND)) {
       CompoundTag point = tag.getCompound("Backpoint");
-      backpoint = Optional.of(new Position(point.getInt("BackX"), point.getInt("BackY"), point.getInt("BackZ")));
+      backpoint =
+          Optional.of(
+              new Position(point.getInt("BackX"), point.getInt("BackY"), point.getInt("BackZ")));
     }
     Map<RuleAction, RuleLevel> levels = new EnumMap<>(RuleAction.class);
     for (RuleAction action : RuleAction.values()) levels.put(action, RuleLevel.MEMBERS);
@@ -636,9 +686,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         levels.put(action, permission(permissions.getString(action.name())));
       }
     }
-    List<Rule> rules = levels.entrySet().stream().map(value -> new Rule(value.getKey(), value.getValue())).toList();
+    List<Rule> rules =
+        levels.entrySet().stream()
+            .map(value -> new Rule(value.getKey(), value.getValue()))
+            .toList();
     List<Buff> buffs = new ArrayList<>();
-    for (Tag value : tag.getList("TerritoryBuffs", Tag.TAG_COMPOUND)) buffs.add(buff((CompoundTag) value));
+    for (Tag value : tag.getList("TerritoryBuffs", Tag.TAG_COMPOUND))
+      buffs.add(buff((CompoundTag) value));
     return new Owned(summary, members, backpoint, rules, buffs);
   }
 
@@ -653,10 +707,17 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       }
       costs.add(new BuffUpgradeCost(items, cost.getInt("xp"), cost.getInt("df_coin")));
     }
-    return new Buff(tag.getString("id"), tag.getString("displayText"), tag.getString("effectId"),
-        tag.getBoolean("initialUnlockState"), tag.getInt("initialLevel"),
-        tag.getInt("single_Upgrade_Level"), tag.getInt("max_Level"),
-        tag.getBoolean("unlocked"), tag.getInt("level"), costs);
+    return new Buff(
+        tag.getString("id"),
+        tag.getString("displayText"),
+        tag.getString("effectId"),
+        tag.getBoolean("initialUnlockState"),
+        tag.getInt("initialLevel"),
+        tag.getInt("single_Upgrade_Level"),
+        tag.getInt("max_Level"),
+        tag.getBoolean("unlocked"),
+        tag.getInt("level"),
+        costs);
   }
 
   static RuleLevel permission(String stored) {
@@ -669,7 +730,8 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   }
 
   static String canonicalDimension(String value) {
-    if (value == null || value.isEmpty()
+    if (value == null
+        || value.isEmpty()
         || value.length() > EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH) {
       throw new IllegalArgumentException("invalid territory dimension");
     }
@@ -680,7 +742,8 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     return value;
   }
 
-  @Override public synchronized CompoundTag save(CompoundTag tag) {
+  @Override
+  public synchronized CompoundTag save(CompoundTag tag) {
     // Merge a defensive copy so unknown fields and future schema additions survive unchanged.
     tag.merge(raw.copy());
     return tag;
