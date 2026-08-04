@@ -8,6 +8,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
@@ -20,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Item_ClaimWand extends Item {
+    public record ResizeCleanupResult(int clearedSessions, int notifiedPlayers, int notificationFailures) {}
 
     private static final Map<UUID, BlockPos> firstPositions = new HashMap<>();
     private static final Map<UUID, BlockPos> secondPositions = new HashMap<>();
@@ -186,6 +188,25 @@ public class Item_ClaimWand extends Item {
         player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_EXIT_RESIZE_MODE));
     }
 
+    public static ResizeCleanupResult cancelResizingForTerritory(MinecraftServer server, UUID territoryId) {
+        java.util.Objects.requireNonNull(server, "server");
+        java.util.Objects.requireNonNull(territoryId, "territoryId");
+        if (!server.isSameThread()) throw new IllegalStateException("resize cleanup must run on server thread");
+        java.util.List<UUID> players = playerModify.entrySet().stream()
+                .filter(entry -> territoryId.equals(entry.getValue())).map(Map.Entry::getKey).toList();
+        int notified = 0;
+        int failures = 0;
+        for (UUID playerId : players) {
+            clearPositions(playerId);
+            ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+            if (player != null) {
+                try { player.sendSystemMessage(Component.translatable("message.territory.remove.resize_cancelled",territoryId)); notified++; }
+                catch (RuntimeException failure) { failures++; }
+            }
+        }
+        return new ResizeCleanupResult(players.size(), notified, failures);
+    }
+
     public static boolean isResizing(ServerPlayer player) {
         return playerModify.containsKey(player.getUUID());
     }
@@ -217,7 +238,7 @@ public class Item_ClaimWand extends Item {
         UUID playerUUID = player.getUUID();
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
-        executorService.schedule(() -> {
+        executorService.schedule(() -> player.getServer().execute(() -> {
             // 如果玩家的圈地状态仍然有效，则自动取消
             if (firstPositions.containsKey(playerUUID) || secondPositions.containsKey(playerUUID)) {
                 firstPositions.remove(playerUUID);
@@ -230,7 +251,7 @@ public class Item_ClaimWand extends Item {
                 cancelResizing(player);
                 player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_WAND_TIMEOUT));
             }
-        }, 60, TimeUnit.SECONDS); // 60秒后执行
+        }), 60, TimeUnit.SECONDS); // 60秒后执行
 
         timeoutTasks.put(playerUUID, executorService);
     }

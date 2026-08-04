@@ -429,7 +429,7 @@ public class Screen_ManageTerritory extends Screen {
         }));
 
         actionEntries.add(new ActionEntry(Util_MessageKeys.TERRITORY_MANAGEMENT_DELETE_TERRITORY, actionDangerStyle, () -> {
-            Minecraft.getInstance().setScreen(new Screen_ConfirmTerritoryRemoval(territory));
+            Minecraft.getInstance().setScreen(new Screen_ConfirmTerritoryRemoval(territory.getTerritoryID(),territory.getName(),this));
         }));
     }
 

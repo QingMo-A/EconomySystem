@@ -19,7 +19,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Forge 1.20.1 territory page for migrated protocols 17-20. */
+/** Forge 1.20.1 territory page for migrated protocols 17-21. */
 public final class Screen_Territory extends Screen
     implements TerritoryDataClientApplier.TerritoryScreenTarget<Owned, Summary> {
   private static final AtomicLong NEXT_REQUEST_ID = new AtomicLong();
@@ -106,8 +106,8 @@ public final class Screen_Territory extends Screen
         graphics.fill(area.x(), area.y(), area.x() + area.width(), area.y() + 1, 0xFF9BC8A4);
         graphics.fill(area.x(), area.y() + area.height() - 1,
             area.x() + area.width(), area.y() + area.height(), 0xFF1B3322);
-        graphics.drawCenteredString(font, Component.translatable(teleport
-                ? "button.territory.teleport" : "button.territory.invite"),
+        String actionKey=teleport?"button.territory.teleport":area.action()==TerritoryTeleportRowLayout.Action.INVITE?"button.territory.invite":"button.territory.delete_short";
+        graphics.drawCenteredString(font, Component.translatable(actionKey),
             area.x() + area.width() / 2, area.y() + 6,
             ready ? 0xFFFFFFFF : 0xFFAAAAAA);
       }
@@ -131,7 +131,7 @@ public final class Screen_Territory extends Screen
               EconomyServices.platform().network().sendToServer(
                   new TeleportToTerritoryMessage(area.territoryId()));
             }
-          } else {
+          } else if(area.action()==TerritoryTeleportRowLayout.Action.INVITE) {
             TerritoryRow row = visibleRows().stream()
                 .filter(value -> value.summary().territoryId().equals(area.territoryId()))
                 .findFirst().orElse(null);
@@ -140,7 +140,7 @@ public final class Screen_Territory extends Screen
                   row.summary().territoryId(), row.summary().name(), row.summary().ownerId(),
                   row.members(), this));
             }
-          }
+          } else {TerritoryRow row=visibleRows().stream().filter(value->value.summary().territoryId().equals(area.territoryId())).findFirst().orElse(null);if(row!=null&&row.owned())Minecraft.getInstance().setScreen(new Screen_ConfirmTerritoryRemoval(row.summary().territoryId(),row.summary().name(),this));}
           return true;
         }
       }

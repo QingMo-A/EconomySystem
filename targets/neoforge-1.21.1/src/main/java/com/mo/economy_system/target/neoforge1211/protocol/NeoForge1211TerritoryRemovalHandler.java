@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.network.RemoveTerritoryMessage;
 import com.mo.economy_system.common.territory.*;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
+import com.mo.economy_system.item.items.Item_ClaimWand;
 import java.util.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -24,9 +25,11 @@ public final class NeoForge1211TerritoryRemovalHandler {
         TerritoryManager::removeTerritoryAuthoritatively,
         LIMITERS.get(server),
         (id,tick) -> NeoForge1211TerritoryInviteHandler.store(server).discardPendingForTerritory(id,tick),
-        (id,tick) -> {},
+        (id,tick) -> Item_ClaimWand.cancelResizingForTerritory(server,id),
         (stage,player,id,error) -> LOGGER.warn("territory removal stage={} player={} territory={}",stage,player,id,error));
-    TerritoryRemovalService.Outcome outcome = service.remove(sender.getUUID(), message.territoryId(), server.getTickCount());
+    var overworld=server.overworld();
+    if(overworld==null){LOGGER.warn("territory removal has no overworld player={} territory={}",sender.getUUID(),message.territoryId());sender.sendSystemMessage(Component.translatable("message.territory.remove.state_unknown"));return;}
+    TerritoryRemovalService.Outcome outcome = service.remove(sender.getUUID(), message.territoryId(), overworld.getGameTime());
     try {
       String key = switch (outcome.result()) {
         case SUCCESS -> "message.territory.remove.success";

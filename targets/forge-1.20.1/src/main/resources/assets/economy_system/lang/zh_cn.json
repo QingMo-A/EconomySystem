@@ -94,5 +94,14 @@
   "message.territory.remove.no_permission": "只有当前领地主人可以删除。",
   "message.territory.remove.rate_limited": "操作过于频繁，请稍后再试。",
   "message.territory.remove.persist_failed": "删除已回滚，可以安全重试。",
-  "message.territory.remove.state_unknown": "领地状态不确定，请联系管理员。"
+  "message.territory.remove.state_unknown": "领地状态不确定，请联系管理员。",
+  "button.territory.delete": "删除领地",
+  "button.territory.delete_short": "×",
+  "button.territory.delete_confirm": "确认删除",
+  "button.territory.delete_cancel": "取消",
+  "screen.territory_remove.title": "删除领地？",
+  "screen.territory_remove.warning": "请确认永久删除该领地。",
+  "screen.territory_remove.no_refund": "删除领地不会退款。",
+  "screen.territory_remove.irreversible": "此操作不可撤销。",
+  "message.territory.remove.resize_cancelled": "领地 %s 已删除，修改模式已取消。"
 }

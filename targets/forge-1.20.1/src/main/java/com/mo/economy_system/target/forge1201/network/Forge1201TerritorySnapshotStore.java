@@ -316,7 +316,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         dirtyMarker.markDirty();
       } catch (RuntimeException rollbackFailure) {
         persistFailure.addSuppressed(rollbackFailure);
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
       }
       try {
         // The original source was strict-parsed above.  Re-parse the restored document as a
@@ -325,13 +325,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         if (restored.snapshots().size() != originalSnapshots.size()
             || restored.snapshots().stream().noneMatch(
                 value -> territoryId.equals(value.summary().territoryId()))) {
-          return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+          return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
         }
       } catch (RuntimeException restorationFailure) {
         persistFailure.addSuppressed(restorationFailure);
-        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN);
+        return repositoryState(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,persistFailure);
       }
-      return repositoryState(TerritoryRemovalService.RepositoryResult.PERSIST_FAILED);
+      return repositoryState(TerritoryRemovalService.RepositoryResult.PERSIST_FAILED,persistFailure);
     }
 
     TerritoryRemovalService.RemovedTerritory removed =
@@ -343,21 +343,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         TerritoryRemovalService.RepositoryResult.REMOVED, removed);
   }
 
-  /** Explicitly named alias for adapters that prefer the authoritative operation name. */
-  synchronized TerritoryRemovalService.RepositoryOutcome removeTerritory(
-      UUID territoryId, UUID expectedOwnerId) {
-    return remove(territoryId, expectedOwnerId);
-  }
-
-  /** Explicitly named alias used by network/runtime integration code. */
-  synchronized TerritoryRemovalService.RepositoryOutcome removeTerritoryAuthoritatively(
-      UUID territoryId, UUID expectedOwnerId) {
-    return remove(territoryId, expectedOwnerId);
-  }
-
   private static TerritoryRemovalService.RepositoryOutcome repositoryState(
       TerritoryRemovalService.RepositoryResult result) {
     return new TerritoryRemovalService.RepositoryOutcome(result, null);
+  }
+  private static TerritoryRemovalService.RepositoryOutcome repositoryState(
+      TerritoryRemovalService.RepositoryResult result,Throwable failure) {
+    return new TerritoryRemovalService.RepositoryOutcome(result,null,failure);
   }
 
   /** Returns a deep copy for persistence tests; callers cannot mutate store state. */

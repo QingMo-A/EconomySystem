@@ -6,7 +6,7 @@ import java.util.UUID;
 
 final class TerritoryTeleportRowLayout {
   static final int ROW_HEIGHT = 26;
-  enum Action { TELEPORT, INVITE }
+  enum Action { TELEPORT, INVITE, DELETE }
 
   record TerritoryRow(UUID territoryId, boolean owned) {}
 
@@ -33,7 +33,7 @@ final class TerritoryTeleportRowLayout {
     return List.copyOf(result);
   }
 
-  /** Lays out one teleport action for authorized rows and teleport+invite for owned rows. */
+  /** Authorized rows teleport; owned rows also invite and expose a compact delete action. */
   static List<ActionArea> layoutActions(List<TerritoryRow> rows, int scroll, int screenWidth,
       int screenHeight, int buttonWidth, int buttonHeight) {
     int first = Math.max(0, Math.min(scroll,
@@ -44,12 +44,15 @@ final class TerritoryTeleportRowLayout {
       TerritoryRow row = rows.get(first + index);
       int y = 53 + index * ROW_HEIGHT;
       if (row.owned()) {
-        int totalWidth = buttonWidth * 2 + 4;
+        int deleteWidth=28;
+        int totalWidth = buttonWidth * 2 + deleteWidth + 8;
         int x = screenWidth - totalWidth - 24;
         result.add(new ActionArea(x, y, buttonWidth, buttonHeight,
             row.territoryId(), Action.TELEPORT));
         result.add(new ActionArea(x + buttonWidth + 4, y, buttonWidth, buttonHeight,
             row.territoryId(), Action.INVITE));
+        result.add(new ActionArea(x + buttonWidth * 2 + 8, y, deleteWidth, buttonHeight,
+            row.territoryId(), Action.DELETE));
       } else {
         int x = screenWidth - buttonWidth - 24;
         result.add(new ActionArea(x, y, buttonWidth, buttonHeight,

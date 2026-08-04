@@ -94,5 +94,14 @@
   "message.territory.remove.no_permission": "Only the current owner can delete this territory.",
   "message.territory.remove.rate_limited": "Please wait before trying again.",
   "message.territory.remove.persist_failed": "Deletion was rolled back; you may retry.",
-  "message.territory.remove.state_unknown": "Territory state is uncertain; contact an administrator."
+  "message.territory.remove.state_unknown": "Territory state is uncertain; contact an administrator.",
+  "button.territory.delete": "Delete territory",
+  "button.territory.delete_short": "×",
+  "button.territory.delete_confirm": "Delete",
+  "button.territory.delete_cancel": "Cancel",
+  "screen.territory_remove.title": "Delete territory?",
+  "screen.territory_remove.warning": "Confirm permanent territory deletion.",
+  "screen.territory_remove.no_refund": "Deleting does not issue a refund.",
+  "screen.territory_remove.irreversible": "This action cannot be undone.",
+  "message.territory.remove.resize_cancelled": "Territory %s was deleted; resize mode was cancelled."
 }

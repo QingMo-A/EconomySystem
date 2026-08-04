@@ -278,7 +278,7 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 - `Packet_SingleTerritoryDataResponse`
 - `TeleportToTerritoryMessage`
 - `InvitePlayerMessage`
-- `Packet_RemoveTerritory`
+- `RemoveTerritoryMessage`
 - `Packet_RemovePlayer`
 - `Packet_ModifyMode`
 - `Packet_UnlockTerritoryBuff`
@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–20 已完成 bridge 迁移与协议 20 最终收尾。协议 20 固定发送 territory UUID 与 target UUID；inviter 取真实 sender。邀请 store 按服务器弱引用隔离、1200 tick/4096 条上限，拒绝非法时间插入，并以包内 claim token 保证 complete/release 归属。ID collision 最多重试八次。PERSIST_FAILED 释放重试，STATE_UNKNOWN 消费终止。NeoForge 的真实 Territory 成员事务具备 dirty/添加/回滚故障注入测试；Forge raw NBT 写回保留未知字段，损坏或重复记录映射 CREATE_FAILED。Forge 玩家目录以本地 revision 驱动 loading/empty，并有 15 tick 邀请 debounce；中文资源回归已恢复。最终回归为 shared-source 252、Forge 315、NeoForge 305 项。协议 21+ 仍为 legacy。
+协议 17–21 已完成 bridge 迁移。协议 21 固定发送 16 字节 territory UUID，删除身份来自真实 sender，实时 owner 校验且不退款。NeoForge 对 primary map、owner bucket、QuadTree 与 SavedData 做事务删除和补偿，并在成功后清理 pending invite 与 resize session；Forge 对 raw NBT 做 copy-on-write 删除并保留未知字段和顺序。PERSIST_FAILED 表示完整回滚可重试，STATE_UNKNOWN 表示最终状态无法证明。双端均有确认 UI。协议 22+ 仍为 legacy。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
 - 将领地价格放入配置。

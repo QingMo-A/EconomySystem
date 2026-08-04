@@ -1,0 +1,1 @@
+package com.mo.economy_system.screen.territory_system;import static org.junit.jupiter.api.Assertions.*;import org.junit.jupiter.api.Test;class TerritoryRemovalSubmitGateTest{@Test void submitsExactlyOnce(){var gate=new TerritoryRemovalSubmitGate();assertTrue(gate.trySubmit());assertTrue(gate.submitted());assertFalse(gate.trySubmit());}}

@@ -89,7 +89,7 @@ public class Command_TerritoryClaim {
                         long price = calculatePrice(volume);
 
             if (price <= EconomySavedData.MAX_BALANCE && data.minBalance(playerUUID, (int) price, "领地", "调整领地大小")) {
-                            TerritoryManager.removeTerritory(t.getTerritoryID());
+                            if(!TerritoryManager.detachTerritoryForResize(t.getTerritoryID(),playerUUID)) return 0;
                             t.setBackpoint(firstPos);
                             t.setX1(firstPos.getX());
                             t.setY1(firstPos.getY());
@@ -105,7 +105,7 @@ public class Command_TerritoryClaim {
                             player.sendSystemMessage(Component.translatable(Util_MessageKeys.CLAIM_RESIZE_INSUFFICIENT_BALANCE));
                         }
                     } else {
-                        TerritoryManager.removeTerritory(t.getTerritoryID());
+                        if(!TerritoryManager.detachTerritoryForResize(t.getTerritoryID(),playerUUID)) return 0;
                         t.setBackpoint(firstPos);
                         t.setX1(firstPos.getX());
                         t.setY1(firstPos.getY());

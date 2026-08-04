@@ -217,22 +217,6 @@ public class TerritoryManager {
     }
 
     // 移除领地
-    @Deprecated
-    public static void removeTerritory(UUID territoryID) {
-        Territory territory = territoryByID.remove(territoryID);
-        if (territory != null) {
-            territoriesByOwner.getOrDefault(territory.getOwnerUUID(), new ArrayList<>()).remove(territory);
-
-            quadTree.remove(territory); // 从四叉树中移除
-            if (savedData != null) {
-                savedData.removeTerritory(territoryID);
-            }
-
-            autoSave(); // 自动保存
-            // ServerMessageUtil.log("Territory removed: " + territory.getName());
-        }
-    }
-
     public static synchronized com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome removeTerritoryAuthoritatively(UUID territoryID, UUID expectedOwner) {
         if (territoryID == null || expectedOwner == null || savedData == null)
             return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, null);
@@ -254,17 +238,27 @@ public class TerritoryManager {
             if (ownerBucket.isEmpty()) territoriesByOwner.remove(expectedOwner, ownerBucket);
             treeRemoved = quadTree.remove(territory);
             savedRemoved = savedData.removeTerritory(territoryID) == territory;
-            if (!primaryRemoved || !ownerRemoved || !treeRemoved || !savedRemoved || territoryByID.containsKey(territoryID) || quadTree.containsTerritory(territoryID)) throw new IllegalStateException("territory removal mutation failed");
+            boolean ownerAbsent=territoriesByOwner.values().stream().noneMatch(list->list.stream().anyMatch(t->territoryID.equals(t.getTerritoryID())));
+            if(!primaryRemoved||!ownerRemoved||!treeRemoved||!savedRemoved||territoryByID.containsKey(territoryID)||!ownerAbsent||quadTree.countTerritory(territoryID)!=0||savedData.getTerritoryByID(territoryID)!=null)throw new IllegalStateException("territory removal mutation failed");
             return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.REMOVED, snapshot);
         } catch (RuntimeException failure) {
             boolean restored = true;
-            try { territoryByID.put(territoryID, territory); } catch (RuntimeException e) { restored = false; failure.addSuppressed(e); }
+            try { if(territoryByID.putIfAbsent(territoryID,territory)!=null&&territoryByID.get(territoryID)!=territory)throw new IllegalStateException("primary replacement conflict"); } catch (RuntimeException e) { restored = false; failure.addSuppressed(e); }
             try { territoriesByOwner.computeIfAbsent(expectedOwner, k -> new ArrayList<>()); if (!territoriesByOwner.get(expectedOwner).contains(territory)) territoriesByOwner.get(expectedOwner).add(territory); } catch (RuntimeException e) { restored = false; failure.addSuppressed(e); }
             try { if (!quadTree.containsTerritory(territoryID)) quadTree.insert(territory); } catch (RuntimeException e) { restored = false; failure.addSuppressed(e); }
             try { if (savedData.getTerritoryByID(territoryID) == null) savedData.restoreTerritory(territory); } catch (RuntimeException e) { restored = false; failure.addSuppressed(e); }
-            boolean verified = restored && territoryByID.get(territoryID) == territory && savedData.getTerritoryByID(territoryID) == territory && quadTree.countTerritory(territoryID) == 1;
-            return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(verified ? com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.PERSIST_FAILED : com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN, null);
+            long restoredOwnerMatches=territoriesByOwner.getOrDefault(expectedOwner,List.of()).stream().filter(t->territoryID.equals(t.getTerritoryID())).count();
+            boolean wrongRestoredBucket=territoriesByOwner.entrySet().stream().anyMatch(e->!e.getKey().equals(expectedOwner)&&e.getValue().stream().anyMatch(t->territoryID.equals(t.getTerritoryID())));
+            boolean verified=restored&&territoryByID.get(territoryID)==territory&&savedData.getTerritoryByID(territoryID)==territory&&quadTree.countTerritory(territoryID)==1&&restoredOwnerMatches==1&&!wrongRestoredBucket;
+            return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(verified?com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.PERSIST_FAILED:com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,null,failure);
         }
+    }
+
+    public static synchronized boolean detachTerritoryForResize(UUID territoryID,UUID expectedOwner){
+        Territory territory=territoryByID.get(territoryID);if(territory==null||expectedOwner==null||!expectedOwner.equals(territory.getOwnerUUID())||savedData==null)return false;
+        List<Territory> bucket=territoriesByOwner.get(expectedOwner);if(bucket==null||bucket.stream().filter(t->territoryID.equals(t.getTerritoryID())).count()!=1||quadTree.countTerritory(territoryID)!=1||savedData.getTerritoryByID(territoryID)!=territory)return false;
+        if(!territoryByID.remove(territoryID,territory)||!bucket.remove(territory)||!quadTree.remove(territory)||savedData.removeTerritory(territoryID)!=territory)return false;
+        if(bucket.isEmpty())territoriesByOwner.remove(expectedOwner,bucket);return true;
     }
 
     public static boolean transferTerritory(UUID territoryID, UUID newOwnerUUID, String newOwnerName) {
