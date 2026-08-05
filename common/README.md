@@ -236,3 +236,14 @@ QuadTree verification proves identity count, expected storage path and represent
 repositories carry an explicit NONE/INTEGRITY/PERSISTENCE/UNKNOWN failure kind, and both handlers use one
 overworld game-time value for the limiter and cleanup. The request wire remains one UUID (16 bytes); protocol
 22+ remains legacy.
+
+## Client file check transaction (protocols 23-25)
+
+Protocols 23-25 are migrated as one atomic transaction. Common owns the three immutable messages, the
+legacy-order bounded wire codec, strict schema-1 JSON model, weak server-scoped pending store, fixed-directory
+scanner, bounded daemon executor and local comparison model. The only roots are `mods`, `shaderpacks` and
+`resourcepacks`; scanning is non-recursive, rejects symlinks and streams SHA-256 without transmitting contents,
+paths, timestamps or exception details. The server binds every response to authenticated target plus the exact
+pending requester/type key, consumes malformed results as `FAILED/INVALID_RESULT`, and prevents replay.
+Protocol 26 and later remain legacy.
+The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.

@@ -53,8 +53,7 @@ public final class EconomyMessages {
       new EconomyMessageType<>(
           EconomyProtocol.DELIVER_DEMAND_ORDER, DeliverDemandOrderMessage.class);
   public static final EconomyMessageType<RemoveDemandOrderMessage> REMOVE_DEMAND_ORDER =
-      new EconomyMessageType<>(
-          EconomyProtocol.REMOVE_DEMAND_ORDER, RemoveDemandOrderMessage.class);
+      new EconomyMessageType<>(EconomyProtocol.REMOVE_DEMAND_ORDER, RemoveDemandOrderMessage.class);
   public static final EconomyMessageType<TerritoryDataRequestMessage> TERRITORY_DATA_REQUEST =
       new EconomyMessageType<>(
           EconomyProtocol.TERRITORY_DATA_REQUEST, TerritoryDataRequestMessage.class);
@@ -62,13 +61,23 @@ public final class EconomyMessages {
       new EconomyMessageType<>(
           EconomyProtocol.TERRITORY_DATA_RESPONSE, TerritoryDataResponseMessage.class);
   public static final EconomyMessageType<TeleportToTerritoryMessage> TELEPORT_TO_TERRITORY =
-      new EconomyMessageType<>(EconomyProtocol.TELEPORT_TO_TERRITORY, TeleportToTerritoryMessage.class);
+      new EconomyMessageType<>(
+          EconomyProtocol.TELEPORT_TO_TERRITORY, TeleportToTerritoryMessage.class);
   public static final EconomyMessageType<InvitePlayerMessage> INVITE_PLAYER =
       new EconomyMessageType<>(EconomyProtocol.INVITE_PLAYER, InvitePlayerMessage.class);
   public static final EconomyMessageType<RemoveTerritoryMessage> REMOVE_TERRITORY =
       new EconomyMessageType<>(EconomyProtocol.REMOVE_TERRITORY, RemoveTerritoryMessage.class);
   public static final EconomyMessageType<RemoveTerritoryMemberMessage> REMOVE_PLAYER =
       new EconomyMessageType<>(EconomyProtocol.REMOVE_PLAYER, RemoveTerritoryMemberMessage.class);
+  public static final EconomyMessageType<ClientFileCheckRequestMessage> CHECK =
+      new EconomyMessageType<>(EconomyProtocol.CHECK, ClientFileCheckRequestMessage.class);
+  public static final EconomyMessageType<ClientFileCheckResultRequestMessage> CHECK_RESULT_REQUEST =
+      new EconomyMessageType<>(
+          EconomyProtocol.CHECK_RESULT_REQUEST, ClientFileCheckResultRequestMessage.class);
+  public static final EconomyMessageType<ClientFileCheckResultResponseMessage>
+      CHECK_RESULT_RESPONSE =
+          new EconomyMessageType<>(
+              EconomyProtocol.CHECK_RESULT_RESPONSE, ClientFileCheckResultResponseMessage.class);
 
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =

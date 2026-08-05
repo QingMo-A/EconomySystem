@@ -6,35 +6,39 @@ import com.mo.economy_system.common.network.BalanceLogRequestMessage;
 import com.mo.economy_system.common.network.BalanceLogResponseMessage;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
+import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
+import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
+import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
-import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
+import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
-import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
-import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
-import com.mo.economy_system.common.network.InvitePlayerMessage;
-import com.mo.economy_system.common.network.RemoveTerritoryMessage;
-import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
-import com.mo.economy_system.network.TerritoryRemovalWireCodec;
-import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
+import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
+import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
+import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
+import com.mo.economy_system.network.TerritoryRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
@@ -65,6 +69,34 @@ public final class Forge1201NetworkChannel {
     if (registered) {
       return;
     }
+
+    CHANNEL
+        .messageBuilder(
+            ClientFileCheckRequestMessage.class,
+            EconomyMessages.CHECK.discriminator(),
+            NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(ClientFileCheckWireCodec::encodeRequest)
+        .decoder(ClientFileCheckWireCodec::decodeRequest)
+        .consumerMainThread(Forge1201ClientFileCheckRequestHandler::handle)
+        .add();
+    CHANNEL
+        .messageBuilder(
+            ClientFileCheckResultRequestMessage.class,
+            EconomyMessages.CHECK_RESULT_REQUEST.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
+        .encoder(ClientFileCheckWireCodec::encodeResultRequest)
+        .decoder(ClientFileCheckWireCodec::decodeResultRequest)
+        .consumerMainThread(Forge1201ClientFileCheckResultRequestHandler::handle)
+        .add();
+    CHANNEL
+        .messageBuilder(
+            ClientFileCheckResultResponseMessage.class,
+            EconomyMessages.CHECK_RESULT_RESPONSE.discriminator(),
+            NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(ClientFileCheckWireCodec::encodeResultResponse)
+        .decoder(ClientFileCheckWireCodec::decodeResultResponse)
+        .consumerMainThread(Forge1201ClientFileCheckResultResponseHandler::handle)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -230,42 +262,59 @@ public final class Forge1201NetworkChannel {
         .consumerMainThread(Forge1201RemoveDemandOrderHandler::handle)
         .add();
     CHANNEL
-        .messageBuilder(TerritoryDataRequestMessage.class,
-            EconomyMessages.TERRITORY_DATA_REQUEST.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .messageBuilder(
+            TerritoryDataRequestMessage.class,
+            EconomyMessages.TERRITORY_DATA_REQUEST.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
         .encoder(Forge1201TerritoryDataCodec::encodeRequest)
         .decoder(Forge1201TerritoryDataCodec::decodeRequest)
         .consumerMainThread(Forge1201TerritoryDataHandlers::handleRequest)
         .add();
     CHANNEL
-        .messageBuilder(TerritoryDataResponseMessage.class,
-            EconomyMessages.TERRITORY_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .messageBuilder(
+            TerritoryDataResponseMessage.class,
+            EconomyMessages.TERRITORY_DATA_RESPONSE.discriminator(),
+            NetworkDirection.PLAY_TO_CLIENT)
         .encoder(Forge1201TerritoryDataCodec::encodeResponse)
         .decoder(Forge1201TerritoryDataCodec::decodeResponse)
         .consumerMainThread(Forge1201TerritoryDataClientDispatch::handle)
         .add();
     CHANNEL
-        .messageBuilder(TeleportToTerritoryMessage.class,
-            EconomyMessages.TELEPORT_TO_TERRITORY.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .messageBuilder(
+            TeleportToTerritoryMessage.class,
+            EconomyMessages.TELEPORT_TO_TERRITORY.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
         .encoder(TerritoryTeleportWireCodec::encode)
         .decoder(TerritoryTeleportWireCodec::decode)
         .consumerMainThread(Forge1201TerritoryTeleportHandler::handle)
         .add();
     CHANNEL
-        .messageBuilder(InvitePlayerMessage.class,
-            EconomyProtocol.INVITE_PLAYER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .messageBuilder(
+            InvitePlayerMessage.class,
+            EconomyProtocol.INVITE_PLAYER.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
         .encoder(TerritoryInviteWireCodec::encode)
         .decoder(TerritoryInviteWireCodec::decode)
         .consumerMainThread(Forge1201TerritoryInviteHandler::handle)
         .add();
-    CHANNEL.messageBuilder(RemoveTerritoryMessage.class,
-            EconomyMessages.REMOVE_TERRITORY.discriminator(), NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryRemovalWireCodec::encode).decoder(TerritoryRemovalWireCodec::decode)
-        .consumerMainThread(Forge1201TerritoryRemovalHandler::handle).add();
-    CHANNEL.messageBuilder(RemoveTerritoryMemberMessage.class,
-            EconomyMessages.REMOVE_PLAYER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+    CHANNEL
+        .messageBuilder(
+            RemoveTerritoryMessage.class,
+            EconomyMessages.REMOVE_TERRITORY.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
+        .encoder(TerritoryRemovalWireCodec::encode)
+        .decoder(TerritoryRemovalWireCodec::decode)
+        .consumerMainThread(Forge1201TerritoryRemovalHandler::handle)
+        .add();
+    CHANNEL
+        .messageBuilder(
+            RemoveTerritoryMemberMessage.class,
+            EconomyMessages.REMOVE_PLAYER.discriminator(),
+            NetworkDirection.PLAY_TO_SERVER)
         .encoder(TerritoryMemberRemovalWireCodec::encode)
         .decoder(TerritoryMemberRemovalWireCodec::decode)
-        .consumerMainThread(Forge1201TerritoryMemberRemovalHandler::handle).add();
+        .consumerMainThread(Forge1201TerritoryMemberRemovalHandler::handle)
+        .add();
 
     CHANNEL
         .messageBuilder(
@@ -291,6 +340,11 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToServer(BalanceRequestMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
+
+  static void sendToServer(ClientFileCheckResultRequestMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
@@ -349,10 +403,12 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
+
   static void sendToServer(RemoveDemandOrderMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
+
   static void sendToServer(TerritoryDataRequestMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
@@ -367,8 +423,16 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
-  static void sendToServer(RemoveTerritoryMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
-  static void sendToServer(RemoveTerritoryMemberMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+
+  static void sendToServer(RemoveTerritoryMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
+
+  static void sendToServer(RemoveTerritoryMemberMessage message) {
+    requireRegistered();
+    CHANNEL.sendToServer(message);
+  }
 
   static void sendToServer(ServerPlayerListRequestMessage message) {
     requireRegistered();
@@ -376,6 +440,16 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToPlayer(ServerPlayer player, BalanceResponseMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+
+  static void sendToPlayer(ServerPlayer player, ClientFileCheckRequestMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+
+  static void sendToPlayer(ServerPlayer player, ClientFileCheckResultResponseMessage message) {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
   }
@@ -399,6 +473,7 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
   }
+
   static void sendToPlayer(ServerPlayer player, TerritoryDataResponseMessage message) {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);

@@ -45,9 +45,9 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.INVITE_PLAYER);
     registry.register(EconomyMessages.REMOVE_TERRITORY);
     registry.register(EconomyMessages.REMOVE_PLAYER);
-    bind(registry, EconomyProtocol.CHECK, Packet_Check.class);
-    bind(registry, EconomyProtocol.CHECK_RESULT_REQUEST, Packet_CheckResultRequest.class);
-    bind(registry, EconomyProtocol.CHECK_RESULT_RESPONSE, Packet_CheckResultResponse.class);
+    registry.register(EconomyMessages.CHECK);
+    registry.register(EconomyMessages.CHECK_RESULT_REQUEST);
+    registry.register(EconomyMessages.CHECK_RESULT_RESPONSE);
     bind(registry, EconomyProtocol.GET, Packet_Get.class);
     bind(registry, EconomyProtocol.GET_RESULT_REQUEST, Packet_GetResultRequest.class);
     bind(registry, EconomyProtocol.GET_RESULT_RESPONSE, Packet_GetResultResponse.class);

@@ -4,27 +4,30 @@ import com.mo.economy_system.common.network.BalanceLogRequestMessage;
 import com.mo.economy_system.common.network.BalanceLogResponseMessage;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
+import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
+import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
+import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
+import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
-import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
+import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
-import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
-import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
-import com.mo.economy_system.common.network.InvitePlayerMessage;
-import com.mo.economy_system.common.network.RemoveTerritoryMessage;
-import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
+import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,6 +39,10 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
   @Override
   public void sendToServer(EconomyNetworkMessage message) {
+    if (message.getClass() == ClientFileCheckResultRequestMessage.class) {
+      Forge1201NetworkChannel.sendToServer((ClientFileCheckResultRequestMessage) message);
+      return;
+    }
     if (message.getClass() == BalanceRequestMessage.class) {
       Forge1201NetworkChannel.sendToServer((BalanceRequestMessage) message);
       return;
@@ -104,13 +111,27 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       Forge1201NetworkChannel.sendToServer((InvitePlayerMessage) message);
       return;
     }
-    if (message.getClass() == RemoveTerritoryMessage.class) { Forge1201NetworkChannel.sendToServer((RemoveTerritoryMessage) message); return; }
-    if (message.getClass() == RemoveTerritoryMemberMessage.class) { Forge1201NetworkChannel.sendToServer((RemoveTerritoryMemberMessage) message); return; }
+    if (message.getClass() == RemoveTerritoryMessage.class) {
+      Forge1201NetworkChannel.sendToServer((RemoveTerritoryMessage) message);
+      return;
+    }
+    if (message.getClass() == RemoveTerritoryMemberMessage.class) {
+      Forge1201NetworkChannel.sendToServer((RemoveTerritoryMemberMessage) message);
+      return;
+    }
     throw notPorted(message);
   }
 
   @Override
   public void sendToPlayer(ServerPlayer player, EconomyNetworkMessage message) {
+    if (message.getClass() == ClientFileCheckRequestMessage.class) {
+      Forge1201NetworkChannel.sendToPlayer(player, (ClientFileCheckRequestMessage) message);
+      return;
+    }
+    if (message.getClass() == ClientFileCheckResultResponseMessage.class) {
+      Forge1201NetworkChannel.sendToPlayer(player, (ClientFileCheckResultResponseMessage) message);
+      return;
+    }
     if (message.getClass() == BalanceResponseMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (BalanceResponseMessage) message);
       return;

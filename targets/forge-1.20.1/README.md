@@ -164,3 +164,9 @@ removal limiter and invitation cleanup share one overworld game-time value. NeoF
 an authoritative prepare/commit plan: cached session area is preview-only, equal-area reshapes are free,
 UNCHANGED avoids persistence, and uncertain mutation is never refunded. QuadTree validation includes storage
 path and representative spatial queries. Forge has no legacy resize-session state. Protocol 22+ remains legacy.
+
+Protocols 23-25 now provide the complete Forge client-file-check chain: `/check`, canonical channel
+registrations, authenticated pending-result handling, an explicit consent screen, safe fixed-root streaming
+scanner, and a searchable/scrollable comparison result screen. Opening consent performs no disk access; allow,
+decline and ESC are one-shot. Remote JSON is displayed but never written to disk. Protocol 26+ remains legacy.
+The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.

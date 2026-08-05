@@ -286,9 +286,9 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 
 #### 检测 / 获取 / 配送箱 / 玩家列表
 
-- `Packet_Check`
-- `Packet_CheckResultRequest`
-- `Packet_CheckResultResponse`
+- `ClientFileCheckRequestMessage`
+- `ClientFileCheckResultRequestMessage`
+- `ClientFileCheckResultResponseMessage`
 - `Packet_Get`
 - `Packet_GetResultRequest`
 - `Packet_GetResultResponse`
@@ -838,4 +838,13 @@ src/main/templates/META-INF/neoforge.mods.toml
 - 语言文件、模型、贴图、创造栏显示。
 - SQLite / HikariCP 是否已有实际数据层。
 - GeckoLib 相关动画物品 / 支持者帽子实现。
+
+### Bridge protocols 23-25 client file check
+
+Protocols 23-25 are one atomic migrated transaction. Keep the canonical IDs/directions and legacy field order.
+The only accepted types and roots are `mods`, `shaderpacks`, and `resourcepacks`. A client must explicitly allow
+each request before a non-recursive, no-follow, streaming SHA-256 scan. Never transmit file contents or paths and
+never write remote result JSON automatically. Server routing must come from the authenticated target and exact
+server-scoped pending requester/type key; malformed results are consumed and replay is rejected. Protocol 26 and
+later remain legacy until a separate task authorizes migration.
 

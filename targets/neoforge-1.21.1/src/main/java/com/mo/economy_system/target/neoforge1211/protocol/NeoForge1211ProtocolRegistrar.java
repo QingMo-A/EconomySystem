@@ -67,36 +67,39 @@ public final class NeoForge1211ProtocolRegistrar {
         NeoForge1211DeliverDemandOrderHandler::handle);
     bindCommon(
         registrar, EconomyMessages.REMOVE_SALES_ORDER, NeoForge1211RemoveSalesOrderHandler::handle);
-    bindCommon(registrar, EconomyMessages.REMOVE_DEMAND_ORDER, NeoForge1211RemoveDemandOrderHandler::handle);
     bindCommon(
-        registrar, EconomyMessages.TERRITORY_DATA_REQUEST,
+        registrar,
+        EconomyMessages.REMOVE_DEMAND_ORDER,
+        NeoForge1211RemoveDemandOrderHandler::handle);
+    bindCommon(
+        registrar,
+        EconomyMessages.TERRITORY_DATA_REQUEST,
         NeoForge1211TerritoryDataHandlers::handleRequest);
     bindCommon(
-        registrar, EconomyMessages.TERRITORY_DATA_RESPONSE,
+        registrar,
+        EconomyMessages.TERRITORY_DATA_RESPONSE,
         NeoForge1211TerritoryDataHandlers::handleResponse);
-    bindCommon(registrar, EconomyMessages.TELEPORT_TO_TERRITORY,
+    bindCommon(
+        registrar,
+        EconomyMessages.TELEPORT_TO_TERRITORY,
         NeoForge1211TerritoryTeleportHandler::handle);
-    bindCommon(registrar, EconomyMessages.INVITE_PLAYER, NeoForge1211TerritoryInviteHandler::handle);
-    bindCommon(registrar, EconomyMessages.REMOVE_TERRITORY, NeoForge1211TerritoryRemovalHandler::handle);
-    bindCommon(registrar, EconomyMessages.REMOVE_PLAYER, NeoForge1211TerritoryMemberRemovalHandler::handle);
-    bind(
+    bindCommon(
+        registrar, EconomyMessages.INVITE_PLAYER, NeoForge1211TerritoryInviteHandler::handle);
+    bindCommon(
+        registrar, EconomyMessages.REMOVE_TERRITORY, NeoForge1211TerritoryRemovalHandler::handle);
+    bindCommon(
         registrar,
-        EconomyProtocol.CHECK,
-        Packet_Check.TYPE,
-        Packet_Check.STREAM_CODEC,
-        Packet_Check::handle);
-    bind(
+        EconomyMessages.REMOVE_PLAYER,
+        NeoForge1211TerritoryMemberRemovalHandler::handle);
+    bindCommon(registrar, EconomyMessages.CHECK, NeoForge1211ClientFileCheckRequestHandler::handle);
+    bindCommon(
         registrar,
-        EconomyProtocol.CHECK_RESULT_REQUEST,
-        Packet_CheckResultRequest.TYPE,
-        Packet_CheckResultRequest.STREAM_CODEC,
-        Packet_CheckResultRequest::handle);
-    bind(
+        EconomyMessages.CHECK_RESULT_REQUEST,
+        NeoForge1211ClientFileCheckResultRequestHandler::handle);
+    bindCommon(
         registrar,
-        EconomyProtocol.CHECK_RESULT_RESPONSE,
-        Packet_CheckResultResponse.TYPE,
-        Packet_CheckResultResponse.STREAM_CODEC,
-        Packet_CheckResultResponse::handle);
+        EconomyMessages.CHECK_RESULT_RESPONSE,
+        NeoForge1211ClientFileCheckResultResponseHandler::handle);
     bind(
         registrar,
         EconomyProtocol.GET,
