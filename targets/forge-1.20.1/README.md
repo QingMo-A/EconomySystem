@@ -1,5 +1,9 @@
 # Forge 1.20.1 Target Status
 
+## Territory protocol 21 boundary status
+
+Protocol 21 keeps its canonical 16-byte UUID wire unchanged. The shared territory geometry contract uses closed integer bounds, including zero-width/zero-height and single-cell territories. QuadTree removal is identity-based and independent of mutable current bounds. Forge continues to use its raw-NBT copy-on-write removal adapter; protocol 22 and later are not migrated by this stage. Final validation executed 266 shared-source tests and 333 Forge tests.
+
 This target now validates the Gradle/Java 17/Forge toolchain, shared platform
 services, the Forge SavedData shells, and seven end-to-end protocol slices:
 

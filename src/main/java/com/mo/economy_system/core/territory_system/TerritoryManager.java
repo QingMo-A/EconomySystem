@@ -257,6 +257,7 @@ public class TerritoryManager {
     if (ownerMatches != 1
         || wrongBucket
         || savedData.getTerritoryByID(territoryID) != territory
+        || quadTree.countIdentity(territory) != 1
         || quadTree.countTerritory(territoryID) != 1
         || !quadTree.isIndexedCorrectly(territory))
       return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(
@@ -269,6 +270,8 @@ public class TerritoryManager {
     var snapshot =
         new com.mo.economy_system.common.territory.TerritoryRemovalService.RemovedTerritory(
             territoryID, expectedOwner, territory.getName());
+    net.minecraft.core.BlockPos oldPos1 = territory.getPos1();
+    net.minecraft.core.BlockPos oldPos2 = territory.getPos2();
     boolean primaryRemoved = false, ownerRemoved = false, treeRemoved = false, savedRemoved = false;
     try {
       primaryRemoved = territoryByID.remove(territoryID, territory);
@@ -286,7 +289,9 @@ public class TerritoryManager {
           || !savedRemoved
           || territoryByID.containsKey(territoryID)
           || !ownerAbsent
+          || quadTree.countIdentity(territory) != 0
           || quadTree.countTerritory(territoryID) != 0
+          || queryContainsAnyRepresentativePoint(territory, oldPos1, oldPos2)
           || savedData.getTerritoryByID(territoryID) != null)
         throw new IllegalStateException("territory removal mutation failed");
       return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(
@@ -311,7 +316,13 @@ public class TerritoryManager {
         failure.addSuppressed(e);
       }
       try {
-        if (!quadTree.containsTerritory(territoryID)) quadTree.insert(territory);
+        while (quadTree.countIdentity(territory) > 0) {
+          if (!quadTree.remove(territory))
+            throw new IllegalStateException("failed to remove stale territory identity");
+        }
+        if (quadTree.countTerritory(territoryID) != 0)
+          throw new IllegalStateException("duplicate UUID with different identity in QuadTree");
+        quadTree.insert(territory);
       } catch (RuntimeException e) {
         restored = false;
         failure.addSuppressed(e);
@@ -337,8 +348,10 @@ public class TerritoryManager {
           restored
               && territoryByID.get(territoryID) == territory
               && savedData.getTerritoryByID(territoryID) == territory
+              && quadTree.countIdentity(territory) == 1
               && quadTree.countTerritory(territoryID) == 1
               && quadTree.isIndexedCorrectly(territory)
+              && queryContainsAllRepresentativePoints(territory, oldPos1, oldPos2)
               && restoredOwnerMatches == 1
               && !wrongRestoredBucket;
       return new com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryOutcome(
@@ -420,7 +433,7 @@ public class TerritoryManager {
     }
   }
 
-  public static synchronized ResizePrepareOutcome prepareTerritoryResize(
+  static synchronized ResizePrepareOutcome prepareTerritoryResize(
       UUID territoryID,
       UUID expectedOwner,
       net.minecraft.core.BlockPos newPos1,
@@ -480,7 +493,7 @@ public class TerritoryManager {
     }
   }
 
-  public static synchronized ResizeOutcome commitTerritoryResize(ResizePlan plan) {
+  static synchronized ResizeOutcome commitTerritoryResize(ResizePlan plan) {
     Objects.requireNonNull(plan);
     Territory current = territoryByID.get(plan.territoryId());
     if (current == null) return ResizeOutcome.of(ResizeResult.TERRITORY_NOT_FOUND);
@@ -524,7 +537,7 @@ public class TerritoryManager {
             });
   }
 
-  public static synchronized ResizeOutcome resizeTerritoryAuthoritatively(
+  static synchronized ResizeOutcome resizeTerritoryAuthoritatively(
       UUID territoryID,
       UUID expectedOwner,
       net.minecraft.core.BlockPos newPos1,
@@ -557,7 +570,9 @@ public class TerritoryManager {
     net.minecraft.core.BlockPos oldBackpoint = territory.getBackpoint();
     RuntimeException failure = null;
     try {
-      if (!quadTree.remove(territory) || quadTree.countTerritory(territoryID) != 0) {
+      if (!quadTree.remove(territory)
+          || quadTree.countIdentity(territory) != 0
+          || quadTree.countTerritory(territoryID) != 0) {
         throw new IllegalStateException("failed to remove old QuadTree entry");
       }
       applyBounds(territory, newPos1, newPos2, newBackpoint);
@@ -573,7 +588,12 @@ public class TerritoryManager {
     }
     boolean restored = true;
     try {
-      while (quadTree.containsTerritory(territoryID)) if (!quadTree.remove(territory)) break;
+      while (quadTree.countIdentity(territory) > 0) {
+        if (!quadTree.remove(territory))
+          throw new IllegalStateException("failed to remove stale territory identity");
+      }
+      if (quadTree.countTerritory(territoryID) != 0)
+        throw new IllegalStateException("duplicate UUID with different identity in QuadTree");
     } catch (RuntimeException compensation) {
       restored = false;
       failure.addSuppressed(compensation);
@@ -585,7 +605,7 @@ public class TerritoryManager {
       failure.addSuppressed(compensation);
     }
     try {
-      if (quadTree.countTerritory(territoryID) == 0) quadTree.insert(territory);
+      if (quadTree.countIdentity(territory) == 0) quadTree.insert(territory);
     } catch (RuntimeException compensation) {
       restored = false;
       failure.addSuppressed(compensation);
@@ -637,6 +657,22 @@ public class TerritoryManager {
     return quadTree.query(x, z).stream().anyMatch(candidate -> candidate == territory);
   }
 
+  private static boolean queryContainsAnyRepresentativePoint(
+      Territory territory, net.minecraft.core.BlockPos first, net.minecraft.core.BlockPos second) {
+    Bounds bounds = Bounds.calculateBounds(first, second);
+    return queryContains(territory, bounds.x, bounds.z)
+        || queryContains(territory, bounds.x + bounds.width / 2, bounds.z + bounds.height / 2)
+        || queryContains(territory, bounds.x + bounds.width, bounds.z + bounds.height);
+  }
+
+  private static boolean queryContainsAllRepresentativePoints(
+      Territory territory, net.minecraft.core.BlockPos first, net.minecraft.core.BlockPos second) {
+    Bounds bounds = Bounds.calculateBounds(first, second);
+    return queryContains(territory, bounds.x, bounds.z)
+        && queryContains(territory, bounds.x + bounds.width / 2, bounds.z + bounds.height / 2)
+        && queryContains(territory, bounds.x + bounds.width, bounds.z + bounds.height);
+  }
+
   private static void applyBounds(
       Territory territory,
       net.minecraft.core.BlockPos first,
@@ -677,7 +713,9 @@ public class TerritoryManager {
         return new IllegalStateException("owner index mismatch");
       if (savedData == null || savedData.getTerritoryByID(territoryID) != territory)
         return new IllegalStateException("SavedData instance mismatch");
-      if (quadTree.countTerritory(territoryID) != 1 || !quadTree.isIndexedCorrectly(territory))
+      if (quadTree.countIdentity(territory) != 1
+          || quadTree.countTerritory(territoryID) != 1
+          || !quadTree.isIndexedCorrectly(territory))
         return new IllegalStateException("QuadTree spatial index mismatch");
       return null;
     } catch (RuntimeException failure) {

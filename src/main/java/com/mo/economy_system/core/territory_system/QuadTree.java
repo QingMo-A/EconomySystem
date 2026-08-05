@@ -2,6 +2,7 @@ package com.mo.economy_system.core.territory_system;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import net.minecraft.core.BlockPos;
 
 public class QuadTree {
@@ -10,7 +11,7 @@ public class QuadTree {
     return isStoredOnExpectedPath(territory);
   }
 
-  private int countIdentity(Territory target) {
+  int countIdentity(Territory target) {
     int count = 0;
     for (Territory territory : territories) if (territory == target) count++;
     if (nodes != null) {
@@ -72,15 +73,22 @@ public class QuadTree {
     int x = bounds.x;
     int z = bounds.z;
 
+    if (bounds.width == 0 || bounds.height == 0) return;
+
+    int rightX = x + subWidth + 1;
+    int bottomZ = z + subHeight + 1;
+    int rightWidth = bounds.width - subWidth - 1;
+    int bottomHeight = bounds.height - subHeight - 1;
+
     nodes[0] = new QuadTree(level + 1, new Bounds(x, z, subWidth, subHeight)); // NW
-    nodes[1] = new QuadTree(level + 1, new Bounds(x + subWidth, z, subWidth, subHeight)); // NE
-    nodes[2] = new QuadTree(level + 1, new Bounds(x, z + subHeight, subWidth, subHeight)); // SW
-    nodes[3] =
-        new QuadTree(level + 1, new Bounds(x + subWidth, z + subHeight, subWidth, subHeight)); // SE
+    nodes[1] = new QuadTree(level + 1, new Bounds(rightX, z, rightWidth, subHeight)); // NE
+    nodes[2] = new QuadTree(level + 1, new Bounds(x, bottomZ, subWidth, bottomHeight)); // SW
+    nodes[3] = new QuadTree(level + 1, new Bounds(rightX, bottomZ, rightWidth, bottomHeight)); // SE
   }
 
   // 插入领地
   public void insert(Territory territory) {
+    Objects.requireNonNull(territory, "territory");
     // 如果超出当前边界，动态扩展
     if (!bounds.contains(territory.getBounds())) {
       expandBounds(territory.getBounds());
@@ -96,7 +104,10 @@ public class QuadTree {
 
     territories.add(territory);
 
-    if (territories.size() > MAX_CAPACITY && level < MAX_LEVELS) {
+    if (territories.size() > MAX_CAPACITY
+        && level < MAX_LEVELS
+        && bounds.width > 0
+        && bounds.height > 0) {
       if (nodes[0] == null) split();
 
       territories.removeIf(
@@ -148,27 +159,28 @@ public class QuadTree {
 
   // 从四叉树中移除领地
   public boolean remove(Territory territory) {
-    if (!bounds.intersects(territory.getBounds())) return false;
+    Objects.requireNonNull(territory, "territory");
+    return removeIdentity(territory);
+  }
 
-    // 如果当前节点包含该领地，直接移除
-    if (territories.remove(territory)) {
-      return true;
-    }
-
-    // 递归子节点查找
-    if (nodes[0] != null) {
-      for (QuadTree node : nodes) {
-        if (node.remove(territory)) {
-          return true;
-        }
+  private boolean removeIdentity(Territory target) {
+    for (int index = 0; index < territories.size(); index++) {
+      if (territories.get(index) == target) {
+        territories.remove(index);
+        return true;
       }
     }
-
+    if (nodes != null) {
+      for (QuadTree node : nodes) {
+        if (node != null && node.removeIdentity(target)) return true;
+      }
+    }
     return false;
   }
 
   public void clear() {
     territories.clear();
+    if (nodes == null) nodes = new QuadTree[4];
     for (int i = 0; i < nodes.length; i++) {
       if (nodes[i] != null) {
         nodes[i].clear();
@@ -179,16 +191,20 @@ public class QuadTree {
 
   private int getIndex(Bounds bounds) {
     int index = -1;
-    double midX = this.bounds.x + this.bounds.width / 2.0;
-    double midZ = this.bounds.z + this.bounds.height / 2.0;
+    long leftMaxX = (long) this.bounds.x + this.bounds.width / 2;
+    long topMaxZ = (long) this.bounds.z + this.bounds.height / 2;
+    long rightMinX = leftMaxX + 1;
+    long bottomMinZ = topMaxZ + 1;
+    long candidateMaxX = (long) bounds.x + bounds.width;
+    long candidateMaxZ = (long) bounds.z + bounds.height;
 
-    boolean top = bounds.z + bounds.height <= midZ;
-    boolean bottom = bounds.z >= midZ;
+    boolean top = candidateMaxZ <= topMaxZ;
+    boolean bottom = bounds.z >= bottomMinZ;
 
-    if (bounds.x + bounds.width <= midX) {
+    if (candidateMaxX <= leftMaxX) {
       if (top) index = 0; // NW
       else if (bottom) index = 2; // SW
-    } else if (bounds.x >= midX) {
+    } else if (bounds.x >= rightMinX) {
       if (top) index = 1; // NE
       else if (bottom) index = 3; // SE
     }
@@ -228,13 +244,14 @@ public class QuadTree {
           node.transferDataTo(newTree);
         }
       }
-      nodes = null;
+      nodes = new QuadTree[4];
     }
   }
 
   // 从另一个四叉树复制数据
   public void copyFrom(QuadTree other) {
-    this.territories.clear();
+    Objects.requireNonNull(other, "other");
+    clear();
     this.territories.addAll(other.territories);
     this.bounds.x = other.bounds.x;
     this.bounds.z = other.bounds.z;
@@ -243,7 +260,12 @@ public class QuadTree {
 
     for (int i = 0; i < other.nodes.length; i++) {
       if (other.nodes[i] != null) {
-        this.nodes[i] = new QuadTree(other.nodes[i].level, other.nodes[i].getBounds());
+        Bounds sourceBounds = other.nodes[i].getBounds();
+        this.nodes[i] =
+            new QuadTree(
+                other.nodes[i].level,
+                new Bounds(
+                    sourceBounds.x, sourceBounds.z, sourceBounds.width, sourceBounds.height));
         this.nodes[i].copyFrom(other.nodes[i]);
       }
     }

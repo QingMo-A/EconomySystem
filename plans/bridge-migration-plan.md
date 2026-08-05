@@ -2,6 +2,16 @@
 
 ## 基线与约束
 
+### 协议 21 最终空间边界加固
+
+- `Bounds` 已统一为闭区间 `[x, x + width] × [z, z + height]`，完整支持单格、单列和单行。
+- `QuadTree.remove` 已改为全树 Java identity 遍历；闭区间子节点采用无重叠、确定性的分割路径。
+- resize 和权威删除在成功及补偿后都会验证 identity/UUID 数量、预期索引路径和新旧范围代表点查询。
+- resize 补偿会移除原实例的全部 stale identity；遇到相同 UUID 的不同实例时不误删并返回 `STATE_UNKNOWN`。
+- manager 低层 resize API 已收紧为 package-private，生产扣款仍只能经过 `TerritoryResizeTransactionService`。
+- 协议 21 wire 仍为单个 16 字节 UUID；协议 22 `REMOVE_PLAYER` 及以后仍为 legacy。
+- 本阶段最终实测：shared-source 266、Forge 333、NeoForge 382，`buildAllTargets` 通过。
+
 - NeoForge 1.21.1 当前代码是唯一业务基线。
 - Forge 1.20.1 历史分支只用于查询旧 API，不恢复过时业务逻辑。
 - `common` 保存共享语义和数据模型，不得导入 `net.neoforged` 或 `net.minecraftforge`。

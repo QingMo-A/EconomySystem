@@ -821,6 +821,10 @@ src/main/templates/META-INF/neoforge.mods.toml
 
 ## 13. 后续需要继续补全的阅读范围
 
+### Bridge 协议 21 空间索引约束
+
+协议 21 的权威删除与 resize 共享以下不变量：`Bounds` 的 `width/height` 是最大坐标减最小坐标，实际范围是两端包含的整数闭区间；零宽、零高和单格范围均合法。`QuadTree.remove` 必须按 Java identity 完整遍历，不能依赖可变 Territory 的当前 bounds。事务成功、失败补偿和持久化失败恢复都必须同时证明 identity/UUID 数量、预期节点路径与代表点查询正确。manager 的低层 resize prepare/commit/mutation API 保持 package-private，生产入口只能通过 `TerritoryResizeTransactionService`。本阶段最终实测 shared-source 266、Forge 333、NeoForge 382，双目标构建通过。协议 22 及以后仍为 legacy。
+
 当前文档已经覆盖入口、构建、网络注册、账户、商店、市场、配送箱、领地、奖励、物品序列化等核心模块。后续如果要进一步完善，请继续阅读并补充：
 
 - 客户端 Screen / GUI / Menu 相关包。

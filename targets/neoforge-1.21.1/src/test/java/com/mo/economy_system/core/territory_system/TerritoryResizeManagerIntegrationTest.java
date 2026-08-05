@@ -89,6 +89,109 @@ class TerritoryResizeManagerIntegrationTest {
     assertFalse(TerritoryManager.quadTree.query(5, 5).contains(territory));
   }
 
+  @Test
+  void resizesRectangleToSingleCellAndBack() {
+    assertEquals(
+        TerritoryManager.ResizeResult.RESIZED,
+        TerritoryManager.commitTerritoryResize(
+                prepare(new BlockPos(50, 64, 50), new BlockPos(50, 64, 50)).plan())
+            .result());
+    assertTrue(TerritoryManager.quadTree.query(50, 50).contains(territory));
+    assertTrue(TerritoryManager.quadTree.isIndexedCorrectly(territory));
+
+    var expanded = prepare(new BlockPos(60, 64, 60), new BlockPos(69, 64, 69));
+    assertEquals(
+        TerritoryManager.ResizeResult.RESIZED,
+        TerritoryManager.commitTerritoryResize(expanded.plan()).result());
+    assertFalse(TerritoryManager.quadTree.query(50, 50).contains(territory));
+    assertTrue(TerritoryManager.quadTree.query(60, 60).contains(territory));
+    assertTrue(TerritoryManager.quadTree.query(69, 69).contains(territory));
+  }
+
+  @Test
+  void resizesSingleColumnToSingleRow() {
+    var column = prepare(new BlockPos(20, 64, 20), new BlockPos(20, 64, 29));
+    assertEquals(
+        TerritoryManager.ResizeResult.RESIZED,
+        TerritoryManager.commitTerritoryResize(column.plan()).result());
+    var row = prepare(new BlockPos(30, 64, 30), new BlockPos(39, 64, 30));
+    assertEquals(
+        TerritoryManager.ResizeResult.RESIZED,
+        TerritoryManager.commitTerritoryResize(row.plan()).result());
+    assertTrue(TerritoryManager.quadTree.query(30, 30).contains(territory));
+    assertTrue(TerritoryManager.quadTree.query(39, 30).contains(territory));
+    assertFalse(TerritoryManager.quadTree.query(20, 29).contains(territory));
+  }
+
+  @Test
+  void persistenceFailureRestoresOldSpatialPath() throws Exception {
+    FailingSavedData failing = new FailingSavedData();
+    failing.addTerritory(territory);
+    setSavedData(failing);
+    failing.failNextDirty();
+
+    var prepared = prepare(new BlockPos(20, 64, 20), new BlockPos(29, 64, 29));
+    var outcome = TerritoryManager.commitTerritoryResize(prepared.plan());
+
+    assertEquals(TerritoryManager.ResizeResult.PERSIST_FAILED, outcome.result());
+    assertTrue(TerritoryManager.quadTree.isIndexedCorrectly(territory));
+    assertTrue(TerritoryManager.quadTree.query(0, 0).contains(territory));
+    assertTrue(TerritoryManager.quadTree.query(9, 9).contains(territory));
+    assertFalse(TerritoryManager.quadTree.query(20, 20).contains(territory));
+  }
+
+  @Test
+  void differentIdentityWithSameUuidMakesCompensationStateUnknown() throws Exception {
+    Territory duplicate =
+        territory(territory.getTerritoryID(), UUID.randomUUID(), 100, 100, 100, 100);
+    FailingSavedData failing = new FailingSavedData();
+    failing.addTerritory(territory);
+    setSavedData(failing);
+    var prepared = prepare(new BlockPos(20, 64, 20), new BlockPos(29, 64, 29));
+    failing.failNextDirty(() -> TerritoryManager.quadTree.insert(duplicate));
+
+    var outcome = TerritoryManager.commitTerritoryResize(prepared.plan());
+
+    assertEquals(TerritoryManager.ResizeResult.STATE_UNKNOWN, outcome.result());
+    assertEquals(1, TerritoryManager.quadTree.countIdentity(territory));
+    assertEquals(1, TerritoryManager.quadTree.countIdentity(duplicate));
+    assertEquals(2, TerritoryManager.quadTree.countTerritory(territory.getTerritoryID()));
+  }
+
+  @Test
+  void removalOfSingleCellVerifiesSpatialAbsence() throws Exception {
+    territory = territory(owner, 7, 7, 7, 7);
+    install(territory, new TerritorySavedData());
+
+    var outcome =
+        TerritoryManager.removeTerritoryAuthoritatively(territory.getTerritoryID(), owner);
+
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult.REMOVED,
+        outcome.result());
+    assertEquals(0, TerritoryManager.quadTree.countIdentity(territory));
+    assertFalse(TerritoryManager.quadTree.query(7, 7).contains(territory));
+  }
+
+  @Test
+  void removalDirtyFailureRestoresSingleCellSpatialPath() throws Exception {
+    territory = territory(owner, 7, 7, 7, 7);
+    FailingSavedData failing = new FailingSavedData();
+    install(territory, failing);
+    failing.failNextDirty();
+
+    var outcome =
+        TerritoryManager.removeTerritoryAuthoritatively(territory.getTerritoryID(), owner);
+
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryRemovalService.RepositoryResult
+            .PERSIST_FAILED,
+        outcome.result());
+    assertEquals(1, TerritoryManager.quadTree.countIdentity(territory));
+    assertTrue(TerritoryManager.quadTree.isIndexedCorrectly(territory));
+    assertTrue(TerritoryManager.quadTree.query(7, 7).contains(territory));
+  }
+
   private TerritoryManager.ResizePrepareOutcome prepare(BlockPos first, BlockPos second) {
     return TerritoryManager.prepareTerritoryResize(
         territory.getTerritoryID(), owner, first, second, first);
@@ -107,9 +210,32 @@ class TerritoryResizeManagerIntegrationTest {
     return field.get(null);
   }
 
+  private static void setSavedData(TerritorySavedData saved) throws Exception {
+    Field field = TerritoryManager.class.getDeclaredField("savedData");
+    field.setAccessible(true);
+    field.set(null, saved);
+  }
+
+  private static void install(Territory value, TerritorySavedData saved) throws Exception {
+    Map<UUID, Territory> primary = field("territoryByID");
+    Map<UUID, List<Territory>> owners = field("territoriesByOwner");
+    primary.clear();
+    owners.clear();
+    primary.put(value.getTerritoryID(), value);
+    owners.put(value.getOwnerUUID(), new ArrayList<>(List.of(value)));
+    saved.addTerritory(value);
+    setSavedData(saved);
+    TerritoryManager.quadTree = new QuadTree(0, new Bounds(-1_000, -1_000, 2_000, 2_000));
+    TerritoryManager.quadTree.insert(value);
+  }
+
   private static Territory territory(UUID owner, int x1, int z1, int x2, int z2) {
+    return territory(UUID.randomUUID(), owner, x1, z1, x2, z2);
+  }
+
+  private static Territory territory(UUID territoryId, UUID owner, int x1, int z1, int x2, int z2) {
     return new Territory(
-        UUID.randomUUID(),
+        territoryId,
         "test",
         owner,
         "owner",
@@ -121,5 +247,29 @@ class TerritoryResizeManagerIntegrationTest {
         z2,
         new BlockPos(x1, 64, z1),
         Level.OVERWORLD);
+  }
+
+  private static final class FailingSavedData extends TerritorySavedData {
+    private int failures;
+    private Runnable beforeFailure = () -> {};
+
+    void failNextDirty() {
+      failNextDirty(() -> {});
+    }
+
+    void failNextDirty(Runnable action) {
+      failures = 1;
+      beforeFailure = action;
+    }
+
+    @Override
+    public void setDirty() {
+      if (failures > 0) {
+        failures--;
+        beforeFailure.run();
+        throw new IllegalStateException("injected dirty failure");
+      }
+      super.setDirty();
+    }
   }
 }

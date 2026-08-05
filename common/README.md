@@ -1,5 +1,9 @@
 # EconomySystem Shared Sources
 
+## Protocol 21 spatial boundary hardening
+
+Protocol 21 remains a C2S request containing exactly one 16-byte territory UUID. Its NeoForge authoritative repository treats territory rectangles as closed integer intervals and verifies QuadTree identity count, UUID count, expected node path, and representative-point queries during deletion, resize, and compensation. Single-cell, single-column, single-row, root-edge, and split-boundary territories are supported. Low-level resize manager methods are package-private; protocol 22 and later remain legacy. Final validation executed 266 shared-source tests, 333 Forge tests, and 382 NeoForge tests.
+
 `common` contains behavior and data semantics shared by every supported
 Minecraft target. It is a shared source directory, not an independently
 published Gradle module; each target recompiles it against that target's
