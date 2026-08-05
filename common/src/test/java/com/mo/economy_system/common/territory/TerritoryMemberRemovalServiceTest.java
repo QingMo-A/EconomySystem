@@ -106,6 +106,107 @@ class TerritoryMemberRemovalServiceTest {
             .result());
   }
 
+  @Test
+  void mapsPersistenceAndUnknownFailuresToDiagnosticsStages() {
+    Map<TerritoryMemberRemovalService.RepositoryFailureKind, String> stages =
+        Map.of(
+            TerritoryMemberRemovalService.RepositoryFailureKind.PERSISTENCE,
+            "repository-persist-failed",
+            TerritoryMemberRemovalService.RepositoryFailureKind.INTEGRITY,
+            "repository-integrity",
+            TerritoryMemberRemovalService.RepositoryFailureKind.UNKNOWN,
+            "repository-state-unknown");
+    for (var entry : stages.entrySet()) {
+      List<String> seen = new ArrayList<>();
+      var result =
+          entry.getKey() == TerritoryMemberRemovalService.RepositoryFailureKind.PERSISTENCE
+              ? TerritoryMemberRemovalService.RepositoryResult.PERSIST_FAILED
+              : TerritoryMemberRemovalService.RepositoryResult.STATE_UNKNOWN;
+      var service =
+          new TerritoryMemberRemovalService(
+              (l, o, t) ->
+                  new TerritoryMemberRemovalService.RepositoryOutcome(
+                      result, null, entry.getKey(), new IllegalStateException("failure")),
+              new TerritoryMemberRemovalRateLimiter(),
+              (t, l, tick) -> new TerritoryInviteStore.DiscardResult(0, 0),
+              (stage, player, territory, error) -> seen.add(stage));
+      service.remove(owner, land, target, 0);
+      assertEquals(List.of(entry.getValue()), seen);
+    }
+  }
+
+  @Test
+  void cleanupFailuresCannotUndoSuccessfulRemoval() {
+    for (TerritoryMemberRemovalService.Cleanup cleanup :
+        List.<TerritoryMemberRemovalService.Cleanup>of(
+            (t, l, tick) -> null,
+            (t, l, tick) -> {
+              throw new IllegalStateException("cleanup");
+            })) {
+      var service =
+          new TerritoryMemberRemovalService(
+              (l, o, t) ->
+                  new TerritoryMemberRemovalService.RepositoryOutcome(
+                      TerritoryMemberRemovalService.RepositoryResult.REMOVED, snap()),
+              new TerritoryMemberRemovalRateLimiter(),
+              cleanup,
+              (stage, player, territory, error) -> {});
+      assertEquals(
+          TerritoryMemberRemovalService.Result.SUCCESS,
+          service.remove(owner, land, target, 0).result());
+    }
+    var errorService =
+        new TerritoryMemberRemovalService(
+            (l, o, t) ->
+                new TerritoryMemberRemovalService.RepositoryOutcome(
+                    TerritoryMemberRemovalService.RepositoryResult.REMOVED, snap()),
+            new TerritoryMemberRemovalRateLimiter(),
+            (t, l, tick) -> {
+              throw new AssertionError("cleanup");
+            },
+            (stage, player, territory, error) -> {});
+    assertThrows(AssertionError.class, () -> errorService.remove(owner, land, target, 0));
+  }
+
+  @Test
+  void processingCleanupAndDiagnosticsBehaviorAreExplicit() {
+    List<String> stages = new ArrayList<>();
+    var service =
+        new TerritoryMemberRemovalService(
+            (l, o, t) ->
+                new TerritoryMemberRemovalService.RepositoryOutcome(
+                    TerritoryMemberRemovalService.RepositoryResult.REMOVED, snap()),
+            new TerritoryMemberRemovalRateLimiter(),
+            (t, l, tick) -> new TerritoryInviteStore.DiscardResult(0, 1),
+            (stage, player, territory, error) -> stages.add(stage));
+    assertEquals(
+        TerritoryMemberRemovalService.Result.SUCCESS,
+        service.remove(owner, land, target, 0).result());
+    assertEquals(List.of("cleanup-pending-invite-processing"), stages);
+
+    var diagnosticsRuntime =
+        new TerritoryMemberRemovalService(
+            (l, o, t) -> null,
+            new TerritoryMemberRemovalRateLimiter(),
+            (t, l, tick) -> new TerritoryInviteStore.DiscardResult(0, 0),
+            (stage, player, territory, error) -> {
+              throw new IllegalStateException("diagnostics");
+            });
+    assertEquals(
+        TerritoryMemberRemovalService.Result.STATE_UNKNOWN,
+        diagnosticsRuntime.remove(owner, land, target, 0).result());
+
+    var diagnosticsError =
+        new TerritoryMemberRemovalService(
+            (l, o, t) -> null,
+            new TerritoryMemberRemovalRateLimiter(),
+            (t, l, tick) -> new TerritoryInviteStore.DiscardResult(0, 0),
+            (stage, player, territory, error) -> {
+              throw new AssertionError("diagnostics");
+            });
+    assertThrows(AssertionError.class, () -> diagnosticsError.remove(owner, land, target, 0));
+  }
+
   private TerritoryMemberRemovalService service(TerritoryMemberRemovalService.Repository r) {
     return new TerritoryMemberRemovalService(
         r,

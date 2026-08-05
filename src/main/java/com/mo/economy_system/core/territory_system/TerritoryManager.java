@@ -788,7 +788,15 @@ public class TerritoryManager {
             case REMOVED -> {
               java.util.Map<UUID, String> expected = new java.util.LinkedHashMap<>(before);
               expected.remove(targetPlayerID);
-              yield current.equals(expected) && !territory.hasPermission(targetPlayerID);
+              var removed = outcome.removedMember();
+              yield current.equals(expected)
+                  && !territory.hasPermission(targetPlayerID)
+                  && removed.territoryId().equals(territoryID)
+                  && removed.ownerId().equals(expectedOwner)
+                  && removed.targetPlayerId().equals(targetPlayerID)
+                  && java.util.Objects.equals(
+                      removed.targetPlayerName(), before.get(targetPlayerID))
+                  && java.util.Objects.equals(removed.territoryName(), territory.getName());
             }
             case PERSIST_FAILED -> current.equals(before);
             case STATE_UNKNOWN -> true;

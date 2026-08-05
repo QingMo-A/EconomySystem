@@ -439,6 +439,75 @@ class Forge1201TerritorySnapshotStoreTest {
     assertEquals(2, calls.get());
   }
 
+  @Test
+  void removeMemberDetectsSilentPostDirtyRawCorruptionAndRollsBack() {
+    CompoundTag territory = validTerritory();
+    UUID targetId = UUID.randomUUID();
+    CompoundTag member = new CompoundTag();
+    member.putUUID("PlayerUUID", targetId);
+    member.putString("PlayerName", "Target");
+    ListTag members = new ListTag();
+    members.add(member);
+    territory.put("AuthorizedPlayers", members);
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore[] holder = new Forge1201TerritorySnapshotStore[1];
+    AtomicInteger calls = new AtomicInteger();
+    holder[0] =
+        new Forge1201TerritorySnapshotStore(
+            root,
+            () -> {
+              if (calls.getAndIncrement() == 0)
+                holder[0].mutateRawForTest(tag -> tag.putString("SilentCorruption", "bad"));
+            });
+    CompoundTag before = holder[0].rawCopy();
+    var outcome =
+        holder[0].removeMember(
+            territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), targetId);
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+            .PERSIST_FAILED,
+        outcome.result());
+    assertEquals(before, holder[0].rawCopy());
+    assertEquals(2, calls.get());
+  }
+
+  @Test
+  void removeMemberDetectsSilentPostDirtyCacheCorruptionAndRollsBack() {
+    CompoundTag territory = validTerritory();
+    UUID targetId = UUID.randomUUID();
+    CompoundTag member = new CompoundTag();
+    member.putUUID("PlayerUUID", targetId);
+    member.putString("PlayerName", "Target");
+    ListTag members = new ListTag();
+    members.add(member);
+    territory.put("AuthorizedPlayers", members);
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore[] holder = new Forge1201TerritorySnapshotStore[1];
+    AtomicInteger calls = new AtomicInteger();
+    holder[0] =
+        new Forge1201TerritorySnapshotStore(
+            root,
+            () -> {
+              if (calls.getAndIncrement() == 0) holder[0].replaceCacheForTest(List.of());
+            });
+    CompoundTag before = holder[0].rawCopy();
+    var outcome =
+        holder[0].removeMember(
+            territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), targetId);
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+            .PERSIST_FAILED,
+        outcome.result());
+    assertEquals(before, holder[0].rawCopy());
+    assertEquals(2, calls.get());
+  }
+
   private static CompoundTag validTerritory() {
     CompoundTag tag = new CompoundTag();
     tag.putUUID("TerritoryID", UUID.fromString("10000000-0000-0000-0000-000000000001"));

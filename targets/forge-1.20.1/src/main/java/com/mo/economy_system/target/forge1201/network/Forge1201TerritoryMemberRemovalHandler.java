@@ -26,10 +26,13 @@ final class Forge1201TerritoryMemberRemovalHandler {
 
   private static void remove(ServerPlayer sender, RemoveTerritoryMemberMessage message) {
     MinecraftServer server = sender.getServer();
+    if (server == null) {
+      notifyUnknown(sender);
+      return;
+    }
     var overworld = server.overworld();
     if (overworld == null) {
-      sender.sendSystemMessage(
-          Component.translatable("message.territory.member_remove.state_unknown"));
+      notifyUnknown(sender);
       return;
     }
     long tick = overworld.getGameTime();
@@ -84,6 +87,15 @@ final class Forge1201TerritoryMemberRemovalHandler {
         } catch (RuntimeException e) {
           LOGGER.warn("member removal target notification failed", e);
         }
+    }
+  }
+
+  private static void notifyUnknown(ServerPlayer sender) {
+    try {
+      sender.sendSystemMessage(
+          Component.translatable("message.territory.member_remove.state_unknown"));
+    } catch (RuntimeException failure) {
+      LOGGER.warn("member removal unavailable-state notification failed", failure);
     }
   }
 }

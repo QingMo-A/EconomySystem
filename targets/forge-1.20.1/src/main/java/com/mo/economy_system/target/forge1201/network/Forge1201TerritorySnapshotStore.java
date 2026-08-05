@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -75,6 +76,14 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     return territories.stream()
         .filter(value -> value.summary().ownerId().equals(requester))
         .toList();
+  }
+
+  synchronized void mutateRawForTest(Consumer<CompoundTag> mutation) {
+    Objects.requireNonNull(mutation, "mutation").accept(raw);
+  }
+
+  synchronized void replaceCacheForTest(List<Owned> replacement) {
+    territories = List.copyOf(Objects.requireNonNull(replacement, "replacement"));
   }
 
   List<Summary> authorized(UUID requester) {
@@ -420,7 +429,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       if (targetPlayerId.equals(member.getUUID("PlayerUUID"))) {
         if (memberIndex >= 0) return memberIntegrity(integrity("duplicate member UUID"));
         memberIndex = i;
-        memberName = member.getString("PlayerName").trim();
+        memberName = member.getString("PlayerName");
       }
     }
     if (memberIndex < 0)
@@ -439,6 +448,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     candidateTerritories.set(territoryIndex, candidateTarget);
     candidateRoot.put("Territories", candidateTerritories);
     List<Owned> candidateCache;
+    CompoundTag candidateRawDeepCopy;
     try {
       candidateCache = parseStrictRoot(candidateRoot).snapshots();
       ListTag verifiedMembers =
@@ -453,6 +463,18 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       }
       if (verifiedMembers.size() != sourceMembers.size() - 1)
         throw integrity("candidate member count mismatch");
+      for (int sourceIndex = 0, candidateIndex = 0;
+          sourceIndex < sourceMembers.size();
+          sourceIndex++) {
+        if (sourceIndex == memberIndex) continue;
+        if (!sourceMembers
+            .getCompound(sourceIndex)
+            .equals(verifiedMembers.getCompound(candidateIndex++)))
+          throw integrity("candidate changed a remaining member record");
+      }
+      if (!parseStrictRoot(candidateRoot).snapshots().equals(candidateCache))
+        throw integrity("candidate raw/cache mismatch");
+      candidateRawDeepCopy = candidateRoot.copy();
     } catch (RuntimeException malformed) {
       return memberIntegrity(malformed);
     }
@@ -461,6 +483,15 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       raw = candidateRoot;
       territories = candidateCache;
       dirtyMarker.markDirty();
+      verifyPublishedMemberRemoval(
+          raw,
+          territories,
+          candidateRawDeepCopy,
+          candidateCache,
+          territoryIndex,
+          targetPlayerId,
+          sourceMembers,
+          memberIndex);
       return new TerritoryMemberRemovalService.RepositoryOutcome(
           TerritoryMemberRemovalService.RepositoryResult.REMOVED,
           new TerritoryMemberRemovalService.RemovedMember(
@@ -489,8 +520,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
               .filter(member -> targetPlayerId.equals(member.getUUID("PlayerUUID")))
               .count();
       if (restoredTargets != 1
-          || !memberName.equals(
-              restoredMembers.getCompound(memberIndex).getString("PlayerName").trim()))
+          || !memberName.equals(restoredMembers.getCompound(memberIndex).getString("PlayerName")))
         throw new IllegalStateException("rollback target mismatch");
       return new TerritoryMemberRemovalService.RepositoryOutcome(
           TerritoryMemberRemovalService.RepositoryResult.PERSIST_FAILED,
@@ -500,6 +530,39 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     } catch (RuntimeException rollback) {
       primary.addSuppressed(rollback);
       return memberUnknown(primary);
+    }
+  }
+
+  private static void verifyPublishedMemberRemoval(
+      CompoundTag publishedRaw,
+      List<Owned> publishedCache,
+      CompoundTag candidateRawDeepCopy,
+      List<Owned> candidateCache,
+      int territoryIndex,
+      UUID targetPlayerId,
+      ListTag originalMembers,
+      int removedIndex) {
+    if (!publishedRaw.equals(candidateRawDeepCopy) || !publishedCache.equals(candidateCache))
+      throw new IllegalStateException("post-dirty candidate changed");
+    StrictRoot reparsed = parseStrictRoot(publishedRaw);
+    if (!reparsed.snapshots().equals(candidateCache))
+      throw new IllegalStateException("post-dirty raw/cache mismatch");
+    ListTag members =
+        publishedRaw
+            .getList("Territories", Tag.TAG_COMPOUND)
+            .getCompound(territoryIndex)
+            .getList("AuthorizedPlayers", Tag.TAG_COMPOUND);
+    if (members.size() != originalMembers.size() - 1
+        || members.stream()
+            .map(CompoundTag.class::cast)
+            .anyMatch(member -> targetPlayerId.equals(member.getUUID("PlayerUUID"))))
+      throw new IllegalStateException("post-dirty target removal mismatch");
+    for (int sourceIndex = 0, candidateIndex = 0;
+        sourceIndex < originalMembers.size();
+        sourceIndex++) {
+      if (sourceIndex == removedIndex) continue;
+      if (!originalMembers.getCompound(sourceIndex).equals(members.getCompound(candidateIndex++)))
+        throw new IllegalStateException("post-dirty member order/content mismatch");
     }
   }
 

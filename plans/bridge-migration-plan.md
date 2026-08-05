@@ -12,7 +12,8 @@
 - NeoForge 与 Forge 均提供 one-shot 确认页；Forge MEMBERS 页面保留邀请功能。
 - `PERSIST_FAILED` 只用于完整恢复，无法证明状态时使用 `STATE_UNKNOWN`。协议 23+ 仍为 legacy。
 - 第二轮加固覆盖 invite 索引 fail-closed 精确清理、统一成员名称限制、NeoForge 成员快照/rollback、manager 身份与空间索引复核、Forge raw 深拷贝恢复证明、双端确认页和 Forge tiny-height 布局。
-- 最终实测：shared-source 276、Forge 349、NeoForge 402，`buildAllTargets` 通过。
+- 最终集成闭环增加 Forge dirty 后 raw/cache 复验及完整 rollback 证明、NeoForge 原始 canonical 名称快照与可注入 mutation、manager 集成、严格注册/资源/limiter 测试，以及 tiny-height/窄宽度无隐藏组件验证。
+- 最终实测：shared-source 285、Forge 362、NeoForge 422，`buildAllTargets` 通过。
 
 ### 协议 21 最终空间边界加固
 

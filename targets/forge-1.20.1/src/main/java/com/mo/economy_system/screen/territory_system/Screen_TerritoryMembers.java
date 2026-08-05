@@ -28,39 +28,46 @@ public final class Screen_TerritoryMembers extends Screen {
 
   protected void init() {
     TerritoryMembersLayout.Layout layout = layout();
-    search =
-        new EditBox(
-            font,
-            layout.search().x(),
-            layout.search().y(),
-            layout.search().width(),
-            layout.search().height(),
-            Component.translatable("screen.territory_members.search"));
-    search.setResponder(v -> scroll = 0);
-    addRenderableWidget(search);
-    addRenderableWidget(
-        Button.builder(
-                Component.translatable("button.territory.member_invite"),
-                b ->
-                    Minecraft.getInstance()
-                        .setScreen(
-                            new Screen_InvitePlayer(
-                                territory.summary().territoryId(),
-                                territory.summary().name(),
-                                territory.summary().ownerId(),
-                                memberIds(),
-                                this)))
-            .bounds(
-                layout.invite().x(),
-                layout.invite().y(),
-                layout.invite().width(),
-                layout.invite().height())
-            .build());
-    addRenderableWidget(
-        Button.builder(Component.translatable("gui.back"), b -> onClose())
-            .bounds(
-                layout.back().x(), layout.back().y(), layout.back().width(), layout.back().height())
-            .build());
+    if (layout.search().inside(width, height)) {
+      search =
+          new EditBox(
+              font,
+              layout.search().x(),
+              layout.search().y(),
+              layout.search().width(),
+              layout.search().height(),
+              Component.translatable("screen.territory_members.search"));
+      search.setResponder(v -> scroll = 0);
+      addRenderableWidget(search);
+    }
+    if (layout.invite().inside(width, height))
+      addRenderableWidget(
+          Button.builder(
+                  Component.translatable("button.territory.member_invite"),
+                  b ->
+                      Minecraft.getInstance()
+                          .setScreen(
+                              new Screen_InvitePlayer(
+                                  territory.summary().territoryId(),
+                                  territory.summary().name(),
+                                  territory.summary().ownerId(),
+                                  memberIds(),
+                                  this)))
+              .bounds(
+                  layout.invite().x(),
+                  layout.invite().y(),
+                  layout.invite().width(),
+                  layout.invite().height())
+              .build());
+    if (layout.back().inside(width, height))
+      addRenderableWidget(
+          Button.builder(Component.translatable("gui.back"), b -> onClose())
+              .bounds(
+                  layout.back().x(),
+                  layout.back().y(),
+                  layout.back().width(),
+                  layout.back().height())
+              .build());
   }
 
   private Set<java.util.UUID> memberIds() {

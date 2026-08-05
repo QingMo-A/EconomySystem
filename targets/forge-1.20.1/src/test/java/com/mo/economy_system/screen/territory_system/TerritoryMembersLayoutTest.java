@@ -27,9 +27,25 @@ class TerritoryMembersLayoutTest {
   void tinyHeightAndEmptyListCreateNoInvisibleActions() {
     var tiny = TerritoryMembersLayout.layout(320, 30, members(4), 0);
     assertTrue(tiny.rows().isEmpty());
-    assertEquals(0, tiny.invite().width() * tiny.invite().height());
-    assertEquals(0, tiny.back().width() * tiny.back().height());
+    assertFalse(tiny.search().visible());
+    assertFalse(tiny.invite().visible());
+    assertFalse(tiny.back().visible());
     assertTrue(TerritoryMembersLayout.layout(320, 240, List.of(), 99).rows().isEmpty());
+  }
+
+  @Test
+  void narrowWidthsHideControlsThatDoNotFitAndNeverOverlap() {
+    for (int width : new int[] {1, 8, 16, 32, 64, 96, 160, 240, 320}) {
+      var layout = TerritoryMembersLayout.layout(width, 180, members(8), 0);
+      for (var rect : List.of(layout.search(), layout.invite(), layout.back()))
+        if (rect.visible()) assertTrue(rect.inside(width, 180), "width=" + width);
+      if (layout.invite().visible() && layout.back().visible())
+        assertFalse(overlaps(layout.invite(), layout.back()), "width=" + width);
+      for (var row : layout.rows()) {
+        assertTrue(row.row().inside(width, 180), "width=" + width);
+        assertTrue(row.removeButton().inside(width, 180), "width=" + width);
+      }
+    }
   }
 
   @Test
@@ -38,7 +54,9 @@ class TerritoryMembersLayoutTest {
     var layout = TerritoryMembersLayout.layout(320, 148, members, Integer.MAX_VALUE);
     int visible = Math.max(0, (148 - 100) / TerritoryMembersLayout.ROW_HEIGHT);
     assertEquals(members.size() - visible, layout.scroll());
-    assertEquals(members.subList(layout.scroll(), members.size()), layout.rows().stream().map(TerritoryMembersLayout.MemberRow::member).toList());
+    assertEquals(
+        members.subList(layout.scroll(), members.size()),
+        layout.rows().stream().map(TerritoryMembersLayout.MemberRow::member).toList());
   }
 
   private static List<TerritoryMembersLayout.MemberValue> members(int count) {
@@ -54,6 +72,9 @@ class TerritoryMembersLayoutTest {
   }
 
   private static boolean overlaps(TerritoryMembersLayout.Rect a, TerritoryMembersLayout.Rect b) {
-    return a.x() < b.x() + b.width() && b.x() < a.x() + a.width() && a.y() < b.y() + b.height() && b.y() < a.y() + a.height();
+    return a.x() < b.x() + b.width()
+        && b.x() < a.x() + a.width()
+        && a.y() < b.y() + b.height()
+        && b.y() < a.y() + a.height();
   }
 }

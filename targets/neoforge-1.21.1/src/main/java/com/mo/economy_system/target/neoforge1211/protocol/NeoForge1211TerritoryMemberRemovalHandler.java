@@ -27,10 +27,13 @@ public final class NeoForge1211TerritoryMemberRemovalHandler {
 
   static void remove(ServerPlayer sender, RemoveTerritoryMemberMessage message) {
     MinecraftServer server = sender.getServer();
+    if (server == null) {
+      notifyUnknown(sender);
+      return;
+    }
     var overworld = server.overworld();
     if (overworld == null) {
-      sender.sendSystemMessage(
-          Component.translatable("message.territory.member_remove.state_unknown"));
+      notifyUnknown(sender);
       return;
     }
     long tick = overworld.getGameTime();
@@ -51,6 +54,15 @@ public final class NeoForge1211TerritoryMemberRemovalHandler {
     var outcome =
         service.remove(sender.getUUID(), message.territoryId(), message.targetPlayerId(), tick);
     notify(server, sender, outcome);
+  }
+
+  private static void notifyUnknown(ServerPlayer sender) {
+    try {
+      sender.sendSystemMessage(
+          Component.translatable("message.territory.member_remove.state_unknown"));
+    } catch (RuntimeException failure) {
+      LOGGER.warn("member removal unavailable-state notification failed", failure);
+    }
   }
 
   private static void notify(
