@@ -19,7 +19,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Forge 1.20.1 territory page for migrated protocols 17-21. */
+/** Forge 1.20.1 territory page for migrated protocols 17-22. */
 public final class Screen_Territory extends Screen
     implements TerritoryDataClientApplier.TerritoryScreenTarget<Owned, Summary> {
   private static final AtomicLong NEXT_REQUEST_ID = new AtomicLong();

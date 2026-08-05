@@ -1,6 +1,7 @@
 package com.mo.economy_system.core.territory_system;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.platform.EconomyServices;
 import java.io.File;
 import java.util.*;
@@ -452,7 +453,8 @@ public class TerritoryManager {
     if (territory == null) return ResizePrepareOutcome.of(ResizePrepareResult.TERRITORY_NOT_FOUND);
     if (!expectedOwner.equals(territory.getOwnerUUID()))
       return ResizePrepareOutcome.of(ResizePrepareResult.OWNER_MISMATCH);
-    IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
+    IllegalStateException invariant =
+        territoryIdentityInvariant(territoryID, expectedOwner, territory);
     if (invariant != null)
       return new ResizePrepareOutcome(ResizePrepareResult.STATE_UNKNOWN, null, invariant);
     if (overlapsOther(territory, Bounds.calculateBounds(newPos1, newPos2)))
@@ -504,7 +506,7 @@ public class TerritoryManager {
         || !Objects.equals(plan.oldBackpoint(), current.getBackpoint()))
       return ResizeOutcome.of(ResizeResult.CHANGED);
     IllegalStateException invariant =
-        resizeInvariant(plan.territoryId(), plan.expectedOwnerId(), current);
+        territoryIdentityInvariant(plan.territoryId(), plan.expectedOwnerId(), current);
     if (invariant != null) return new ResizeOutcome(ResizeResult.STATE_UNKNOWN, invariant);
     if (overlapsOther(current, Bounds.calculateBounds(plan.newPos1(), plan.newPos2())))
       return ResizeOutcome.of(ResizeResult.OVERLAP);
@@ -559,7 +561,8 @@ public class TerritoryManager {
         || !validCoordinate(newPos2)) {
       return ResizeOutcome.of(ResizeResult.INVALID_BOUNDS);
     }
-    IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
+    IllegalStateException invariant =
+        territoryIdentityInvariant(territoryID, expectedOwner, territory);
     if (invariant != null) return new ResizeOutcome(ResizeResult.STATE_UNKNOWN, invariant);
     Bounds candidate = Bounds.calculateBounds(newPos1, newPos2);
     boolean overlaps = overlapsOther(territory, candidate);
@@ -579,7 +582,8 @@ public class TerritoryManager {
       quadTree.insert(territory);
       if (!spatiallyVerified(territory, oldPos1, oldPos2))
         throw new IllegalStateException("new QuadTree spatial verification failed");
-      IllegalStateException finalInvariant = resizeInvariant(territoryID, expectedOwner, territory);
+      IllegalStateException finalInvariant =
+          territoryIdentityInvariant(territoryID, expectedOwner, territory);
       if (finalInvariant != null) throw finalInvariant;
       savedData.setDirty();
       return ResizeOutcome.of(ResizeResult.RESIZED);
@@ -617,7 +621,7 @@ public class TerritoryManager {
       failure.addSuppressed(compensation);
     }
     IllegalStateException restoredInvariant =
-        resizeInvariant(territoryID, expectedOwner, territory);
+        territoryIdentityInvariant(territoryID, expectedOwner, territory);
     boolean oldState =
         oldPos1.equals(territory.getPos1())
             && oldPos2.equals(territory.getPos2())
@@ -687,7 +691,7 @@ public class TerritoryManager {
     territory.setBackpoint(backpoint);
   }
 
-  private static IllegalStateException resizeInvariant(
+  private static IllegalStateException territoryIdentityInvariant(
       UUID territoryID, UUID owner, Territory territory) {
     try {
       List<Territory> correct = territoriesByOwner.get(owner);
@@ -719,7 +723,7 @@ public class TerritoryManager {
         return new IllegalStateException("QuadTree spatial index mismatch");
       return null;
     } catch (RuntimeException failure) {
-      return new IllegalStateException("resize invariant inspection failed", failure);
+      return new IllegalStateException("territory identity invariant inspection failed", failure);
     }
   }
 
@@ -755,7 +759,8 @@ public class TerritoryManager {
           com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
               .OWNER_TARGET,
           null);
-    IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
+    IllegalStateException invariant =
+        territoryIdentityInvariant(territoryID, expectedOwner, territory);
     if (invariant != null)
       return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
           .RepositoryOutcome(
@@ -765,20 +770,51 @@ public class TerritoryManager {
           com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
               .INTEGRITY,
           invariant);
+    java.util.Map<UUID, String> before;
+    try {
+      before = TerritoryMemberRemovalMutation.snapshot(territory);
+    } catch (RuntimeException failure) {
+      return memberIntegrityOutcome(failure);
+    }
     var outcome =
         TerritoryMemberRemovalMutation.remove(
             territory, expectedOwner, targetPlayerID, savedData::setDirty);
-    IllegalStateException after = resizeInvariant(territoryID, expectedOwner, territory);
-    if (after != null)
-      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
-          .RepositoryOutcome(
-          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
-              .STATE_UNKNOWN,
-          null,
-          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
-              .INTEGRITY,
-          after);
+    IllegalStateException after = territoryIdentityInvariant(territoryID, expectedOwner, territory);
+    if (after != null) return memberIntegrityOutcome(after);
+    try {
+      java.util.Map<UUID, String> current = TerritoryMemberRemovalMutation.snapshot(territory);
+      boolean validState =
+          switch (outcome.result()) {
+            case REMOVED -> {
+              java.util.Map<UUID, String> expected = new java.util.LinkedHashMap<>(before);
+              expected.remove(targetPlayerID);
+              yield current.equals(expected) && !territory.hasPermission(targetPlayerID);
+            }
+            case PERSIST_FAILED -> current.equals(before);
+            case STATE_UNKNOWN -> true;
+            case TARGET_NOT_MEMBER -> !before.containsKey(targetPlayerID) && current.equals(before);
+            case OWNER_MISMATCH, OWNER_TARGET, TERRITORY_NOT_FOUND -> current.equals(before);
+          };
+      if (!validState)
+        return memberIntegrityOutcome(
+            new IllegalStateException("member repository outcome conflicts with final state"));
+    } catch (RuntimeException failure) {
+      return memberIntegrityOutcome(failure);
+    }
     return outcome;
+  }
+
+  private static com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome
+      memberIntegrityOutcome(Throwable failure) {
+    return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+        .RepositoryOutcome(
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+            .STATE_UNKNOWN,
+        null,
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
+            .INTEGRITY,
+        failure);
   }
 
   public static boolean transferTerritory(
@@ -833,7 +869,7 @@ public class TerritoryManager {
         || playerUUID == null
         || playerName == null
         || playerName.isBlank()
-        || playerName.length() > 64)
+        || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)
       return com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult
           .PERSIST_FAILED;
     if (savedData == null)

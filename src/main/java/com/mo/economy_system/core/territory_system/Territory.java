@@ -1,5 +1,6 @@
 package com.mo.economy_system.core.territory_system;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -182,7 +183,7 @@ public class Territory {
     Objects.requireNonNull(playerName, "playerName");
     String validName = playerName.trim();
     if (validName.isEmpty()
-        || validName.length() > 64
+        || validName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH
         || isOwner(playerUUID)
         || hasPermission(playerUUID)) return false;
     authorizedPlayers.add(new PlayerInfo(playerUUID, validName));
@@ -373,7 +374,7 @@ public class Territory {
         if (playerUUID.equals(ownerUUID)
             || !loadedPlayers.add(playerUUID)
             || playerName.isEmpty()
-            || playerName.length() > 64) {
+            || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
           throw new IllegalArgumentException("Invalid authorized member");
         }
         territory.authorizedPlayers.add(new PlayerInfo(playerUUID, playerName));

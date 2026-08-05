@@ -1,7 +1,8 @@
 package com.mo.economy_system.target.forge1201.network;
 
 import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
-import com.mo.economy_system.common.territory.*;
+import com.mo.economy_system.common.territory.TerritoryMemberRemovalRateLimiterRegistry;
+import com.mo.economy_system.common.territory.TerritoryMemberRemovalService;
 import com.mojang.logging.LogUtils;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;

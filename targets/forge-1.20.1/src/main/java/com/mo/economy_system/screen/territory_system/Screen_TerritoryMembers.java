@@ -27,13 +27,14 @@ public final class Screen_TerritoryMembers extends Screen {
   }
 
   protected void init() {
+    TerritoryMembersLayout.Layout layout = layout();
     search =
         new EditBox(
             font,
-            width / 2 - 100,
-            24,
-            200,
-            20,
+            layout.search().x(),
+            layout.search().y(),
+            layout.search().width(),
+            layout.search().height(),
             Component.translatable("screen.territory_members.search"));
     search.setResponder(v -> scroll = 0);
     addRenderableWidget(search);
@@ -49,11 +50,16 @@ public final class Screen_TerritoryMembers extends Screen {
                                 territory.summary().ownerId(),
                                 memberIds(),
                                 this)))
-            .bounds(12, height - 24, 100, 20)
+            .bounds(
+                layout.invite().x(),
+                layout.invite().y(),
+                layout.invite().width(),
+                layout.invite().height())
             .build());
     addRenderableWidget(
         Button.builder(Component.translatable("gui.back"), b -> onClose())
-            .bounds(width - 72, height - 24, 60, 20)
+            .bounds(
+                layout.back().x(), layout.back().y(), layout.back().width(), layout.back().height())
             .build());
   }
 
@@ -74,44 +80,45 @@ public final class Screen_TerritoryMembers extends Screen {
     renderBackground(g);
     g.drawCenteredString(font, title, width / 2, 8, 0xffffff);
     g.drawString(font, territory.summary().name(), 12, 50, 0xffffff);
-    List<Member> rows = visible();
-    int count = Math.max(0, (height - 100) / 24);
-    scroll = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - count)));
-    if (rows.isEmpty())
+    TerritoryMembersLayout.Layout layout = layout();
+    scroll = layout.scroll();
+    if (layout.rows().isEmpty())
       g.drawCenteredString(
           font,
           Component.translatable("screen.territory_members.empty"),
           width / 2,
           height / 2,
           0xaaaaaa);
-    for (int i = 0; i < Math.min(count, rows.size() - scroll); i++) {
-      Member m = rows.get(scroll + i);
-      int y = 66 + i * 24;
-      g.drawString(font, m.playerName(), 20, y + 6, 0xffffff);
-      int x = width - 82;
-      g.fill(x, y, x + 62, y + 20, 0xff8b2525);
+    for (TerritoryMembersLayout.MemberRow row : layout.rows()) {
+      g.drawString(font, row.member().playerName(), 20, row.row().y() + 6, 0xffffff);
+      var button = row.removeButton();
+      g.fill(
+          button.x(),
+          button.y(),
+          button.x() + button.width(),
+          button.y() + button.height(),
+          0xff8b2525);
       g.drawCenteredString(
-          font, Component.translatable("button.territory.member_remove"), x + 31, y + 6, 0xffffff);
+          font,
+          Component.translatable("button.territory.member_remove"),
+          button.x() + button.width() / 2,
+          button.y() + 6,
+          0xffffff);
     }
     super.render(g, mx, my, tick);
   }
 
   public boolean mouseClicked(double mx, double my, int button) {
     if (button == 0) {
-      List<Member> rows = visible();
-      int count = Math.max(0, (height - 100) / 24);
-      for (int i = 0; i < Math.min(count, rows.size() - scroll); i++) {
-        int y = 66 + i * 24;
-        int x = width - 82;
-        if (mx >= x && mx < x + 62 && my >= y && my < y + 20) {
-          Member m = rows.get(scroll + i);
+      for (TerritoryMembersLayout.MemberRow row : layout().rows()) {
+        if (row.removeButton().contains(mx, my)) {
           Minecraft.getInstance()
               .setScreen(
                   new Screen_ConfirmTerritoryMemberRemoval(
                       territory.summary().territoryId(),
                       territory.summary().name(),
-                      m.playerId(),
-                      m.playerName(),
+                      row.member().playerId(),
+                      row.member().playerName(),
                       this));
           return true;
         }
@@ -130,5 +137,17 @@ public final class Screen_TerritoryMembers extends Screen {
 
   public void onClose() {
     Minecraft.getInstance().setScreen(back);
+  }
+
+  private TerritoryMembersLayout.Layout layout() {
+    return TerritoryMembersLayout.layout(
+        width,
+        height,
+        visible().stream()
+            .map(
+                member ->
+                    new TerritoryMembersLayout.MemberValue(member.playerId(), member.playerName()))
+            .toList(),
+        scroll);
   }
 }

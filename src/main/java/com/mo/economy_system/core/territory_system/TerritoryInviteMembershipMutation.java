@@ -1,5 +1,6 @@
 package com.mo.economy_system.core.territory_system;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService.WriteResult;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,7 +36,9 @@ final class TerritoryInviteMembershipMutation {
     static WriteResult mutate(Membership membership, UUID expectedOwner, UUID playerId,
             String playerName, DirtyMarker dirtyMarker) {
         if (membership == null || expectedOwner == null || playerId == null || playerName == null
-                || playerName.isBlank() || playerName.length() > 64 || dirtyMarker == null) {
+                || playerName.isBlank()
+                || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH
+                || dirtyMarker == null) {
             return WriteResult.PERSIST_FAILED;
         }
         if (!expectedOwner.equals(membership.ownerId())) return WriteResult.OWNER_CHANGED;

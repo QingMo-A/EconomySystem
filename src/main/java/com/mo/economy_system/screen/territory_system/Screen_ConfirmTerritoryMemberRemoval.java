@@ -1,5 +1,6 @@
 package com.mo.economy_system.screen.territory_system;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import java.util.Objects;
@@ -28,7 +29,10 @@ public final class Screen_ConfirmTerritoryMemberRemoval extends Screen {
     this.targetId = Objects.requireNonNull(targetId);
     this.targetName = Objects.requireNonNull(targetName).trim();
     this.returnScreen = Objects.requireNonNull(returnScreen);
-    if (this.territoryName.isEmpty() || this.targetName.isEmpty())
+    if (this.territoryName.isEmpty()
+        || this.territoryName.length() > EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH
+        || this.targetName.isEmpty()
+        || this.targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)
       throw new IllegalArgumentException("name");
   }
 

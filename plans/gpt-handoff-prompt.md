@@ -2,7 +2,7 @@
 
 ## 当前领地迁移状态
 
-协议 17–22 已迁移。协议 22 是 32 字节 C2S wire，字段顺序固定为 territory UUID、target player UUID；sender 来自 authenticated context。实时 owner 才能移除实时成员，owner 不可移除，target 可以离线。NeoForge 采用精确成员事务与 dirty rollback，Forge 使用保留未知字段/顺序的 raw NBT copy-on-write；成功后只精确清理 target+territory invite。双端 confirmation 均为 one-shot，Forge MEMBERS 页面继续提供邀请入口。`PERSIST_FAILED` 表示已完整恢复，`STATE_UNKNOWN` 表示最终状态无法证明。最终实测 shared-source 272、Forge 341、NeoForge 392，双目标构建通过。协议 23 及以后仍为 legacy，不得在未授权任务中迁移。
+协议 17–22 已迁移。协议 22 是 32 字节 C2S wire，字段顺序固定为 territory UUID、target player UUID；sender 来自 authenticated context。实时 owner 才能移除实时成员，owner 不可移除，target 可以离线。NeoForge 采用完整成员快照、精确事务与 dirty rollback；Forge 使用保留未知字段/顺序的 raw NBT copy-on-write，并证明 raw 深拷贝与 parsed cache 恢复。成功后只 fail-closed 精确清理 target+territory invite。双端 confirmation 均为 one-shot，Forge MEMBERS 页面继续提供邀请入口并有 tiny-height 安全布局。`PERSIST_FAILED` 表示已完整恢复，`STATE_UNKNOWN` 表示最终状态无法证明。最终实测 shared-source 276、Forge 349、NeoForge 402，双目标构建通过。协议 23 及以后仍为 legacy，不得在未授权任务中迁移。
 
 协议 21 删除已完成最终空间边界加固，wire 仍严格为一个 16 字节 Territory UUID。后续必须保留闭区间 Bounds（`width/height = max - min`）、全树 identity-based QuadTree 删除，以及覆盖 identity 数、UUID 数、预期节点路径和代表点查询的事务验证。不得把 package-private 的 manager resize 方法重新公开，也不得绕过 `TerritoryResizeTransactionService`。最终实测 shared-source 266、Forge 333、NeoForge 382，完整双目标构建通过。协议 22 `REMOVE_PLAYER` 及以后仍为 legacy，只能在独立任务中迁移。
 

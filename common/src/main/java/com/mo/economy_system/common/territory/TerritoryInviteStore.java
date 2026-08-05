@@ -4,23 +4,71 @@ import java.util.*;
 
 /** Bounded, expiring, server-session invitation state machine. */
 public final class TerritoryInviteStore {
-  public enum PutResult { CREATED, ALREADY_PENDING, ID_COLLISION, FULL }
-  enum ClaimStatus { CLAIMED, NOT_FOUND, NOT_TARGET, BUSY }
-  enum CompleteResult { COMPLETED, INVALID_CLAIM }
-  enum ReleaseResult { RELEASED, EXPIRED, INVALID_CLAIM }
-  public enum SoleStatus { NONE, SOLE, MULTIPLE }
-  public record DiscardResult(int discarded,int processingSkipped){public DiscardResult{if(discarded<0||processingSkipped<0)throw new IllegalArgumentException();}}
+  public enum PutResult {
+    CREATED,
+    ALREADY_PENDING,
+    ID_COLLISION,
+    FULL
+  }
+
+  enum ClaimStatus {
+    CLAIMED,
+    NOT_FOUND,
+    NOT_TARGET,
+    BUSY
+  }
+
+  enum CompleteResult {
+    COMPLETED,
+    INVALID_CLAIM
+  }
+
+  enum ReleaseResult {
+    RELEASED,
+    EXPIRED,
+    INVALID_CLAIM
+  }
+
+  public enum SoleStatus {
+    NONE,
+    SOLE,
+    MULTIPLE
+  }
+
+  public record DiscardResult(int discarded, int processingSkipped) {
+    public DiscardResult {
+      if (discarded < 0 || processingSkipped < 0) throw new IllegalArgumentException();
+    }
+  }
+
   public record Key(UUID targetPlayerId, UUID territoryId) {
-    public Key { Objects.requireNonNull(targetPlayerId); Objects.requireNonNull(territoryId); }
+    public Key {
+      Objects.requireNonNull(targetPlayerId);
+      Objects.requireNonNull(territoryId);
+    }
   }
+
   record Claim(long token, TerritoryInvite invite) {
-    Claim { if (token <= 0) throw new IllegalArgumentException("token"); Objects.requireNonNull(invite); }
+    Claim {
+      if (token <= 0) throw new IllegalArgumentException("token");
+      Objects.requireNonNull(invite);
+    }
   }
+
   record ClaimResult(ClaimStatus status, Claim claim) {
-    ClaimResult { Objects.requireNonNull(status); if ((status == ClaimStatus.CLAIMED) != (claim != null)) throw new IllegalArgumentException("claim/status"); }
+    ClaimResult {
+      Objects.requireNonNull(status);
+      if ((status == ClaimStatus.CLAIMED) != (claim != null))
+        throw new IllegalArgumentException("claim/status");
+    }
   }
+
   public record SoleResult(SoleStatus status, UUID inviteId) {
-    public SoleResult { Objects.requireNonNull(status); if ((status == SoleStatus.SOLE) != (inviteId != null)) throw new IllegalArgumentException("id/status"); }
+    public SoleResult {
+      Objects.requireNonNull(status);
+      if ((status == SoleStatus.SOLE) != (inviteId != null))
+        throw new IllegalArgumentException("id/status");
+    }
   }
 
   private final int capacity;
@@ -30,51 +78,169 @@ public final class TerritoryInviteStore {
   private long lastTick = -1;
   private long nextToken = 1;
 
-  public TerritoryInviteStore() { this(4096); }
-  public TerritoryInviteStore(int capacity) { if (capacity < 1) throw new IllegalArgumentException("capacity"); this.capacity = capacity; }
+  public TerritoryInviteStore() {
+    this(4096);
+  }
+
+  public TerritoryInviteStore(int capacity) {
+    if (capacity < 1) throw new IllegalArgumentException("capacity");
+    this.capacity = capacity;
+  }
 
   public synchronized PutResult put(TerritoryInvite invite, long tick) {
     Objects.requireNonNull(invite, "invite");
-    if (tick < 0 || invite.createdTick() > tick || tick >= invite.expiresTick()) throw new IllegalArgumentException("invite/tick");
+    if (tick < 0 || invite.createdTick() > tick || tick >= invite.expiresTick())
+      throw new IllegalArgumentException("invite/tick");
     cleanup(tick);
     if (invites.containsKey(invite.inviteId())) return PutResult.ID_COLLISION;
     Key key = new Key(invite.targetPlayerId(), invite.territoryId());
     if (keys.containsKey(key)) return PutResult.ALREADY_PENDING;
     if (invites.size() >= capacity) return PutResult.FULL;
-    invites.put(invite.inviteId(), invite); keys.put(key, invite.inviteId());
+    invites.put(invite.inviteId(), invite);
+    keys.put(key, invite.inviteId());
     return PutResult.CREATED;
   }
 
-  public synchronized Optional<TerritoryInvite> find(UUID id, long tick) { Objects.requireNonNull(id); cleanup(tick); return Optional.ofNullable(invites.get(id)); }
-  public synchronized List<TerritoryInvite> listForTarget(UUID target, long tick) { Objects.requireNonNull(target); cleanup(tick); return invites.values().stream().filter(i -> i.targetPlayerId().equals(target)).sorted(Comparator.comparing(TerritoryInvite::createdTick)).toList(); }
-  public synchronized SoleResult resolveSole(UUID target, long tick) { List<TerritoryInvite> found=listForTarget(target,tick); return found.isEmpty()?new SoleResult(SoleStatus.NONE,null):found.size()==1?new SoleResult(SoleStatus.SOLE,found.get(0).inviteId()):new SoleResult(SoleStatus.MULTIPLE,null); }
+  public synchronized Optional<TerritoryInvite> find(UUID id, long tick) {
+    Objects.requireNonNull(id);
+    cleanup(tick);
+    return Optional.ofNullable(invites.get(id));
+  }
+
+  public synchronized List<TerritoryInvite> listForTarget(UUID target, long tick) {
+    Objects.requireNonNull(target);
+    cleanup(tick);
+    return invites.values().stream()
+        .filter(i -> i.targetPlayerId().equals(target))
+        .sorted(Comparator.comparing(TerritoryInvite::createdTick))
+        .toList();
+  }
+
+  public synchronized SoleResult resolveSole(UUID target, long tick) {
+    List<TerritoryInvite> found = listForTarget(target, tick);
+    return found.isEmpty()
+        ? new SoleResult(SoleStatus.NONE, null)
+        : found.size() == 1
+            ? new SoleResult(SoleStatus.SOLE, found.get(0).inviteId())
+            : new SoleResult(SoleStatus.MULTIPLE, null);
+  }
 
   synchronized ClaimResult claim(UUID id, UUID actor, long tick) {
-    Objects.requireNonNull(id); Objects.requireNonNull(actor); cleanup(tick);
-    TerritoryInvite invite=invites.get(id); if(invite==null||tick>=invite.expiresTick())return new ClaimResult(ClaimStatus.NOT_FOUND,null);
-    if(!invite.targetPlayerId().equals(actor))return new ClaimResult(ClaimStatus.NOT_TARGET,null);
-    if(processing.containsKey(id))return new ClaimResult(ClaimStatus.BUSY,null);
-    long token=nextToken++; if(nextToken<=0)nextToken=1; processing.put(id,token);
-    return new ClaimResult(ClaimStatus.CLAIMED,new Claim(token,invite));
+    Objects.requireNonNull(id);
+    Objects.requireNonNull(actor);
+    cleanup(tick);
+    TerritoryInvite invite = invites.get(id);
+    if (invite == null || tick >= invite.expiresTick())
+      return new ClaimResult(ClaimStatus.NOT_FOUND, null);
+    if (!invite.targetPlayerId().equals(actor))
+      return new ClaimResult(ClaimStatus.NOT_TARGET, null);
+    if (processing.containsKey(id)) return new ClaimResult(ClaimStatus.BUSY, null);
+    long token = nextToken++;
+    if (nextToken <= 0) nextToken = 1;
+    processing.put(id, token);
+    return new ClaimResult(ClaimStatus.CLAIMED, new Claim(token, invite));
   }
 
   synchronized CompleteResult complete(Claim claim) {
     if (!valid(claim)) return CompleteResult.INVALID_CLAIM;
-    TerritoryInvite invite=invites.remove(claim.invite().inviteId()); processing.remove(invite.inviteId());
-    keys.remove(new Key(invite.targetPlayerId(),invite.territoryId()),invite.inviteId());
+    TerritoryInvite invite = invites.remove(claim.invite().inviteId());
+    processing.remove(invite.inviteId());
+    keys.remove(new Key(invite.targetPlayerId(), invite.territoryId()), invite.inviteId());
     return CompleteResult.COMPLETED;
   }
+
   synchronized ReleaseResult release(Claim claim) {
     if (!valid(claim)) return ReleaseResult.INVALID_CLAIM;
     processing.remove(claim.invite().inviteId());
-    if(lastTick>=claim.invite().expiresTick()){remove(claim.invite());return ReleaseResult.EXPIRED;}
+    if (lastTick >= claim.invite().expiresTick()) {
+      remove(claim.invite());
+      return ReleaseResult.EXPIRED;
+    }
     return ReleaseResult.RELEASED;
   }
-  public synchronized int size(long tick){cleanup(tick);return invites.size();}
-  public synchronized DiscardResult discardPendingForTerritory(UUID territoryId,long tick){Objects.requireNonNull(territoryId);cleanup(tick);int discarded=0,skipped=0;for(TerritoryInvite invite:new ArrayList<>(invites.values()))if(invite.territoryId().equals(territoryId)){if(processing.containsKey(invite.inviteId()))skipped++;else{remove(invite);discarded++;}}return new DiscardResult(discarded,skipped);}
-  public synchronized DiscardResult discardPending(UUID targetPlayerId,UUID territoryId,long tick){Key key=new Key(targetPlayerId,territoryId);cleanup(tick);UUID inviteId=keys.get(key);if(inviteId==null)return new DiscardResult(0,0);TerritoryInvite invite=invites.get(inviteId);if(invite==null)throw new IllegalStateException("invite index mismatch");if(processing.containsKey(inviteId))return new DiscardResult(0,1);remove(invite);return new DiscardResult(1,0);}
-  synchronized boolean consistent(){return invites.size()==keys.size()&&processing.keySet().stream().allMatch(invites::containsKey)&&invites.values().stream().allMatch(i->Objects.equals(keys.get(new Key(i.targetPlayerId(),i.territoryId())),i.inviteId()));}
-  private boolean valid(Claim claim){return claim!=null&&Objects.equals(processing.get(claim.invite().inviteId()),claim.token())&&Objects.equals(invites.get(claim.invite().inviteId()),claim.invite());}
-  private void remove(TerritoryInvite invite){invites.remove(invite.inviteId());processing.remove(invite.inviteId());keys.remove(new Key(invite.targetPlayerId(),invite.territoryId()),invite.inviteId());}
-  private void cleanup(long tick){if(tick<0)throw new IllegalArgumentException("tick");if(lastTick>=0&&tick<lastTick){invites.clear();keys.clear();processing.clear();}lastTick=tick;for(TerritoryInvite i:new ArrayList<>(invites.values()))if(!processing.containsKey(i.inviteId())&&tick>=i.expiresTick())remove(i);}
+
+  public synchronized int size(long tick) {
+    cleanup(tick);
+    return invites.size();
+  }
+
+  public synchronized DiscardResult discardPendingForTerritory(UUID territoryId, long tick) {
+    Objects.requireNonNull(territoryId);
+    cleanup(tick);
+    int discarded = 0, skipped = 0;
+    for (TerritoryInvite invite : new ArrayList<>(invites.values()))
+      if (invite.territoryId().equals(territoryId)) {
+        if (processing.containsKey(invite.inviteId())) skipped++;
+        else {
+          remove(invite);
+          discarded++;
+        }
+      }
+    return new DiscardResult(discarded, skipped);
+  }
+
+  public synchronized DiscardResult discardPending(
+      UUID targetPlayerId, UUID territoryId, long tick) {
+    Key key = new Key(targetPlayerId, territoryId);
+    cleanup(tick);
+    if (!consistent()) throw new IllegalStateException("invite store is inconsistent");
+    UUID inviteId = keys.get(key);
+    List<TerritoryInvite> matching =
+        invites.values().stream()
+            .filter(
+                invite ->
+                    invite.targetPlayerId().equals(targetPlayerId)
+                        && invite.territoryId().equals(territoryId))
+            .toList();
+    if (inviteId == null) {
+      if (!matching.isEmpty()) throw new IllegalStateException("invite exists without exact key");
+      return new DiscardResult(0, 0);
+    }
+    TerritoryInvite invite = invites.get(inviteId);
+    if (invite == null) throw new IllegalStateException("key points to missing invite");
+    if (!invite.targetPlayerId().equals(targetPlayerId)
+        || !invite.territoryId().equals(territoryId)
+        || matching.size() != 1
+        || matching.get(0) != invite) {
+      throw new IllegalStateException("exact invite index mismatch");
+    }
+    if (processing.containsKey(inviteId)) return new DiscardResult(0, 1);
+    remove(invite);
+    if (!consistent()) throw new IllegalStateException("invite cleanup broke indexes");
+    return new DiscardResult(1, 0);
+  }
+
+  synchronized boolean consistent() {
+    return invites.size() == keys.size()
+        && processing.keySet().stream().allMatch(invites::containsKey)
+        && invites.values().stream()
+            .allMatch(
+                i ->
+                    Objects.equals(
+                        keys.get(new Key(i.targetPlayerId(), i.territoryId())), i.inviteId()));
+  }
+
+  private boolean valid(Claim claim) {
+    return claim != null
+        && Objects.equals(processing.get(claim.invite().inviteId()), claim.token())
+        && Objects.equals(invites.get(claim.invite().inviteId()), claim.invite());
+  }
+
+  private void remove(TerritoryInvite invite) {
+    invites.remove(invite.inviteId());
+    processing.remove(invite.inviteId());
+    keys.remove(new Key(invite.targetPlayerId(), invite.territoryId()), invite.inviteId());
+  }
+
+  private void cleanup(long tick) {
+    if (tick < 0) throw new IllegalArgumentException("tick");
+    if (lastTick >= 0 && tick < lastTick) {
+      invites.clear();
+      keys.clear();
+      processing.clear();
+    }
+    lastTick = tick;
+    for (TerritoryInvite i : new ArrayList<>(invites.values()))
+      if (!processing.containsKey(i.inviteId()) && tick >= i.expiresTick()) remove(i);
+  }
 }

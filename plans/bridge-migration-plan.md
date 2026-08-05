@@ -11,7 +11,8 @@
 - pending invite 只按 target+territory 精确清理；processing claim 不被破坏。
 - NeoForge 与 Forge 均提供 one-shot 确认页；Forge MEMBERS 页面保留邀请功能。
 - `PERSIST_FAILED` 只用于完整恢复，无法证明状态时使用 `STATE_UNKNOWN`。协议 23+ 仍为 legacy。
-- 最终实测：shared-source 272、Forge 341、NeoForge 392，`buildAllTargets` 通过。
+- 第二轮加固覆盖 invite 索引 fail-closed 精确清理、统一成员名称限制、NeoForge 成员快照/rollback、manager 身份与空间索引复核、Forge raw 深拷贝恢复证明、双端确认页和 Forge tiny-height 布局。
+- 最终实测：shared-source 276、Forge 349、NeoForge 402，`buildAllTargets` 通过。
 
 ### 协议 21 最终空间边界加固
 

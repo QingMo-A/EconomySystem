@@ -427,6 +427,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       return new TerritoryMemberRemovalService.RepositoryOutcome(
           TerritoryMemberRemovalService.RepositoryResult.TARGET_NOT_MEMBER, null);
     CompoundTag originalRaw = raw;
+    CompoundTag originalRawDeepCopy = raw.copy();
     List<Owned> originalCache = territories;
     CompoundTag candidateRoot = raw.copy();
     ListTag candidateTerritories = candidateRoot.getList("Territories", Tag.TAG_COMPOUND).copy();
@@ -440,6 +441,18 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     List<Owned> candidateCache;
     try {
       candidateCache = parseStrictRoot(candidateRoot).snapshots();
+      ListTag verifiedMembers =
+          candidateRoot
+              .getList("Territories", Tag.TAG_COMPOUND)
+              .getCompound(territoryIndex)
+              .getList("AuthorizedPlayers", Tag.TAG_COMPOUND);
+      if (verifiedMembers.stream()
+          .map(CompoundTag.class::cast)
+          .anyMatch(member -> targetPlayerId.equals(member.getUUID("PlayerUUID")))) {
+        throw integrity("candidate still contains target member");
+      }
+      if (verifiedMembers.size() != sourceMembers.size() - 1)
+        throw integrity("candidate member count mismatch");
     } catch (RuntimeException malformed) {
       return memberIntegrity(malformed);
     }
@@ -461,7 +474,24 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       dirtyMarker.markDirty();
       if (raw != originalRaw || territories != originalCache)
         throw new IllegalStateException("rollback identity mismatch");
-      parseStrictRoot(raw);
+      StrictRoot restored = parseStrictRoot(raw);
+      if (!raw.equals(originalRawDeepCopy)
+          || !territories.equals(originalCache)
+          || !restored.snapshots().equals(originalCache))
+        throw new IllegalStateException("rollback content mismatch");
+      ListTag restoredMembers =
+          raw.getList("Territories", Tag.TAG_COMPOUND)
+              .getCompound(territoryIndex)
+              .getList("AuthorizedPlayers", Tag.TAG_COMPOUND);
+      long restoredTargets =
+          restoredMembers.stream()
+              .map(CompoundTag.class::cast)
+              .filter(member -> targetPlayerId.equals(member.getUUID("PlayerUUID")))
+              .count();
+      if (restoredTargets != 1
+          || !memberName.equals(
+              restoredMembers.getCompound(memberIndex).getString("PlayerName").trim()))
+        throw new IllegalStateException("rollback target mismatch");
       return new TerritoryMemberRemovalService.RepositoryOutcome(
           TerritoryMemberRemovalService.RepositoryResult.PERSIST_FAILED,
           null,

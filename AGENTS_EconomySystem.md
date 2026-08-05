@@ -825,7 +825,7 @@ src/main/templates/META-INF/neoforge.mods.toml
 
 ### Bridge 协议 22 成员移除约束
 
-协议 22 已迁移为 loader-neutral `RemoveTerritoryMemberMessage`，wire 固定为 territory UUID 后接 target player UUID，共 32 字节；sender 只能来自 authenticated network context。实时 owner 才能移除实时成员，owner 本身不可移除，target 可离线。NeoForge 使用精确成员事务和 dirty rollback，Forge 对 raw NBT 做 copy-on-write 并保留未知字段与顺序。成功后只清理 target+territory 的 pending invite。双端均先确认再提交，Forge MEMBERS 页面继续提供邀请入口。`PERSIST_FAILED` 仅表示完整恢复可重试，不能证明状态时返回 `STATE_UNKNOWN`。最终实测 shared-source 272、Forge 341、NeoForge 392。协议 23 及以后仍为 legacy。
+协议 22 已迁移并完成第二轮加固：loader-neutral `RemoveTerritoryMemberMessage` 的 wire 固定为 territory UUID 后接 target player UUID，共 32 字节；sender 只能来自 authenticated network context。实时 owner 才能移除实时成员，owner 本身不可移除，target 可离线。NeoForge 使用完整成员快照、精确事务和 dirty rollback；Forge 对 raw NBT 做 copy-on-write，保留未知字段与顺序，并验证恢复后的 raw 深拷贝和 parsed cache。成功后只 fail-closed 清理 target+territory 的 pending invite。双端均先确认再提交，Forge MEMBERS 页面继续提供邀请入口。`PERSIST_FAILED` 仅表示完整恢复可重试，不能证明状态时返回 `STATE_UNKNOWN`。最终实测 shared-source 276、Forge 349、NeoForge 402。协议 23 及以后仍为 legacy。
 
 协议 21 的权威删除与 resize 共享以下不变量：`Bounds` 的 `width/height` 是最大坐标减最小坐标，实际范围是两端包含的整数闭区间；零宽、零高和单格范围均合法。`QuadTree.remove` 必须按 Java identity 完整遍历，不能依赖可变 Territory 的当前 bounds。事务成功、失败补偿和持久化失败恢复都必须同时证明 identity/UUID 数量、预期节点路径与代表点查询正确。manager 的低层 resize prepare/commit/mutation API 保持 package-private，生产入口只能通过 `TerritoryResizeTransactionService`。本阶段最终实测 shared-source 266、Forge 333、NeoForge 382，双目标构建通过。协议 22 及以后仍为 legacy。
 

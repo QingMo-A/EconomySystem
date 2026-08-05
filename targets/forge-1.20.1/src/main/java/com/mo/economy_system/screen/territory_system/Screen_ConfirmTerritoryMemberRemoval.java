@@ -1,5 +1,6 @@
 package com.mo.economy_system.screen.territory_system;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.platform.EconomyServices;
 import java.util.Objects;
@@ -20,10 +21,15 @@ public final class Screen_ConfirmTerritoryMemberRemoval extends Screen {
       UUID territoryId, String territoryName, UUID targetId, String targetName, Screen back) {
     super(Component.translatable("screen.territory_member_remove.title"));
     this.territoryId = Objects.requireNonNull(territoryId);
-    this.territoryName = Objects.requireNonNull(territoryName);
+    this.territoryName = Objects.requireNonNull(territoryName).trim();
     this.targetId = Objects.requireNonNull(targetId);
-    this.targetName = Objects.requireNonNull(targetName);
+    this.targetName = Objects.requireNonNull(targetName).trim();
     this.back = Objects.requireNonNull(back);
+    if (this.territoryName.isEmpty()
+        || this.territoryName.length() > EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH
+        || this.targetName.isEmpty()
+        || this.targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)
+      throw new IllegalArgumentException("name");
   }
 
   protected void init() {
