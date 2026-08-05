@@ -4,9 +4,9 @@
 
 ## Territory protocol 22 member removal
 
-Forge registers discriminator 22 as the common 32-byte C2S member-removal message. The repository strictly validates raw territory/member NBT, removes the exact list entry through copy-on-write, preserves unknown fields and list order, then revalidates candidate raw/cache after dirty. Silent raw/cache drift enters compensation; retry-safe failure requires restored reference identity, deep content, strict parse, target name and ordering. Owned rows expose TELEPORT/MEMBERS/DELETE; MEMBERS retains invitation and one-shot confirmation. The pure layout hides controls that cannot fit, including tiny-height and narrow-width screens. Final validation: 285 shared-source and 362 Forge tests. Protocol 23 remains legacy.
+Forge registers discriminator 22 as the common 32-byte C2S member-removal message. The repository strictly validates raw territory/member NBT, removes the exact list entry through copy-on-write, preserves unknown fields and list order, then revalidates candidate raw/cache after dirty. Silent raw/cache drift enters compensation; retry-safe failure requires restored reference identity, deep content, strict parse, target name and ordering. Owned rows expose TELEPORT/MEMBERS/DELETE; MEMBERS retains invitation and one-shot confirmation. The pure layout hides controls that cannot fit, including tiny-height and narrow-width screens. Protocol 23 remains legacy.
 
-Protocol 21 keeps its canonical 16-byte UUID wire unchanged. The shared territory geometry contract uses closed integer bounds, including zero-width/zero-height and single-cell territories. QuadTree removal is identity-based and independent of mutable current bounds. Forge continues to use its raw-NBT copy-on-write removal adapter; protocol 22 and later are not migrated by this stage. Final validation executed 266 shared-source tests and 333 Forge tests.
+Protocol 21 keeps its canonical 16-byte UUID wire unchanged. The shared territory geometry contract uses closed integer bounds, including zero-width/zero-height and single-cell territories. QuadTree removal is identity-based and independent of mutable current bounds. Forge continues to use its raw-NBT copy-on-write removal adapter; protocol 22 and later are not migrated by this stage.
 
 This target now validates the Gradle/Java 17/Forge toolchain, shared platform
 services, the Forge SavedData shells, and seven end-to-end protocol slices:
@@ -89,13 +89,12 @@ the request ID and response 18 uses explicit, bounded snapshots instead of Terri
 Forge captures its existing `territory_data` persistence into full owned snapshots and
 minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19 is the
 UUID-only teleport transaction described below. Protocol 20 uses the common 32-byte territory/target UUID invite request and a server-scoped expiring store. Forge invite acceptance performs a guarded raw-NBT `AuthorizedPlayers` mutation while retaining unknown fields. Protocols 17-21 are migrated; protocol 22 and later remain legacy.
-Protocol-20 finalization uses token claims, raw-NBT exact request lookup, canonical bilingual keys, and an owned-row invite button. Player-list revision drives fresh loading/empty state and a 15-tick debounce blocks duplicate sends. Malformed or duplicate raw territory records map to CREATE_FAILED. Forge Chinese non-invite translations were restored from the pre-protocol-20 baseline. The final regression contains 252 shared-source tests, 315 Forge tests, and 305 NeoForge tests.
+Protocol-20 finalization uses token claims, raw-NBT exact request lookup, canonical bilingual keys, and an owned-row invite button. Player-list revision drives fresh loading/empty state and a 15-tick debounce blocks duplicate sends. Malformed or duplicate raw territory records map to CREATE_FAILED. Forge Chinese non-invite translations were restored from the pre-protocol-20 baseline.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
 Protocol 16 carries only tradeId; server-authoritative expected-order removal and exact owner refund use
 compensation, and CHANGED/UNKNOWN failures invalidate clients. Removal/outcome construction invariants,
 repository-contract recovery, combined failure logging and real post-plan success semantics are hardened.
-The final hardened protocol-19 suite contains 228 shared-source tests, 280 Forge tests, and 274 NeoForge tests.
 
 Market payments and compensation for protocols `8/9` now use the common exact balance
 API. Overflow and persistence failure leave balance and logs unchanged. The protocol `9`
@@ -169,9 +168,11 @@ Protocols 23-25 now provide the complete Forge client-file-check chain: `/check`
 registrations, authenticated pending-result handling, an explicit consent screen, safe fixed-root streaming
 scanner, and a searchable/scrollable comparison result screen. Opening consent performs no disk access; allow,
 decline and ESC are one-shot. Remote JSON is displayed but never written to disk. Protocol 26+ remains legacy.
-The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.
 
 The Forge 23-25 client creates its scanner runtime per network generation and closes it on logout or shutdown.
 Stale scans cannot send into a later connection or update a closed result page. DECLINED/FAILED responses do not
 trigger a local scan. Both loaders route C2S results through one common one-shot service. Current verified counts
-are 317 shared-source, 393 Forge and 453 NeoForge tests. Protocol 26+ remains legacy.
+are recorded from the final build below. Both loaders use one shared session dispatcher. Consent remains owned
+until terminal sending finishes, root replacement fails
+closed, and the result page renders loading/busy/failed/ready plus every skipped row. Protocol 26+ remains legacy.
+Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.

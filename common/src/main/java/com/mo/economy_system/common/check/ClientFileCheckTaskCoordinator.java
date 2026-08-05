@@ -92,24 +92,42 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
       Supplier<T> task,
       Consumer<Runnable> mainThread,
       Predicate<TaskToken> acceptance,
-      Consumer<T> completion) {
+      Consumer<T> completion,
+      Consumer<RuntimeException> failure) {
     Objects.requireNonNull(task, "task");
     Objects.requireNonNull(mainThread, "mainThread");
     Objects.requireNonNull(acceptance, "acceptance");
     Objects.requireNonNull(completion, "completion");
+    Objects.requireNonNull(failure, "failure");
     if (!isCurrent(session) || executor == null) return null;
     TaskToken token = new TaskToken(session, request, controllerGeneration);
     boolean accepted =
         executor.submit(
             () -> {
-              T value = task.get();
-              if (!isAccepted(token, acceptance)) return;
-              mainThread.accept(
-                  () -> {
-                    if (isAccepted(token, acceptance)) completion.accept(value);
-                  });
+              try {
+                T value = task.get();
+                schedule(token, acceptance, mainThread, () -> completion.accept(value));
+              } catch (RuntimeException taskFailure) {
+                schedule(token, acceptance, mainThread, () -> failure.accept(taskFailure));
+              }
             });
     return accepted ? token : null;
+  }
+
+  private void schedule(
+      TaskToken token,
+      Predicate<TaskToken> acceptance,
+      Consumer<Runnable> mainThread,
+      Runnable callback) {
+    if (!isAccepted(token, acceptance)) return;
+    try {
+      mainThread.accept(
+          () -> {
+            if (isAccepted(token, acceptance)) callback.run();
+          });
+    } catch (RuntimeException schedulingFailure) {
+      token.cancel();
+    }
   }
 
   public synchronized boolean isCurrent(Session session) {

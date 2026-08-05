@@ -36,6 +36,36 @@ class ClientFileCheckResultControllerTest {
     assertEquals("Alpha.jar", controller.filtered("alpha").get(0).fileName());
   }
 
+  @Test
+  void skippedRowsAreMappedAndSearchableWithoutChangingFilename() {
+    var remote =
+        new ClientFileCheckResult(
+            1,
+            ClientFileCheckStatus.TRUNCATED,
+            ClientFileCheckType.MODS,
+            List.of(),
+            List.of(new ClientFileCheckSkippedEntry("Skipped.jar", "SYMLINK")),
+            "FILE_LIMIT");
+    var controller = new ClientFileCheckResultController(remote);
+    var row = controller.filtered("skipped").get(0);
+    assertEquals("Skipped.jar", row.fileName());
+    assertEquals("symlink", row.reasonId());
+    assertEquals(ClientFileCheckResultController.RowType.SKIPPED, row.type());
+  }
+
+  @Test
+  void retryAdvancesGenerationAndRejectsOldCallback() {
+    var remote = success("a.jar", "0".repeat(64));
+    var controller = new ClientFileCheckResultController(remote);
+    long old = controller.generation();
+    controller.failed(old);
+    long retry = controller.retry();
+    assertTrue(retry > old);
+    assertEquals(ClientFileCheckResultController.LocalState.LOADING, controller.localState());
+    assertFalse(controller.apply(old, remote));
+    assertTrue(controller.apply(retry, remote));
+  }
+
   private static ClientFileCheckResult success(String name, String hash) {
     return new ClientFileCheckResult(
         1,

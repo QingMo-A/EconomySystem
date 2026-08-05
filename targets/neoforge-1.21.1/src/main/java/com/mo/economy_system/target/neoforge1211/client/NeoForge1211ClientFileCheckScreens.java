@@ -1,5 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
+import com.mo.economy_system.common.check.ClientFileCheckClientResultDispatcher;
 import com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
 import com.mo.economy_system.common.check.ClientFileCheckResultJsonCodec;
@@ -18,17 +19,22 @@ public final class NeoForge1211ClientFileCheckScreens {
     if (minecraft.player == null || !minecraft.player.getUUID().equals(message.targetPlayerId()))
       return;
     if (minecraft.getConnection() == null) return;
-    NeoForge1211ClientFileCheckClientRuntime.currentOrBegin(
-        minecraft.getConnection(), minecraft.player.getUUID());
+    ClientFileCheckTaskCoordinator.Session session =
+        NeoForge1211ClientFileCheckClientRuntime.currentOrBegin(
+            minecraft.getConnection(), minecraft.player.getUUID());
     ClientFileCheckTaskCoordinator.RequestIdentity identity = identity(message);
     ClientFileCheckConsentCoordinator.Decision decision =
-        NeoForge1211ClientFileCheckClientRuntime.consent().receive(identity);
+        NeoForge1211ClientFileCheckClientRuntime.consent().receive(identity, session);
     if (decision == ClientFileCheckConsentCoordinator.Decision.DUPLICATE) return;
     if (decision == ClientFileCheckConsentCoordinator.Decision.BUSY) {
-      send(message, ClientFileCheckResult.failed(message.checkType(), "CONSENT_BUSY"));
+      dispatchBusy(
+          message,
+          identity,
+          session,
+          ClientFileCheckResult.failed(message.checkType(), "CONSENT_BUSY"));
       return;
     }
-    minecraft.setScreen(new Screen_ClientFileCheckConsent(message, identity));
+    minecraft.setScreen(new Screen_ClientFileCheckConsent(message, identity, session));
   }
 
   public static void openResult(ClientFileCheckResultResponseMessage message) {
@@ -52,7 +58,45 @@ public final class NeoForge1211ClientFileCheckScreens {
         m.targetPlayerId(), m.requesterPlayerId(), m.checkType());
   }
 
-  static void send(ClientFileCheckRequestMessage request, ClientFileCheckResult result) {
+  static boolean dispatchTerminal(
+      ClientFileCheckRequestMessage request,
+      ClientFileCheckTaskCoordinator.RequestIdentity identity,
+      ClientFileCheckTaskCoordinator.Session session,
+      ClientFileCheckTaskCoordinator.TaskToken token,
+      ClientFileCheckResult result) {
+    Minecraft minecraft = Minecraft.getInstance();
+    return ClientFileCheckClientResultDispatcher.terminal(
+        NeoForge1211ClientFileCheckClientRuntime.tasks(),
+        NeoForge1211ClientFileCheckClientRuntime.consent(),
+        session,
+        identity,
+        token,
+        minecraft::getConnection,
+        () -> minecraft.player == null ? null : minecraft.player.getUUID(),
+        result,
+        value -> sendRaw(request, value),
+        (stage, ignored, failure) -> {});
+  }
+
+  private static boolean dispatchBusy(
+      ClientFileCheckRequestMessage request,
+      ClientFileCheckTaskCoordinator.RequestIdentity identity,
+      ClientFileCheckTaskCoordinator.Session session,
+      ClientFileCheckResult result) {
+    Minecraft minecraft = Minecraft.getInstance();
+    return ClientFileCheckClientResultDispatcher.busy(
+        NeoForge1211ClientFileCheckClientRuntime.tasks(),
+        NeoForge1211ClientFileCheckClientRuntime.consent(),
+        session,
+        identity,
+        minecraft::getConnection,
+        () -> minecraft.player == null ? null : minecraft.player.getUUID(),
+        result,
+        value -> sendRaw(request, value),
+        (stage, ignored, failure) -> {});
+  }
+
+  private static void sendRaw(ClientFileCheckRequestMessage request, ClientFileCheckResult result) {
     EconomySystem_NetworkManager.sendToServer(
         new ClientFileCheckResultRequestMessage(
             request.targetPlayerName(),

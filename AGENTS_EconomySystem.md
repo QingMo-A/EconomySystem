@@ -853,4 +853,5 @@ logout, disconnect, menu return, and shutdown invalidate queued completions befo
 Directory enumeration is capped at 4096 entries and its deadline covers opening, enumeration, sorting, and
 hashing. Files are opened once with open-time `NOFOLLOW_LINKS`; size and SHA-256 come from that same channel.
 Concurrent consent requests are exact-identity deduplicated or answered `FAILED/CONSENT_BUSY`.
+Final protocol-23-25 verification: 345 shared-source tests, 421 Forge tests, and 481 NeoForge tests.
 

@@ -1,12 +1,13 @@
 package com.mo.economy_system.target.forge1201.network;
 
-import com.mo.economy_system.common.check.ClientFileCheckComparison;
+import com.mo.economy_system.common.check.ClientFileCheckClientResultDispatcher;
 import com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator;
 import com.mo.economy_system.common.check.ClientFileCheckLayout;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
 import com.mo.economy_system.common.check.ClientFileCheckResultController;
 import com.mo.economy_system.common.check.ClientFileCheckResultJsonCodec;
 import com.mo.economy_system.common.check.ClientFileCheckScanner;
+import com.mo.economy_system.common.check.ClientFileCheckStatus;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
@@ -30,17 +31,22 @@ public final class Forge1201ClientFileCheckScreens {
     if (minecraft.player == null || !minecraft.player.getUUID().equals(message.targetPlayerId()))
       return;
     if (minecraft.getConnection() == null) return;
-    Forge1201ClientFileCheckClientRuntime.currentOrBegin(
-        minecraft.getConnection(), minecraft.player.getUUID());
+    ClientFileCheckTaskCoordinator.Session session =
+        Forge1201ClientFileCheckClientRuntime.currentOrBegin(
+            minecraft.getConnection(), minecraft.player.getUUID());
     ClientFileCheckTaskCoordinator.RequestIdentity identity = identity(message);
     ClientFileCheckConsentCoordinator.Decision decision =
-        Forge1201ClientFileCheckClientRuntime.consent().receive(identity);
+        Forge1201ClientFileCheckClientRuntime.consent().receive(identity, session);
     if (decision == ClientFileCheckConsentCoordinator.Decision.DUPLICATE) return;
     if (decision == ClientFileCheckConsentCoordinator.Decision.BUSY) {
-      send(message, ClientFileCheckResult.failed(message.checkType(), "CONSENT_BUSY"));
+      dispatchBusy(
+          message,
+          identity,
+          session,
+          ClientFileCheckResult.failed(message.checkType(), "CONSENT_BUSY"));
       return;
     }
-    minecraft.setScreen(new Screen_ClientFileCheckConsent(message, identity));
+    minecraft.setScreen(new Screen_ClientFileCheckConsent(message, identity, session));
   }
 
   private static ClientFileCheckTaskCoordinator.RequestIdentity identity(
@@ -49,7 +55,45 @@ public final class Forge1201ClientFileCheckScreens {
         message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
   }
 
-  private static void send(ClientFileCheckRequestMessage request, ClientFileCheckResult result) {
+  private static boolean dispatchTerminal(
+      ClientFileCheckRequestMessage request,
+      ClientFileCheckTaskCoordinator.RequestIdentity identity,
+      ClientFileCheckTaskCoordinator.Session session,
+      ClientFileCheckTaskCoordinator.TaskToken token,
+      ClientFileCheckResult result) {
+    Minecraft minecraft = Minecraft.getInstance();
+    return ClientFileCheckClientResultDispatcher.terminal(
+        Forge1201ClientFileCheckClientRuntime.tasks(),
+        Forge1201ClientFileCheckClientRuntime.consent(),
+        session,
+        identity,
+        token,
+        minecraft::getConnection,
+        () -> minecraft.player == null ? null : minecraft.player.getUUID(),
+        result,
+        value -> sendRaw(request, value),
+        (stage, ignored, failure) -> {});
+  }
+
+  private static boolean dispatchBusy(
+      ClientFileCheckRequestMessage request,
+      ClientFileCheckTaskCoordinator.RequestIdentity identity,
+      ClientFileCheckTaskCoordinator.Session session,
+      ClientFileCheckResult result) {
+    Minecraft minecraft = Minecraft.getInstance();
+    return ClientFileCheckClientResultDispatcher.busy(
+        Forge1201ClientFileCheckClientRuntime.tasks(),
+        Forge1201ClientFileCheckClientRuntime.consent(),
+        session,
+        identity,
+        minecraft::getConnection,
+        () -> minecraft.player == null ? null : minecraft.player.getUUID(),
+        result,
+        value -> sendRaw(request, value),
+        (stage, ignored, failure) -> {});
+  }
+
+  private static void sendRaw(ClientFileCheckRequestMessage request, ClientFileCheckResult result) {
     Forge1201NetworkChannel.sendToServer(
         new ClientFileCheckResultRequestMessage(
             request.targetPlayerName(),
@@ -79,15 +123,20 @@ public final class Forge1201ClientFileCheckScreens {
   static final class Screen_ClientFileCheckConsent extends Screen {
     private final ClientFileCheckRequestMessage request;
     private final ClientFileCheckTaskCoordinator.RequestIdentity identity;
+    private final ClientFileCheckTaskCoordinator.Session session;
+    private final ClientFileCheckTaskCoordinator.TaskToken[] tokenHolder =
+        new ClientFileCheckTaskCoordinator.TaskToken[1];
     private final AtomicBoolean finished = new AtomicBoolean();
     private final long deadline = System.nanoTime() + 60_000_000_000L;
 
     Screen_ClientFileCheckConsent(
         ClientFileCheckRequestMessage request,
-        ClientFileCheckTaskCoordinator.RequestIdentity identity) {
+        ClientFileCheckTaskCoordinator.RequestIdentity identity,
+        ClientFileCheckTaskCoordinator.Session session) {
       super(Component.translatable("screen.check_consent.title"));
       this.request = request;
       this.identity = identity;
+      this.session = session;
     }
 
     @Override
@@ -115,13 +164,23 @@ public final class Forge1201ClientFileCheckScreens {
 
     private void allow() {
       if (System.nanoTime() > deadline) {
-        decline();
+        if (finished.compareAndSet(false, true))
+          terminal(ClientFileCheckResult.failed(request.checkType(), "REQUEST_EXPIRED"), null);
+        Minecraft.getInstance().setScreen(null);
         return;
       }
       if (!finished.compareAndSet(false, true)) return;
       Minecraft minecraft = Minecraft.getInstance();
       ClientFileCheckTaskCoordinator coordinator = Forge1201ClientFileCheckClientRuntime.tasks();
-      ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
+      if (!Forge1201ClientFileCheckClientRuntime.consent()
+          .transition(
+              identity,
+              session,
+              ClientFileCheckConsentCoordinator.State.CONSENT,
+              ClientFileCheckConsentCoordinator.State.SCANNING)) {
+        minecraft.setScreen(null);
+        return;
+      }
       ClientFileCheckTaskCoordinator.TaskToken token =
           session == null
               ? null
@@ -129,37 +188,34 @@ public final class Forge1201ClientFileCheckScreens {
                   session,
                   identity,
                   1,
-                  () -> {
-                    ClientFileCheckResult result;
-                    try {
-                      result =
-                          new ClientFileCheckScanner()
-                              .scan(minecraft.gameDirectory.toPath(), request.checkType());
-                    } catch (RuntimeException failure) {
-                      result = ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED");
-                    }
-                    return result;
-                  },
+                  () ->
+                      new ClientFileCheckScanner()
+                          .scan(minecraft.gameDirectory.toPath(), request.checkType()),
                   minecraft::execute,
                   ignored ->
                       minecraft.getConnection() == session.connectionIdentity()
                           && minecraft.player != null
                           && minecraft.player.getUUID().equals(session.localPlayerId()),
-                  this::send);
-      if (token == null) send(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"));
-      Forge1201ClientFileCheckClientRuntime.consent().finish(identity);
+                  result -> terminal(result, tokenHolder[0]),
+                  failure ->
+                      terminal(
+                          ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED"),
+                          tokenHolder[0]));
+      tokenHolder[0] = token;
+      if (token == null)
+        terminal(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"), null);
       minecraft.setScreen(null);
     }
 
     private void decline() {
       if (!finished.compareAndSet(false, true)) return;
-      send(ClientFileCheckResult.declined(request.checkType()));
-      Forge1201ClientFileCheckClientRuntime.consent().finish(identity);
+      terminal(ClientFileCheckResult.declined(request.checkType()), null);
       Minecraft.getInstance().setScreen(null);
     }
 
-    private void send(ClientFileCheckResult result) {
-      Forge1201ClientFileCheckScreens.send(request, result);
+    private void terminal(
+        ClientFileCheckResult result, ClientFileCheckTaskCoordinator.TaskToken token) {
+      Forge1201ClientFileCheckScreens.dispatchTerminal(request, identity, session, token, result);
     }
 
     @Override
@@ -213,6 +269,7 @@ public final class Forge1201ClientFileCheckScreens {
     private final ClientFileCheckResultController controller;
     private ClientFileCheckTaskCoordinator.TaskToken task;
     private EditBox search;
+    private Button retry;
     private int offset;
 
     Screen_ClientFileCheckResult(
@@ -225,7 +282,8 @@ public final class Forge1201ClientFileCheckScreens {
 
     @Override
     protected void init() {
-      ClientFileCheckLayout.Box box = ClientFileCheckLayout.search(width, height);
+      ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, true);
+      ClientFileCheckLayout.Box box = layout.search();
       if (box != null) {
         search =
             new EditBox(
@@ -239,11 +297,27 @@ public final class Forge1201ClientFileCheckScreens {
         search.setResponder(ignored -> offset = 0);
         addRenderableWidget(search);
       }
+      if (layout.retry() != null && controller.needsComparison()) {
+        retry =
+            addRenderableWidget(
+                Button.builder(
+                        Component.translatable("button.check_result.retry"), ignored -> retry())
+                    .bounds(
+                        layout.retry().x(),
+                        layout.retry().y(),
+                        layout.retry().width(),
+                        layout.retry().height())
+                    .build());
+        retry.visible = false;
+      }
       if (!controller.needsComparison() || task != null) return;
+      submit(controller.generation());
+    }
+
+    private void submit(long generation) {
       Minecraft minecraft = Minecraft.getInstance();
       ClientFileCheckTaskCoordinator coordinator = Forge1201ClientFileCheckClientRuntime.tasks();
       ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
-      long generation = controller.generation();
       ClientFileCheckTaskCoordinator.RequestIdentity identity =
           new ClientFileCheckTaskCoordinator.RequestIdentity(
               message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
@@ -264,13 +338,29 @@ public final class Forge1201ClientFileCheckScreens {
                           && minecraft.player != null
                           && minecraft.player.getUUID().equals(session.localPlayerId())
                           && controller.generation() == token.controllerGeneration(),
-                  local -> controller.apply(generation, local));
-      if (task == null) controller.busy();
+                  local -> {
+                    controller.apply(generation, local);
+                    task = null;
+                  },
+                  failure -> {
+                    controller.failed(generation);
+                    task = null;
+                  });
+      if (task == null) controller.busy(generation);
+    }
+
+    private void retry() {
+      if (Minecraft.getInstance().screen != this) return;
+      long generation = controller.retry();
+      if (generation < 0) return;
+      if (task != null) task.cancel();
+      task = null;
+      submit(generation);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-      int visible = ClientFileCheckLayout.visibleRows(height);
+      int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
       int size = filtered().size();
       offset = ClientFileCheckLayout.clampOffset(offset - (int) Math.signum(delta), size, visible);
       return true;
@@ -300,6 +390,28 @@ public final class Forge1201ClientFileCheckScreens {
           12,
           84,
           0xCCCCCC);
+      ClientFileCheckResultController.LocalState localState = controller.localState();
+      if (retry != null)
+        retry.visible =
+            localState == ClientFileCheckResultController.LocalState.BUSY
+                || localState == ClientFileCheckResultController.LocalState.FAILED;
+      if (controller.needsComparison()
+          && localState != ClientFileCheckResultController.LocalState.READY)
+        graphics.drawString(
+            font,
+            Component.translatable(
+                switch (localState) {
+                  case LOADING -> "screen.check_result.loading";
+                  case BUSY -> "screen.check_result.local_scan_busy";
+                  case FAILED -> "screen.check_result.local_scan_failed";
+                  default -> "screen.check_result.loading";
+                }),
+            12,
+            120,
+            0xAAAAAA);
+      if (result.status() == ClientFileCheckStatus.TRUNCATED)
+        graphics.drawString(
+            font, Component.translatable("screen.check_result.incomplete"), 12, 132, 0xCCAA66);
       graphics.drawString(
           font,
           Component.literal(
@@ -310,40 +422,34 @@ public final class Forge1201ClientFileCheckScreens {
       if (result.errorCode() != null)
         graphics.drawString(
             font,
-            Component.translatable("screen.check_result.error", result.errorCode()),
+            Component.translatable(
+                "screen.check_result.error",
+                Component.translatable(
+                    "screen.check_result.error_code."
+                        + result.errorCode().toLowerCase(Locale.ROOT))),
             12,
             108,
             0xCC7777);
-      if (!result.skipped().isEmpty()) {
-        var skipped = result.skipped().get(0);
-        graphics.drawString(
-            font,
-            Component.translatable(
-                "screen.check_result.skipped", skipped.fileName() + " (" + skipped.reason() + ")"),
-            12,
-            120,
-            0xAAAAAA);
-      }
-      List<ClientFileCheckComparison.Row> visibleRows = filtered();
-      int visible = ClientFileCheckLayout.visibleRows(height);
+      List<ClientFileCheckResultController.UiRow> visibleRows = filtered();
+      int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
+      int rowY = retry == null ? 148 : 172;
       for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
-        ClientFileCheckComparison.Row row = visibleRows.get(i);
-        String line =
-            row.fileName()
-                + "  "
-                + Component.translatable(
-                        "screen.check_result." + row.kind().name().toLowerCase(Locale.ROOT))
-                    .getString();
+        ClientFileCheckResultController.UiRow row = visibleRows.get(i);
+        String key =
+            row.type() == ClientFileCheckResultController.RowType.SKIPPED
+                ? "screen.check_result.skip_reason." + row.reasonId()
+                : "screen.check_result." + row.reasonId();
+        String line = row.fileName() + "  " + Component.translatable(key).getString();
         graphics.drawString(
             font,
             font.plainSubstrByWidth(line, Math.max(40, width - 24)),
             12,
-            136 + (i - offset) * 12,
+            rowY + (i - offset) * 12,
             0xAAAAAA);
       }
     }
 
-    private List<ClientFileCheckComparison.Row> filtered() {
+    private List<ClientFileCheckResultController.UiRow> filtered() {
       return controller.filtered(search == null ? "" : search.getValue());
     }
 

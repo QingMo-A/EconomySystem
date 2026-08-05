@@ -29,7 +29,8 @@ class ClientFileCheckTaskCoordinatorTest {
                 produced.countDown();
               },
               ignored -> true,
-              applied::set);
+              applied::set,
+              failure -> fail(failure));
       assertNotNull(token);
       assertTrue(produced.await(2, TimeUnit.SECONDS));
       coordinator.invalidateSession();
@@ -54,7 +55,8 @@ class ClientFileCheckTaskCoordinatorTest {
             produced.countDown();
           },
           ignored -> true,
-          ignored -> fail());
+          ignored -> fail(),
+          failure -> fail(failure));
       assertTrue(produced.await(2, TimeUnit.SECONDS));
       var current = coordinator.beginSession(new Object(), UUID.randomUUID());
       queued.remove().run();
@@ -67,7 +69,8 @@ class ClientFileCheckTaskCoordinatorTest {
               () -> 2,
               Runnable::run,
               ignored -> true,
-              ignored -> done.countDown()));
+              ignored -> done.countDown(),
+              failure -> fail(failure)));
       assertTrue(done.await(2, TimeUnit.SECONDS));
     }
   }
@@ -93,12 +96,76 @@ class ClientFileCheckTaskCoordinatorTest {
               },
               Runnable::run,
               ignored -> true,
-              completed::set);
+              completed::set,
+              failure -> fail(failure));
       assertNotNull(token);
       token.cancel();
       gate.countDown();
       Thread.sleep(50);
       assertEquals(0, completed.get());
+    }
+  }
+
+  @Test
+  void runtimeFailureUsesMainThreadCallbackOnlyWhileSessionIsCurrent() throws Exception {
+    try (var coordinator = new ClientFileCheckTaskCoordinator()) {
+      var session = coordinator.beginSession(new Object(), UUID.randomUUID());
+      var queued = new ArrayDeque<Runnable>();
+      var scheduled = new CountDownLatch(1);
+      var failures = new AtomicInteger();
+      assertNotNull(
+          coordinator.submit(
+              session,
+              identity(),
+              1,
+              () -> {
+                throw new IllegalStateException("scan");
+              },
+              runnable -> {
+                queued.add(runnable);
+                scheduled.countDown();
+              },
+              ignored -> true,
+              ignored -> fail(),
+              ignored -> failures.incrementAndGet()));
+      assertTrue(scheduled.await(2, TimeUnit.SECONDS));
+      coordinator.invalidateSession();
+      queued.remove().run();
+      assertEquals(0, failures.get());
+    }
+  }
+
+  @Test
+  void errorDoesNotInvokeRuntimeFailureAndWorkerRecovers() throws Exception {
+    try (var coordinator = new ClientFileCheckTaskCoordinator()) {
+      var session = coordinator.beginSession(new Object(), UUID.randomUUID());
+      var failure = new AtomicInteger();
+      assertNotNull(
+          coordinator.submit(
+              session,
+              identity(),
+              1,
+              () -> {
+                throw new AssertionError("fatal");
+              },
+              Runnable::run,
+              ignored -> true,
+              ignored -> fail(),
+              ignored -> failure.incrementAndGet()));
+      Thread.sleep(50);
+      var done = new CountDownLatch(1);
+      assertNotNull(
+          coordinator.submit(
+              session,
+              identity(),
+              2,
+              () -> 1,
+              Runnable::run,
+              ignored -> true,
+              ignored -> done.countDown(),
+              ignored -> fail()));
+      assertTrue(done.await(2, TimeUnit.SECONDS));
+      assertEquals(0, failure.get());
     }
   }
 

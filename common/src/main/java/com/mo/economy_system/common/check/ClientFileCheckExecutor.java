@@ -1,7 +1,6 @@
 package com.mo.economy_system.common.check;
 
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -20,24 +19,26 @@ public final class ClientFileCheckExecutor implements AutoCloseable {
           },
           new ThreadPoolExecutor.AbortPolicy());
   private boolean busy;
-  private Future<?> current;
+  private Thread current;
 
   public synchronized boolean submit(Runnable task) {
     if (busy) return false;
     busy = true;
     try {
-      current =
-          executor.submit(
-              () -> {
-                try {
-                  task.run();
-                } finally {
-                  synchronized (ClientFileCheckExecutor.this) {
-                    busy = false;
-                    current = null;
-                  }
-                }
-              });
+      executor.execute(
+          () -> {
+            synchronized (ClientFileCheckExecutor.this) {
+              current = Thread.currentThread();
+            }
+            try {
+              task.run();
+            } finally {
+              synchronized (ClientFileCheckExecutor.this) {
+                busy = false;
+                current = null;
+              }
+            }
+          });
       return true;
     } catch (RuntimeException busy) {
       this.busy = false;
@@ -47,8 +48,12 @@ public final class ClientFileCheckExecutor implements AutoCloseable {
   }
 
   public synchronized void cancelPending() {
-    if (current != null) current.cancel(true);
-    executor.getQueue().clear();
+    if (current != null) {
+      current.interrupt();
+    } else {
+      executor.getQueue().clear();
+      busy = false;
+    }
   }
 
   @Override

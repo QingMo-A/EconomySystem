@@ -4,9 +4,9 @@
 
 ## Protocol 22 territory member removal
 
-Protocol 22 is migrated as the loader-neutral `RemoveTerritoryMemberMessage`. Its C2S wire is exactly 32 bytes in `territoryId`, `targetPlayerId` order. The authenticated sender is the expected live owner; owners cannot remove themselves, targets must currently be members, and offline targets remain removable. A dedicated server-scoped limiter is independent from protocol 21. Successful removal performs fail-closed, exact pending-invite cleanup for only the target and territory. NeoForge preserves and validates raw canonical member names through injectable mutation/rollback tests; manager integration rechecks identity, SavedData, owner buckets and spatial indexes. Forge revalidates raw/cache after dirty and proves complete rollback. Strict protocol registration, language parity and narrow-layout tests are included. Final validation: 285 shared-source, 362 Forge, and 422 NeoForge tests. Protocol 23 and later remain legacy.
+Protocol 22 is migrated as the loader-neutral `RemoveTerritoryMemberMessage`. Its C2S wire is exactly 32 bytes in `territoryId`, `targetPlayerId` order. The authenticated sender is the expected live owner; owners cannot remove themselves, targets must currently be members, and offline targets remain removable. A dedicated server-scoped limiter is independent from protocol 21. Successful removal performs fail-closed, exact pending-invite cleanup for only the target and territory. NeoForge preserves and validates raw canonical member names through injectable mutation/rollback tests; manager integration rechecks identity, SavedData, owner buckets and spatial indexes. Forge revalidates raw/cache after dirty and proves complete rollback. Strict protocol registration, language parity and narrow-layout tests are included. Protocol 23 and later remain legacy.
 
-Protocol 21 remains a C2S request containing exactly one 16-byte territory UUID. Its NeoForge authoritative repository treats territory rectangles as closed integer intervals and verifies QuadTree identity count, UUID count, expected node path, and representative-point queries during deletion, resize, and compensation. Single-cell, single-column, single-row, root-edge, and split-boundary territories are supported. Low-level resize manager methods are package-private; protocol 22 and later remain legacy. Final validation executed 266 shared-source tests, 333 Forge tests, and 382 NeoForge tests.
+Protocol 21 remains a C2S request containing exactly one 16-byte territory UUID. Its NeoForge authoritative repository treats territory rectangles as closed integer intervals and verifies QuadTree identity count, UUID count, expected node path, and representative-point queries during deletion, resize, and compensation. Single-cell, single-column, single-row, root-edge, and split-boundary territories are supported. Low-level resize manager methods are package-private; protocol 22 and later remain legacy.
 
 `common` contains behavior and data semantics shared by every supported
 Minecraft target. It is a shared source directory, not an independently
@@ -71,8 +71,7 @@ maintaining independent registration order.
   Limit failures use `DATA_LIMIT_EXCEEDED` and never truncate data.
 - Both targets reject nonzero damage on items with no durability, so capture
   and restore now apply the same rule. One shared schema-v1 golden fixture is
-  restored and recaptured by both targets. The complete verified suite runs 199 shared-source,
-  280 Forge 1.20.1 and 274 NeoForge 1.21.1 tests with no failures (228 shared-source tests).
+  restored and recaptured by both targets.
 - Protocol `8` carries only `slot`, `quantity`, and `totalPrice`. The server rereads
   inventory state, stores a count-one template, counts matching stacks with `long`,
   charges `(totalPrice + 9L) / 10L`, and compensates inventory/tax changes if the
@@ -218,7 +217,7 @@ PERSIST_FAILED to a safe release while consuming STATE_UNKNOWN. Client player-li
 an immutable snapshot with a monotonic local revision, allowing Forge to distinguish a fresh response from stale
 cache. Canonical invite resources are strict-parsed for duplicate keys and placeholder parity. Protocol 21
 removal is now migrated and hardened as described below; protocol 22 and later territory operations remain
-legacy. The current suites contain 266 shared-source, 333 Forge and 349 NeoForge tests.
+legacy.
 
 Protocol 21 uses the loader-neutral `RemoveTerritoryMessage` and the shared 16-byte UUID codec. The service
 derives authority from the authenticated sender, applies a bounded 20-tick server-scoped limiter, never refunds,
@@ -250,6 +249,9 @@ Protocol 26 and later remain legacy.
 Protocols 23-25 are lifecycle-hardened. Common owns the connection-generation task coordinator, exact consent
 coordinator, status-specific result controller/layout, and the single server result-routing service. Session
 cancellation never becomes a protocol 24 result. Scans cap direct-child enumeration at 4096 and use one
-`NOFOLLOW_LINKS` channel for size plus streaming SHA-256. Verified counts: 317 shared-source, 393 Forge, 453
-NeoForge. Protocol 26+ remains legacy.
-The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.
+`NOFOLLOW_LINKS` channel for size plus streaming SHA-256. The final lifecycle pass keeps consent ownership through
+CONSENT, SCANNING and SENDING; every protocol-24 result uses one connection/session dispatcher. Secure directory
+providers use relative handle opens, while fallback providers revalidate root identity and canonical parent
+before and after entry opens. The result controller renders local loading/busy/failed/ready states and exposes
+all comparison and skipped rows. Protocol 26+ remains legacy.
+Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.

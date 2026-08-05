@@ -1,6 +1,5 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
-import com.mo.economy_system.common.check.ClientFileCheckComparison;
 import com.mo.economy_system.common.check.ClientFileCheckLayout;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
 import com.mo.economy_system.common.check.ClientFileCheckResultController;
@@ -11,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -21,6 +21,7 @@ public final class Screen_ClientFileCheckResult extends Screen {
   private final ClientFileCheckResultController controller;
   private ClientFileCheckTaskCoordinator.TaskToken task;
   private EditBox search;
+  private Button retry;
   private int offset;
 
   public Screen_ClientFileCheckResult(
@@ -33,7 +34,8 @@ public final class Screen_ClientFileCheckResult extends Screen {
 
   @Override
   protected void init() {
-    ClientFileCheckLayout.Box box = ClientFileCheckLayout.search(width, height);
+    ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, true);
+    ClientFileCheckLayout.Box box = layout.search();
     if (box != null) {
       search =
           new EditBox(
@@ -47,11 +49,27 @@ public final class Screen_ClientFileCheckResult extends Screen {
       search.setResponder(ignored -> offset = 0);
       addRenderableWidget(search);
     }
+    if (layout.retry() != null && controller.needsComparison()) {
+      retry =
+          addRenderableWidget(
+              Button.builder(
+                      Component.translatable("button.check_result.retry"), ignored -> retry())
+                  .bounds(
+                      layout.retry().x(),
+                      layout.retry().y(),
+                      layout.retry().width(),
+                      layout.retry().height())
+                  .build());
+      retry.visible = false;
+    }
     if (!controller.needsComparison() || task != null) return;
+    submit(controller.generation());
+  }
+
+  private void submit(long generation) {
     Minecraft minecraft = Minecraft.getInstance();
     ClientFileCheckTaskCoordinator coordinator = NeoForge1211ClientFileCheckClientRuntime.tasks();
     ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
-    long generation = controller.generation();
     ClientFileCheckTaskCoordinator.RequestIdentity identity =
         new ClientFileCheckTaskCoordinator.RequestIdentity(
             message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
@@ -72,13 +90,29 @@ public final class Screen_ClientFileCheckResult extends Screen {
                         && minecraft.player != null
                         && minecraft.player.getUUID().equals(session.localPlayerId())
                         && controller.generation() == token.controllerGeneration(),
-                local -> controller.apply(generation, local));
-    if (task == null) controller.busy();
+                local -> {
+                  controller.apply(generation, local);
+                  task = null;
+                },
+                failure -> {
+                  controller.failed(generation);
+                  task = null;
+                });
+    if (task == null) controller.busy(generation);
+  }
+
+  private void retry() {
+    if (Minecraft.getInstance().screen != this) return;
+    long generation = controller.retry();
+    if (generation < 0) return;
+    if (task != null) task.cancel();
+    task = null;
+    submit(generation);
   }
 
   @Override
   public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
-    int visible = ClientFileCheckLayout.visibleRows(height);
+    int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
     int size = filtered().size();
     offset = ClientFileCheckLayout.clampOffset(offset - (int) Math.signum(deltaY), size, visible);
     return true;
@@ -107,6 +141,28 @@ public final class Screen_ClientFileCheckResult extends Screen {
         12,
         84,
         0xCCCCCC);
+    ClientFileCheckResultController.LocalState localState = controller.localState();
+    if (retry != null)
+      retry.visible =
+          localState == ClientFileCheckResultController.LocalState.BUSY
+              || localState == ClientFileCheckResultController.LocalState.FAILED;
+    if (controller.needsComparison()
+        && localState != ClientFileCheckResultController.LocalState.READY)
+      graphics.drawString(
+          font,
+          Component.translatable(
+              switch (localState) {
+                case LOADING -> "screen.check_result.loading";
+                case BUSY -> "screen.check_result.local_scan_busy";
+                case FAILED -> "screen.check_result.local_scan_failed";
+                default -> "screen.check_result.loading";
+              }),
+          12,
+          120,
+          0xAAAAAA);
+    if (result.status() == com.mo.economy_system.common.check.ClientFileCheckStatus.TRUNCATED)
+      graphics.drawString(
+          font, Component.translatable("screen.check_result.incomplete"), 12, 132, 0xCCAA66);
     graphics.drawString(
         font,
         Component.literal(
@@ -117,40 +173,33 @@ public final class Screen_ClientFileCheckResult extends Screen {
     if (result.errorCode() != null)
       graphics.drawString(
           font,
-          Component.translatable("screen.check_result.error", result.errorCode()),
+          Component.translatable(
+              "screen.check_result.error",
+              Component.translatable(
+                  "screen.check_result.error_code." + result.errorCode().toLowerCase(Locale.ROOT))),
           12,
           108,
           0xCC7777);
-    if (!result.skipped().isEmpty()) {
-      var skipped = result.skipped().get(0);
-      graphics.drawString(
-          font,
-          Component.translatable(
-              "screen.check_result.skipped", skipped.fileName() + " (" + skipped.reason() + ")"),
-          12,
-          120,
-          0xAAAAAA);
-    }
-    List<ClientFileCheckComparison.Row> visibleRows = filtered();
-    int visible = ClientFileCheckLayout.visibleRows(height);
+    List<ClientFileCheckResultController.UiRow> visibleRows = filtered();
+    int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
+    int rowY = retry == null ? 148 : 172;
     for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
-      ClientFileCheckComparison.Row row = visibleRows.get(i);
-      String line =
-          row.fileName()
-              + "  "
-              + Component.translatable(
-                      "screen.check_result." + row.kind().name().toLowerCase(Locale.ROOT))
-                  .getString();
+      ClientFileCheckResultController.UiRow row = visibleRows.get(i);
+      String key =
+          row.type() == ClientFileCheckResultController.RowType.SKIPPED
+              ? "screen.check_result.skip_reason." + row.reasonId()
+              : "screen.check_result." + row.reasonId();
+      String line = row.fileName() + "  " + Component.translatable(key).getString();
       graphics.drawString(
           font,
           font.plainSubstrByWidth(line, Math.max(40, width - 24)),
           12,
-          136 + (i - offset) * 12,
+          rowY + (i - offset) * 12,
           0xAAAAAA);
     }
   }
 
-  private List<ClientFileCheckComparison.Row> filtered() {
+  private List<ClientFileCheckResultController.UiRow> filtered() {
     return controller.filtered(search == null ? "" : search.getValue());
   }
 
