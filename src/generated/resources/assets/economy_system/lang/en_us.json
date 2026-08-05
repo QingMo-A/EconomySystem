@@ -502,5 +502,15 @@
   "screen.transfer_result.size": "Bytes: %s",
   "screen.transfer_result.hash": "SHA-256: %s",
   "button.transfer.save": "Save",
-  "button.transfer.discard": "Discard"
+  "button.transfer.discard": "Discard",
+  "message.transfer.consent_busy": "Another file consent request is already active",
+  "message.transfer.request_expired": "The file request expired",
+  "message.transfer.temp_storage_limit": "Temporary transfer storage is full",
+  "message.transfer.snapshot_timeout": "The private snapshot timed out",
+  "message.transfer.snapshot_cancelled": "The private snapshot was cancelled",
+  "message.transfer.save_name_exhausted": "No safe unused file name is available",
+  "message.transfer.save_parent_unsafe": "The receive directory is unsafe",
+  "message.transfer.interrupted": "The file transfer was interrupted",
+  "message.transfer.expired": "The file transfer expired",
+  "message.transfer.invalid_server_response": "The server returned an invalid transfer response"
 }

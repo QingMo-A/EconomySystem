@@ -1,3 +1,32 @@
 package com.mo.economy_system.target.neoforge1211.client;
-import com.mo.economy_system.common.network.*;import com.mo.economy_system.common.transfer.*;import java.nio.file.*;import net.minecraft.client.Minecraft;
-final class CheckedFileTransferIncomingRuntime{private static CheckedFileTransferIncoming incoming;private static CheckedFileTransferControlResponseMessage metadata;private CheckedFileTransferIncomingRuntime(){}static synchronized void control(CheckedFileTransferControlResponseMessage m){Minecraft mc=Minecraft.getInstance();if(mc.player==null||!mc.player.getUUID().equals(m.requesterPlayerId()))return;CheckedFileTransferControl c;try{c=CheckedFileTransferControlJsonCodec.decode(m.controlPayload());if(c.status()==CheckedFileTransferControlStatus.READY){clear();metadata=m;incoming=new CheckedFileTransferIncoming(c.transferId(),c.byteLength(),c.sha256(),c.totalChunks(),mc.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"));}else if(c.status()==CheckedFileTransferControlStatus.COMPLETE&&incoming!=null){Path completed=incoming.complete(c);incoming=null;metadata=null;mc.setScreen(new Screen_CheckedFileTransferResult(m,completed,c));}}catch(Exception failure){clear();}}static synchronized void chunk(CheckedFileTransferChunkResponseMessage m){if(incoming==null||metadata==null)return;if(!metadata.targetPlayerId().equals(m.targetPlayerId())||!metadata.fileName().equals(m.fileName())){clear();return;}try{incoming.chunk(m.transferId(),m.chunkIndex(),m.totalChunks(),m.chunkData());}catch(Exception failure){clear();}}static synchronized void clear(){if(incoming!=null)try{incoming.close();}catch(Exception ignored){}incoming=null;metadata=null;}}
+
+import com.mo.economy_system.common.network.CheckedFileTransferChunkResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
+import com.mo.economy_system.common.transfer.CheckedFileTransferClientCoordinator;
+import net.minecraft.client.Minecraft;
+
+/** Thin Minecraft adapter; all incoming ownership and validation lives in common. */
+final class CheckedFileTransferIncomingRuntime {
+  private CheckedFileTransferIncomingRuntime() {}
+
+  static void control(CheckedFileTransferControlResponseMessage message) {
+    Minecraft minecraft = Minecraft.getInstance();
+    if (minecraft.player == null || minecraft.getConnection() == null) return;
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    var result = coordinator.control(message,
+        minecraft.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"),
+        System.nanoTime());
+    if (result == CheckedFileTransferClientCoordinator.IncomingResult.COMPLETE
+        && coordinator.completedArtifact() != null) {
+      minecraft.setScreen(new Screen_CheckedFileTransferResult(coordinator.completedArtifact()));
+    }
+  }
+
+  static void chunk(CheckedFileTransferChunkResponseMessage message) {
+    NeoForge1211ClientFileCheckClientRuntime.transfers().chunk(message);
+  }
+
+  static void clear() {
+    NeoForge1211ClientFileCheckClientRuntime.transfers().invalidateSession();
+  }
+}

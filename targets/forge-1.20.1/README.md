@@ -179,4 +179,6 @@ Forge uses the shared local-result controller: SUCCESS compares normally, FAILED
 
 Forge now registers canonical protocols 26-30 as the five common checked-file transfer messages. `/get` requires a delivered recent-check authorization and creates server-scoped bounded state. The target separately consents; a SecureDirectoryStream snapshot is streamed in 18,000-byte chunks, while the requester writes a private part file and explicitly saves without overwrite or discards it. Unsupported providers fail closed, and no file is automatically written into the game root or loader directories. Protocol 31+ remains legacy.
 
+The hardened Forge adapter uses the shared protocol 26-30 transaction rules: atomic manifest replacement, target/requester single-active limits, unique transfer IDs, authenticated-target-first validation, one-shot forwarding claims, and failure consumption before diagnostics. Client `COMPLETE` is invalid; only the server emits terminal `COMPLETE` after the final chunk is verified and forwarded. Temporary files are budgeted and managed through explicit save/discard lifecycle, and saving never replaces an existing file or follows a symlink parent. Protocol 31+ remains legacy.
+
 Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.

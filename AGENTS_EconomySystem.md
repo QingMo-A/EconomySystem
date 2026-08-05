@@ -859,3 +859,6 @@ Protocols 26-30 are atomically migrated as the checked-file transfer transaction
 
 Final protocol-26-30 verification: 360 shared-source tests, 436 Forge tests, and 496 NeoForge tests.
 
+Protocol 26-30 transaction hardening preserves all canonical IDs, directions, discriminators and legacy UTF/int field order. Protocol-23 manifest scopes are cleared immediately after authenticated claim and replacements are installed atomically only after successful delivery. Server transfers enforce target/requester single-active ownership, unique transfer IDs, authenticated-target-first checks and one-shot READY/chunk prepare/commit; any lookup or forwarding failure consumes exact state before diagnostics, while `Error` is rethrown after cleanup. Client protocol 27 may send READY/DECLINED/NOT_FOUND/FAILED but never COMPLETE. Temporary snapshots and incoming parts share a bounded budget, and completed artifacts remain managed until safe no-overwrite save/discard. Protocol 31+ remains legacy.
+Final hardening verification: 382 shared-source test methods, 459 Forge tests, and 519 NeoForge tests; both target test suites and `buildAllTargets` pass.
+

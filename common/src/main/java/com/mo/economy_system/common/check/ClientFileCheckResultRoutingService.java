@@ -69,17 +69,23 @@ public final class ClientFileCheckResultRoutingService {
       return Outcome.NOT_FOUND;
     if (claimed.status() == ClientFileCheckRequestStore.ClaimStatus.BUSY) return Outcome.BUSY;
     var claim = claimed.claim();
+    var scope =
+        new ClientFileCheckManifestAuthorizationStore.Scope(
+            authenticatedTarget, message.requesterPlayerId(), message.checkType());
+    if (authorizations != null) authorizations.removeScope(scope, tick);
     try {
       var pending = claim.pending();
       if (!metadataMatches(message, pending)) return Outcome.METADATA_MISMATCH;
       String json;
       ClientFileCheckResult parsed;
+      boolean validResult = true;
       try {
         parsed = ClientFileCheckResultJsonCodec.decode(message.resultJson());
         if (parsed.checkType() != pending.checkType())
           throw new IllegalArgumentException("check type");
         json = ClientFileCheckResultJsonCodec.encode(parsed);
       } catch (RuntimeException invalid) {
+        validResult = false;
         parsed = ClientFileCheckResult.failed(pending.checkType(), "INVALID_RESULT");
         json =
             ClientFileCheckResultJsonCodec.encode(
@@ -100,18 +106,22 @@ public final class ClientFileCheckResultRoutingService {
               json);
       try {
         sender.send(requester, response);
-        if (authorizations != null)
-          authorizations.replace(
+        if (authorizations != null && validResult) {
+          var replaced = authorizations.replace(
               pending.targetPlayerId(), pending.requesterPlayerId(), parsed, tick);
+          if (replaced
+              == ClientFileCheckManifestAuthorizationStore.ReplaceResult.CAPACITY_REJECTED) {
+            diagnose(diagnostics, "authorization_capacity", pending, null);
+            return Outcome.DELIVERY_FAILED;
+          }
+        }
         return Outcome.DELIVERED;
       } catch (RuntimeException failure) {
-        if (authorizations != null)
-          authorizations.removeScope(
-              new ClientFileCheckManifestAuthorizationStore.Scope(
-                  pending.targetPlayerId(), pending.requesterPlayerId(), pending.checkType()),
-              tick);
         diagnose(diagnostics, "delivery_failed", pending, failure);
         return Outcome.DELIVERY_FAILED;
+      } catch (Error failure) {
+        diagnose(diagnostics, "delivery_failed", pending, failure);
+        throw failure;
       }
     } finally {
       store.complete(claim);

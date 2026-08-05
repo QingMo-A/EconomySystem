@@ -1,8 +1,90 @@
 package com.mo.economy_system.target.neoforge1211.client;
-import com.mo.economy_system.common.network.*;import com.mo.economy_system.common.transfer.*;import com.mo.economy_system.network.EconomySystem_NetworkManager;import java.nio.file.Path;import net.minecraft.client.Minecraft;import net.minecraft.client.gui.GuiGraphics;import net.minecraft.client.gui.components.Button;import net.minecraft.client.gui.screens.Screen;import net.minecraft.network.chat.Component;
-final class Screen_CheckedFileTransferConsent extends Screen{private final CheckedFileTransferRequestMessage request;private final CheckedFileTransferManifestCache.Entry entry;private final Object connection;private boolean finished;Screen_CheckedFileTransferConsent(CheckedFileTransferRequestMessage r,CheckedFileTransferManifestCache.Entry e,Object c){super(Component.translatable("screen.transfer_consent.title"));request=r;entry=e;connection=c;}
- protected void init(){if(width<110||height<140)return;addRenderableWidget(Button.builder(Component.translatable("button.transfer.allow"),b->allow()).bounds(width/2-105,height-25,100,20).build());addRenderableWidget(Button.builder(Component.translatable("button.transfer.decline"),b->decline()).bounds(width/2+5,height-25,100,20).build());}
- public void render(GuiGraphics g,int x,int y,float p){super.render(g,x,y,p);g.drawCenteredString(font,title,width/2,18,0xffffff);if(height>=100){g.drawString(font,Component.translatable("screen.transfer_consent.requester",request.requesterPlayerName()),12,42,0xdddddd);g.drawString(font,Component.translatable("screen.transfer_consent.type",request.checkType().id()),12,54,0xdddddd);g.drawString(font,Component.translatable("screen.transfer_consent.file",request.fileName()),12,66,0xdddddd);g.drawString(font,Component.translatable("screen.transfer_consent.size",entry.size()),12,78,0xdddddd);g.drawString(font,Component.translatable("screen.transfer_consent.hash",entry.sha256()),12,90,0xdddddd);g.drawString(font,Component.translatable("screen.transfer_consent.warning"),12,102,0xccaa66);}}
- private boolean valid(){Minecraft m=Minecraft.getInstance();return m.getConnection()==connection&&m.player!=null&&m.player.getUUID().equals(request.targetPlayerId());}
- private void allow(){if(finished||!valid())return;finished=true;Minecraft m=Minecraft.getInstance();m.setScreen(null);Thread worker=new Thread(()->{Path temp=m.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp");var outcome=CheckedFileSnapshotter.create(m.gameDirectory.toPath(),request.checkType(),request.fileName(),entry.size(),entry.sha256(),temp,System.nanoTime()+30_000_000_000L);if(!outcome.success()){sendError(CheckedFileTransferControlStatus.FAILED,outcome.errorCode());return;}try(var snapshot=outcome.snapshot()){CheckedFileTransferOutgoing.send(request,snapshot,this::valid,msg->EconomySystem_NetworkManager.sendToServer((com.mo.economy_system.platform.network.EconomyNetworkMessage)msg));}catch(Exception failure){sendError(CheckedFileTransferControlStatus.FAILED,"SNAPSHOT_FAILED");}},"economy-file-transfer");worker.setDaemon(true);worker.start();}
- private void decline(){if(finished)return;finished=true;if(valid())sendError(CheckedFileTransferControlStatus.DECLINED,"DECLINED");Minecraft.getInstance().setScreen(null);}private void sendError(CheckedFileTransferControlStatus s,String code){if(valid())EconomySystem_NetworkManager.sendToServer(CheckedFileTransferOutgoing.control(request,CheckedFileTransferControl.error(s,code)));}public void onClose(){decline();}}
+
+import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
+import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
+import com.mo.economy_system.common.transfer.CheckedFileSnapshotter;
+import com.mo.economy_system.common.transfer.CheckedFileTransferManifestCache;
+import com.mo.economy_system.common.transfer.CheckedFileTransferOutgoing;
+import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.platform.network.EconomyNetworkMessage;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+final class Screen_CheckedFileTransferConsent extends Screen {
+  private final CheckedFileTransferRequestMessage request;
+  private final CheckedFileTransferManifestCache.Entry entry;
+  private final ClientFileCheckTaskCoordinator.Session session;
+  private boolean finished;
+
+  Screen_CheckedFileTransferConsent(CheckedFileTransferRequestMessage request,
+                                    CheckedFileTransferManifestCache.Entry entry,
+                                    ClientFileCheckTaskCoordinator.Session session) {
+    super(Component.translatable("screen.transfer_consent.title"));
+    this.request = request; this.entry = entry; this.session = session;
+  }
+
+  @Override protected void init() {
+    if (width < 32 || height < 55) return;
+    int buttonWidth = Math.min(100, Math.max(1, (width - 15) / 2));
+    int total = buttonWidth * 2 + 5; int left = Math.max(0, (width - total) / 2);
+    int y = Math.max(0, height - 25);
+    addRenderableWidget(Button.builder(Component.translatable("button.transfer.allow"), b -> allow())
+        .bounds(left, y, buttonWidth, Math.min(20, height - y)).build());
+    addRenderableWidget(Button.builder(Component.translatable("button.transfer.decline"), b -> decline())
+        .bounds(left + buttonWidth + 5, y, buttonWidth, Math.min(20, height - y)).build());
+  }
+
+  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    super.render(graphics, mouseX, mouseY, partialTick);
+    graphics.drawCenteredString(font, title, width / 2, Math.min(18, Math.max(0, height - 1)), 0xffffff);
+    if (width >= 64 && height >= 110) {
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.requester", request.requesterPlayerName()), 4, 42, 0xdddddd);
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.type", request.checkType().id()), 4, 54, 0xdddddd);
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.file", request.fileName()), 4, 66, 0xdddddd);
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.size", entry.size()), 4, 78, 0xdddddd);
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.hash", entry.sha256()), 4, 90, 0xdddddd);
+      graphics.drawString(font, Component.translatable("screen.transfer_consent.warning"), 4, 102, 0xccaa66);
+    }
+  }
+
+  private void allow() {
+    if (finished || !current()) return;
+    finished = true;
+    Minecraft minecraft = Minecraft.getInstance();
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    coordinator.outgoing().allow(request, session,
+        deadline -> CheckedFileSnapshotter.create(minecraft.gameDirectory.toPath(), request.checkType(),
+            request.fileName(), entry.size(), entry.sha256(),
+            minecraft.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"),
+            deadline, coordinator.tempBudget()),
+        (activeSession, token, outgoing) -> send(activeSession, outgoing));
+    minecraft.setScreen(null);
+  }
+
+  private void decline() {
+    if (finished) return;
+    finished = true;
+    NeoForge1211ClientFileCheckClientRuntime.transfers().outgoing().decline(
+        request, session, (activeSession, token, outgoing) -> send(activeSession, outgoing));
+    Minecraft.getInstance().setScreen(null);
+  }
+
+  private boolean current() {
+    var active = NeoForge1211ClientFileCheckClientRuntime.transfers().currentSession();
+    return active != null && active.generation() == session.generation()
+        && active.connectionIdentity() == session.connectionIdentity()
+        && active.localPlayerId().equals(session.localPlayerId());
+  }
+  private static void send(ClientFileCheckTaskCoordinator.Session session, Object message) {
+    var active = NeoForge1211ClientFileCheckClientRuntime.transfers().currentSession();
+    if (active == null || active.generation() != session.generation()
+        || active.connectionIdentity() != session.connectionIdentity()
+        || !active.localPlayerId().equals(session.localPlayerId())) return;
+    EconomySystem_NetworkManager.sendToServer((EconomyNetworkMessage) message);
+  }
+  @Override public void onClose() { decline(); }
+  @Override public void removed() { if (!finished) decline(); }
+}

@@ -502,5 +502,15 @@
   "screen.transfer_result.size": "字节数：%s",
   "screen.transfer_result.hash": "SHA-256：%s",
   "button.transfer.save": "保存",
-  "button.transfer.discard": "丢弃"
+  "button.transfer.discard": "丢弃",
+  "message.transfer.consent_busy": "已有另一个文件发送确认正在处理",
+  "message.transfer.request_expired": "文件请求已过期",
+  "message.transfer.temp_storage_limit": "文件传输临时空间已满",
+  "message.transfer.snapshot_timeout": "私有快照创建超时",
+  "message.transfer.snapshot_cancelled": "私有快照创建已取消",
+  "message.transfer.save_name_exhausted": "没有可用的安全文件名",
+  "message.transfer.save_parent_unsafe": "接收目录不安全",
+  "message.transfer.interrupted": "文件传输已中断",
+  "message.transfer.expired": "文件传输已过期",
+  "message.transfer.invalid_server_response": "服务器返回了无效的传输响应"
 }

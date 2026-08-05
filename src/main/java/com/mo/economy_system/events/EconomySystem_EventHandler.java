@@ -24,6 +24,7 @@ import com.mo.economy_system.core.update_checker_system.UpdateChecker;
 import com.mo.economy_system.enchant.enchants.BountyHunterEnchantment;
 import com.mo.economy_system.enchant.enchants.CarefullyEnchantment;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211ClientFileCheckRuntime;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -78,6 +79,7 @@ public class EconomySystem_EventHandler {
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
+        NeoForge1211ClientFileCheckRuntime.stop(event.getServer());
         // 服务器停止时，Forge 会自动保存 SavedData
         System.out.println("Saving economy data...");
         MarketSavedData.getInstance(event.getServer().overworld()).setDirty();
@@ -163,6 +165,13 @@ public class EconomySystem_EventHandler {
             for (String message : offlineMessages) {
                 serverPlayer.sendSystemMessage(Component.literal(message));
             }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && player.getServer() != null) {
+            NeoForge1211ClientFileCheckRuntime.discardPlayer(player.getServer(), player.getUUID());
         }
     }
 

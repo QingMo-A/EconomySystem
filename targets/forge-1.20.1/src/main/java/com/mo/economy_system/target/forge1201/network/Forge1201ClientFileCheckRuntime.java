@@ -16,4 +16,10 @@ public final class Forge1201ClientFileCheckRuntime {
     return STORES.get(server);
   }
   public static CheckedFileTransferStoreRegistry.Stores transfers(MinecraftServer server) { return TRANSFERS.get(server); }
+  public static void discardPlayer(MinecraftServer server, java.util.UUID playerId) {
+    var stores = TRANSFERS.get(server);
+    stores.transfers().discardTarget(playerId);
+    stores.transfers().discardRequester(playerId);
+  }
+  public static void stop(MinecraftServer server) { TRANSFERS.remove(server); }
 }

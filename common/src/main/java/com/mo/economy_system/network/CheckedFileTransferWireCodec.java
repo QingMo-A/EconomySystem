@@ -3,6 +3,8 @@ package com.mo.economy_system.network;
 import com.mo.economy_system.common.check.ClientFileCheckType;
 import com.mo.economy_system.common.network.*;
 import com.mo.economy_system.common.transfer.CheckedFileTransferValidation;
+import com.mo.economy_system.common.transfer.CheckedFileTransferControlJsonCodec;
+import com.mo.economy_system.common.transfer.CheckedFileTransferControlStatus;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import java.util.UUID;
@@ -15,9 +17,9 @@ public final class CheckedFileTransferWireCodec {
   public static void encodeRequest(CheckedFileTransferRequestMessage m,FriendlyByteBuf out){atomic(out,b->{base(b,m.targetPlayerName(),m.targetPlayerId(),m.requesterPlayerName(),m.requesterPlayerId(),m.checkType(),m.fileName());});}
   public static CheckedFileTransferRequestMessage decodeRequest(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);return new CheckedFileTransferRequestMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file);});}
   public static void encodeControlRequest(CheckedFileTransferControlRequestMessage m,FriendlyByteBuf out){atomic(out,b->{base(b,m.targetPlayerName(),m.targetPlayerId(),m.requesterPlayerName(),m.requesterPlayerId(),m.checkType(),m.fileName());b.writeUtf(m.controlPayload(),EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS);});}
-  public static CheckedFileTransferControlRequestMessage decodeControlRequest(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);return new CheckedFileTransferControlRequestMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file,x.readUtf(EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS));});}
+  public static CheckedFileTransferControlRequestMessage decodeControlRequest(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);String payload=x.readUtf(EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS);if(CheckedFileTransferControlJsonCodec.decode(payload).status()==CheckedFileTransferControlStatus.COMPLETE)throw new DecoderException("client COMPLETE is forbidden");return new CheckedFileTransferControlRequestMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file,payload);});}
   public static void encodeControlResponse(CheckedFileTransferControlResponseMessage m,FriendlyByteBuf out){atomic(out,b->{base(b,m.targetPlayerName(),m.targetPlayerId(),m.requesterPlayerName(),m.requesterPlayerId(),m.checkType(),m.fileName());b.writeUtf(m.controlPayload(),EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS);});}
-  public static CheckedFileTransferControlResponseMessage decodeControlResponse(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);return new CheckedFileTransferControlResponseMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file,x.readUtf(EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS));});}
+  public static CheckedFileTransferControlResponseMessage decodeControlResponse(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);String payload=x.readUtf(EconomyNetworkLimits.MAX_TRANSFER_CONTROL_JSON_CHARS);CheckedFileTransferControlJsonCodec.decode(payload);return new CheckedFileTransferControlResponseMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file,payload);});}
   public static void encodeChunkRequest(CheckedFileTransferChunkRequestMessage m,FriendlyByteBuf out){atomic(out,b->{base(b,m.targetPlayerName(),m.targetPlayerId(),m.requesterPlayerName(),m.requesterPlayerId(),m.checkType(),m.fileName());chunk(b,m.transferId(),m.chunkIndex(),m.totalChunks(),m.chunkData());});}
   public static CheckedFileTransferChunkRequestMessage decodeChunkRequest(FriendlyByteBuf b){return decode(b,x->{Base v=base(x);Chunk c=chunk(x);return new CheckedFileTransferChunkRequestMessage(v.tn,v.ti,v.rn,v.ri,v.type,v.file,c.id,c.index,c.total,c.data);});}
   public static void encodeChunkResponse(CheckedFileTransferChunkResponseMessage m,FriendlyByteBuf out){atomic(out,b->{base(b,m.targetPlayerName(),m.targetPlayerId(),m.requesterPlayerName(),m.requesterPlayerId(),m.checkType(),m.fileName());chunk(b,m.transferId(),m.chunkIndex(),m.totalChunks(),m.chunkData());});}
