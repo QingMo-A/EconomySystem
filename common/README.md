@@ -256,4 +256,6 @@ before and after entry opens. The result controller renders local loading/busy/f
 all comparison and skipped rows. Protocol 26+ remains legacy.
 Local SUCCESS produces a complete comparison, local FAILED preserves its bounded error and produces no comparison, and local TRUNCATED preserves skipped/error data as READY_INCOMPLETE with an explicit partial-comparison warning. Task tokens are created before submission and passed directly to callbacks. Scheduling and callback failures reach terminal states and invoke common-state-only abandonment cleanup. Scanning now verifies attributes of the opened SecureDirectoryStream itself against the pre-open identity; providers without a stable opened-directory identity fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
 
-Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
+Protocols 26-30 now use five loader-neutral messages while preserving their legacy UTF/int field order. Protocol-23 manifests become short-lived exact authorizations only after protocol-25 delivery. `/get` creates bounded server pending state, the target separately consents, and an opened-handle-authenticated snapshot is streamed in 18,000-byte chunks with incremental size/SHA-256 verification. Incoming data stays in a private part file until explicit no-overwrite save or discard; nothing is automatically written to an auto-load directory. Protocol 31+ remains legacy.
+
+Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.

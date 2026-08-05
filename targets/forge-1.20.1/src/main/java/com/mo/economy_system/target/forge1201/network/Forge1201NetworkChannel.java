@@ -9,6 +9,11 @@ import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
@@ -36,6 +41,7 @@ import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
+import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
@@ -97,6 +103,11 @@ public final class Forge1201NetworkChannel {
         .decoder(ClientFileCheckWireCodec::decodeResultResponse)
         .consumerMainThread(Forge1201ClientFileCheckResultResponseHandler::handle)
         .add();
+    CHANNEL.messageBuilder(CheckedFileTransferRequestMessage.class,EconomyMessages.GET.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeRequest).decoder(CheckedFileTransferWireCodec::decodeRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::request).add();
+    CHANNEL.messageBuilder(CheckedFileTransferControlRequestMessage.class,EconomyMessages.GET_RESULT_REQUEST.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(CheckedFileTransferWireCodec::encodeControlRequest).decoder(CheckedFileTransferWireCodec::decodeControlRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlRequest).add();
+    CHANNEL.messageBuilder(CheckedFileTransferControlResponseMessage.class,EconomyMessages.GET_RESULT_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeControlResponse).decoder(CheckedFileTransferWireCodec::decodeControlResponse).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlResponse).add();
+    CHANNEL.messageBuilder(CheckedFileTransferChunkRequestMessage.class,EconomyMessages.CHUNK.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(CheckedFileTransferWireCodec::encodeChunkRequest).decoder(CheckedFileTransferWireCodec::decodeChunkRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkRequest).add();
+    CHANNEL.messageBuilder(CheckedFileTransferChunkResponseMessage.class,EconomyMessages.CHUNK_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeChunkResponse).decoder(CheckedFileTransferWireCodec::decodeChunkResponse).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkResponse).add();
 
     CHANNEL
         .messageBuilder(
@@ -348,6 +359,8 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.sendToServer(message);
   }
+  static void sendToServer(CheckedFileTransferControlRequestMessage message){requireRegistered();CHANNEL.sendToServer(message);}
+  static void sendToServer(CheckedFileTransferChunkRequestMessage message){requireRegistered();CHANNEL.sendToServer(message);}
 
   static void sendToServer(BalanceLogRequestMessage message) {
     requireRegistered();
@@ -453,6 +466,9 @@ public final class Forge1201NetworkChannel {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
   }
+  static void sendToPlayer(ServerPlayer player,CheckedFileTransferRequestMessage message){requireRegistered();CHANNEL.send(PacketDistributor.PLAYER.with(()->player),message);}
+  static void sendToPlayer(ServerPlayer player,CheckedFileTransferControlResponseMessage message){requireRegistered();CHANNEL.send(PacketDistributor.PLAYER.with(()->player),message);}
+  static void sendToPlayer(ServerPlayer player,CheckedFileTransferChunkResponseMessage message){requireRegistered();CHANNEL.send(PacketDistributor.PLAYER.with(()->player),message);}
 
   static void sendToPlayer(ServerPlayer player, BalanceLogResponseMessage message) {
     requireRegistered();

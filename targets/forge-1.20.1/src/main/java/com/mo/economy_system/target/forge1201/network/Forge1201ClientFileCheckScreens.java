@@ -102,6 +102,7 @@ public final class Forge1201ClientFileCheckScreens {
             request.requesterPlayerId(),
             request.checkType(),
             ClientFileCheckResultJsonCodec.encode(result)));
+    com.mo.economy_system.target.forge1201.client.Forge1201ClientFileCheckClientRuntime.manifest().replace(request.requesterPlayerId(), result, System.nanoTime());
   }
 
   static void openResult(ClientFileCheckResultResponseMessage message) {

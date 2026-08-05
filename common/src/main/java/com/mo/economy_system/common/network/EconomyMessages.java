@@ -78,6 +78,16 @@ public final class EconomyMessages {
       CHECK_RESULT_RESPONSE =
           new EconomyMessageType<>(
               EconomyProtocol.CHECK_RESULT_RESPONSE, ClientFileCheckResultResponseMessage.class);
+  public static final EconomyMessageType<CheckedFileTransferRequestMessage> GET =
+      new EconomyMessageType<>(EconomyProtocol.GET, CheckedFileTransferRequestMessage.class);
+  public static final EconomyMessageType<CheckedFileTransferControlRequestMessage> GET_RESULT_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.GET_RESULT_REQUEST, CheckedFileTransferControlRequestMessage.class);
+  public static final EconomyMessageType<CheckedFileTransferControlResponseMessage> GET_RESULT_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.GET_RESULT_RESPONSE, CheckedFileTransferControlResponseMessage.class);
+  public static final EconomyMessageType<CheckedFileTransferChunkRequestMessage> CHUNK =
+      new EconomyMessageType<>(EconomyProtocol.CHUNK, CheckedFileTransferChunkRequestMessage.class);
+  public static final EconomyMessageType<CheckedFileTransferChunkResponseMessage> CHUNK_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.CHUNK_RESPONSE, CheckedFileTransferChunkResponseMessage.class);
 
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =

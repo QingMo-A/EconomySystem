@@ -8,6 +8,11 @@ import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
@@ -33,6 +38,7 @@ import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
+import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
@@ -110,6 +116,26 @@ public final class NeoForge1211MessageCodecs {
             return ClientFileCheckWireCodec.decodeResultResponse(buffer);
           }
         });
+    register(codecs, EconomyMessages.GET, new NeoForge1211MessageCodec<>() {
+      public void encode(CheckedFileTransferRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeRequest(m,b); }
+      public CheckedFileTransferRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeRequest(b); }
+    });
+    register(codecs, EconomyMessages.GET_RESULT_REQUEST, new NeoForge1211MessageCodec<>() {
+      public void encode(CheckedFileTransferControlRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlRequest(m,b); }
+      public CheckedFileTransferControlRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlRequest(b); }
+    });
+    register(codecs, EconomyMessages.GET_RESULT_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(CheckedFileTransferControlResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlResponse(m,b); }
+      public CheckedFileTransferControlResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlResponse(b); }
+    });
+    register(codecs, EconomyMessages.CHUNK, new NeoForge1211MessageCodec<>() {
+      public void encode(CheckedFileTransferChunkRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkRequest(m,b); }
+      public CheckedFileTransferChunkRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkRequest(b); }
+    });
+    register(codecs, EconomyMessages.CHUNK_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(CheckedFileTransferChunkResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkResponse(m,b); }
+      public CheckedFileTransferChunkResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkResponse(b); }
+    });
     register(
         codecs,
         EconomyMessages.INVITE_PLAYER,

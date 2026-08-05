@@ -105,5 +105,6 @@ public final class NeoForge1211ClientFileCheckScreens {
             request.requesterPlayerId(),
             request.checkType(),
             ClientFileCheckResultJsonCodec.encode(result)));
+    NeoForge1211ClientFileCheckClientRuntime.manifest().replace(request.requesterPlayerId(), result, System.nanoTime());
   }
 }

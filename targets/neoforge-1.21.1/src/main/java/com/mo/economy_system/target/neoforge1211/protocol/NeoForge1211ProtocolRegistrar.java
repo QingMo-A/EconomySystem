@@ -1,7 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
 import com.mo.economy_system.common.network.EconomyMessages;
-import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
@@ -100,36 +99,11 @@ public final class NeoForge1211ProtocolRegistrar {
         registrar,
         EconomyMessages.CHECK_RESULT_RESPONSE,
         NeoForge1211ClientFileCheckResultResponseHandler::handle);
-    bind(
-        registrar,
-        EconomyProtocol.GET,
-        Packet_Get.TYPE,
-        Packet_Get.STREAM_CODEC,
-        Packet_Get::handle);
-    bind(
-        registrar,
-        EconomyProtocol.GET_RESULT_REQUEST,
-        Packet_GetResultRequest.TYPE,
-        Packet_GetResultRequest.STREAM_CODEC,
-        Packet_GetResultRequest::handle);
-    bind(
-        registrar,
-        EconomyProtocol.GET_RESULT_RESPONSE,
-        Packet_GetResultResponse.TYPE,
-        Packet_GetResultResponse.STREAM_CODEC,
-        Packet_GetResultResponse::handle);
-    bind(
-        registrar,
-        EconomyProtocol.CHUNK,
-        Packet_Chunk.TYPE,
-        Packet_Chunk.STREAM_CODEC,
-        Packet_Chunk::handle);
-    bind(
-        registrar,
-        EconomyProtocol.CHUNK_RESPONSE,
-        Packet_ChunkResponse.TYPE,
-        Packet_ChunkResponse.STREAM_CODEC,
-        Packet_ChunkResponse::handle);
+    bindCommon(registrar, EconomyMessages.GET, NeoForge1211CheckedFileTransferHandlers::request);
+    bindCommon(registrar, EconomyMessages.GET_RESULT_REQUEST, NeoForge1211CheckedFileTransferHandlers::controlRequest);
+    bindCommon(registrar, EconomyMessages.GET_RESULT_RESPONSE, NeoForge1211CheckedFileTransferHandlers::controlResponse);
+    bindCommon(registrar, EconomyMessages.CHUNK, NeoForge1211CheckedFileTransferHandlers::chunkRequest);
+    bindCommon(registrar, EconomyMessages.CHUNK_RESPONSE, NeoForge1211CheckedFileTransferHandlers::chunkResponse);
     bind(
         registrar,
         EconomyProtocol.DELIVERY_BOX_DATA_REQUEST,

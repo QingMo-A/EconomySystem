@@ -90,4 +90,6 @@ dispatcher, SecureDirectoryStream relative opens or fallback root identity reval
 status-specific local result UI, and complete skipped-row rendering. Protocol 26+ remains legacy.
 The protocol 23-25 safety closure is complete: local SUCCESS compares fully, FAILED has no comparison, and TRUNCATED is READY_INCOMPLETE with preserved skipped/error data. Pre-created task tokens are passed directly to callbacks; scheduling/callback failures terminate and run common-state abandonment cleanup. Scanner roots are authenticated from the opened SecureDirectoryStream handle, and unsupported providers fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ is still legacy.
 
-Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
+Protocols 26-30 are migrated as one checked-file transfer transaction. Preserve the legacy field order and canonical IDs. `/get` requires a recent delivered protocol-23 authorization; target full-file consent is independent. Files use an opened-handle-authenticated private snapshot, 18,000-byte ordered chunks, streaming SHA-256, requester part files, and explicit no-overwrite save/discard. Unsupported providers fail closed. Protocol 31+ is still legacy.
+
+Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.

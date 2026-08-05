@@ -289,11 +289,11 @@ src/main/java/com/mo/economy_system/network/EconomySystem_NetworkManager.java
 - `ClientFileCheckRequestMessage`
 - `ClientFileCheckResultRequestMessage`
 - `ClientFileCheckResultResponseMessage`
-- `Packet_Get`
-- `Packet_GetResultRequest`
-- `Packet_GetResultResponse`
-- `Packet_Chunk`
-- `Packet_ChunkResponse`
+- `CheckedFileTransferRequestMessage`
+- `CheckedFileTransferControlRequestMessage`
+- `CheckedFileTransferControlResponseMessage`
+- `CheckedFileTransferChunkRequestMessage`
+- `CheckedFileTransferChunkResponseMessage`
 - `Packet_DeliveryBoxDataRequest`
 - `Packet_DeliveryBoxDataResponse`
 - `Packet_DeliveryBoxClaimItem`
@@ -855,5 +855,7 @@ hashing. Files are opened once with open-time `NOFOLLOW_LINKS`; size and SHA-256
 Concurrent consent requests are exact-identity deduplicated or answered `FAILED/CONSENT_BUSY`.
 Protocol 23-25 safety closure distinguishes local SUCCESS, FAILED, and TRUNCATED; TRUNCATED is exposed as READY_INCOMPLETE and FAILED never produces comparison rows. Task callbacks receive their real pre-created token, scheduling/callback failures terminate the handle and run common-only abandonment cleanup. Directory scans bind the precheck identity to attributes read from the opened SecureDirectoryStream itself; providers without a stable opened-handle identity fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
 
-Final protocol-23-25 verification: 352 shared-source tests, 428 Forge tests, and 488 NeoForge tests.
+Protocols 26-30 are atomically migrated as the checked-file transfer transaction. Recent protocol-23 entries authorize exact target/requester/type/file/size/hash tuples only after protocol-25 delivery. `/get` requires permission level 2, an online player source and that authorization. The target grants separate full-file consent; a SecureDirectoryStream-bound private snapshot is streamed as fixed 18,000-byte Base64 chunks through server-authoritative pending state. Requesters receive into private part files and explicitly save without overwrite under `economy_system/received-check-files/<target-uuid>` or discard. Unsupported providers fail closed. Protocol 31+ remains legacy.
+
+Final protocol-26-30 verification: 360 shared-source tests, 436 Forge tests, and 496 NeoForge tests.
 

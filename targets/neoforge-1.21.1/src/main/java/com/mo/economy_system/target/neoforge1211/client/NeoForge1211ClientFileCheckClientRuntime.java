@@ -3,17 +3,21 @@ package com.mo.economy_system.target.neoforge1211.client;
 import com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import java.util.UUID;
+import com.mo.economy_system.common.transfer.CheckedFileTransferManifestCache;
 
 public final class NeoForge1211ClientFileCheckClientRuntime {
   private static ClientFileCheckTaskCoordinator tasks = new ClientFileCheckTaskCoordinator();
   private static final ClientFileCheckConsentCoordinator CONSENT =
       new ClientFileCheckConsentCoordinator();
+  private static final CheckedFileTransferManifestCache MANIFEST = new CheckedFileTransferManifestCache();
 
   private NeoForge1211ClientFileCheckClientRuntime() {}
 
   public static synchronized ClientFileCheckTaskCoordinator.Session begin(
       Object connection, UUID playerId) {
     CONSENT.invalidate();
+    MANIFEST.clear();
+    CheckedFileTransferIncomingRuntime.clear();
     return tasks.beginSession(connection, playerId);
   }
 
@@ -28,11 +32,15 @@ public final class NeoForge1211ClientFileCheckClientRuntime {
 
   public static synchronized void invalidate() {
     CONSENT.invalidate();
+    MANIFEST.clear();
+    CheckedFileTransferIncomingRuntime.clear();
     tasks.invalidateSession();
   }
 
   public static synchronized void stop() {
     CONSENT.invalidate();
+    MANIFEST.clear();
+    CheckedFileTransferIncomingRuntime.clear();
     tasks.close();
     tasks = new ClientFileCheckTaskCoordinator();
   }
@@ -44,4 +52,5 @@ public final class NeoForge1211ClientFileCheckClientRuntime {
   public static ClientFileCheckConsentCoordinator consent() {
     return CONSENT;
   }
+  public static CheckedFileTransferManifestCache manifest(){return MANIFEST;}
 }

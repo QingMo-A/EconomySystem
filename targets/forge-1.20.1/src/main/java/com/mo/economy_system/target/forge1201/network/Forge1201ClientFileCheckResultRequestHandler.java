@@ -27,6 +27,7 @@ final class Forge1201ClientFileCheckResultRequestHandler {
             authenticatedTarget.getUUID(),
             tick,
             Forge1201ClientFileCheckRuntime.store(server),
+            Forge1201ClientFileCheckRuntime.transfers(server).authorizations(),
             requesterId -> server.getPlayerList().getPlayer(requesterId),
             (requester, response) ->
                 Forge1201NetworkChannel.sendToPlayer((ServerPlayer) requester, response),

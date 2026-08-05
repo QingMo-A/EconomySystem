@@ -177,4 +177,6 @@ until terminal sending finishes, root replacement fails
 closed, and the result page renders loading/busy/failed/ready plus every skipped row. Protocol 26+ remains legacy.
 Forge uses the shared local-result controller: SUCCESS compares normally, FAILED retains its error without fake ONLY_REMOTE rows, and TRUNCATED is READY_INCOMPLETE with skipped/error details and a warning. Scanner task callbacks carry their pre-created token; dispatch/callback failures terminate and clear common state. Files are scanned only through a SecureDirectoryStream whose opened-handle attributes match the precheck identity. Unsupported providers fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
 
-Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
+Forge now registers canonical protocols 26-30 as the five common checked-file transfer messages. `/get` requires a delivered recent-check authorization and creates server-scoped bounded state. The target separately consents; a SecureDirectoryStream snapshot is streamed in 18,000-byte chunks, while the requester writes a private part file and explicitly saves without overwrite or discards it. Unsupported providers fail closed, and no file is automatically written into the game root or loader directories. Protocol 31+ remains legacy.
+
+Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.

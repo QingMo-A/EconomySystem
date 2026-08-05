@@ -5,7 +5,10 @@ import com.mo.economy_system.common.check.ClientFileCheckType;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.check_system.Packet_Get;
+import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
+import com.mo.economy_system.common.transfer.ClientFileCheckManifestAuthorizationStore;
+import com.mo.economy_system.common.transfer.CheckedFileTransferStore;
+import com.mo.economy_system.common.transfer.CheckedFileTransferValidation;
 import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211ClientFileCheckRuntime;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -45,7 +48,7 @@ public final class Command_Check {
                       getPlayerFile(
                           context.getSource(),
                           EntityArgument.getPlayer(context, "playerName"),
-                          type.id(),
+                          type,
                           StringArgumentType.getString(context, "fileName"))));
     }
     dispatcher.register(get.then(getTarget.then(file)));
@@ -101,20 +104,13 @@ public final class Command_Check {
   }
 
   private static int getPlayerFile(
-      CommandSourceStack source, ServerPlayer player, String type, String fileName) {
+      CommandSourceStack source, ServerPlayer player, ClientFileCheckType type, String rawFileName) {
     if (!(source.getEntity() instanceof ServerPlayer requester)) {
       source.sendFailure(Component.translatable("message.check.player_only"));
       return 0;
     }
-    EconomySystem_NetworkManager.sendToClient(
-        player,
-        new Packet_Get(
-            player.getGameProfile().getName(),
-            player.getUUID().toString(),
-            requester.getGameProfile().getName(),
-            requester.getUUID().toString(),
-            type,
-            fileName));
+    String fileName;try{fileName=CheckedFileTransferValidation.fileName(rawFileName);}catch(RuntimeException invalid){source.sendFailure(Component.translatable("message.transfer.invalid_file"));return 0;}
+    long tick=source.getServer().overworld().getGameTime();var stores=NeoForge1211ClientFileCheckRuntime.transfers(source.getServer());var authorization=stores.authorizations().find(new ClientFileCheckManifestAuthorizationStore.Key(player.getUUID(),requester.getUUID(),type,fileName),tick);if(authorization.isEmpty()){source.sendFailure(Component.translatable("message.transfer.run_check_first"));return 0;}var a=authorization.get();var key=new CheckedFileTransferStore.Key(player.getUUID(),requester.getUUID(),type,fileName);var pending=new CheckedFileTransferStore.Pending(key,player.getGameProfile().getName(),requester.getGameProfile().getName(),a.expectedByteLength(),a.expectedSha256(),tick,tick+EconomyNetworkLimits.FILE_TRANSFER_TTL_TICKS);if(stores.transfers().create(pending,tick)!=CheckedFileTransferStore.Result.CREATED){source.sendFailure(Component.translatable("message.transfer.busy"));return 0;}try{EconomySystem_NetworkManager.sendToClient(player,new CheckedFileTransferRequestMessage(pending.targetName(),player.getUUID(),pending.requesterName(),requester.getUUID(),type,fileName));}catch(RuntimeException failure){stores.transfers().rollback(pending,tick);source.sendFailure(Component.translatable("message.transfer.send_failed"));return 0;}source.sendSuccess(()->Component.translatable("message.transfer.sent",player.getGameProfile().getName(),fileName),false);
     return 1;
   }
 }

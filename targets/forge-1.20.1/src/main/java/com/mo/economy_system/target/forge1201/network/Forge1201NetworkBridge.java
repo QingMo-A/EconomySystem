@@ -7,6 +7,11 @@ import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferChunkResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
@@ -39,6 +44,8 @@ import net.minecraft.server.level.ServerPlayer;
 public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
   @Override
   public void sendToServer(EconomyNetworkMessage message) {
+    if(message instanceof CheckedFileTransferControlRequestMessage value){Forge1201NetworkChannel.sendToServer(value);return;}
+    if(message instanceof CheckedFileTransferChunkRequestMessage value){Forge1201NetworkChannel.sendToServer(value);return;}
     if (message.getClass() == ClientFileCheckResultRequestMessage.class) {
       Forge1201NetworkChannel.sendToServer((ClientFileCheckResultRequestMessage) message);
       return;
@@ -124,6 +131,9 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
 
   @Override
   public void sendToPlayer(ServerPlayer player, EconomyNetworkMessage message) {
+    if(message instanceof CheckedFileTransferRequestMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}
+    if(message instanceof CheckedFileTransferControlResponseMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}
+    if(message instanceof CheckedFileTransferChunkResponseMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}
     if (message.getClass() == ClientFileCheckRequestMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (ClientFileCheckRequestMessage) message);
       return;

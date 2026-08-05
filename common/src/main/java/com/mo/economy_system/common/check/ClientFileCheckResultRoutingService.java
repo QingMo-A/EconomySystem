@@ -4,6 +4,7 @@ import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
 import java.util.Objects;
 import java.util.UUID;
+import com.mo.economy_system.common.transfer.ClientFileCheckManifestAuthorizationStore;
 
 public final class ClientFileCheckResultRoutingService {
   public enum Outcome {
@@ -41,6 +42,18 @@ public final class ClientFileCheckResultRoutingService {
       RequesterLookup lookup,
       ResponseSender sender,
       Diagnostics diagnostics) {
+    return route(message, authenticatedTarget, tick, store, null, lookup, sender, diagnostics);
+  }
+
+  public static Outcome route(
+      ClientFileCheckResultRequestMessage message,
+      UUID authenticatedTarget,
+      long tick,
+      ClientFileCheckRequestStore store,
+      ClientFileCheckManifestAuthorizationStore authorizations,
+      RequesterLookup lookup,
+      ResponseSender sender,
+      Diagnostics diagnostics) {
     Objects.requireNonNull(message);
     Objects.requireNonNull(authenticatedTarget);
     Objects.requireNonNull(store);
@@ -60,15 +73,17 @@ public final class ClientFileCheckResultRoutingService {
       var pending = claim.pending();
       if (!metadataMatches(message, pending)) return Outcome.METADATA_MISMATCH;
       String json;
+      ClientFileCheckResult parsed;
       try {
-        ClientFileCheckResult parsed = ClientFileCheckResultJsonCodec.decode(message.resultJson());
+        parsed = ClientFileCheckResultJsonCodec.decode(message.resultJson());
         if (parsed.checkType() != pending.checkType())
           throw new IllegalArgumentException("check type");
         json = ClientFileCheckResultJsonCodec.encode(parsed);
       } catch (RuntimeException invalid) {
+        parsed = ClientFileCheckResult.failed(pending.checkType(), "INVALID_RESULT");
         json =
             ClientFileCheckResultJsonCodec.encode(
-                ClientFileCheckResult.failed(pending.checkType(), "INVALID_RESULT"));
+                parsed);
       }
       Object requester = lookup.find(pending.requesterPlayerId());
       if (requester == null) {
@@ -85,8 +100,16 @@ public final class ClientFileCheckResultRoutingService {
               json);
       try {
         sender.send(requester, response);
+        if (authorizations != null)
+          authorizations.replace(
+              pending.targetPlayerId(), pending.requesterPlayerId(), parsed, tick);
         return Outcome.DELIVERED;
       } catch (RuntimeException failure) {
+        if (authorizations != null)
+          authorizations.removeScope(
+              new ClientFileCheckManifestAuthorizationStore.Scope(
+                  pending.targetPlayerId(), pending.requesterPlayerId(), pending.checkType()),
+              tick);
         diagnose(diagnostics, "delivery_failed", pending, failure);
         return Outcome.DELIVERY_FAILED;
       }

@@ -254,5 +254,6 @@ git diff --check
   through one session-aware dispatcher, uses secure relative directory opens or fail-closed root revalidation,
   and renders every local state plus all skipped rows. Protocol 26+ is legacy.
   Final safety closure distinguishes local SUCCESS/FAILED/TRUNCATED, exposes READY_INCOMPLETE, terminates scheduling/callback failures with common-only abandonment cleanup, and passes the real pre-created token to every callback. Directory identity is verified from the opened SecureDirectoryStream handle; providers without that guarantee fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
-  Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
+  Protocols 26-30 are atomically migrated: delivered protocol-23 manifests authorize `/get`; the target separately consents; a bounded SecureDirectoryStream snapshot flows through strict READY/chunk/COMPLETE server state; requester data remains private until explicit no-overwrite save or discard. Protocol 31+ remains legacy.
+  Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.
   after a separate task.

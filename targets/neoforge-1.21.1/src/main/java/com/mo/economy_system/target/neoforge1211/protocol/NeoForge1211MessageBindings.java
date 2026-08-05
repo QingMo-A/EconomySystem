@@ -1,7 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
 import com.mo.economy_system.common.network.EconomyMessages;
-import com.mo.economy_system.network.packets.check_system.*;
 import com.mo.economy_system.network.packets.economy_system.*;
 import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
@@ -48,11 +47,11 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.CHECK);
     registry.register(EconomyMessages.CHECK_RESULT_REQUEST);
     registry.register(EconomyMessages.CHECK_RESULT_RESPONSE);
-    bind(registry, EconomyProtocol.GET, Packet_Get.class);
-    bind(registry, EconomyProtocol.GET_RESULT_REQUEST, Packet_GetResultRequest.class);
-    bind(registry, EconomyProtocol.GET_RESULT_RESPONSE, Packet_GetResultResponse.class);
-    bind(registry, EconomyProtocol.CHUNK, Packet_Chunk.class);
-    bind(registry, EconomyProtocol.CHUNK_RESPONSE, Packet_ChunkResponse.class);
+    registry.register(EconomyMessages.GET);
+    registry.register(EconomyMessages.GET_RESULT_REQUEST);
+    registry.register(EconomyMessages.GET_RESULT_RESPONSE);
+    registry.register(EconomyMessages.CHUNK);
+    registry.register(EconomyMessages.CHUNK_RESPONSE);
     bind(registry, EconomyProtocol.DELIVERY_BOX_DATA_REQUEST, Packet_DeliveryBoxDataRequest.class);
     bind(
         registry, EconomyProtocol.DELIVERY_BOX_DATA_RESPONSE, Packet_DeliveryBoxDataResponse.class);

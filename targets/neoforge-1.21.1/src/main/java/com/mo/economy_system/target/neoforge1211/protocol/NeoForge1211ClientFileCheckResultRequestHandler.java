@@ -23,6 +23,7 @@ public final class NeoForge1211ClientFileCheckResultRequestHandler {
               authenticatedTarget.getUUID(),
               tick,
               NeoForge1211ClientFileCheckRuntime.store(server),
+              NeoForge1211ClientFileCheckRuntime.transfers(server).authorizations(),
               requesterId -> server.getPlayerList().getPlayer(requesterId),
               (requester, response) ->
                   EconomySystem_NetworkManager.sendToClient((ServerPlayer) requester, response),

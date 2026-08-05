@@ -42,6 +42,20 @@ public final class EconomyNetworkLimits {
   public static final int MAX_PENDING_CHECKS = 1_024;
   public static final long CHECK_REQUEST_TTL_TICKS = 1_200;
   public static final long CHECK_REQUEST_COOLDOWN_TICKS = 100;
+  public static final long MAX_TRANSFER_FILE_BYTES = 32L * 1024L * 1024L;
+  public static final int TRANSFER_RAW_CHUNK_BYTES = 18_000;
+  public static final int MAX_TRANSFER_CHUNK_BASE64_CHARS = 24_000;
+  public static final int MAX_TRANSFER_CHUNKS =
+      (int) ((MAX_TRANSFER_FILE_BYTES + TRANSFER_RAW_CHUNK_BYTES - 1) / TRANSFER_RAW_CHUNK_BYTES);
+  public static final int MAX_PENDING_FILE_TRANSFERS = 256;
+  public static final int MAX_ACTIVE_FILE_TRANSFERS = 64;
+  public static final long FILE_TRANSFER_TTL_TICKS = 1_200;
+  public static final long FILE_TRANSFER_COOLDOWN_TICKS = 100;
+  public static final int MAX_TRANSFER_CONTROL_JSON_CHARS = 2_048;
+  public static final int MAX_TRANSFER_FILE_NAME_CHARS = 255;
+  public static final int MAX_TRANSFER_TEMP_FILES = 8;
+  public static final long MAX_TRANSFER_TEMP_BYTES = 64L * 1024L * 1024L;
+  public static final int MAX_TRANSFER_SNAPSHOT_SECONDS = 30;
 
   private EconomyNetworkLimits() {}
 }
