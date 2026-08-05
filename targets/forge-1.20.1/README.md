@@ -2,6 +2,10 @@
 
 ## Territory protocol 21 boundary status
 
+## Territory protocol 22 member removal
+
+Forge registers discriminator 22 as the common 32-byte C2S member-removal message. The repository strictly validates raw territory/member NBT, removes the exact list entry through copy-on-write, preserves unknown fields and list order, and restores the original raw/cache references after a dirty failure. Owned rows now expose TELEPORT/MEMBERS/DELETE; MEMBERS retains the invitation entry and uses a one-shot confirmation page before removal. Final validation: 272 shared-source and 341 Forge tests. Protocol 23 remains legacy.
+
 Protocol 21 keeps its canonical 16-byte UUID wire unchanged. The shared territory geometry contract uses closed integer bounds, including zero-width/zero-height and single-cell territories. QuadTree removal is identity-based and independent of mutable current bounds. Forge continues to use its raw-NBT copy-on-write removal adapter; protocol 22 and later are not migrated by this stage. Final validation executed 266 shared-source tests and 333 Forge tests.
 
 This target now validates the Gradle/Java 17/Forge toolchain, shared platform

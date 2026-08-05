@@ -2,6 +2,17 @@
 
 ## 基线与约束
 
+### 协议 22：领地成员移除（已迁移）
+
+- canonical discriminator 22、C2S ID 和声明顺序不变；wire 为 `territoryId`、`targetPlayerId` 两个 UUID，共 32 字节。
+- authenticated sender 是唯一 expected owner；owner 不可移除，target 必须实时为成员但不要求在线。
+- NeoForge 使用精确成员事务、完整成员快照、dirty rollback 和原有 Territory 四索引复验。
+- Forge 使用 strict raw NBT copy-on-write，保留未知字段、成员/领地顺序及无关数据。
+- pending invite 只按 target+territory 精确清理；processing claim 不被破坏。
+- NeoForge 与 Forge 均提供 one-shot 确认页；Forge MEMBERS 页面保留邀请功能。
+- `PERSIST_FAILED` 只用于完整恢复，无法证明状态时使用 `STATE_UNKNOWN`。协议 23+ 仍为 legacy。
+- 最终实测：shared-source 272、Forge 341、NeoForge 392，`buildAllTargets` 通过。
+
 ### 协议 21 最终空间边界加固
 
 - `Bounds` 已统一为闭区间 `[x, x + width] × [z, z + height]`，完整支持单格、单列和单行。

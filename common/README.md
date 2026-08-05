@@ -2,6 +2,10 @@
 
 ## Protocol 21 spatial boundary hardening
 
+## Protocol 22 territory member removal
+
+Protocol 22 is migrated as the loader-neutral `RemoveTerritoryMemberMessage`. Its C2S wire is exactly 32 bytes in `territoryId`, `targetPlayerId` order. The authenticated sender is the expected live owner; owners cannot remove themselves, targets must currently be members, and offline targets remain removable. A dedicated server-scoped limiter is independent from protocol 21. Successful removal performs best-effort exact pending-invite cleanup for only the target and territory. `PERSIST_FAILED` means a fully verified rollback; uncertain state is `STATE_UNKNOWN`. Final validation: 272 shared-source, 341 Forge, and 392 NeoForge tests. Protocol 23 and later remain legacy.
+
 Protocol 21 remains a C2S request containing exactly one 16-byte territory UUID. Its NeoForge authoritative repository treats territory rectangles as closed integer intervals and verifies QuadTree identity count, UUID count, expected node path, and representative-point queries during deletion, resize, and compensation. Single-cell, single-column, single-row, root-edge, and split-boundary territories are supported. Low-level resize manager methods are package-private; protocol 22 and later remain legacy. Final validation executed 266 shared-source tests, 333 Forge tests, and 382 NeoForge tests.
 
 `common` contains behavior and data semantics shared by every supported

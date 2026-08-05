@@ -723,6 +723,64 @@ public class TerritoryManager {
     }
   }
 
+  public static synchronized com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome
+      removeTerritoryMemberAuthoritatively(
+          UUID territoryID, UUID expectedOwner, UUID targetPlayerID) {
+    if (territoryID == null || expectedOwner == null || targetPlayerID == null || savedData == null)
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .STATE_UNKNOWN,
+          null,
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
+              .UNKNOWN,
+          new IllegalStateException("invalid member removal state"));
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null)
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .TERRITORY_NOT_FOUND,
+          null);
+    if (!expectedOwner.equals(territory.getOwnerUUID()))
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .OWNER_MISMATCH,
+          null);
+    if (expectedOwner.equals(targetPlayerID))
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .OWNER_TARGET,
+          null);
+    IllegalStateException invariant = resizeInvariant(territoryID, expectedOwner, territory);
+    if (invariant != null)
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .STATE_UNKNOWN,
+          null,
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
+              .INTEGRITY,
+          invariant);
+    var outcome =
+        TerritoryMemberRemovalMutation.remove(
+            territory, expectedOwner, targetPlayerID, savedData::setDirty);
+    IllegalStateException after = resizeInvariant(territoryID, expectedOwner, territory);
+    if (after != null)
+      return new com.mo.economy_system.common.territory.TerritoryMemberRemovalService
+          .RepositoryOutcome(
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+              .STATE_UNKNOWN,
+          null,
+          com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryFailureKind
+              .INTEGRITY,
+          after);
+    return outcome;
+  }
+
   public static boolean transferTerritory(
       UUID territoryID, UUID newOwnerUUID, String newOwnerName) {
     Territory territory = getTerritoryByID(territoryID);

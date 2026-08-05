@@ -27,7 +27,9 @@ import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.RemoveTerritoryMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
+import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
@@ -72,6 +74,10 @@ public final class NeoForge1211MessageCodecs {
     register(codecs, EconomyMessages.REMOVE_TERRITORY, new NeoForge1211MessageCodec<>() {
       public void encode(RemoveTerritoryMessage message, RegistryFriendlyByteBuf buffer) { TerritoryRemovalWireCodec.encode(message, buffer); }
       public RemoveTerritoryMessage decode(RegistryFriendlyByteBuf buffer) { return TerritoryRemovalWireCodec.decode(buffer); }
+    });
+    register(codecs, EconomyMessages.REMOVE_PLAYER, new NeoForge1211MessageCodec<>() {
+      public void encode(RemoveTerritoryMemberMessage message, RegistryFriendlyByteBuf buffer) { TerritoryMemberRemovalWireCodec.encode(message, buffer); }
+      public RemoveTerritoryMemberMessage decode(RegistryFriendlyByteBuf buffer) { return TerritoryMemberRemovalWireCodec.decode(buffer); }
     });
     register(
         codecs,

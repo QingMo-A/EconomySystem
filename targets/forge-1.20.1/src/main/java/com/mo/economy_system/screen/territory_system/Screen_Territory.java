@@ -144,8 +144,8 @@ public final class Screen_Territory extends Screen
         String actionKey =
             teleport
                 ? "button.territory.teleport"
-                : area.action() == TerritoryTeleportRowLayout.Action.INVITE
-                    ? "button.territory.invite"
+                : area.action() == TerritoryTeleportRowLayout.Action.MEMBERS
+                    ? "button.territory.members"
                     : "button.territory.delete_short";
         graphics.drawCenteredString(
             font,
@@ -184,7 +184,7 @@ public final class Screen_Territory extends Screen
                   .network()
                   .sendToServer(new TeleportToTerritoryMessage(area.territoryId()));
             }
-          } else if (area.action() == TerritoryTeleportRowLayout.Action.INVITE) {
+          } else if (area.action() == TerritoryTeleportRowLayout.Action.MEMBERS) {
             TerritoryRow row =
                 visibleRows().stream()
                     .filter(value -> value.summary().territoryId().equals(area.territoryId()))
@@ -192,13 +192,7 @@ public final class Screen_Territory extends Screen
                     .orElse(null);
             if (row != null && row.owned()) {
               Minecraft.getInstance()
-                  .setScreen(
-                      new Screen_InvitePlayer(
-                          row.summary().territoryId(),
-                          row.summary().name(),
-                          row.summary().ownerId(),
-                          row.members(),
-                          this));
+                  .setScreen(new Screen_TerritoryMembers(row.ownedSnapshot(), this));
             }
           } else {
             TerritoryRow row =
@@ -239,11 +233,9 @@ public final class Screen_Territory extends Screen
           new TerritoryRow(
               value.summary(),
               true,
-              value.authorizedMembers().stream()
-                  .map(member -> member.playerId())
-                  .collect(java.util.stream.Collectors.toUnmodifiableSet())));
+              value));
     }
-    for (Summary value : authorized) rows.add(new TerritoryRow(value, false, Set.of()));
+    for (Summary value : authorized) rows.add(new TerritoryRow(value, false, null));
     if (query.isEmpty()) return rows;
     return rows.stream()
         .filter(
@@ -279,7 +271,7 @@ public final class Screen_Territory extends Screen
     actionButtons = List.of();
   }
 
-  private record TerritoryRow(Summary summary, boolean owned, Set<UUID> members) {}
+  private record TerritoryRow(Summary summary, boolean owned, Owned ownedSnapshot) {}
 
   @Override
   public boolean isPauseScreen() {

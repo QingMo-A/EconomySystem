@@ -387,5 +387,8 @@
   "message.claim.resize.state_unknown": "Territory resize state is uncertain; contact an administrator.",
   "message.claim.resize.refund_failed": "Resize failed and the payment could not be refunded.",
   "message.claim.resize.overlap": "The new territory bounds overlap another territory.",
-  "message.claim.resize.unchanged": "The territory bounds have not changed."
+  "message.claim.resize.unchanged": "The territory bounds have not changed.",
+  "button.territory.members": "Members", "button.territory.member_invite": "Invite", "button.territory.member_remove": "Remove", "button.territory.member_remove_confirm": "Confirm Remove", "button.territory.member_remove_cancel": "Cancel",
+  "screen.territory_members.title": "Territory Members", "screen.territory_members.empty": "No members", "screen.territory_members.search": "Search members", "screen.territory_member_remove.title": "Remove Member", "screen.territory_member_remove.warning": "Remove this member from the territory?", "screen.territory_member_remove.territory": "Territory: %s", "screen.territory_member_remove.target": "Member: %s",
+  "message.territory.member_remove.success": "Removed %s from territory %s", "message.territory.member_remove.target_notice": "You were removed from territory %s", "message.territory.member_remove.territory_not_found": "Territory not found", "message.territory.member_remove.no_permission": "You do not own this territory", "message.territory.member_remove.cannot_remove_owner": "The owner cannot be removed", "message.territory.member_remove.target_not_member": "That player is not a territory member", "message.territory.member_remove.rate_limited": "Please wait before removing another member", "message.territory.member_remove.persist_failed": "Member removal failed and was rolled back; retry", "message.territory.member_remove.state_unknown": "Member state is uncertain; contact an administrator"
 }

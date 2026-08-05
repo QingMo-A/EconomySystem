@@ -30,7 +30,9 @@ import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.RemoveTerritoryMessage;
+import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
+import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
@@ -259,6 +261,11 @@ public final class Forge1201NetworkChannel {
             EconomyMessages.REMOVE_TERRITORY.discriminator(), NetworkDirection.PLAY_TO_SERVER)
         .encoder(TerritoryRemovalWireCodec::encode).decoder(TerritoryRemovalWireCodec::decode)
         .consumerMainThread(Forge1201TerritoryRemovalHandler::handle).add();
+    CHANNEL.messageBuilder(RemoveTerritoryMemberMessage.class,
+            EconomyMessages.REMOVE_PLAYER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(TerritoryMemberRemovalWireCodec::encode)
+        .decoder(TerritoryMemberRemovalWireCodec::decode)
+        .consumerMainThread(Forge1201TerritoryMemberRemovalHandler::handle).add();
 
     CHANNEL
         .messageBuilder(
@@ -361,6 +368,7 @@ public final class Forge1201NetworkChannel {
     CHANNEL.sendToServer(message);
   }
   static void sendToServer(RemoveTerritoryMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(RemoveTerritoryMemberMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
   static void sendToServer(ServerPlayerListRequestMessage message) {
     requireRegistered();

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 final class TerritoryTeleportRowLayout {
   static final int ROW_HEIGHT = 26;
-  enum Action { TELEPORT, INVITE, DELETE }
+  enum Action { TELEPORT, MEMBERS, DELETE }
 
   record TerritoryRow(UUID territoryId, boolean owned) {}
 
@@ -50,7 +50,7 @@ final class TerritoryTeleportRowLayout {
         result.add(new ActionArea(x, y, buttonWidth, buttonHeight,
             row.territoryId(), Action.TELEPORT));
         result.add(new ActionArea(x + buttonWidth + 4, y, buttonWidth, buttonHeight,
-            row.territoryId(), Action.INVITE));
+            row.territoryId(), Action.MEMBERS));
         result.add(new ActionArea(x + buttonWidth * 2 + 8, y, deleteWidth, buttonHeight,
             row.territoryId(), Action.DELETE));
       } else {

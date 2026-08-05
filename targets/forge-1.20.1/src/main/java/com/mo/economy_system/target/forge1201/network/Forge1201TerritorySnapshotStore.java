@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201.network;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
+import com.mo.economy_system.common.territory.TerritoryMemberRemovalService;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
@@ -379,6 +380,114 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   private static TerritoryRemovalService.RepositoryOutcome repositoryState(
       TerritoryRemovalService.RepositoryResult result) {
     return new TerritoryRemovalService.RepositoryOutcome(result, null);
+  }
+
+  synchronized TerritoryMemberRemovalService.RepositoryOutcome removeMember(
+      UUID territoryId, UUID expectedOwnerId, UUID targetPlayerId) {
+    if (territoryId == null || expectedOwnerId == null || targetPlayerId == null)
+      return memberUnknown(new IllegalStateException("member removal input is null"));
+    try {
+      parseStrictRoot(raw);
+    } catch (RuntimeException malformed) {
+      return memberIntegrity(malformed);
+    }
+    ListTag sourceTerritories = raw.getList("Territories", Tag.TAG_COMPOUND);
+    int territoryIndex = -1;
+    CompoundTag sourceTarget = null;
+    for (int i = 0; i < sourceTerritories.size(); i++) {
+      CompoundTag candidate = sourceTerritories.getCompound(i);
+      if (territoryId.equals(candidate.getUUID("TerritoryID"))) {
+        if (territoryIndex >= 0) return memberIntegrity(integrity("duplicate territory UUID"));
+        territoryIndex = i;
+        sourceTarget = candidate;
+      }
+    }
+    if (territoryIndex < 0)
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.TERRITORY_NOT_FOUND, null);
+    UUID ownerId = sourceTarget.getUUID("OwnerUUID");
+    if (!expectedOwnerId.equals(ownerId))
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.OWNER_MISMATCH, null);
+    if (targetPlayerId.equals(ownerId))
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.OWNER_TARGET, null);
+    ListTag sourceMembers = sourceTarget.getList("AuthorizedPlayers", Tag.TAG_COMPOUND);
+    int memberIndex = -1;
+    String memberName = null;
+    for (int i = 0; i < sourceMembers.size(); i++) {
+      CompoundTag member = sourceMembers.getCompound(i);
+      if (targetPlayerId.equals(member.getUUID("PlayerUUID"))) {
+        if (memberIndex >= 0) return memberIntegrity(integrity("duplicate member UUID"));
+        memberIndex = i;
+        memberName = member.getString("PlayerName").trim();
+      }
+    }
+    if (memberIndex < 0)
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.TARGET_NOT_MEMBER, null);
+    CompoundTag originalRaw = raw;
+    List<Owned> originalCache = territories;
+    CompoundTag candidateRoot = raw.copy();
+    ListTag candidateTerritories = candidateRoot.getList("Territories", Tag.TAG_COMPOUND).copy();
+    CompoundTag candidateTarget = candidateTerritories.getCompound(territoryIndex).copy();
+    ListTag candidateMembers =
+        candidateTarget.getList("AuthorizedPlayers", Tag.TAG_COMPOUND).copy();
+    candidateMembers.remove(memberIndex);
+    candidateTarget.put("AuthorizedPlayers", candidateMembers);
+    candidateTerritories.set(territoryIndex, candidateTarget);
+    candidateRoot.put("Territories", candidateTerritories);
+    List<Owned> candidateCache;
+    try {
+      candidateCache = parseStrictRoot(candidateRoot).snapshots();
+    } catch (RuntimeException malformed) {
+      return memberIntegrity(malformed);
+    }
+    RuntimeException primary;
+    try {
+      raw = candidateRoot;
+      territories = candidateCache;
+      dirtyMarker.markDirty();
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.REMOVED,
+          new TerritoryMemberRemovalService.RemovedMember(
+              territoryId, ownerId, sourceTarget.getString("Name"), targetPlayerId, memberName));
+    } catch (RuntimeException failure) {
+      primary = failure;
+    }
+    try {
+      raw = originalRaw;
+      territories = originalCache;
+      dirtyMarker.markDirty();
+      if (raw != originalRaw || territories != originalCache)
+        throw new IllegalStateException("rollback identity mismatch");
+      parseStrictRoot(raw);
+      return new TerritoryMemberRemovalService.RepositoryOutcome(
+          TerritoryMemberRemovalService.RepositoryResult.PERSIST_FAILED,
+          null,
+          TerritoryMemberRemovalService.RepositoryFailureKind.PERSISTENCE,
+          primary);
+    } catch (RuntimeException rollback) {
+      primary.addSuppressed(rollback);
+      return memberUnknown(primary);
+    }
+  }
+
+  private static TerritoryMemberRemovalService.RepositoryOutcome memberIntegrity(
+      Throwable failure) {
+    return new TerritoryMemberRemovalService.RepositoryOutcome(
+        TerritoryMemberRemovalService.RepositoryResult.STATE_UNKNOWN,
+        null,
+        TerritoryMemberRemovalService.RepositoryFailureKind.INTEGRITY,
+        failure);
+  }
+
+  private static TerritoryMemberRemovalService.RepositoryOutcome memberUnknown(Throwable failure) {
+    return new TerritoryMemberRemovalService.RepositoryOutcome(
+        TerritoryMemberRemovalService.RepositoryResult.STATE_UNKNOWN,
+        null,
+        TerritoryMemberRemovalService.RepositoryFailureKind.UNKNOWN,
+        failure);
   }
 
   private static TerritoryRemovalService.RepositoryOutcome repositoryState(

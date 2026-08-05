@@ -2,15 +2,15 @@ package com.mo.economy_system.target.forge1201.network;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
-import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRateLimiter;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryInviteResult;
 import com.mo.economy_system.common.territory.TerritoryInviteStore;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
+import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
+import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
+import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,7 +20,8 @@ import net.minecraft.nbt.Tag;
 import org.junit.jupiter.api.Test;
 
 class Forge1201TerritorySnapshotStoreTest {
-  @Test void permissionCompatibilityUsesMembersForMissingAndUnknownValues() {
+  @Test
+  void permissionCompatibilityUsesMembersForMissingAndUnknownValues() {
     assertEquals(RuleLevel.OWNER_ONLY, Forge1201TerritorySnapshotStore.permission("OWNER_ONLY"));
     assertEquals(RuleLevel.MEMBERS, Forge1201TerritorySnapshotStore.permission("MEMBERS"));
     assertEquals(RuleLevel.EVERYONE, Forge1201TerritorySnapshotStore.permission("EVERYONE"));
@@ -28,32 +29,50 @@ class Forge1201TerritorySnapshotStoreTest {
     assertEquals(RuleLevel.MEMBERS, Forge1201TerritorySnapshotStore.permission("FUTURE"));
   }
 
-  @Test void dimensionsMustBeCanonicalAndBounded() {
-    assertEquals("minecraft:overworld",
+  @Test
+  void dimensionsMustBeCanonicalAndBounded() {
+    assertEquals(
+        "minecraft:overworld",
         Forge1201TerritorySnapshotStore.canonicalDimension("minecraft:overworld"));
-    assertEquals("example:moon", Forge1201TerritorySnapshotStore.canonicalDimension("example:moon"));
-    assertThrows(IllegalArgumentException.class,
+    assertEquals(
+        "example:moon", Forge1201TerritorySnapshotStore.canonicalDimension("example:moon"));
+    assertThrows(
+        IllegalArgumentException.class,
         () -> Forge1201TerritorySnapshotStore.canonicalDimension("overworld"));
-    for (String invalid : new String[] {"", "bad id", "Minecraft:overworld", "a:b:c", "x".repeat(257)}) {
-      assertThrows(IllegalArgumentException.class,
+    for (String invalid :
+        new String[] {"", "bad id", "Minecraft:overworld", "a:b:c", "x".repeat(257)}) {
+      assertThrows(
+          IllegalArgumentException.class,
           () -> Forge1201TerritorySnapshotStore.canonicalDimension(invalid));
     }
   }
 
-  @Test void captureFallsBackUnknownPermissionsWithoutChangingOtherData() {
+  @Test
+  void captureFallsBackUnknownPermissionsWithoutChangingOtherData() {
     CompoundTag tag = validTerritory();
     CompoundTag permissions = new CompoundTag();
     permissions.putString(RuleAction.PLACE_BLOCK.name(), "OWNER_ONLY");
     permissions.putString(RuleAction.BREAK_BLOCK.name(), "FUTURE");
     tag.put("Permissions", permissions);
     var snapshot = Forge1201TerritorySnapshotStore.capture(tag);
-    assertEquals(RuleLevel.OWNER_ONLY, snapshot.rules().stream()
-        .filter(rule -> rule.action() == RuleAction.PLACE_BLOCK).findFirst().orElseThrow().level());
-    assertEquals(RuleLevel.MEMBERS, snapshot.rules().stream()
-        .filter(rule -> rule.action() == RuleAction.BREAK_BLOCK).findFirst().orElseThrow().level());
+    assertEquals(
+        RuleLevel.OWNER_ONLY,
+        snapshot.rules().stream()
+            .filter(rule -> rule.action() == RuleAction.PLACE_BLOCK)
+            .findFirst()
+            .orElseThrow()
+            .level());
+    assertEquals(
+        RuleLevel.MEMBERS,
+        snapshot.rules().stream()
+            .filter(rule -> rule.action() == RuleAction.BREAK_BLOCK)
+            .findFirst()
+            .orElseThrow()
+            .level());
   }
 
-  @Test void invalidBuffValuesFailClosedInsteadOfBeingClamped() {
+  @Test
+  void invalidBuffValuesFailClosedInsteadOfBeingClamped() {
     CompoundTag buff = new CompoundTag();
     buff.putString("id", "economy:speed");
     buff.putString("displayText", "Speed");
@@ -65,7 +84,8 @@ class Forge1201TerritorySnapshotStoreTest {
     assertThrows(IllegalArgumentException.class, () -> Forge1201TerritorySnapshotStore.buff(buff));
   }
 
-  @Test void findBuildsOwnerAndAuthorizedTeleportTarget() {
+  @Test
+  void findBuildsOwnerAndAuthorizedTeleportTarget() {
     CompoundTag tag = validTerritory();
     CompoundTag backpoint = new CompoundTag();
     backpoint.putInt("BackX", 2);
@@ -91,7 +111,8 @@ class Forge1201TerritorySnapshotStoreTest {
     assertTrue(store.find(UUID.randomUUID()).isEmpty());
   }
 
-  @Test void authorizeCopyOnWritePreservesUnknownNbtAndReloads() {
+  @Test
+  void authorizeCopyOnWritePreservesUnknownNbtAndReloads() {
     CompoundTag root = new CompoundTag();
     CompoundTag territory = validTerritory();
     territory.putString("FutureTerritoryField", "keep-me");
@@ -104,19 +125,30 @@ class Forge1201TerritorySnapshotStoreTest {
     UUID owner = territory.getUUID("OwnerUUID");
     UUID member = UUID.fromString("00000000-0000-0000-0000-000000000002");
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertEquals(TerritoryInviteDecisionService.WriteResult.ADDED,
+    assertEquals(
+        TerritoryInviteDecisionService.WriteResult.ADDED,
         store.authorize(territory.getUUID("TerritoryID"), owner, member, "Member"));
 
     CompoundTag saved = store.save(new CompoundTag());
     assertEquals("keep-root", saved.getString("FutureRootField"));
-    assertEquals("keep-me", saved.getList("Territories", Tag.TAG_COMPOUND)
-        .getCompound(0).getString("FutureTerritoryField"));
-    assertEquals(1, saved.getList("Territories", Tag.TAG_COMPOUND).getCompound(0)
-        .getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
+    assertEquals(
+        "keep-me",
+        saved
+            .getList("Territories", Tag.TAG_COMPOUND)
+            .getCompound(0)
+            .getString("FutureTerritoryField"));
+    assertEquals(
+        1,
+        saved
+            .getList("Territories", Tag.TAG_COMPOUND)
+            .getCompound(0)
+            .getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
+            .size());
     assertTrue(Forge1201TerritorySnapshotStore.load(saved).authorized(member).size() == 1);
   }
 
-  @Test void authorizeRechecksOwnerAndRejectsDuplicateUuidFailClosed() {
+  @Test
+  void authorizeRechecksOwnerAndRejectsDuplicateUuidFailClosed() {
     CompoundTag root = new CompoundTag();
     CompoundTag territory = validTerritory();
     territory.put("AuthorizedPlayers", new ListTag());
@@ -124,8 +156,10 @@ class Forge1201TerritorySnapshotStoreTest {
     territories.add(territory);
     root.put("Territories", territories);
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertEquals(TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED,
-        store.authorize(territory.getUUID("TerritoryID"), UUID.randomUUID(), UUID.randomUUID(), "x"));
+    assertEquals(
+        TerritoryInviteDecisionService.WriteResult.OWNER_CHANGED,
+        store.authorize(
+            territory.getUUID("TerritoryID"), UUID.randomUUID(), UUID.randomUUID(), "x"));
 
     UUID duplicate = UUID.fromString("00000000-0000-0000-0000-000000000003");
     ListTag members = new ListTag();
@@ -138,14 +172,25 @@ class Forge1201TerritorySnapshotStoreTest {
     territory.put("AuthorizedPlayers", members);
     root.put("Territories", territories);
     var duplicateStore = Forge1201TerritorySnapshotStore.load(root);
-    assertEquals(TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN,
-        duplicateStore.authorize(territory.getUUID("TerritoryID"),
-            territory.getUUID("OwnerUUID"), UUID.randomUUID(), "new"));
-    assertEquals(2, duplicateStore.rawCopy().getList("Territories", Tag.TAG_COMPOUND)
-        .getCompound(0).getList("AuthorizedPlayers", Tag.TAG_COMPOUND).size());
+    assertEquals(
+        TerritoryInviteDecisionService.WriteResult.STATE_UNKNOWN,
+        duplicateStore.authorize(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            UUID.randomUUID(),
+            "new"));
+    assertEquals(
+        2,
+        duplicateStore
+            .rawCopy()
+            .getList("Territories", Tag.TAG_COMPOUND)
+            .getCompound(0)
+            .getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
+            .size());
   }
 
-  @Test void removeUsesRawCopyOnWriteAndPreservesUnknownFieldsAndOrder() {
+  @Test
+  void removeUsesRawCopyOnWriteAndPreservesUnknownFieldsAndOrder() {
     CompoundTag first = validTerritory();
     first.putString("FutureTerritoryField", "keep-first");
     CompoundTag second = validTerritory();
@@ -173,11 +218,12 @@ class Forge1201TerritorySnapshotStoreTest {
     assertEquals(1, remaining.size());
     assertEquals(second.getUUID("TerritoryID"), remaining.getCompound(0).getUUID("TerritoryID"));
     assertEquals("keep-second", remaining.getCompound(0).getString("FutureTerritoryField"));
-    assertTrue(Forge1201TerritorySnapshotStore.load(saved)
-        .find(first.getUUID("TerritoryID")).isEmpty());
+    assertTrue(
+        Forge1201TerritorySnapshotStore.load(saved).find(first.getUUID("TerritoryID")).isEmpty());
   }
 
-  @Test void removeRejectsMissingOwnerMalformedRootAndDuplicateRecordsWithoutMutation() {
+  @Test
+  void removeRejectsMissingOwnerMalformedRootAndDuplicateRecordsWithoutMutation() {
     CompoundTag territory = validTerritory();
     ListTag records = new ListTag();
     records.add(territory);
@@ -186,10 +232,12 @@ class Forge1201TerritorySnapshotStoreTest {
     Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
     CompoundTag before = store.rawCopy();
 
-    assertEquals(TerritoryRemovalService.RepositoryResult.OWNER_MISMATCH,
+    assertEquals(
+        TerritoryRemovalService.RepositoryResult.OWNER_MISMATCH,
         store.remove(territory.getUUID("TerritoryID"), UUID.randomUUID()).result());
     assertEquals(before, store.rawCopy());
-    assertEquals(TerritoryRemovalService.RepositoryResult.NOT_FOUND,
+    assertEquals(
+        TerritoryRemovalService.RepositoryResult.NOT_FOUND,
         store.remove(UUID.randomUUID(), territory.getUUID("OwnerUUID")).result());
     assertEquals(before, store.rawCopy());
 
@@ -198,31 +246,39 @@ class Forge1201TerritorySnapshotStoreTest {
     duplicateRecords.add(territory);
     duplicateRecords.add(territory.copy());
     duplicateRoot.put("Territories", duplicateRecords);
-    Forge1201TerritorySnapshotStore duplicateStore = Forge1201TerritorySnapshotStore.load(duplicateRoot);
+    Forge1201TerritorySnapshotStore duplicateStore =
+        Forge1201TerritorySnapshotStore.load(duplicateRoot);
     CompoundTag duplicateBefore = duplicateStore.rawCopy();
-    assertEquals(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
-        duplicateStore.remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
+    assertEquals(
+        TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+        duplicateStore
+            .remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
             .result());
     assertEquals(duplicateBefore, duplicateStore.rawCopy());
 
     CompoundTag malformedRoot = new CompoundTag();
     malformedRoot.putString("Territories", "not-a-list");
-    Forge1201TerritorySnapshotStore malformedStore = Forge1201TerritorySnapshotStore.load(malformedRoot);
-    assertEquals(TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
-        malformedStore.remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
+    Forge1201TerritorySnapshotStore malformedStore =
+        Forge1201TerritorySnapshotStore.load(malformedRoot);
+    assertEquals(
+        TerritoryRemovalService.RepositoryResult.STATE_UNKNOWN,
+        malformedStore
+            .remove(territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"))
             .result());
   }
 
-  @Test void removeDirtyFailureRollsBackRawAndParsedSnapshots() {
+  @Test
+  void removeDirtyFailureRollsBackRawAndParsedSnapshots() {
     CompoundTag territory = validTerritory();
     ListTag records = new ListTag();
     records.add(territory);
     CompoundTag root = new CompoundTag();
     root.put("Territories", records);
     AtomicInteger marks = new AtomicInteger();
-    DirtyMarker marker = () -> {
-      if (marks.getAndIncrement() == 0) throw new IllegalStateException("dirty");
-    };
+    DirtyMarker marker =
+        () -> {
+          if (marks.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+        };
     Forge1201TerritorySnapshotStore store = new Forge1201TerritorySnapshotStore(root, marker);
     CompoundTag before = store.rawCopy();
     TerritoryRemovalService.RepositoryOutcome outcome =
@@ -233,7 +289,8 @@ class Forge1201TerritorySnapshotStoreTest {
     assertEquals(2, marks.get());
   }
 
-  @Test void inviteLookupReadsRawAndFailsClosedForDuplicateTerritoryIds() {
+  @Test
+  void inviteLookupReadsRawAndFailsClosedForDuplicateTerritoryIds() {
     CompoundTag first = validTerritory();
     first.put("AuthorizedPlayers", new ListTag());
     CompoundTag duplicate = validTerritory();
@@ -245,11 +302,13 @@ class Forge1201TerritorySnapshotStoreTest {
     CompoundTag root = new CompoundTag();
     root.put("Territories", records);
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertThrows(TerritorySnapshotIntegrityException.class,
+    assertThrows(
+        TerritorySnapshotIntegrityException.class,
         () -> store.inviteTerritory(first.getUUID("TerritoryID")));
   }
 
-  @Test void inviteLookupRejectsMalformedAuthorizationEntries() {
+  @Test
+  void inviteLookupRejectsMalformedAuthorizationEntries() {
     CompoundTag territory = validTerritory();
     ListTag members = new ListTag();
     members.add(net.minecraft.nbt.StringTag.valueOf("not-a-player-record"));
@@ -259,21 +318,27 @@ class Forge1201TerritorySnapshotStoreTest {
     CompoundTag root = new CompoundTag();
     root.put("Territories", records);
     var store = Forge1201TerritorySnapshotStore.load(root);
-    assertThrows(TerritorySnapshotIntegrityException.class,
+    assertThrows(
+        TerritorySnapshotIntegrityException.class,
         () -> store.inviteTerritory(territory.getUUID("TerritoryID")));
   }
 
-  @Test void inviteLookupDistinguishesMissingFromMalformedRoot() {
+  @Test
+  void inviteLookupDistinguishesMissingFromMalformedRoot() {
     CompoundTag emptyRoot = new CompoundTag();
-    assertTrue(Forge1201TerritorySnapshotStore.load(emptyRoot)
-        .inviteTerritory(UUID.randomUUID()).isEmpty());
+    assertTrue(
+        Forge1201TerritorySnapshotStore.load(emptyRoot)
+            .inviteTerritory(UUID.randomUUID())
+            .isEmpty());
     CompoundTag malformed = new CompoundTag();
     malformed.putString("Territories", "not-a-list");
-    assertThrows(TerritorySnapshotIntegrityException.class,
+    assertThrows(
+        TerritorySnapshotIntegrityException.class,
         () -> Forge1201TerritorySnapshotStore.load(malformed).inviteTerritory(UUID.randomUUID()));
   }
 
-  @Test void duplicateTerritoryIsCreateFailedWithRepositoryDiagnostics() {
+  @Test
+  void duplicateTerritoryIsCreateFailedWithRepositoryDiagnostics() {
     CompoundTag first = validTerritory();
     first.put("AuthorizedPlayers", new ListTag());
     CompoundTag duplicate = first.copy();
@@ -284,15 +349,94 @@ class Forge1201TerritorySnapshotStoreTest {
     root.put("Territories", records);
     var store = Forge1201TerritorySnapshotStore.load(root);
     List<String> stages = new java.util.ArrayList<>();
-    var service = new TerritoryInviteRequestService(store::inviteTerritory,
-        id -> java.util.Optional.of(new TerritoryInviteRequestService.Player(id, "Target")),
-        new TerritoryInviteStore(), new TerritoryInviteRateLimiter(), UUID::randomUUID,
-        (stage, inviter, territory, target, error) -> stages.add(stage), 1200);
+    var service =
+        new TerritoryInviteRequestService(
+            store::inviteTerritory,
+            id -> java.util.Optional.of(new TerritoryInviteRequestService.Player(id, "Target")),
+            new TerritoryInviteStore(),
+            new TerritoryInviteRateLimiter(),
+            UUID::randomUUID,
+            (stage, inviter, territory, target, error) -> stages.add(stage),
+            1200);
     UUID owner = first.getUUID("OwnerUUID");
-    var outcome = service.create(owner, "Owner", first.getUUID("TerritoryID"),
-        UUID.randomUUID(), 10);
+    var outcome =
+        service.create(owner, "Owner", first.getUUID("TerritoryID"), UUID.randomUUID(), 10);
     assertEquals(TerritoryInviteResult.CREATE_FAILED, outcome.result());
     assertEquals(List.of("repository"), stages);
+  }
+
+  @Test
+  void removeMemberPreservesUnknownFieldsAndRemainingOrder() {
+    CompoundTag territory = validTerritory();
+    territory.putString("FutureField", "kept");
+    ListTag members = new ListTag();
+    UUID firstId = UUID.randomUUID(), targetId = UUID.randomUUID(), lastId = UUID.randomUUID();
+    for (UUID id : List.of(firstId, targetId, lastId)) {
+      CompoundTag member = new CompoundTag();
+      member.putUUID("PlayerUUID", id);
+      member.putString("PlayerName", id.equals(targetId) ? "Target" : "Other");
+      member.putString("UnknownMemberField", "kept");
+      members.add(member);
+    }
+    territory.put("AuthorizedPlayers", members);
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    root.putString("RootFuture", "kept");
+    var store = new Forge1201TerritorySnapshotStore(root);
+    var outcome =
+        store.removeMember(
+            territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), targetId);
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+            .REMOVED,
+        outcome.result());
+    assertEquals("Target", outcome.removedMember().targetPlayerName());
+    CompoundTag saved = store.rawCopy();
+    assertEquals("kept", saved.getString("RootFuture"));
+    CompoundTag savedTerritory = saved.getList("Territories", Tag.TAG_COMPOUND).getCompound(0);
+    assertEquals("kept", savedTerritory.getString("FutureField"));
+    ListTag savedMembers = savedTerritory.getList("AuthorizedPlayers", Tag.TAG_COMPOUND);
+    assertEquals(
+        List.of(firstId, lastId),
+        List.of(
+            savedMembers.getCompound(0).getUUID("PlayerUUID"),
+            savedMembers.getCompound(1).getUUID("PlayerUUID")));
+    assertEquals("kept", savedMembers.getCompound(0).getString("UnknownMemberField"));
+  }
+
+  @Test
+  void removeMemberDirtyFailureRestoresRawAndCache() {
+    CompoundTag territory = validTerritory();
+    UUID targetId = UUID.randomUUID();
+    CompoundTag member = new CompoundTag();
+    member.putUUID("PlayerUUID", targetId);
+    member.putString("PlayerName", "Target");
+    ListTag members = new ListTag();
+    members.add(member);
+    territory.put("AuthorizedPlayers", members);
+    ListTag records = new ListTag();
+    records.add(territory);
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", records);
+    AtomicInteger calls = new AtomicInteger();
+    var store =
+        new Forge1201TerritorySnapshotStore(
+            root,
+            () -> {
+              if (calls.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+            });
+    CompoundTag before = store.rawCopy();
+    var outcome =
+        store.removeMember(
+            territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), targetId);
+    assertEquals(
+        com.mo.economy_system.common.territory.TerritoryMemberRemovalService.RepositoryResult
+            .PERSIST_FAILED,
+        outcome.result());
+    assertEquals(before, store.rawCopy());
+    assertEquals(2, calls.get());
   }
 
   private static CompoundTag validTerritory() {
@@ -302,8 +446,12 @@ class Forge1201TerritorySnapshotStoreTest {
     tag.putString("OwnerName", "Owner");
     tag.putString("Name", "Home");
     tag.putString("Dimension", "minecraft:overworld");
-    tag.putInt("X1", 0); tag.putInt("Y1", 64); tag.putInt("Z1", 0);
-    tag.putInt("X2", 10); tag.putInt("Y2", 80); tag.putInt("Z2", 10);
+    tag.putInt("X1", 0);
+    tag.putInt("Y1", 64);
+    tag.putInt("Z1", 0);
+    tag.putInt("X2", 10);
+    tag.putInt("Y2", 80);
+    tag.putInt("Z2", 10);
     return tag;
   }
 }

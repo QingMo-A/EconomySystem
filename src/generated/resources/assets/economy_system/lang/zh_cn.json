@@ -387,5 +387,8 @@
   "message.claim.resize.state_unknown": "领地修改状态不确定，请联系管理员。",
   "message.claim.resize.refund_failed": "领地修改失败且费用退款失败。",
   "message.claim.resize.overlap": "新的领地范围与其他领地重叠。",
-  "message.claim.resize.unchanged": "领地范围没有变化。"
+  "message.claim.resize.unchanged": "领地范围没有变化。",
+  "button.territory.members": "成员", "button.territory.member_invite": "邀请成员", "button.territory.member_remove": "移出", "button.territory.member_remove_confirm": "确认移出", "button.territory.member_remove_cancel": "取消",
+  "screen.territory_members.title": "领地成员", "screen.territory_members.empty": "暂无成员", "screen.territory_members.search": "搜索成员", "screen.territory_member_remove.title": "移出成员", "screen.territory_member_remove.warning": "确定将该成员移出领地吗？", "screen.territory_member_remove.territory": "领地：%s", "screen.territory_member_remove.target": "成员：%s",
+  "message.territory.member_remove.success": "已将 %s 移出领地 %s", "message.territory.member_remove.target_notice": "你已被移出领地 %s", "message.territory.member_remove.territory_not_found": "领地不存在", "message.territory.member_remove.no_permission": "你不是该领地的所有者", "message.territory.member_remove.cannot_remove_owner": "不能移出领地所有者", "message.territory.member_remove.target_not_member": "该玩家不是领地成员", "message.territory.member_remove.rate_limited": "操作过快，请稍后再试", "message.territory.member_remove.persist_failed": "移出失败且已回滚，请重试", "message.territory.member_remove.state_unknown": "成员状态不确定，请联系管理员"
 }
