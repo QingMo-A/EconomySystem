@@ -37,10 +37,10 @@ public final class ClientFileCheckLayout {
 
   public static Result result(int width, int height, boolean retryVisible) {
     Box search = search(width, height);
-    Box status = width >= 24 && height >= 144 ? new Box(12, 84, width - 24, 60) : null;
+    Box status = width >= 24 && height >= 168 ? new Box(12, 84, width - 24, 84) : null;
     Box retry =
-        retryVisible && width >= 110 && height >= 172 ? new Box(width - 102, 148, 90, 20) : null;
-    int rowsY = retry == null ? 148 : 172;
+        retryVisible && width >= 110 && height >= 196 ? new Box(width - 102, 172, 90, 20) : null;
+    int rowsY = retry == null ? 172 : 196;
     Box rows =
         width >= 24 && height > rowsY ? new Box(12, rowsY, width - 24, height - rowsY) : null;
     return new Result(search, retry, status, rows);
@@ -51,7 +51,7 @@ public final class ClientFileCheckLayout {
   }
 
   public static int visibleRows(int height, boolean retryVisible) {
-    return Math.max(0, (height - (retryVisible ? 172 : 148)) / 12);
+    return Math.max(0, (height - (retryVisible ? 196 : 172)) / 12);
   }
 
   public static int clampOffset(int offset, int rowCount, int visibleRows) {

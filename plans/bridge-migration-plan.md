@@ -253,5 +253,6 @@ git diff --check
   Final lifecycle verification keeps the active identity through terminal sending, routes all protocol-24 sends
   through one session-aware dispatcher, uses secure relative directory opens or fail-closed root revalidation,
   and renders every local state plus all skipped rows. Protocol 26+ is legacy.
-  Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.
+  Final safety closure distinguishes local SUCCESS/FAILED/TRUNCATED, exposes READY_INCOMPLETE, terminates scheduling/callback failures with common-only abandonment cleanup, and passes the real pre-created token to every callback. Directory identity is verified from the opened SecureDirectoryStream handle; providers without that guarantee fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
+  Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
   after a separate task.

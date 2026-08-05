@@ -86,12 +86,13 @@ public final class Screen_ClientFileCheckConsent extends Screen {
                     minecraft.getConnection() == session.connectionIdentity()
                         && minecraft.player != null
                         && minecraft.player.getUUID().equals(session.localPlayerId()),
-                result -> terminal(result, tokenHolder[0]),
-                failure ->
+                (callbackToken, result) -> terminal(result, callbackToken),
+                (callbackToken, failure) ->
                     terminal(
                         ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED"),
-                        tokenHolder[0]));
-    tokenHolder[0] = token;
+                        callbackToken),
+                (abandonedToken, failure) ->
+                    NeoForge1211ClientFileCheckClientRuntime.consent().finish(identity, session));
     if (token == null)
       terminal(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"), null);
     minecraft.setScreen(null);
@@ -102,9 +103,6 @@ public final class Screen_ClientFileCheckConsent extends Screen {
     terminal(ClientFileCheckResult.declined(request.checkType()), null);
     Minecraft.getInstance().setScreen(null);
   }
-
-  private final ClientFileCheckTaskCoordinator.TaskToken[] tokenHolder =
-      new ClientFileCheckTaskCoordinator.TaskToken[1];
 
   private void terminal(
       ClientFileCheckResult result, ClientFileCheckTaskCoordinator.TaskToken token) {

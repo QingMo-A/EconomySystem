@@ -10,9 +10,11 @@ public final class ClientFileCheckResultController {
     NOT_REQUIRED,
     LOADING,
     READY,
+    READY_INCOMPLETE,
     BUSY,
     FAILED
   }
+  public enum LocalApplyOutcome { APPLIED, INCOMPLETE, FAILED, STALE }
 
   public enum RowType {
     COMPARISON,
@@ -31,6 +33,8 @@ public final class ClientFileCheckResultController {
   private long generation = 1;
   private LocalState localState;
   private List<ClientFileCheckComparison.Row> comparison = List.of();
+  private List<ClientFileCheckSkippedEntry> localSkipped = List.of();
+  private String localErrorCode;
 
   public ClientFileCheckResultController(ClientFileCheckResult remote) {
     this.remote = Objects.requireNonNull(remote, "remote");
@@ -51,10 +55,15 @@ public final class ClientFileCheckResultController {
   }
 
   public synchronized long retry() {
-    if (!needsComparison() || (localState != LocalState.BUSY && localState != LocalState.FAILED))
+    if (!needsComparison()
+        || (localState != LocalState.BUSY
+            && localState != LocalState.FAILED
+            && localState != LocalState.READY_INCOMPLETE))
       return -1;
     generation++;
     comparison = List.of();
+    localSkipped = List.of();
+    localErrorCode = null;
     localState = LocalState.LOADING;
     return generation;
   }
@@ -64,28 +73,69 @@ public final class ClientFileCheckResultController {
   }
 
   public synchronized void failed(long expectedGeneration) {
-    if (expectedGeneration == generation && needsComparison()) localState = LocalState.FAILED;
+    if (expectedGeneration == generation && needsComparison()) {
+      comparison = List.of();
+      localErrorCode = "SCAN_FAILED";
+      localState = LocalState.FAILED;
+    }
   }
 
-  public synchronized boolean apply(long expectedGeneration, ClientFileCheckResult local) {
-    if (expectedGeneration != generation || !needsComparison()) return false;
-    comparison = ClientFileCheckComparison.compare(remote, local);
-    localState = LocalState.READY;
-    return true;
+  public synchronized LocalApplyOutcome acceptLocalResult(
+      long expectedGeneration, ClientFileCheckResult local) {
+    if (expectedGeneration != generation || !needsComparison()) return LocalApplyOutcome.STALE;
+    if (local == null
+        || local.schemaVersion() != ClientFileCheckResult.SCHEMA_VERSION
+        || local.checkType() != remote.checkType()) {
+      return invalidLocal();
+    }
+    localSkipped = local.skipped();
+    return switch (local.status()) {
+      case SUCCESS -> {
+        comparison = ClientFileCheckComparison.compare(remote, local);
+        localErrorCode = null;
+        localState = LocalState.READY;
+        yield LocalApplyOutcome.APPLIED;
+      }
+      case TRUNCATED -> {
+        comparison = ClientFileCheckComparison.compare(remote, local);
+        localErrorCode = local.errorCode();
+        localState = LocalState.READY_INCOMPLETE;
+        yield LocalApplyOutcome.INCOMPLETE;
+      }
+      case FAILED -> {
+        comparison = List.of();
+        localErrorCode = local.errorCode();
+        localState = LocalState.FAILED;
+        yield LocalApplyOutcome.FAILED;
+      }
+      case DECLINED -> invalidLocal();
+    };
+  }
+
+  private LocalApplyOutcome invalidLocal() {
+    comparison = List.of();
+    localSkipped = List.of();
+    localErrorCode = "INVALID_LOCAL_RESULT";
+    localState = LocalState.FAILED;
+    return LocalApplyOutcome.FAILED;
   }
 
   public synchronized void invalidate() {
     generation++;
     comparison = List.of();
+    localSkipped = List.of();
   }
 
   public synchronized List<UiRow> rows() {
-    List<UiRow> rows = new ArrayList<>(comparison.size() + remote.skipped().size());
+    List<UiRow> rows =
+        new ArrayList<>(comparison.size() + remote.skipped().size() + localSkipped.size());
     for (ClientFileCheckComparison.Row row : comparison)
       rows.add(
           new UiRow(
               row.fileName(), row.kind().name().toLowerCase(Locale.ROOT), RowType.COMPARISON));
     for (ClientFileCheckSkippedEntry row : remote.skipped())
+      rows.add(new UiRow(row.fileName(), row.reason().toLowerCase(Locale.ROOT), RowType.SKIPPED));
+    for (ClientFileCheckSkippedEntry row : localSkipped)
       rows.add(new UiRow(row.fileName(), row.reason().toLowerCase(Locale.ROOT), RowType.SKIPPED));
     return List.copyOf(rows);
   }
@@ -102,4 +152,8 @@ public final class ClientFileCheckResultController {
   public ClientFileCheckResult remote() {
     return remote;
   }
+
+  public synchronized String localErrorCode() { return localErrorCode; }
+  public synchronized List<ClientFileCheckSkippedEntry> localSkipped() { return localSkipped; }
+  public synchronized boolean localIncomplete() { return localState == LocalState.READY_INCOMPLETE; }
 }

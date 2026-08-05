@@ -29,8 +29,9 @@ class ClientFileCheckTaskCoordinatorTest {
                 produced.countDown();
               },
               ignored -> true,
-              applied::set,
-              failure -> fail(failure));
+              (ignored, value) -> applied.set(value),
+              (ignored, failure) -> fail(failure),
+              (ignored, failure) -> {});
       assertNotNull(token);
       assertTrue(produced.await(2, TimeUnit.SECONDS));
       coordinator.invalidateSession();
@@ -55,8 +56,9 @@ class ClientFileCheckTaskCoordinatorTest {
             produced.countDown();
           },
           ignored -> true,
-          ignored -> fail(),
-          failure -> fail(failure));
+          (ignored, value) -> fail(),
+          (ignored, failure) -> fail(failure),
+          (ignored, failure) -> {});
       assertTrue(produced.await(2, TimeUnit.SECONDS));
       var current = coordinator.beginSession(new Object(), UUID.randomUUID());
       queued.remove().run();
@@ -69,8 +71,9 @@ class ClientFileCheckTaskCoordinatorTest {
               () -> 2,
               Runnable::run,
               ignored -> true,
-              ignored -> done.countDown(),
-              failure -> fail(failure)));
+              (ignored, value) -> done.countDown(),
+              (ignored, failure) -> fail(failure),
+              (ignored, failure) -> {}));
       assertTrue(done.await(2, TimeUnit.SECONDS));
     }
   }
@@ -96,8 +99,9 @@ class ClientFileCheckTaskCoordinatorTest {
               },
               Runnable::run,
               ignored -> true,
-              completed::set,
-              failure -> fail(failure));
+              (ignored, value) -> completed.set(value),
+              (ignored, failure) -> fail(failure),
+              (ignored, failure) -> {});
       assertNotNull(token);
       token.cancel();
       gate.countDown();
@@ -126,8 +130,9 @@ class ClientFileCheckTaskCoordinatorTest {
                 scheduled.countDown();
               },
               ignored -> true,
-              ignored -> fail(),
-              ignored -> failures.incrementAndGet()));
+              (ignored, value) -> fail(),
+              (ignored, failure) -> failures.incrementAndGet(),
+              (ignored, failure) -> {}));
       assertTrue(scheduled.await(2, TimeUnit.SECONDS));
       coordinator.invalidateSession();
       queued.remove().run();
@@ -150,8 +155,9 @@ class ClientFileCheckTaskCoordinatorTest {
               },
               Runnable::run,
               ignored -> true,
-              ignored -> fail(),
-              ignored -> failure.incrementAndGet()));
+              (ignored, value) -> fail(),
+              (ignored, problem) -> failure.incrementAndGet(),
+              (ignored, problem) -> {}));
       Thread.sleep(50);
       var done = new CountDownLatch(1);
       assertNotNull(
@@ -162,10 +168,58 @@ class ClientFileCheckTaskCoordinatorTest {
               () -> 1,
               Runnable::run,
               ignored -> true,
-              ignored -> done.countDown(),
-              ignored -> fail()));
+              (ignored, value) -> done.countDown(),
+              (ignored, problem) -> fail(),
+              (ignored, problem) -> {}));
       assertTrue(done.await(2, TimeUnit.SECONDS));
       assertEquals(0, failure.get());
+    }
+  }
+
+  @Test
+  void completionReceivesItsRealTokenAndCompletesHandle() throws Exception {
+    try (var coordinator = new ClientFileCheckTaskCoordinator()) {
+      var session = coordinator.beginSession(new Object(), UUID.randomUUID());
+      var done = new CountDownLatch(1);
+      ClientFileCheckTaskCoordinator.TaskToken[] seen = new ClientFileCheckTaskCoordinator.TaskToken[1];
+      var token = coordinator.submit(session, identity(), 7, () -> 9, Runnable::run,
+          ignored -> true, (actual, value) -> { seen[0] = actual; done.countDown(); },
+          (ignored, failure) -> fail(failure), (ignored, failure) -> fail(failure));
+      assertTrue(done.await(2, TimeUnit.SECONDS));
+      assertSame(token, seen[0]);
+      assertEquals(ClientFileCheckTaskCoordinator.TaskState.COMPLETED, token.state());
+    }
+  }
+
+  @Test
+  void schedulingFailureAbandonsAndMarksDispatchFailedThenExecutorIsReusable() throws Exception {
+    try (var coordinator = new ClientFileCheckTaskCoordinator()) {
+      var session = coordinator.beginSession(new Object(), UUID.randomUUID());
+      var abandoned = new CountDownLatch(1);
+      var token = coordinator.submit(session, identity(), 1, () -> 1,
+          ignored -> { throw new IllegalStateException("dispatch"); }, ignored -> true,
+          (ignored, value) -> fail(), (ignored, failure) -> fail(),
+          (ignored, failure) -> abandoned.countDown());
+      assertTrue(abandoned.await(2, TimeUnit.SECONDS));
+      assertEquals(ClientFileCheckTaskCoordinator.TaskState.DISPATCH_FAILED, token.state());
+      var done = new CountDownLatch(1);
+      assertNotNull(coordinator.submit(session, identity(), 2, () -> 2, Runnable::run,
+          ignored -> true, (ignored, value) -> done.countDown(),
+          (ignored, failure) -> fail(), (ignored, failure) -> fail()));
+      assertTrue(done.await(2, TimeUnit.SECONDS));
+    }
+  }
+
+  @Test
+  void queuedCallbackRuntimeFailureAbandonsAndTerminates() throws Exception {
+    try (var coordinator = new ClientFileCheckTaskCoordinator()) {
+      var session = coordinator.beginSession(new Object(), UUID.randomUUID());
+      var abandoned = new CountDownLatch(1);
+      var token = coordinator.submit(session, identity(), 1, () -> 1, Runnable::run,
+          ignored -> true, (ignored, value) -> { throw new IllegalStateException("callback"); },
+          (ignored, failure) -> fail(), (ignored, failure) -> abandoned.countDown());
+      assertTrue(abandoned.await(2, TimeUnit.SECONDS));
+      assertEquals(ClientFileCheckTaskCoordinator.TaskState.FAILED, token.state());
     }
   }
 

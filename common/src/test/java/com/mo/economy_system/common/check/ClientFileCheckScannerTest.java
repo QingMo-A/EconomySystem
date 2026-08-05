@@ -18,22 +18,13 @@ class ClientFileCheckScannerTest {
   @TempDir Path game;
 
   @Test
-  void scansOnlyDirectRegularFilesInStableOrder() throws Exception {
-    Path mods = Files.createDirectory(game.resolve("mods"));
-    Files.writeString(mods.resolve("b.jar"), "b");
-    Files.writeString(mods.resolve("a.jar"), "abc");
-    Files.createDirectories(mods.resolve("nested"));
-    Files.writeString(mods.resolve("nested/x.jar"), "x");
-    ClientFileCheckResult result =
-        new ClientFileCheckScanner().scan(game, ClientFileCheckType.MODS);
-    assertEquals(ClientFileCheckStatus.SUCCESS, result.status(), result.toString());
-    assertEquals(
-        List.of("a.jar", "b.jar"),
-        result.files().stream().map(ClientFileCheckEntry::fileName).toList());
-    assertEquals(
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        result.files().get(0).sha256());
-    assertTrue(result.skipped().stream().anyMatch(value -> value.fileName().equals("nested")));
+  void unsupportedSystemProviderFailsClosedWithoutLeakingPaths() throws Exception {
+    var access = new FakeAccess(List.of(Path.of("secret.jar")), "secret".getBytes());
+    access.unsafeProvider = true;
+    ClientFileCheckResult result = scanner(access).scan(game, ClientFileCheckType.MODS);
+    assertEquals(ClientFileCheckStatus.FAILED, result.status(), result.toString());
+    assertEquals("DIRECTORY_PROVIDER_UNSAFE", result.errorCode());
+    assertTrue(result.files().isEmpty());
     assertFalse(ClientFileCheckResultJsonCodec.encode(result).contains(game.toString()));
   }
 
@@ -51,22 +42,20 @@ class ClientFileCheckScannerTest {
 
   @Test
   void reportsFileAndTotalLimits() throws Exception {
-    Path mods = Files.createDirectory(game.resolve("mods"));
-    Files.writeString(mods.resolve("a"), "1234");
-    Files.writeString(mods.resolve("b"), "12");
+    var access = new FakeAccess(List.of(Path.of("a"), Path.of("b")), "1234".getBytes());
     var perFile =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 10, 10, 2, 10, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 10, 10, 2, 10, 1_000_000_000), System::nanoTime, access);
     assertEquals(
         "FILE_TOO_LARGE", perFile.scan(game, ClientFileCheckType.MODS).skipped().get(0).reason());
     var total =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 10, 10, 10, 4, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 10, 10, 10, 4, 1_000_000_000), System::nanoTime, new FakeAccess(List.of(Path.of("a"), Path.of("b")), "1234".getBytes()));
     assertEquals(
         ClientFileCheckStatus.TRUNCATED, total.scan(game, ClientFileCheckType.MODS).status());
     var count =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 1, 10, 10, 10, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 1, 10, 10, 10, 1_000_000_000), System::nanoTime, new FakeAccess(List.of(Path.of("a"), Path.of("b")), "1".getBytes()));
     assertEquals("FILE_LIMIT", count.scan(game, ClientFileCheckType.MODS).errorCode());
   }
 
@@ -85,12 +74,10 @@ class ClientFileCheckScannerTest {
 
   @Test
   void boundsDirectoryCandidatesBeforeSortingOrOpening() throws Exception {
-    Path mods = Files.createDirectory(game.resolve("mods"));
-    Files.writeString(mods.resolve("a"), "a");
-    Files.writeString(mods.resolve("b"), "b");
+    var access = new FakeAccess(List.of(Path.of("a"), Path.of("b")), "a".getBytes());
     var scanner =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(1, 10, 10, 10, 10, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(1, 10, 10, 10, 10, 1_000_000_000), System::nanoTime, access);
     ClientFileCheckResult result = scanner.scan(game, ClientFileCheckType.MODS);
     assertEquals(ClientFileCheckStatus.TRUNCATED, result.status());
     assertEquals("DIRECTORY_ENTRY_LIMIT", result.errorCode());
@@ -103,6 +90,18 @@ class ClientFileCheckScannerTest {
     access.failOpenRoot = true;
     ClientFileCheckResult result = scanner(access).scan(game, ClientFileCheckType.MODS);
     assertEquals("DIRECTORY_CHANGED", result.errorCode());
+  }
+
+  @Test
+  void openedHandleIdentityMismatchRejectsSwapBackBeforeEnumerationOrOpen() {
+    var access = new FakeAccess(List.of(Path.of("secret.jar")), "secret".getBytes());
+    // Models precheck=A, opened handle=B, while the pathname has already been restored to A.
+    access.openedIdentityMismatch = true;
+    ClientFileCheckResult result = scanner(access).scan(game, ClientFileCheckType.MODS);
+    assertEquals(ClientFileCheckStatus.TRUNCATED, result.status());
+    assertEquals("DIRECTORY_CHANGED", result.errorCode());
+    assertEquals(0, access.enumerations);
+    assertEquals(0, access.opens);
   }
 
   @Test
@@ -219,6 +218,9 @@ class ClientFileCheckScannerTest {
     int failValidationAt = -1;
     int opens;
     boolean failOpenRoot;
+    boolean unsafeProvider;
+    boolean openedIdentityMismatch;
+    int enumerations;
     boolean entrySymlink;
     boolean noFollowOpen;
     boolean interruptOnNext;
@@ -234,8 +236,11 @@ class ClientFileCheckScannerTest {
 
     public ClientFileCheckScanner.ScanDirectory open(Path game, Path root) throws IOException {
       if (failOpenRoot) throw new ClientFileCheckScanner.RootChangedException();
+      if (unsafeProvider) throw new ClientFileCheckScanner.UnsafeDirectoryProviderException();
+      if (openedIdentityMismatch) throw new ClientFileCheckScanner.RootChangedException();
       return new ClientFileCheckScanner.ScanDirectory() {
         public Iterator<Path> entries() {
+          enumerations++;
           Iterator<Path> delegate = entries.iterator();
           return new Iterator<>() {
             public boolean hasNext() {

@@ -24,7 +24,9 @@ class ClientFileCheckResultControllerTest {
     var controller = new ClientFileCheckResultController(remote);
     long generation = controller.generation();
     controller.invalidate();
-    assertFalse(controller.apply(generation, remote));
+    assertEquals(
+        ClientFileCheckResultController.LocalApplyOutcome.STALE,
+        controller.acceptLocalResult(generation, remote));
     assertTrue(controller.rows().isEmpty());
   }
 
@@ -32,7 +34,9 @@ class ClientFileCheckResultControllerTest {
   void filtersWithoutChangingStoredNames() {
     var remote = success("Alpha.jar", "0".repeat(64));
     var controller = new ClientFileCheckResultController(remote);
-    assertTrue(controller.apply(controller.generation(), remote));
+    assertEquals(
+        ClientFileCheckResultController.LocalApplyOutcome.APPLIED,
+        controller.acceptLocalResult(controller.generation(), remote));
     assertEquals("Alpha.jar", controller.filtered("alpha").get(0).fileName());
   }
 
@@ -62,8 +66,45 @@ class ClientFileCheckResultControllerTest {
     long retry = controller.retry();
     assertTrue(retry > old);
     assertEquals(ClientFileCheckResultController.LocalState.LOADING, controller.localState());
-    assertFalse(controller.apply(old, remote));
-    assertTrue(controller.apply(retry, remote));
+    assertEquals(ClientFileCheckResultController.LocalApplyOutcome.STALE,
+        controller.acceptLocalResult(old, remote));
+    assertEquals(ClientFileCheckResultController.LocalApplyOutcome.APPLIED,
+        controller.acceptLocalResult(retry, remote));
+  }
+
+  @Test
+  void failedLocalHasNoComparisonAndPreservesError() {
+    var controller = new ClientFileCheckResultController(success("remote.jar", "0".repeat(64)));
+    var local = ClientFileCheckResult.failed(ClientFileCheckType.MODS, "DIRECTORY_PROVIDER_UNSAFE");
+    assertEquals(ClientFileCheckResultController.LocalApplyOutcome.FAILED,
+        controller.acceptLocalResult(controller.generation(), local));
+    assertEquals(ClientFileCheckResultController.LocalState.FAILED, controller.localState());
+    assertEquals("DIRECTORY_PROVIDER_UNSAFE", controller.localErrorCode());
+    assertTrue(controller.rows().isEmpty());
+  }
+
+  @Test
+  void truncatedLocalIsExplicitlyIncompleteAndRetryable() {
+    var controller = new ClientFileCheckResultController(success("remote.jar", "0".repeat(64)));
+    var local = new ClientFileCheckResult(1, ClientFileCheckStatus.TRUNCATED,
+        ClientFileCheckType.MODS, List.of(),
+        List.of(new ClientFileCheckSkippedEntry("local.jar", "FILE_TOO_LARGE")), "FILE_LIMIT");
+    assertEquals(ClientFileCheckResultController.LocalApplyOutcome.INCOMPLETE,
+        controller.acceptLocalResult(controller.generation(), local));
+    assertEquals(ClientFileCheckResultController.LocalState.READY_INCOMPLETE, controller.localState());
+    assertEquals("FILE_LIMIT", controller.localErrorCode());
+    assertTrue(controller.rows().stream().anyMatch(row -> row.fileName().equals("local.jar")));
+    assertTrue(controller.retry() > 0);
+  }
+
+  @Test
+  void declinedAndTypeMismatchFailAsInvalidLocalResult() {
+    var controller = new ClientFileCheckResultController(success("a.jar", "0".repeat(64)));
+    controller.acceptLocalResult(controller.generation(), ClientFileCheckResult.declined(ClientFileCheckType.MODS));
+    assertEquals("INVALID_LOCAL_RESULT", controller.localErrorCode());
+    long retry = controller.retry();
+    controller.acceptLocalResult(retry, ClientFileCheckResult.failed(ClientFileCheckType.SHADERPACKS, "X"));
+    assertEquals("INVALID_LOCAL_RESULT", controller.localErrorCode());
   }
 
   private static ClientFileCheckResult success(String name, String hash) {

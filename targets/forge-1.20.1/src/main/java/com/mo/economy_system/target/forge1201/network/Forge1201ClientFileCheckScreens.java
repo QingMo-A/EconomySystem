@@ -124,8 +124,6 @@ public final class Forge1201ClientFileCheckScreens {
     private final ClientFileCheckRequestMessage request;
     private final ClientFileCheckTaskCoordinator.RequestIdentity identity;
     private final ClientFileCheckTaskCoordinator.Session session;
-    private final ClientFileCheckTaskCoordinator.TaskToken[] tokenHolder =
-        new ClientFileCheckTaskCoordinator.TaskToken[1];
     private final AtomicBoolean finished = new AtomicBoolean();
     private final long deadline = System.nanoTime() + 60_000_000_000L;
 
@@ -196,12 +194,13 @@ public final class Forge1201ClientFileCheckScreens {
                       minecraft.getConnection() == session.connectionIdentity()
                           && minecraft.player != null
                           && minecraft.player.getUUID().equals(session.localPlayerId()),
-                  result -> terminal(result, tokenHolder[0]),
-                  failure ->
+                  (callbackToken, result) -> terminal(result, callbackToken),
+                  (callbackToken, failure) ->
                       terminal(
                           ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED"),
-                          tokenHolder[0]));
-      tokenHolder[0] = token;
+                          callbackToken),
+                  (abandonedToken, failure) ->
+                      Forge1201ClientFileCheckClientRuntime.consent().finish(identity, session));
       if (token == null)
         terminal(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"), null);
       minecraft.setScreen(null);
@@ -338,14 +337,15 @@ public final class Forge1201ClientFileCheckScreens {
                           && minecraft.player != null
                           && minecraft.player.getUUID().equals(session.localPlayerId())
                           && controller.generation() == token.controllerGeneration(),
-                  local -> {
-                    controller.apply(generation, local);
+                  (callbackToken, local) -> {
+                    controller.acceptLocalResult(generation, local);
                     task = null;
                   },
-                  failure -> {
+                  (callbackToken, failure) -> {
                     controller.failed(generation);
                     task = null;
-                  });
+                  },
+                  (abandonedToken, failure) -> controller.failed(generation));
       if (task == null) controller.busy(generation);
     }
 
@@ -383,18 +383,20 @@ public final class Forge1201ClientFileCheckScreens {
           12,
           48,
           0xDDDDDD);
+      ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, retry != null);
+      ClientFileCheckLayout.Box status = layout.status();
+      ClientFileCheckResultController.LocalState localState = controller.localState();
+      if (retry != null)
+        retry.visible = layout.retry() != null && (localState == ClientFileCheckResultController.LocalState.BUSY
+            || localState == ClientFileCheckResultController.LocalState.FAILED
+            || localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE);
+      if (status != null) {
       graphics.drawString(
           font,
           Component.translatable(
               "screen.check_result.status_" + result.status().name().toLowerCase(Locale.ROOT)),
-          12,
-          84,
+          status.x(), status.y(),
           0xCCCCCC);
-      ClientFileCheckResultController.LocalState localState = controller.localState();
-      if (retry != null)
-        retry.visible =
-            localState == ClientFileCheckResultController.LocalState.BUSY
-                || localState == ClientFileCheckResultController.LocalState.FAILED;
       if (controller.needsComparison()
           && localState != ClientFileCheckResultController.LocalState.READY)
         graphics.drawString(
@@ -404,20 +406,18 @@ public final class Forge1201ClientFileCheckScreens {
                   case LOADING -> "screen.check_result.loading";
                   case BUSY -> "screen.check_result.local_scan_busy";
                   case FAILED -> "screen.check_result.local_scan_failed";
+                  case READY_INCOMPLETE -> "screen.check_result.local_incomplete";
                   default -> "screen.check_result.loading";
                 }),
-            12,
-            120,
+            status.x(), status.y() + 36,
             0xAAAAAA);
       if (result.status() == ClientFileCheckStatus.TRUNCATED)
         graphics.drawString(
-            font, Component.translatable("screen.check_result.incomplete"), 12, 132, 0xCCAA66);
+            font, Component.translatable("screen.check_result.incomplete"), status.x(), status.y() + 48, 0xCCAA66);
       graphics.drawString(
           font,
-          Component.literal(
-              "files=" + result.files().size() + "  skipped=" + result.skipped().size()),
-          12,
-          96,
+          Component.translatable("screen.check_result.counts", result.files().size(), result.skipped().size(), controller.localSkipped().size()),
+          status.x(), status.y() + 12,
           0xCCCCCC);
       if (result.errorCode() != null)
         graphics.drawString(
@@ -427,12 +427,21 @@ public final class Forge1201ClientFileCheckScreens {
                 Component.translatable(
                     "screen.check_result.error_code."
                         + result.errorCode().toLowerCase(Locale.ROOT))),
-            12,
-            108,
+            status.x(), status.y() + 24,
             0xCC7777);
+      if (controller.localErrorCode() != null)
+        graphics.drawString(font, Component.translatable("screen.check_result.local_error",
+            Component.translatable("screen.check_result.error_code." + controller.localErrorCode().toLowerCase(Locale.ROOT))),
+            status.x(), status.y() + 60, 0xCC7777);
+      if (localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE)
+        graphics.drawString(font, Component.translatable("screen.check_result.local_comparison_warning"),
+            status.x(), status.y() + 72, 0xCCAA66);
+      }
       List<ClientFileCheckResultController.UiRow> visibleRows = filtered();
-      int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
-      int rowY = retry == null ? 148 : 172;
+      ClientFileCheckLayout.Box rows = layout.rows();
+      if (rows == null) return;
+      int visible = rows.height() / 12;
+      int rowY = rows.y();
       for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
         ClientFileCheckResultController.UiRow row = visibleRows.get(i);
         String key =
@@ -443,7 +452,7 @@ public final class Forge1201ClientFileCheckScreens {
         graphics.drawString(
             font,
             font.plainSubstrByWidth(line, Math.max(40, width - 24)),
-            12,
+            rows.x(),
             rowY + (i - offset) * 12,
             0xAAAAAA);
       }

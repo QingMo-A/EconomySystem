@@ -253,5 +253,11 @@
   "screen.check_result.error_code.skipped_limit": "已达到跳过文件上限",
   "screen.check_result.error_code.json_limit": "已达到结果大小上限",
   "screen.check_result.error_code.result_too_large": "结果过大",
-  "screen.check_result.error_code.directory_unreadable": "扫描目录不可用"
+  "screen.check_result.error_code.directory_unreadable": "扫描目录不可用",
+  "screen.check_result.counts": "远端文件：%s，远端跳过：%s，本地跳过：%s",
+  "screen.check_result.local_incomplete": "本地扫描结果不完整",
+  "screen.check_result.local_error": "本地原因：%s",
+  "screen.check_result.local_comparison_warning": "仅远端 / 仅本地的比较结果可能不完整",
+  "screen.check_result.error_code.invalid_local_result": "本地扫描结果无效",
+  "screen.check_result.error_code.directory_provider_unsafe": "目录提供程序无法保证安全扫描"
 }

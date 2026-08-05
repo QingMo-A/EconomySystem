@@ -88,4 +88,6 @@ exact consent-busy semantics, expiring processing claims, shared one-shot result
 Consent ownership now spans CONSENT, SCANNING and SENDING. Preserve the shared session-aware protocol-24
 dispatcher, SecureDirectoryStream relative opens or fallback root identity revalidation, task failure callbacks,
 status-specific local result UI, and complete skipped-row rendering. Protocol 26+ remains legacy.
-Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.
+The protocol 23-25 safety closure is complete: local SUCCESS compares fully, FAILED has no comparison, and TRUNCATED is READY_INCOMPLETE with preserved skipped/error data. Pre-created task tokens are passed directly to callbacks; scheduling/callback failures terminate and run common-state abandonment cleanup. Scanner roots are authenticated from the opened SecureDirectoryStream handle, and unsupported providers fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ is still legacy.
+
+Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.

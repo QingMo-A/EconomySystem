@@ -853,5 +853,7 @@ logout, disconnect, menu return, and shutdown invalidate queued completions befo
 Directory enumeration is capped at 4096 entries and its deadline covers opening, enumeration, sorting, and
 hashing. Files are opened once with open-time `NOFOLLOW_LINKS`; size and SHA-256 come from that same channel.
 Concurrent consent requests are exact-identity deduplicated or answered `FAILED/CONSENT_BUSY`.
-Final protocol-23-25 verification: 345 shared-source tests, 421 Forge tests, and 481 NeoForge tests.
+Protocol 23-25 safety closure distinguishes local SUCCESS, FAILED, and TRUNCATED; TRUNCATED is exposed as READY_INCOMPLETE and FAILED never produces comparison rows. Task callbacks receive their real pre-created token, scheduling/callback failures terminate the handle and run common-only abandonment cleanup. Directory scans bind the precheck identity to attributes read from the opened SecureDirectoryStream itself; providers without a stable opened-handle identity fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
+
+Final protocol-23-25 verification: 352 shared-source tests, 428 Forge tests, and 488 NeoForge tests.
 

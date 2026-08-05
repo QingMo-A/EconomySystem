@@ -253,5 +253,11 @@
   "screen.check_result.error_code.skipped_limit": "skipped-file limit reached",
   "screen.check_result.error_code.json_limit": "result size limit reached",
   "screen.check_result.error_code.result_too_large": "result is too large",
-  "screen.check_result.error_code.directory_unreadable": "scan directory is unavailable"
+  "screen.check_result.error_code.directory_unreadable": "scan directory is unavailable",
+  "screen.check_result.counts": "Remote files: %s, remote skipped: %s, local skipped: %s",
+  "screen.check_result.local_incomplete": "Local scan is incomplete",
+  "screen.check_result.local_error": "Local reason: %s",
+  "screen.check_result.local_comparison_warning": "ONLY_REMOTE / ONLY_LOCAL results may be incomplete",
+  "screen.check_result.error_code.invalid_local_result": "invalid local scan result",
+  "screen.check_result.error_code.directory_provider_unsafe": "directory provider cannot be scanned safely"
 }

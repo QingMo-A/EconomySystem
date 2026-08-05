@@ -212,6 +212,8 @@ public final class ClientFileCheckScanner {
       }
     } catch (RootChangedException changed) {
       truncation = "DIRECTORY_CHANGED";
+    } catch (UnsafeDirectoryProviderException unsafe) {
+      return ClientFileCheckResult.failed(type, "DIRECTORY_PROVIDER_UNSAFE");
     } catch (IOException | SecurityException failure) {
       if (files.isEmpty() && skipped.isEmpty())
         return ClientFileCheckResult.failed(type, "DIRECTORY_UNREADABLE");
@@ -337,6 +339,12 @@ public final class ClientFileCheckScanner {
     }
   }
 
+  static final class UnsafeDirectoryProviderException extends IOException {
+    UnsafeDirectoryProviderException() {
+      super("directory provider cannot bind an opened handle identity");
+    }
+  }
+
   private static final class SystemFileAccess implements FileAccess {
     public boolean existsNoFollow(Path root) {
       return Files.exists(root, NOFOLLOW);
@@ -344,15 +352,24 @@ public final class ClientFileCheckScanner {
 
     public ScanDirectory open(Path gameDirectory, Path root) throws IOException {
       BasicFileAttributes attributes = readRoot(root);
-      String fileKey = identity(root, attributes);
-      Path canonicalGame = gameDirectory.toRealPath();
-      Path expectedRoot = canonicalGame.resolve(root.getFileName()).normalize();
+      Object fileKey = attributes.fileKey();
+      if (fileKey == null) throw new UnsafeDirectoryProviderException();
       DirectoryStream<Path> stream = Files.newDirectoryStream(root);
       try {
-        if (stream instanceof SecureDirectoryStream<Path> secure)
-          return new SystemScanDirectory(root, expectedRoot, fileKey, stream, secure);
-        return new SystemScanDirectory(root, expectedRoot, fileKey, stream, null);
+        if (!(stream instanceof SecureDirectoryStream<Path> secure))
+          throw new UnsafeDirectoryProviderException();
+        BasicFileAttributeView view = secure.getFileAttributeView(BasicFileAttributeView.class);
+        if (view == null) throw new UnsafeDirectoryProviderException();
+        BasicFileAttributes opened = view.readAttributes();
+        if (!opened.isDirectory()
+            || opened.isSymbolicLink()
+            || opened.fileKey() == null
+            || !fileKey.equals(opened.fileKey())) throw new RootChangedException();
+        return new SystemScanDirectory(fileKey, stream, secure, view);
       } catch (RuntimeException | Error failure) {
+        stream.close();
+        throw failure;
+      } catch (IOException failure) {
         stream.close();
         throw failure;
       }
@@ -364,36 +381,23 @@ public final class ClientFileCheckScanner {
       return value;
     }
 
-    private static String identity(Path root, BasicFileAttributes attributes) throws IOException {
-      Object key = attributes.fileKey();
-      if (key != null) return "key:" + key;
-      return "fallback:"
-          + attributes.creationTime().toMillis()
-          + ':'
-          + Files.getFileStore(root).name()
-          + ':'
-          + root.toRealPath();
-    }
   }
 
   private static final class SystemScanDirectory implements ScanDirectory {
-    private final Path root;
-    private final Path expectedRoot;
-    private final String fileKey;
+    private final Object fileKey;
     private final DirectoryStream<Path> stream;
     private final SecureDirectoryStream<Path> secure;
+    private final BasicFileAttributeView rootView;
 
     private SystemScanDirectory(
-        Path root,
-        Path expectedRoot,
-        String fileKey,
+        Object fileKey,
         DirectoryStream<Path> stream,
-        SecureDirectoryStream<Path> secure) {
-      this.root = root;
-      this.expectedRoot = expectedRoot;
+        SecureDirectoryStream<Path> secure,
+        BasicFileAttributeView rootView) {
       this.fileKey = fileKey;
       this.stream = stream;
       this.secure = secure;
+      this.rootView = rootView;
     }
 
     public Iterator<Path> entries() {
@@ -402,10 +406,7 @@ public final class ClientFileCheckScanner {
 
     public SeekableByteChannel openNoFollow(Path name) throws IOException {
       validate();
-      SeekableByteChannel channel =
-          secure != null
-              ? secure.newByteChannel(name, READ_NOFOLLOW)
-              : Files.newByteChannel(root.resolve(name), READ_NOFOLLOW);
+      SeekableByteChannel channel = secure.newByteChannel(name, READ_NOFOLLOW);
       try {
         validate();
         return channel;
@@ -416,19 +417,18 @@ public final class ClientFileCheckScanner {
     }
 
     public BasicFileAttributes attributesNoFollow(Path name) throws IOException {
-      if (secure != null) {
-        BasicFileAttributeView view =
-            secure.getFileAttributeView(name, BasicFileAttributeView.class, NOFOLLOW);
-        if (view == null) throw new IOException("attributes unavailable");
-        return view.readAttributes();
-      }
-      return Files.readAttributes(root.resolve(name), BasicFileAttributes.class, NOFOLLOW);
+      BasicFileAttributeView view =
+          secure.getFileAttributeView(name, BasicFileAttributeView.class, NOFOLLOW);
+      if (view == null) throw new IOException("attributes unavailable");
+      return view.readAttributes();
     }
 
     public void validate() throws IOException {
-      BasicFileAttributes current = SystemFileAccess.readRoot(root);
-      if (!fileKey.equals(SystemFileAccess.identity(root, current))
-          || !Files.isSameFile(root, expectedRoot)) throw new RootChangedException();
+      BasicFileAttributes current = rootView.readAttributes();
+      if (!current.isDirectory()
+          || current.isSymbolicLink()
+          || current.fileKey() == null
+          || !fileKey.equals(current.fileKey())) throw new RootChangedException();
     }
 
     public void close() throws IOException {

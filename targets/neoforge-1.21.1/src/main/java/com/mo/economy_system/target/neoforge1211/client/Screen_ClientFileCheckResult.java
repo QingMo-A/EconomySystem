@@ -90,14 +90,15 @@ public final class Screen_ClientFileCheckResult extends Screen {
                         && minecraft.player != null
                         && minecraft.player.getUUID().equals(session.localPlayerId())
                         && controller.generation() == token.controllerGeneration(),
-                local -> {
-                  controller.apply(generation, local);
+                (callbackToken, local) -> {
+                  controller.acceptLocalResult(generation, local);
                   task = null;
                 },
-                failure -> {
+                (callbackToken, failure) -> {
                   controller.failed(generation);
                   task = null;
-                });
+                },
+                (abandonedToken, failure) -> controller.failed(generation));
     if (task == null) controller.busy(generation);
   }
 
@@ -122,6 +123,14 @@ public final class Screen_ClientFileCheckResult extends Screen {
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     super.render(graphics, mouseX, mouseY, partialTick);
     graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFF);
+    ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, retry != null);
+    ClientFileCheckLayout.Box status = layout.status();
+    ClientFileCheckResultController.LocalState localState = controller.localState();
+    if (retry != null)
+      retry.visible = layout.retry() != null && (localState == ClientFileCheckResultController.LocalState.BUSY
+          || localState == ClientFileCheckResultController.LocalState.FAILED
+          || localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE);
+    if (status != null) {
     graphics.drawString(
         font,
         Component.translatable("screen.check_result.target", message.targetPlayerName()),
@@ -138,16 +147,10 @@ public final class Screen_ClientFileCheckResult extends Screen {
         font,
         Component.translatable(
             "screen.check_result.status_" + result.status().name().toLowerCase(Locale.ROOT)),
-        12,
-        84,
+        status.x(), status.y(),
         0xCCCCCC);
-    ClientFileCheckResultController.LocalState localState = controller.localState();
-    if (retry != null)
-      retry.visible =
-          localState == ClientFileCheckResultController.LocalState.BUSY
-              || localState == ClientFileCheckResultController.LocalState.FAILED;
-    if (controller.needsComparison()
-        && localState != ClientFileCheckResultController.LocalState.READY)
+    int lineY = status.y() + 36;
+    if (controller.needsComparison() && localState != ClientFileCheckResultController.LocalState.READY)
       graphics.drawString(
           font,
           Component.translatable(
@@ -155,20 +158,18 @@ public final class Screen_ClientFileCheckResult extends Screen {
                 case LOADING -> "screen.check_result.loading";
                 case BUSY -> "screen.check_result.local_scan_busy";
                 case FAILED -> "screen.check_result.local_scan_failed";
+                case READY_INCOMPLETE -> "screen.check_result.local_incomplete";
                 default -> "screen.check_result.loading";
               }),
-          12,
-          120,
+          status.x(), lineY,
           0xAAAAAA);
     if (result.status() == com.mo.economy_system.common.check.ClientFileCheckStatus.TRUNCATED)
       graphics.drawString(
-          font, Component.translatable("screen.check_result.incomplete"), 12, 132, 0xCCAA66);
+            font, Component.translatable("screen.check_result.incomplete"), status.x(), status.y() + 48, 0xCCAA66);
     graphics.drawString(
         font,
-        Component.literal(
-            "files=" + result.files().size() + "  skipped=" + result.skipped().size()),
-        12,
-        96,
+        Component.translatable("screen.check_result.counts", result.files().size(), result.skipped().size(), controller.localSkipped().size()),
+        status.x(), status.y() + 12,
         0xCCCCCC);
     if (result.errorCode() != null)
       graphics.drawString(
@@ -177,12 +178,21 @@ public final class Screen_ClientFileCheckResult extends Screen {
               "screen.check_result.error",
               Component.translatable(
                   "screen.check_result.error_code." + result.errorCode().toLowerCase(Locale.ROOT))),
-          12,
-          108,
+          status.x(), status.y() + 24,
           0xCC7777);
+    if (controller.localErrorCode() != null)
+      graphics.drawString(font, Component.translatable("screen.check_result.local_error",
+          Component.translatable("screen.check_result.error_code." + controller.localErrorCode().toLowerCase(Locale.ROOT))),
+          status.x(), status.y() + 60, 0xCC7777);
+    if (localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE)
+      graphics.drawString(font, Component.translatable("screen.check_result.local_comparison_warning"),
+          status.x(), status.y() + 72, 0xCCAA66);
+    }
     List<ClientFileCheckResultController.UiRow> visibleRows = filtered();
-    int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
-    int rowY = retry == null ? 148 : 172;
+    ClientFileCheckLayout.Box rows = layout.rows();
+    if (rows == null) return;
+    int visible = rows.height() / 12;
+    int rowY = rows.y();
     for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
       ClientFileCheckResultController.UiRow row = visibleRows.get(i);
       String key =
@@ -193,7 +203,7 @@ public final class Screen_ClientFileCheckResult extends Screen {
       graphics.drawString(
           font,
           font.plainSubstrByWidth(line, Math.max(40, width - 24)),
-          12,
+          rows.x(),
           rowY + (i - offset) * 12,
           0xAAAAAA);
     }

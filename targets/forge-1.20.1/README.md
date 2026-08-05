@@ -175,4 +175,6 @@ trigger a local scan. Both loaders route C2S results through one common one-shot
 are recorded from the final build below. Both loaders use one shared session dispatcher. Consent remains owned
 until terminal sending finishes, root replacement fails
 closed, and the result page renders loading/busy/failed/ready plus every skipped row. Protocol 26+ remains legacy.
-Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.
+Forge uses the shared local-result controller: SUCCESS compares normally, FAILED retains its error without fake ONLY_REMOTE rows, and TRUNCATED is READY_INCOMPLETE with skipped/error details and a warning. Scanner task callbacks carry their pre-created token; dispatch/callback failures terminate and clear common state. Files are scanned only through a SecureDirectoryStream whose opened-handle attributes match the precheck identity. Unsupported providers fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
+
+Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.

@@ -4,11 +4,20 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /** Owns one bounded worker for one client connection generation. */
 public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
+  public enum TaskState {
+    RUNNING,
+    CALLBACK_QUEUED,
+    COMPLETED,
+    FAILED,
+    CANCELLED,
+    DISPATCH_FAILED
+  }
   public record Session(long generation, Object connectionIdentity, UUID localPlayerId) {
     public Session {
       if (generation <= 0) throw new IllegalArgumentException("generation");
@@ -31,6 +40,7 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
     private final RequestIdentity request;
     private final long controllerGeneration;
     private final AtomicBoolean cancelled = new AtomicBoolean();
+    private volatile TaskState state = TaskState.RUNNING;
 
     private TaskToken(Session session, RequestIdentity request, long controllerGeneration) {
       this.session = session;
@@ -52,11 +62,16 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
 
     public void cancel() {
       cancelled.set(true);
+      if (!terminal(state)) state = TaskState.CANCELLED;
     }
 
     public boolean cancelled() {
       return cancelled.get();
     }
+
+    public TaskState state() { return state; }
+
+    private void state(TaskState next) { state = next; }
   }
 
   private long generation;
@@ -92,13 +107,15 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
       Supplier<T> task,
       Consumer<Runnable> mainThread,
       Predicate<TaskToken> acceptance,
-      Consumer<T> completion,
-      Consumer<RuntimeException> failure) {
+      BiConsumer<TaskToken, T> completion,
+      BiConsumer<TaskToken, RuntimeException> failure,
+      BiConsumer<TaskToken, Throwable> abandonment) {
     Objects.requireNonNull(task, "task");
     Objects.requireNonNull(mainThread, "mainThread");
     Objects.requireNonNull(acceptance, "acceptance");
     Objects.requireNonNull(completion, "completion");
     Objects.requireNonNull(failure, "failure");
+    Objects.requireNonNull(abandonment, "abandonment");
     if (!isCurrent(session) || executor == null) return null;
     TaskToken token = new TaskToken(session, request, controllerGeneration);
     boolean accepted =
@@ -106,11 +123,30 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
             () -> {
               try {
                 T value = task.get();
-                schedule(token, acceptance, mainThread, () -> completion.accept(value));
+                schedule(
+                    token,
+                    acceptance,
+                    mainThread,
+                    () -> completion.accept(token, value),
+                    TaskState.COMPLETED,
+                    abandonment);
               } catch (RuntimeException taskFailure) {
-                schedule(token, acceptance, mainThread, () -> failure.accept(taskFailure));
+                schedule(
+                    token,
+                    acceptance,
+                    mainThread,
+                    () -> failure.accept(token, taskFailure),
+                    TaskState.FAILED,
+                    abandonment);
+              } catch (Error fatal) {
+                if (!terminal(token.state())) {
+                  token.state(TaskState.FAILED);
+                  abandon(token, fatal, abandonment);
+                }
+                throw fatal;
               }
             });
+    if (!accepted) token.cancel();
     return accepted ? token : null;
   }
 
@@ -118,16 +154,62 @@ public final class ClientFileCheckTaskCoordinator implements AutoCloseable {
       TaskToken token,
       Predicate<TaskToken> acceptance,
       Consumer<Runnable> mainThread,
-      Runnable callback) {
-    if (!isAccepted(token, acceptance)) return;
-    try {
-      mainThread.accept(
-          () -> {
-            if (isAccepted(token, acceptance)) callback.run();
-          });
-    } catch (RuntimeException schedulingFailure) {
+      Runnable callback,
+      TaskState terminalState,
+      BiConsumer<TaskToken, Throwable> abandonment) {
+    if (!isAccepted(token, acceptance)) {
       token.cancel();
+      return;
     }
+    token.state(TaskState.CALLBACK_QUEUED);
+    try {
+      mainThread.accept(() -> runCallback(
+          token, acceptance, callback, terminalState, abandonment));
+    } catch (RuntimeException schedulingFailure) {
+      token.state(TaskState.DISPATCH_FAILED);
+      abandon(token, schedulingFailure, abandonment);
+    }
+  }
+
+  private void runCallback(
+      TaskToken token,
+      Predicate<TaskToken> acceptance,
+      Runnable callback,
+      TaskState terminalState,
+      BiConsumer<TaskToken, Throwable> abandonment) {
+    if (!isAccepted(token, acceptance)) {
+      token.cancel();
+      return;
+    }
+    try {
+      callback.run();
+      token.state(terminalState);
+    } catch (RuntimeException callbackFailure) {
+      token.state(TaskState.FAILED);
+      abandon(token, callbackFailure, abandonment);
+    } catch (Error fatal) {
+      token.state(TaskState.FAILED);
+      abandon(token, fatal, abandonment);
+      throw fatal;
+    }
+  }
+
+  private void abandon(
+      TaskToken token,
+      Throwable failure,
+      BiConsumer<TaskToken, Throwable> abandonment) {
+    try {
+      abandonment.accept(token, failure);
+    } catch (RuntimeException ignored) {
+      // Abandonment is restricted to thread-safe common state.
+    }
+  }
+
+  private static boolean terminal(TaskState state) {
+    return state == TaskState.COMPLETED
+        || state == TaskState.FAILED
+        || state == TaskState.CANCELLED
+        || state == TaskState.DISPATCH_FAILED;
   }
 
   public synchronized boolean isCurrent(Session session) {

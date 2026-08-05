@@ -254,4 +254,6 @@ CONSENT, SCANNING and SENDING; every protocol-24 result uses one connection/sess
 providers use relative handle opens, while fallback providers revalidate root identity and canonical parent
 before and after entry opens. The result controller renders local loading/busy/failed/ready states and exposes
 all comparison and skipped rows. Protocol 26+ remains legacy.
-Final verified counts: 345 shared-source tests, 421 Forge tests, 481 NeoForge tests.
+Local SUCCESS produces a complete comparison, local FAILED preserves its bounded error and produces no comparison, and local TRUNCATED preserves skipped/error data as READY_INCOMPLETE with an explicit partial-comparison warning. Task tokens are created before submission and passed directly to callbacks. Scheduling and callback failures reach terminal states and invoke common-state-only abandonment cleanup. Scanning now verifies attributes of the opened SecureDirectoryStream itself against the pre-open identity; providers without a stable opened-directory identity fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
+
+Final verified counts: 352 shared-source tests, 428 Forge tests, 488 NeoForge tests.
