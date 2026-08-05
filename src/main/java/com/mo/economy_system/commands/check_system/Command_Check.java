@@ -91,7 +91,7 @@ public final class Command_Check {
               pending.requesterPlayerId(),
               type));
     } catch (RuntimeException failure) {
-      store.discard(pending.key(), tick);
+      store.rollbackCreated(pending, tick);
       source.sendFailure(Component.translatable("message.check.send_failed"));
       return 0;
     }

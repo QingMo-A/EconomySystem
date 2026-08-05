@@ -2,31 +2,59 @@ package com.mo.economy_system.common.check;
 
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 public final class ClientFileCheckScanner {
   public interface Clock {
     long nanoTime();
   }
 
+  interface FileAccess {
+    boolean exists(Path path);
+
+    boolean directoryNoFollow(Path path);
+
+    DirectoryStream<Path> list(Path path) throws IOException;
+
+    SeekableByteChannel openNoFollow(Path path) throws IOException;
+
+    boolean symbolicLink(Path path);
+
+    boolean directoryEntry(Path path);
+  }
+
   public record Limits(
-      int maxFiles, int maxSkipped, long maxSingleBytes, long maxTotalBytes, long maxNanos) {
+      int maxCandidates,
+      int maxFiles,
+      int maxSkipped,
+      long maxSingleBytes,
+      long maxTotalBytes,
+      long maxNanos) {
     public Limits {
-      if (maxFiles < 1 || maxSkipped < 0 || maxSingleBytes < 0 || maxTotalBytes < 0 || maxNanos < 1)
-        throw new IllegalArgumentException("scan limits");
+      if (maxCandidates < 1
+          || maxFiles < 1
+          || maxSkipped < 0
+          || maxSingleBytes < 0
+          || maxTotalBytes < 0
+          || maxNanos < 1) throw new IllegalArgumentException("scan limits");
     }
 
     public static Limits defaults() {
       return new Limits(
+          EconomyNetworkLimits.MAX_CHECK_DIRECTORY_ENTRIES,
           EconomyNetworkLimits.MAX_CHECK_FILES,
           EconomyNetworkLimits.MAX_CHECK_SKIPPED_FILES,
           EconomyNetworkLimits.MAX_CHECK_SINGLE_FILE_BYTES,
@@ -35,16 +63,50 @@ public final class ClientFileCheckScanner {
     }
   }
 
+  private static final FileAccess SYSTEM =
+      new FileAccess() {
+        public boolean exists(Path path) {
+          return Files.exists(path, LinkOption.NOFOLLOW_LINKS);
+        }
+
+        public boolean directoryNoFollow(Path path) {
+          return Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path);
+        }
+
+        public DirectoryStream<Path> list(Path path) throws IOException {
+          return Files.newDirectoryStream(path);
+        }
+
+        public SeekableByteChannel openNoFollow(Path path) throws IOException {
+          Set<OpenOption> options = Set.of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
+          return Files.newByteChannel(path, options);
+        }
+
+        public boolean symbolicLink(Path path) {
+          return Files.isSymbolicLink(path);
+        }
+
+        public boolean directoryEntry(Path path) {
+          return Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS);
+        }
+      };
+
   private final Limits limits;
   private final Clock clock;
+  private final FileAccess access;
 
   public ClientFileCheckScanner() {
-    this(Limits.defaults(), System::nanoTime);
+    this(Limits.defaults(), System::nanoTime, SYSTEM);
   }
 
   public ClientFileCheckScanner(Limits limits, Clock clock) {
+    this(limits, clock, SYSTEM);
+  }
+
+  ClientFileCheckScanner(Limits limits, Clock clock, FileAccess access) {
     this.limits = limits;
     this.clock = clock;
+    this.access = access;
   }
 
   public Path directory(Path gameDirectory, ClientFileCheckType type) {
@@ -56,145 +118,223 @@ public final class ClientFileCheckScanner {
   }
 
   public ClientFileCheckResult scan(Path gameDirectory, ClientFileCheckType type) {
+    long deadline = saturatedAdd(clock.nanoTime(), limits.maxNanos());
+    String stopped = stopReason(deadline);
+    if (stopped != null) return truncated(type, List.of(), List.of(), stopped);
     Path root = directory(gameDirectory, type);
-    if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS))
-      return new ClientFileCheckResult(
-          1, ClientFileCheckStatus.SUCCESS, type, List.of(), List.of(), null);
-    if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(root))
+    stopped = stopReason(deadline);
+    if (stopped != null) return truncated(type, List.of(), List.of(), stopped);
+    if (!access.exists(root)) return success(type, List.of(), List.of());
+    if (!access.directoryNoFollow(root))
       return ClientFileCheckResult.failed(type, "DIRECTORY_UNREADABLE");
 
-    List<Path> candidates = new ArrayList<>();
-    try (DirectoryStream<Path> stream = Files.newDirectoryStream(root)) {
-      for (Path path : stream) candidates.add(path);
+    List<Path> candidates = new ArrayList<>(Math.min(limits.maxCandidates(), 256));
+    String truncation = null;
+    try (DirectoryStream<Path> stream = access.list(root)) {
+      for (Path path : stream) {
+        stopped = stopReason(deadline);
+        if (stopped != null) {
+          truncation = stopped;
+          break;
+        }
+        if (candidates.size() >= limits.maxCandidates()) {
+          truncation = "DIRECTORY_ENTRY_LIMIT";
+          break;
+        }
+        candidates.add(path);
+      }
     } catch (IOException | SecurityException failure) {
       return ClientFileCheckResult.failed(type, "DIRECTORY_UNREADABLE");
     }
-    candidates.sort(Comparator.comparing(path -> path.getFileName().toString()));
+    stopped = stopReason(deadline);
+    if (stopped != null) truncation = stopped;
+    if (truncation == null) {
+      try {
+        candidates.sort(
+            Comparator.comparing(
+                path -> {
+                  String reason = stopReason(deadline);
+                  if (reason != null) throw new ScanStopped(reason);
+                  return path.getFileName().toString();
+                }));
+      } catch (ScanStopped stoppedSort) {
+        truncation = stoppedSort.reason;
+      }
+    }
+
     List<ClientFileCheckEntry> files = new ArrayList<>();
     List<ClientFileCheckSkippedEntry> skipped = new ArrayList<>();
     long total = 0;
-    long deadline = saturatedAdd(clock.nanoTime(), limits.maxNanos());
-    String truncation = null;
-    for (Path path : candidates) {
-      if (Thread.currentThread().isInterrupted()) {
-        truncation = "SCAN_CANCELLED";
-        break;
-      }
-      if (clock.nanoTime() > deadline) {
-        truncation = "TIME_LIMIT";
-        break;
-      }
-      if (files.size() >= limits.maxFiles()) {
-        truncation = "FILE_LIMIT";
-        break;
-      }
-      String name;
-      try {
-        name = ClientFileCheckValidation.fileName(path.getFileName().toString());
-      } catch (RuntimeException invalid) {
-        addSkipped(skipped, safeDisplayName(path), "INVALID_FILE_NAME");
-        continue;
-      }
-      if (Files.isSymbolicLink(path)) {
-        addSkipped(skipped, name, "SYMLINK");
-        continue;
-      }
-      if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-        addSkipped(skipped, name, "NOT_REGULAR_FILE");
-        continue;
-      }
-      try {
-        long size = Files.size(path);
-        if (size > limits.maxSingleBytes()) {
-          addSkipped(skipped, name, "FILE_TOO_LARGE");
+    if (truncation == null) {
+      for (Path path : candidates) {
+        stopped = stopReason(deadline);
+        if (stopped != null) {
+          truncation = stopped;
+          break;
+        }
+        if (files.size() >= limits.maxFiles()) {
+          truncation = "FILE_LIMIT";
+          break;
+        }
+        String name;
+        try {
+          name = ClientFileCheckValidation.fileName(path.getFileName().toString());
+        } catch (RuntimeException invalid) {
+          if (!addSkipped(skipped, safeDisplayName(path), "INVALID_FILE_NAME")) {
+            truncation = "SKIPPED_LIMIT";
+            break;
+          }
           continue;
         }
-        if (size > limits.maxTotalBytes() - total) {
-          truncation = "TOTAL_BYTE_LIMIT";
+        stopped = stopReason(deadline);
+        if (stopped != null) {
+          truncation = stopped;
           break;
         }
-        HashOutcome outcome = sha256(path, size, deadline);
-        if (outcome.timedOut()) {
-          truncation = "TIME_LIMIT";
-          break;
+        try (SeekableByteChannel channel = access.openNoFollow(path)) {
+          stopped = stopReason(deadline);
+          if (stopped != null) {
+            truncation = stopped;
+            break;
+          }
+          long size = channel.size();
+          if (size < 0) throw new IOException("negative size");
+          if (size > limits.maxSingleBytes()) {
+            if (!addSkipped(skipped, name, "FILE_TOO_LARGE")) {
+              truncation = "SKIPPED_LIMIT";
+              break;
+            }
+            continue;
+          }
+          if (size > limits.maxTotalBytes() - total) {
+            truncation = "TOTAL_BYTE_LIMIT";
+            break;
+          }
+          HashOutcome outcome = sha256(channel, size, deadline);
+          if (outcome.stopReason() != null) {
+            truncation = outcome.stopReason();
+            break;
+          }
+          if (outcome.changed()) {
+            if (!addSkipped(skipped, name, "FILE_CHANGED")) {
+              truncation = "SKIPPED_LIMIT";
+              break;
+            }
+            continue;
+          }
+          files.add(new ClientFileCheckEntry(name, size, outcome.sha256()));
+          total += size;
+        } catch (IOException | SecurityException failure) {
+          stopped = stopReason(deadline);
+          if (stopped != null) {
+            truncation = stopped;
+            break;
+          }
+          String reason =
+              access.symbolicLink(path)
+                  ? "SYMLINK"
+                  : access.directoryEntry(path) ? "NOT_REGULAR_FILE" : "READ_FAILED";
+          if (!addSkipped(skipped, name, reason)) {
+            truncation = "SKIPPED_LIMIT";
+            break;
+          }
         }
-        if (outcome.changed()) {
-          addSkipped(skipped, name, "FILE_CHANGED");
-          continue;
-        }
-        files.add(new ClientFileCheckEntry(name, size, outcome.sha256()));
-        total += size;
-      } catch (IOException | SecurityException failure) {
-        if (Thread.currentThread().isInterrupted()) {
-          truncation = "SCAN_CANCELLED";
-          break;
-        }
-        addSkipped(skipped, name, "READ_FAILED");
       }
     }
-    ClientFileCheckStatus status =
-        truncation == null ? ClientFileCheckStatus.SUCCESS : ClientFileCheckStatus.TRUNCATED;
     ClientFileCheckResult result =
-        new ClientFileCheckResult(1, status, type, files, skipped, truncation);
+        truncation == null
+            ? success(type, files, skipped)
+            : truncated(type, files, skipped, truncation);
     while (true) {
+      stopped = stopReason(deadline);
+      if (stopped != null) return truncated(type, files, skipped, stopped);
       try {
         ClientFileCheckResultJsonCodec.encode(result);
         return result;
       } catch (IllegalArgumentException tooLarge) {
         if (files.isEmpty()) return ClientFileCheckResult.failed(type, "RESULT_TOO_LARGE");
         files.remove(files.size() - 1);
-        result =
-            new ClientFileCheckResult(
-                1, ClientFileCheckStatus.TRUNCATED, type, files, skipped, "JSON_LIMIT");
+        result = truncated(type, files, skipped, "JSON_LIMIT");
       }
     }
   }
 
-  private void addSkipped(List<ClientFileCheckSkippedEntry> skipped, String name, String reason) {
-    if (skipped.size() < limits.maxSkipped())
-      skipped.add(new ClientFileCheckSkippedEntry(name, reason));
-  }
-
-  private static String safeDisplayName(Path path) {
-    String name = path.getFileName() == null ? "INVALID" : path.getFileName().toString();
-    if (name.isEmpty()
-        || name.length() > EconomyNetworkLimits.MAX_CHECK_FILE_NAME_LENGTH
-        || name.contains("/")
-        || name.contains("\\")
-        || name.contains("\0")
-        || name.contains("..")
-        || name.contains(":")) return "INVALID";
-    return name;
-  }
-
-  private HashOutcome sha256(Path path, long expectedSize, long deadline) throws IOException {
+  private HashOutcome sha256(SeekableByteChannel channel, long expectedSize, long deadline)
+      throws IOException {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] buffer = new byte[8192];
-      try (InputStream input = Files.newInputStream(path)) {
-        long remaining = expectedSize;
-        while (remaining > 0) {
-          if (Thread.currentThread().isInterrupted()) throw new IOException("scan cancelled");
-          if (clock.nanoTime() > deadline) return new HashOutcome(null, true, false);
-          int count = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-          if (count < 0) return new HashOutcome(null, false, true);
-          if (count > 0) {
-            digest.update(buffer, 0, count);
-            remaining -= count;
-          }
-        }
-        if (input.read() >= 0) return new HashOutcome(null, false, true);
+      ByteBuffer buffer = ByteBuffer.allocate(8192);
+      long readTotal = 0;
+      while (readTotal < expectedSize) {
+        String stopped = stopReason(deadline);
+        if (stopped != null) return new HashOutcome(null, false, stopped);
+        buffer.clear();
+        buffer.limit((int) Math.min(buffer.capacity(), expectedSize - readTotal));
+        int count = channel.read(buffer);
+        if (count < 0) return new HashOutcome(null, true, null);
+        if (count == 0) continue;
+        digest.update(buffer.array(), 0, count);
+        readTotal += count;
       }
-      return new HashOutcome(java.util.HexFormat.of().formatHex(digest.digest()), false, false);
+      buffer.clear();
+      buffer.limit(1);
+      boolean extra = channel.read(buffer) >= 0;
+      boolean changed = extra || readTotal != expectedSize || channel.size() != expectedSize;
+      return new HashOutcome(
+          changed ? null : java.util.HexFormat.of().formatHex(digest.digest()), changed, null);
     } catch (NoSuchAlgorithmException impossible) {
       throw new IllegalStateException("SHA-256 unavailable", impossible);
     }
   }
 
-  private record HashOutcome(String sha256, boolean timedOut, boolean changed) {}
+  private String stopReason(long deadline) {
+    if (Thread.currentThread().isInterrupted()) return "SCAN_CANCELLED";
+    return clock.nanoTime() > deadline ? "TIME_LIMIT" : null;
+  }
+
+  private boolean addSkipped(
+      List<ClientFileCheckSkippedEntry> skipped, String name, String reason) {
+    if (skipped.size() >= limits.maxSkipped()) return false;
+    skipped.add(new ClientFileCheckSkippedEntry(name, reason));
+    return true;
+  }
+
+  private static ClientFileCheckResult success(
+      ClientFileCheckType type,
+      List<ClientFileCheckEntry> files,
+      List<ClientFileCheckSkippedEntry> skipped) {
+    return new ClientFileCheckResult(1, ClientFileCheckStatus.SUCCESS, type, files, skipped, null);
+  }
+
+  private static ClientFileCheckResult truncated(
+      ClientFileCheckType type,
+      List<ClientFileCheckEntry> files,
+      List<ClientFileCheckSkippedEntry> skipped,
+      String reason) {
+    return new ClientFileCheckResult(
+        1, ClientFileCheckStatus.TRUNCATED, type, files, skipped, reason);
+  }
+
+  private static String safeDisplayName(Path path) {
+    String name = path.getFileName() == null ? "INVALID" : path.getFileName().toString();
+    try {
+      return ClientFileCheckValidation.fileName(name);
+    } catch (RuntimeException invalid) {
+      return "INVALID";
+    }
+  }
 
   private static long saturatedAdd(long left, long right) {
-    long value = left + right;
-    return value < left ? Long.MAX_VALUE : value;
+    return left > Long.MAX_VALUE - right ? Long.MAX_VALUE : left + right;
+  }
+
+  private record HashOutcome(String sha256, boolean changed, String stopReason) {}
+
+  private static final class ScanStopped extends RuntimeException {
+    private final String reason;
+
+    private ScanStopped(String reason) {
+      this.reason = reason;
+    }
   }
 }

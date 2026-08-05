@@ -246,4 +246,10 @@ scanner, bounded daemon executor and local comparison model. The only roots are 
 paths, timestamps or exception details. The server binds every response to authenticated target plus the exact
 pending requester/type key, consumes malformed results as `FAILED/INVALID_RESULT`, and prevents replay.
 Protocol 26 and later remain legacy.
+
+Protocols 23-25 are lifecycle-hardened. Common owns the connection-generation task coordinator, exact consent
+coordinator, status-specific result controller/layout, and the single server result-routing service. Session
+cancellation never becomes a protocol 24 result. Scans cap direct-child enumeration at 4096 and use one
+`NOFOLLOW_LINKS` channel for size plus streaming SHA-256. Verified counts: 317 shared-source, 393 Forge, 453
+NeoForge. Protocol 26+ remains legacy.
 The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.

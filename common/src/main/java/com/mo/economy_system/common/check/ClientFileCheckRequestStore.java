@@ -61,7 +61,13 @@ public final class ClientFileCheckRequestStore {
     }
   }
 
-  public record ClaimResult(ClaimStatus status, Claim claim) {}
+  public record ClaimResult(ClaimStatus status, Claim claim) {
+    public ClaimResult {
+      Objects.requireNonNull(status, "status");
+      if ((status == ClaimStatus.CLAIMED) != (claim != null))
+        throw new IllegalArgumentException("claim invariant");
+    }
+  }
 
   private final int capacity;
   private final Map<Key, Pending> pending = new LinkedHashMap<>();
@@ -132,6 +138,21 @@ public final class ClientFileCheckRequestStore {
     return pending.remove(key) != null;
   }
 
+  public synchronized boolean rollbackCreated(Pending value, long tick) {
+    Objects.requireNonNull(value, "pending");
+    cleanup(tick);
+    if (processing.containsKey(value.key()) || !Objects.equals(pending.get(value.key()), value))
+      return false;
+    pending.remove(value.key());
+    requesterCooldown.computeIfPresent(
+        value.requesterPlayerId(),
+        (ignored, recorded) -> recorded == value.createdTick() ? null : recorded);
+    targetCooldown.computeIfPresent(
+        value.targetPlayerId(),
+        (ignored, recorded) -> recorded == value.createdTick() ? null : recorded);
+    return true;
+  }
+
   public synchronized int size(long tick) {
     cleanup(tick);
     return pending.size();
@@ -161,8 +182,10 @@ public final class ClientFileCheckRequestStore {
     }
     lastTick = tick;
     for (Pending value : new ArrayList<>(pending.values()))
-      if (!processing.containsKey(value.key()) && tick >= value.expiresTick())
+      if (tick >= value.expiresTick()) {
         pending.remove(value.key());
+        processing.remove(value.key());
+      }
   }
 
   private void trimCooldowns() {

@@ -848,3 +848,9 @@ never write remote result JSON automatically. Server routing must come from the 
 server-scoped pending requester/type key; malformed results are consumed and replay is rejected. Protocol 26 and
 later remain legacy until a separate task authorizes migration.
 
+The hardened client lifecycle is connection-generation scoped. Login creates one bounded daemon worker;
+logout, disconnect, menu return, and shutdown invalidate queued completions before any protocol 24 send.
+Directory enumeration is capped at 4096 entries and its deadline covers opening, enumeration, sorting, and
+hashing. Files are opened once with open-time `NOFOLLOW_LINKS`; size and SHA-256 come from that same channel.
+Concurrent consent requests are exact-identity deduplicated or answered `FAILED/CONSENT_BUSY`.
+

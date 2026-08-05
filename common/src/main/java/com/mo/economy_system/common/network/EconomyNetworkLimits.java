@@ -33,6 +33,7 @@ public final class EconomyNetworkLimits {
   public static final int MAX_TERRITORY_RESPONSE_WIRE_BYTES = 1024 * 1024;
   public static final int MAX_CHECK_RESULT_JSON_LENGTH = 30_000;
   public static final int MAX_CHECK_FILES = 1_024;
+  public static final int MAX_CHECK_DIRECTORY_ENTRIES = 4_096;
   public static final int MAX_CHECK_FILE_NAME_LENGTH = 255;
   public static final int MAX_CHECK_SKIPPED_FILES = 256;
   public static final long MAX_CHECK_SINGLE_FILE_BYTES = 536_870_912L;

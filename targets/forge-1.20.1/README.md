@@ -170,3 +170,8 @@ registrations, authenticated pending-result handling, an explicit consent screen
 scanner, and a searchable/scrollable comparison result screen. Opening consent performs no disk access; allow,
 decline and ESC are one-shot. Remote JSON is displayed but never written to disk. Protocol 26+ remains legacy.
 The verified suites contain 303 shared-source, 379 Forge and 439 NeoForge tests.
+
+The Forge 23-25 client creates its scanner runtime per network generation and closes it on logout or shutdown.
+Stale scans cannot send into a later connection or update a closed result page. DECLINED/FAILED responses do not
+trigger a local scan. Both loaders route C2S results through one common one-shot service. Current verified counts
+are 317 shared-source, 393 Forge and 453 NeoForge tests. Protocol 26+ remains legacy.

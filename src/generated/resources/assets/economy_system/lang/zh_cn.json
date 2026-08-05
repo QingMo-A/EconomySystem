@@ -439,5 +439,18 @@
   "screen.check_result.hash_changed": "哈希不同",
   "screen.check_result.same": "相同",
   "screen.check_result.search": "搜索",
-  "screen.check_result.empty": "没有文件"
+  "screen.check_result.empty": "没有文件",
+  "message.check.consent_busy": "另一个文件检查正在等待确认",
+  "message.check.scan_busy": "本地文件扫描正在进行中",
+  "message.check.scan_cancelled": "本地文件扫描已取消",
+  "message.check.result_delivery_failed": "文件检查结果发送失败",
+  "screen.check_result.loading": "正在扫描本地文件……",
+  "screen.check_result.local_scan_busy": "本地扫描器正忙",
+  "screen.check_result.error": "错误：%s",
+  "screen.check_result.skipped": "已跳过：%s",
+  "screen.check_result.incomplete": "此结果可能不完整",
+  "screen.check_result.status_success": "成功",
+  "screen.check_result.status_declined": "已拒绝",
+  "screen.check_result.status_failed": "失败",
+  "screen.check_result.status_truncated": "已截断"
 }

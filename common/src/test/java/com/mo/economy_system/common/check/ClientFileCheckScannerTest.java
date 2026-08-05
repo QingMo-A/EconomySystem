@@ -50,17 +50,17 @@ class ClientFileCheckScannerTest {
     Files.writeString(mods.resolve("b"), "12");
     var perFile =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 10, 2, 10, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 10, 10, 2, 10, 1_000_000_000), System::nanoTime);
     assertEquals(
         "FILE_TOO_LARGE", perFile.scan(game, ClientFileCheckType.MODS).skipped().get(0).reason());
     var total =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 10, 10, 4, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 10, 10, 10, 4, 1_000_000_000), System::nanoTime);
     assertEquals(
         ClientFileCheckStatus.TRUNCATED, total.scan(game, ClientFileCheckType.MODS).status());
     var count =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(1, 10, 10, 10, 1_000_000_000), System::nanoTime);
+            new ClientFileCheckScanner.Limits(10, 1, 10, 10, 10, 1_000_000_000), System::nanoTime);
     assertEquals("FILE_LIMIT", count.scan(game, ClientFileCheckType.MODS).errorCode());
   }
 
@@ -71,9 +71,23 @@ class ClientFileCheckScannerTest {
     long[] now = {0};
     var scanner =
         new ClientFileCheckScanner(
-            new ClientFileCheckScanner.Limits(10, 10, 10, 10, 1), () -> now[0] += 2);
+            new ClientFileCheckScanner.Limits(10, 10, 10, 10, 10, 1), () -> now[0] += 2);
     ClientFileCheckResult result = scanner.scan(game, ClientFileCheckType.MODS);
     assertEquals(ClientFileCheckStatus.TRUNCATED, result.status());
     assertEquals("TIME_LIMIT", result.errorCode());
+  }
+
+  @Test
+  void boundsDirectoryCandidatesBeforeSortingOrOpening() throws Exception {
+    Path mods = Files.createDirectory(game.resolve("mods"));
+    Files.writeString(mods.resolve("a"), "a");
+    Files.writeString(mods.resolve("b"), "b");
+    var scanner =
+        new ClientFileCheckScanner(
+            new ClientFileCheckScanner.Limits(1, 10, 10, 10, 10, 1_000_000_000), System::nanoTime);
+    ClientFileCheckResult result = scanner.scan(game, ClientFileCheckType.MODS);
+    assertEquals(ClientFileCheckStatus.TRUNCATED, result.status());
+    assertEquals("DIRECTORY_ENTRY_LIMIT", result.errorCode());
+    assertTrue(result.files().isEmpty());
   }
 }

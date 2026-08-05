@@ -1,9 +1,10 @@
 package com.mo.economy_system.target.forge1201.client;
 
 import com.mo.economy_system.target.forge1201.EconomySystemForge1201;
-import com.mo.economy_system.target.forge1201.network.Forge1201ClientFileCheckScreens;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.event.GameShuttingDownEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -15,7 +16,21 @@ public final class Forge1201ClientFileCheckEvents {
   private Forge1201ClientFileCheckEvents() {}
 
   @SubscribeEvent
+  public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+    Minecraft minecraft = Minecraft.getInstance();
+    if (minecraft.getConnection() != null && minecraft.player != null) {
+      Forge1201ClientFileCheckClientRuntime.begin(
+          minecraft.getConnection(), minecraft.player.getUUID());
+    }
+  }
+
+  @SubscribeEvent
   public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-    Forge1201ClientFileCheckScreens.cancelPendingScan();
+    Forge1201ClientFileCheckClientRuntime.invalidate();
+  }
+
+  @SubscribeEvent
+  public static void onStopping(GameShuttingDownEvent event) {
+    Forge1201ClientFileCheckClientRuntime.stop();
   }
 }

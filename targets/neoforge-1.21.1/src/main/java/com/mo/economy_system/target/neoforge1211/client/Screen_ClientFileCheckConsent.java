@@ -1,12 +1,10 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
-import com.mo.economy_system.common.check.ClientFileCheckExecutor;
+import com.mo.economy_system.common.check.ClientFileCheckLayout;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
-import com.mo.economy_system.common.check.ClientFileCheckResultJsonCodec;
 import com.mo.economy_system.common.check.ClientFileCheckScanner;
+import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
-import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
-import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,44 +13,38 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public final class Screen_ClientFileCheckConsent extends Screen {
-  private static final ClientFileCheckExecutor EXECUTOR = new ClientFileCheckExecutor();
   private final ClientFileCheckRequestMessage request;
+  private final ClientFileCheckTaskCoordinator.RequestIdentity identity;
   private final AtomicBoolean finished = new AtomicBoolean();
   private final long deadline = System.nanoTime() + 60_000_000_000L;
 
-  public Screen_ClientFileCheckConsent(ClientFileCheckRequestMessage request) {
+  public Screen_ClientFileCheckConsent(
+      ClientFileCheckRequestMessage request,
+      ClientFileCheckTaskCoordinator.RequestIdentity identity) {
     super(Component.translatable("screen.check_consent.title"));
     this.request = request;
-  }
-
-  public static void cancelPendingScan() {
-    EXECUTOR.cancelPending();
-  }
-
-  static boolean submitScan(Runnable task) {
-    return EXECUTOR.submit(task);
+    this.identity = identity;
   }
 
   @Override
   protected void init() {
-    if (width >= 220 && height >= 30) {
-      int y = height - 25;
+    ClientFileCheckLayout.Consent layout = ClientFileCheckLayout.consent(width, height);
+    if (layout.allow() != null) {
       addRenderableWidget(
           Button.builder(Component.translatable("button.check_consent.allow"), b -> allow())
-              .bounds(width / 2 - 105, y, 100, 20)
+              .bounds(
+                  layout.allow().x(),
+                  layout.allow().y(),
+                  layout.allow().width(),
+                  layout.allow().height())
               .build());
       addRenderableWidget(
           Button.builder(Component.translatable("button.check_consent.decline"), b -> decline())
-              .bounds(width / 2 + 5, y, 100, 20)
-              .build());
-    } else if (width >= 110 && height >= 55) {
-      addRenderableWidget(
-          Button.builder(Component.translatable("button.check_consent.allow"), b -> allow())
-              .bounds(width / 2 - 50, height - 50, 100, 20)
-              .build());
-      addRenderableWidget(
-          Button.builder(Component.translatable("button.check_consent.decline"), b -> decline())
-              .bounds(width / 2 - 50, height - 25, 100, 20)
+              .bounds(
+                  layout.decline().x(),
+                  layout.decline().y(),
+                  layout.decline().width(),
+                  layout.decline().height())
               .build());
     }
   }
@@ -64,40 +56,46 @@ public final class Screen_ClientFileCheckConsent extends Screen {
     }
     if (!finished.compareAndSet(false, true)) return;
     Minecraft minecraft = Minecraft.getInstance();
-    boolean accepted =
-        EXECUTOR.submit(
-            () -> {
-              ClientFileCheckResult result;
-              try {
-                result =
-                    new ClientFileCheckScanner()
-                        .scan(minecraft.gameDirectory.toPath(), request.checkType());
-              } catch (RuntimeException failure) {
-                result = ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED");
-              }
-              ClientFileCheckResult completed = result;
-              minecraft.execute(() -> send(completed));
-            });
-    if (!accepted) send(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"));
+    ClientFileCheckTaskCoordinator coordinator = NeoForge1211ClientFileCheckClientRuntime.tasks();
+    ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
+    ClientFileCheckTaskCoordinator.TaskToken token =
+        session == null
+            ? null
+            : coordinator.submit(
+                session,
+                identity,
+                1,
+                () -> {
+                  ClientFileCheckResult result;
+                  try {
+                    result =
+                        new ClientFileCheckScanner()
+                            .scan(minecraft.gameDirectory.toPath(), request.checkType());
+                  } catch (RuntimeException failure) {
+                    result = ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED");
+                  }
+                  return result;
+                },
+                minecraft::execute,
+                ignored ->
+                    minecraft.getConnection() == session.connectionIdentity()
+                        && minecraft.player != null
+                        && minecraft.player.getUUID().equals(session.localPlayerId()),
+                this::send);
+    if (token == null) send(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"));
+    NeoForge1211ClientFileCheckClientRuntime.consent().finish(identity);
     minecraft.setScreen(null);
   }
 
   private void decline() {
     if (!finished.compareAndSet(false, true)) return;
     send(ClientFileCheckResult.declined(request.checkType()));
+    NeoForge1211ClientFileCheckClientRuntime.consent().finish(identity);
     Minecraft.getInstance().setScreen(null);
   }
 
   private void send(ClientFileCheckResult result) {
-    String json = ClientFileCheckResultJsonCodec.encode(result);
-    EconomySystem_NetworkManager.sendToServer(
-        new ClientFileCheckResultRequestMessage(
-            request.targetPlayerName(),
-            request.targetPlayerId(),
-            request.requesterPlayerName(),
-            request.requesterPlayerId(),
-            request.checkType(),
-            json));
+    NeoForge1211ClientFileCheckScreens.send(request, result);
   }
 
   @Override

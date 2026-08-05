@@ -439,5 +439,18 @@
   "screen.check_result.hash_changed": "Hash differs",
   "screen.check_result.same": "Same",
   "screen.check_result.search": "Search",
-  "screen.check_result.empty": "No files"
+  "screen.check_result.empty": "No files",
+  "message.check.consent_busy": "Another file check is awaiting consent",
+  "message.check.scan_busy": "A local file scan is already running",
+  "message.check.scan_cancelled": "The local file scan was cancelled",
+  "message.check.result_delivery_failed": "The file check result could not be delivered",
+  "screen.check_result.loading": "Scanning local files...",
+  "screen.check_result.local_scan_busy": "Local scanner is busy",
+  "screen.check_result.error": "Error: %s",
+  "screen.check_result.skipped": "Skipped: %s",
+  "screen.check_result.incomplete": "This result may be incomplete",
+  "screen.check_result.status_success": "Success",
+  "screen.check_result.status_declined": "Declined",
+  "screen.check_result.status_failed": "Failed",
+  "screen.check_result.status_truncated": "Truncated"
 }

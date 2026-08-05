@@ -1,8 +1,11 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
 import com.mo.economy_system.common.check.ClientFileCheckComparison;
+import com.mo.economy_system.common.check.ClientFileCheckLayout;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
+import com.mo.economy_system.common.check.ClientFileCheckResultController;
 import com.mo.economy_system.common.check.ClientFileCheckScanner;
+import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
 import java.util.List;
 import java.util.Locale;
@@ -15,7 +18,8 @@ import net.minecraft.network.chat.Component;
 public final class Screen_ClientFileCheckResult extends Screen {
   private final ClientFileCheckResultResponseMessage message;
   private final ClientFileCheckResult result;
-  private List<ClientFileCheckComparison.Row> rows = List.of();
+  private final ClientFileCheckResultController controller;
+  private ClientFileCheckTaskCoordinator.TaskToken task;
   private EditBox search;
   private int offset;
 
@@ -24,40 +28,59 @@ public final class Screen_ClientFileCheckResult extends Screen {
     super(Component.translatable("screen.check_result.title"));
     this.message = message;
     this.result = result;
+    this.controller = new ClientFileCheckResultController(result);
   }
 
   @Override
   protected void init() {
-    if (width >= 80 && height >= 100) {
+    ClientFileCheckLayout.Box box = ClientFileCheckLayout.search(width, height);
+    if (box != null) {
       search =
           new EditBox(
               font,
-              12,
-              62,
-              Math.min(220, width - 24),
-              18,
+              box.x(),
+              box.y(),
+              box.width(),
+              box.height(),
               Component.translatable("screen.check_result.search"));
       search.setHint(Component.translatable("screen.check_result.search"));
       search.setResponder(ignored -> offset = 0);
       addRenderableWidget(search);
     }
+    if (!controller.needsComparison() || task != null) return;
     Minecraft minecraft = Minecraft.getInstance();
-    Screen_ClientFileCheckConsent.submitScan(
-        () -> {
-          ClientFileCheckResult local =
-              new ClientFileCheckScanner()
-                  .scan(minecraft.gameDirectory.toPath(), message.checkType());
-          List<ClientFileCheckComparison.Row> compared =
-              ClientFileCheckComparison.compare(result, local);
-          minecraft.execute(() -> rows = compared);
-        });
+    ClientFileCheckTaskCoordinator coordinator = NeoForge1211ClientFileCheckClientRuntime.tasks();
+    ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
+    long generation = controller.generation();
+    ClientFileCheckTaskCoordinator.RequestIdentity identity =
+        new ClientFileCheckTaskCoordinator.RequestIdentity(
+            message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
+    task =
+        session == null
+            ? null
+            : coordinator.submit(
+                session,
+                identity,
+                generation,
+                () ->
+                    new ClientFileCheckScanner()
+                        .scan(minecraft.gameDirectory.toPath(), message.checkType()),
+                minecraft::execute,
+                token ->
+                    minecraft.screen == this
+                        && minecraft.getConnection() == session.connectionIdentity()
+                        && minecraft.player != null
+                        && minecraft.player.getUUID().equals(session.localPlayerId())
+                        && controller.generation() == token.controllerGeneration(),
+                local -> controller.apply(generation, local));
+    if (task == null) controller.busy();
   }
 
   @Override
   public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
-    int visible = Math.max(1, (height - 100) / 12);
+    int visible = ClientFileCheckLayout.visibleRows(height);
     int size = filtered().size();
-    offset = Math.max(0, Math.min(Math.max(0, size - visible), offset - (int) Math.signum(deltaY)));
+    offset = ClientFileCheckLayout.clampOffset(offset - (int) Math.signum(deltaY), size, visible);
     return true;
   }
 
@@ -79,34 +102,62 @@ public final class Screen_ClientFileCheckResult extends Screen {
         0xDDDDDD);
     graphics.drawString(
         font,
-        Component.literal(
-            result.status().name()
-                + "  files="
-                + result.files().size()
-                + " skipped="
-                + result.skipped().size()),
-        Math.max(240, width / 2),
-        66,
+        Component.translatable(
+            "screen.check_result.status_" + result.status().name().toLowerCase(Locale.ROOT)),
+        12,
+        84,
         0xCCCCCC);
+    graphics.drawString(
+        font,
+        Component.literal(
+            "files=" + result.files().size() + "  skipped=" + result.skipped().size()),
+        12,
+        96,
+        0xCCCCCC);
+    if (result.errorCode() != null)
+      graphics.drawString(
+          font,
+          Component.translatable("screen.check_result.error", result.errorCode()),
+          12,
+          108,
+          0xCC7777);
+    if (!result.skipped().isEmpty()) {
+      var skipped = result.skipped().get(0);
+      graphics.drawString(
+          font,
+          Component.translatable(
+              "screen.check_result.skipped", skipped.fileName() + " (" + skipped.reason() + ")"),
+          12,
+          120,
+          0xAAAAAA);
+    }
     List<ClientFileCheckComparison.Row> visibleRows = filtered();
-    int visible = Math.max(1, (height - 100) / 12);
+    int visible = ClientFileCheckLayout.visibleRows(height);
     for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
       ClientFileCheckComparison.Row row = visibleRows.get(i);
-      String line = row.fileName() + "  " + row.kind().name();
+      String line =
+          row.fileName()
+              + "  "
+              + Component.translatable(
+                      "screen.check_result." + row.kind().name().toLowerCase(Locale.ROOT))
+                  .getString();
       graphics.drawString(
           font,
           font.plainSubstrByWidth(line, Math.max(40, width - 24)),
           12,
-          92 + (i - offset) * 12,
+          136 + (i - offset) * 12,
           0xAAAAAA);
     }
   }
 
   private List<ClientFileCheckComparison.Row> filtered() {
-    if (search == null || search.getValue().isBlank()) return rows;
-    String query = search.getValue().toLowerCase(Locale.ROOT);
-    return rows.stream()
-        .filter(row -> row.fileName().toLowerCase(Locale.ROOT).contains(query))
-        .toList();
+    return controller.filtered(search == null ? "" : search.getValue());
+  }
+
+  @Override
+  public void removed() {
+    controller.invalidate();
+    if (task != null) task.cancel();
+    super.removed();
   }
 }

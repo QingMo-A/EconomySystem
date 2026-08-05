@@ -83,3 +83,8 @@ fallback, `Files.readAllBytes`, or remote JSON file writes. The server trusts on
 and its exact pending key. Protocol 26 GET and every later file-transfer packet remain legacy; do not migrate them
 without a separate task.
 The latest verified counts are 303 shared-source, 379 Forge and 439 NeoForge tests.
+
+Protocols 23-25 are lifecycle-hardened. Preserve connection-generation cancellation, no stale protocol 24 send,
+the 4096-entry enumeration cap, deadline coverage through sort/hash, single-channel open-time `NOFOLLOW_LINKS`,
+exact consent-busy semantics, expiring processing claims, shared one-shot result routing, and status-specific UI.
+Verified counts: 317 shared-source, 393 Forge, 453 NeoForge. Protocol 26+ remains legacy.
