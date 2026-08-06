@@ -6,10 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.mo.economy_system.common.check.ClientFileCheckType;
 import com.mo.economy_system.common.network.CheckedFileTransferChunkRequestMessage;
 import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMessage;
+import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -86,6 +89,27 @@ class CheckedFileTransferRoutingServiceTest {
         CheckedFileTransferRoutingService.control(complete, fixture.target, 2, fixture.store,
             ignored -> new Object(), (player, message) -> {}));
     assertEquals(0, fixture.store.size(2));
+  }
+
+  @Test
+  void invalidChunkConsumesThenSendsAuthoritativeFailureAndReplayIsNotFound() throws Exception {
+    Fixture fixture = new Fixture(new byte[] {1});
+    CheckedFileTransferRoutingService.control(fixture.ready(), fixture.target, 2,
+        fixture.store, ignored -> new Object(), (player, message) -> {});
+    List<Object> sent = new ArrayList<>();
+    var invalid = fixture.chunk(0, 1, new byte[0]);
+    assertEquals(CheckedFileTransferStore.Result.INVALID_CHUNK,
+        CheckedFileTransferRoutingService.chunk(invalid, fixture.target, 3, fixture.store,
+            ignored -> new Object(), (player, message) -> sent.add(message)));
+    assertEquals(1, sent.size());
+    var response = (CheckedFileTransferControlResponseMessage) sent.get(0);
+    var control = CheckedFileTransferControlJsonCodec.decode(response.controlPayload());
+    assertEquals(CheckedFileTransferControlStatus.FAILED, control.status());
+    assertEquals("INVALID_CHUNK", control.errorCode());
+    assertEquals("Target", response.targetPlayerName());
+    assertEquals(CheckedFileTransferStore.Result.NOT_FOUND,
+        CheckedFileTransferRoutingService.chunk(invalid, fixture.target, 4, fixture.store,
+            ignored -> new Object(), (player, message) -> {}));
   }
 
   private static final class Fixture {

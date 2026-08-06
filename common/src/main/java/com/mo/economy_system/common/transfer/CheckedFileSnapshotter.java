@@ -73,6 +73,13 @@ public final class CheckedFileSnapshotter {
 
     SeekableByteChannel channel();
 
+    /** Returns the creation-time channel positioned for exact reading. */
+    default SeekableByteChannel exactReadChannel() throws IOException {
+      SeekableByteChannel exact = channel();
+      exact.position(0);
+      return exact;
+    }
+
     /** Deletes the owned path without following a replaced temp-root ancestor. */
     void delete() throws IOException;
 
@@ -124,6 +131,14 @@ public final class CheckedFileSnapshotter {
 
     public String sha256() {
       return sha256;
+    }
+
+    /** Opens the exact creation-time snapshot handle; callers must not close it. */
+    public synchronized SeekableByteChannel openExactReadChannel() throws IOException {
+      if (closed.get() || output == null) throw new IOException("snapshot closed");
+      SeekableByteChannel channel = output.exactReadChannel();
+      if (!channel.isOpen() || channel.size() != size) throw new IOException("snapshot changed");
+      return channel;
     }
 
     @Override
@@ -893,6 +908,11 @@ public final class CheckedFileSnapshotter {
       } catch (IOException failure) {
         throw new IllegalStateException("temporary channel unavailable", failure);
       }
+    }
+
+    @Override
+    public SeekableByteChannel exactReadChannel() throws IOException {
+      return file.exactReadChannel();
     }
 
     @Override

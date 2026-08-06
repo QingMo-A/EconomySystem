@@ -40,17 +40,20 @@ public final class CheckedFileTransferRoutingService {
     }
     if (!store.contains(key, tick)) return CheckedFileTransferStore.Result.NOT_FOUND;
     if (!store.metadataMatches(key, message.targetPlayerName(), message.requesterPlayerName(), tick)) {
-      store.discard(key, tick);
+      CheckedFileTransferStore.Pending pending = store.consumePending(key, tick);
+      notifyFailure(pending, "INVALID_METADATA", lookup, sender, diagnostics, message);
       return CheckedFileTransferStore.Result.INVALID_METADATA;
     }
     CheckedFileTransferControl control;
     try { control = CheckedFileTransferControlJsonCodec.decode(message.controlPayload()); }
     catch (RuntimeException invalid) {
-      store.discard(key, tick);
+      CheckedFileTransferStore.Pending pending = store.consumePending(key, tick);
+      notifyFailure(pending, "INVALID_METADATA", lookup, sender, diagnostics, message);
       return CheckedFileTransferStore.Result.INVALID_METADATA;
     }
     if (control.status() == CheckedFileTransferControlStatus.COMPLETE) {
-      store.discard(key, tick);
+      CheckedFileTransferStore.Pending pending = store.consumePending(key, tick);
+      notifyFailure(pending, "CLIENT_COMPLETE_FORBIDDEN", lookup, sender, diagnostics, message);
       return CheckedFileTransferStore.Result.INVALID_METADATA;
     }
     Object requester;
@@ -72,7 +75,11 @@ public final class CheckedFileTransferRoutingService {
     }
     CheckedFileTransferStore.PrepareReady prepared =
         store.prepareReady(key, authenticatedTarget, control, tick);
-    if (prepared.claim() == null) return prepared.result();
+    if (prepared.claim() == null) {
+      notifyFailure(prepared.failurePending(), prepared.failureCode(), lookup, sender, diagnostics,
+          message);
+      return prepared.result();
+    }
     try {
       sender.send(requester, response(message, control));
     } catch (RuntimeException failure) {
@@ -84,7 +91,13 @@ public final class CheckedFileTransferRoutingService {
       diagnose(diagnostics, "ready_forward", message, failure);
       throw failure;
     }
-    CheckedFileTransferStore.Result committed = store.commitReady(prepared.claim(), tick);
+    CheckedFileTransferStore.CommitResult readyCommit =
+        store.commitReadyDetailed(prepared.claim(), tick);
+    CheckedFileTransferStore.Result committed = readyCommit.result();
+    if (readyCommit.failurePending() != null) {
+      notifyFailure(readyCommit.failurePending(), "INVALID_SERVER_RESPONSE", lookup, sender,
+          diagnostics, message);
+    }
     if (committed != CheckedFileTransferStore.Result.COMPLETE) return committed;
     CheckedFileTransferControl complete = CheckedFileTransferControl.complete(
         control.transferId(), control.byteLength(), control.sha256());
@@ -113,18 +126,24 @@ public final class CheckedFileTransferRoutingService {
     }
     if (!store.contains(key, tick)) return CheckedFileTransferStore.Result.NOT_FOUND;
     if (!store.metadataMatches(key, message.targetPlayerName(), message.requesterPlayerName(), tick)) {
-      store.discard(key, tick);
+      CheckedFileTransferStore.Pending pending = store.consumePending(key, tick);
+      notifyFailure(pending, "INVALID_METADATA", lookup, sender, diagnostics, message);
       return CheckedFileTransferStore.Result.INVALID_METADATA;
     }
     byte[] raw;
     try { raw = decodeCanonical(message.chunkData()); }
     catch (RuntimeException invalid) {
-      store.discard(key, tick);
+      CheckedFileTransferStore.Pending pending = store.consumePending(key, tick);
+      notifyFailure(pending, "INVALID_BASE64", lookup, sender, diagnostics, message);
       return CheckedFileTransferStore.Result.INVALID_CHUNK;
     }
     CheckedFileTransferStore.PrepareChunk prepared = store.prepareChunk(key, authenticatedTarget,
         message.transferId(), message.chunkIndex(), message.totalChunks(), raw, tick);
-    if (prepared.claim() == null) return prepared.result();
+    if (prepared.claim() == null) {
+      notifyFailure(prepared.failurePending(), errorCode(prepared.result()), lookup, sender,
+          diagnostics, message);
+      return prepared.result();
+    }
     Object requester;
     try { requester = lookup.find(message.requesterPlayerId()); }
     catch (RuntimeException failure) {
@@ -146,7 +165,13 @@ public final class CheckedFileTransferRoutingService {
       store.consumeClaim(prepared.claim()); diagnose(diagnostics, "chunk_forward", message, failure);
       throw failure;
     }
-    CheckedFileTransferStore.Result committed = store.commitChunk(prepared.claim(), tick);
+    CheckedFileTransferStore.CommitResult chunkCommit =
+        store.commitChunkDetailed(prepared.claim(), tick);
+    CheckedFileTransferStore.Result committed = chunkCommit.result();
+    if (chunkCommit.failurePending() != null) {
+      notifyFailure(chunkCommit.failurePending(), "INVALID_SERVER_RESPONSE", lookup, sender,
+          diagnostics, message);
+    }
     if (committed != CheckedFileTransferStore.Result.COMPLETE) return committed;
     store.complete(key, tick);
     CheckedFileTransferControl complete = CheckedFileTransferControl.complete(
@@ -173,6 +198,45 @@ public final class CheckedFileTransferRoutingService {
     try { sender.send(requester, response); return CheckedFileTransferStore.Result.COMPLETE; }
     catch (RuntimeException failure) { diagnose(diagnostics, "terminal_forward", source, failure); return CheckedFileTransferStore.Result.REQUESTER_OFFLINE; }
     catch (Error failure) { diagnose(diagnostics, "terminal_forward", source, failure); throw failure; }
+  }
+
+  private static void notifyFailure(
+      CheckedFileTransferStore.Pending pending, String errorCode, PlayerLookup lookup,
+      Sender sender, Diagnostics diagnostics, Object source) {
+    if (pending == null) return;
+    Object requester;
+    try {
+      requester = lookup.find(pending.key().requesterPlayerId());
+    } catch (RuntimeException failure) {
+      diagnose(diagnostics, "failure_lookup", source, failure);
+      return;
+    } catch (Error failure) {
+      diagnose(diagnostics, "failure_lookup", source, failure);
+      throw failure;
+    }
+    if (requester == null) return;
+    CheckedFileTransferControlResponseMessage response = new CheckedFileTransferControlResponseMessage(
+        pending.targetName(), pending.key().targetPlayerId(), pending.requesterName(),
+        pending.key().requesterPlayerId(), pending.key().checkType(), pending.key().fileName(),
+        CheckedFileTransferControlJsonCodec.encode(CheckedFileTransferControl.error(
+            CheckedFileTransferControlStatus.FAILED, errorCode)));
+    try {
+      sender.send(requester, response);
+    } catch (RuntimeException failure) {
+      diagnose(diagnostics, "failure_forward", source, failure);
+    } catch (Error failure) {
+      diagnose(diagnostics, "failure_forward", source, failure);
+      throw failure;
+    }
+  }
+
+  private static String errorCode(CheckedFileTransferStore.Result result) {
+    return switch (result) {
+      case CHUNK_OUT_OF_ORDER -> "CHUNK_OUT_OF_ORDER";
+      case SIZE_MISMATCH -> "SIZE_MISMATCH";
+      case HASH_MISMATCH -> "HASH_MISMATCH";
+      default -> "INVALID_CHUNK";
+    };
   }
   private static CheckedFileTransferStore.Key key(UUID target, UUID requester,
                                                    ClientFileCheckType type, String file) {

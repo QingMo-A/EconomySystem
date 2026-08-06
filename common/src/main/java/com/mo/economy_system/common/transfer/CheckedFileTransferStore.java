@@ -66,8 +66,14 @@ public final class CheckedFileTransferStore {
     public ChunkClaim { raw = Arrays.copyOf(raw, raw.length); }
     @Override public byte[] raw() { return Arrays.copyOf(raw, raw.length); }
   }
-  public record PrepareReady(Result result, ReadyClaim claim) {}
-  public record PrepareChunk(Result result, ChunkClaim claim) {}
+  public record PrepareReady(
+      Result result, ReadyClaim claim, Pending failurePending, String failureCode) {
+    PrepareReady(Result result, ReadyClaim claim) { this(result, claim, null, null); }
+  }
+  public record PrepareChunk(Result result, ChunkClaim claim, Pending failurePending) {
+    PrepareChunk(Result result, ChunkClaim claim) { this(result, claim, null); }
+  }
+  public record CommitResult(Result result, Pending failurePending) {}
   public record ChunkResult(Result result, boolean consumed, long byteLength, String sha256) {}
 
   private static final class Active {
@@ -139,16 +145,21 @@ public final class CheckedFileTransferStore {
     if (!key.targetPlayerId().equals(authenticatedTarget)) {
       return new PrepareReady(Result.WRONG_TARGET, null);
     }
-    if (current.state != State.AWAITING_TARGET_RESPONSE
-        || control.status() != CheckedFileTransferControlStatus.READY
+    String failureCode = null;
+    if (current.state != State.AWAITING_TARGET_RESPONSE) failureCode = "READY_REPLAY";
+    else if (transferIds.containsKey(control.transferId())) failureCode = "TRANSFER_ID_REUSE";
+    else if (control.status() != CheckedFileTransferControlStatus.READY
         || control.byteLength() != current.pending.size()
         || !control.sha256().equals(current.pending.sha256())
         || control.rawChunkBytes() != EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES
         || control.totalChunks() != CheckedFileTransferValidation.totalChunks(
-            current.pending.size(), EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES)
-        || transferIds.containsKey(control.transferId())) {
+            current.pending.size(), EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES)) {
+      failureCode = "INVALID_METADATA";
+    }
+    if (failureCode != null) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareReady(Result.INVALID_METADATA, null);
+      return new PrepareReady(Result.INVALID_METADATA, null, failurePending, failureCode);
     }
     current.state = State.READY_FORWARDING;
     current.claimToken = claimToken();
@@ -157,24 +168,29 @@ public final class CheckedFileTransferStore {
   }
 
   public synchronized Result commitReady(ReadyClaim claim, long tick) {
+    return commitReadyDetailed(claim, tick).result();
+  }
+
+  public synchronized CommitResult commitReadyDetailed(ReadyClaim claim, long tick) {
     cleanup(tick);
     Active current = claimed(claim.key(), claim.token(), State.READY_FORWARDING);
-    if (current == null) return Result.NOT_FOUND;
+    if (current == null) return new CommitResult(Result.NOT_FOUND, null);
     CheckedFileTransferControl control = claim.control();
     current.transferId = control.transferId();
     current.total = control.totalChunks();
     try {
       current.digest = digestSupport.create();
     } catch (RuntimeException failure) {
+      Pending failurePending = current.pending;
       consume(claim.key());
-      return Result.INVALID_METADATA;
+      return new CommitResult(Result.INVALID_METADATA, failurePending);
     } catch (Error failure) {
       consume(claim.key());
       throw failure;
     }
     current.state = current.total == 0 ? State.FINALIZING : State.STREAMING;
     transferIds.put(current.transferId, claim.key());
-    return current.total == 0 ? Result.COMPLETE : Result.READY;
+    return new CommitResult(current.total == 0 ? Result.COMPLETE : Result.READY, null);
   }
 
   public synchronized PrepareChunk prepareChunk(
@@ -188,26 +204,30 @@ public final class CheckedFileTransferStore {
     }
     if (current.state != State.STREAMING || !Objects.equals(current.transferId, transferId)
         || !Objects.equals(transferIds.get(transferId), key) || total != current.total) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.INVALID_CHUNK, null);
+      return new PrepareChunk(Result.INVALID_CHUNK, null, failurePending);
     }
     if (index != current.next) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.CHUNK_OUT_OF_ORDER, null);
+      return new PrepareChunk(Result.CHUNK_OUT_OF_ORDER, null, failurePending);
     }
     long remaining = current.pending.size() - current.received;
     int expected = (int) Math.min(EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES, remaining);
     if (raw == null || raw.length != expected) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.INVALID_CHUNK, null);
+      return new PrepareChunk(Result.INVALID_CHUNK, null, failurePending);
     }
     boolean terminal = index + 1 == total;
     MessageDigest candidate;
     try {
       candidate = digestSupport.copy(current.digest);
     } catch (RuntimeException failure) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.INVALID_CHUNK, null);
+      return new PrepareChunk(Result.INVALID_CHUNK, null, failurePending);
     } catch (Error failure) {
       consume(key);
       throw failure;
@@ -216,12 +236,14 @@ public final class CheckedFileTransferStore {
     long byteLength = current.received + raw.length;
     String hash = terminal ? HexFormat.of().formatHex(candidate.digest()) : null;
     if (terminal && byteLength != current.pending.size()) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.SIZE_MISMATCH, null);
+      return new PrepareChunk(Result.SIZE_MISMATCH, null, failurePending);
     }
     if (terminal && !hash.equals(current.pending.sha256())) {
+      Pending failurePending = current.pending;
       consume(key);
-      return new PrepareChunk(Result.HASH_MISMATCH, null);
+      return new PrepareChunk(Result.HASH_MISMATCH, null, failurePending);
     }
     current.state = State.CHUNK_FORWARDING;
     current.claimToken = claimToken();
@@ -231,18 +253,29 @@ public final class CheckedFileTransferStore {
   }
 
   public synchronized Result commitChunk(ChunkClaim claim, long tick) {
+    return commitChunkDetailed(claim, tick).result();
+  }
+
+  public synchronized CommitResult commitChunkDetailed(ChunkClaim claim, long tick) {
     cleanup(tick);
     Active current = claimed(claim.key(), claim.token(), State.CHUNK_FORWARDING);
-    if (current == null) return Result.NOT_FOUND;
+    if (current == null) return new CommitResult(Result.NOT_FOUND, null);
     current.digest.update(claim.raw());
     current.received += claim.raw().length;
     current.next++;
     if (claim.terminal()) {
       current.state = State.FINALIZING;
-      return Result.COMPLETE;
+      return new CommitResult(Result.COMPLETE, null);
     }
     current.state = State.STREAMING;
-    return Result.FORWARD;
+    return new CommitResult(Result.FORWARD, null);
+  }
+
+  /** Irreversibly consumes an authenticated exact key while retaining authoritative metadata. */
+  public synchronized Pending consumePending(Key key, long tick) {
+    cleanup(tick);
+    Active removed = consume(key);
+    return removed == null ? null : removed.pending;
   }
 
   public synchronized boolean consumeClaim(ReadyClaim claim) { return consumeClaim(claim.key(), claim.token()); }

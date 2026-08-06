@@ -7,10 +7,9 @@ import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -89,6 +88,8 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
       }
     }
   }
+
+  private record DispatchTicket(Active operation, Object message) {}
 
   private static final long DEFAULT_TIMEOUT_NANOS = 60_000_000_000L;
 
@@ -194,6 +195,13 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   /** Returns whether a snapshot still needs an exact relative-delete retry. */
   public synchronized boolean hasPendingSnapshotCleanup() {
     return !pendingSnapshots.isEmpty();
+  }
+
+  /** True while a worker may still create, write, read, or clean an owned temp snapshot. */
+  public synchronized boolean hasActiveTempUse() {
+    return active != null && (active.state() == State.SNAPSHOTTING
+        || active.state() == State.SENDING_READY || active.state() == State.STREAMING)
+        || !activeSnapshots.isEmpty();
   }
 
   /** Installs the coordinator-owned connection generation used by every dispatch gate. */
@@ -399,25 +407,37 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     if (!dispatch(operation, sender, message)) throw new IllegalStateException("session invalid");
   }
 
-  private synchronized boolean dispatch(Active operation, SessionSender sender, Object message) {
-    if (!isCurrentLocked(operation, System.nanoTime())) return false;
+  private boolean dispatch(Active operation, SessionSender sender, Object message) {
+    DispatchTicket ticket;
+    synchronized (this) {
+      ticket = prepareDispatchLocked(operation, message, System.nanoTime());
+    }
+    if (ticket == null) return false;
     try {
-      if (active.state() == State.SENDING_READY) {
-        active =
-            new Active(operation.request(), operation.session(), operation.token(), State.STREAMING,
-                operation.deadlineNanos());
-      }
-      if (!isCurrentLocked(operation, System.nanoTime())) return false;
-      sender.send(operation.session(), operation.token(), message);
+      sender.send(ticket.operation().session(), ticket.operation().token(), ticket.message());
       return true;
     } catch (RuntimeException | Error failure) {
-      finishLocked(operation.token());
+      synchronized (this) {
+        finishLocked(ticket.operation().token());
+      }
       if (failure instanceof Error error) throw error;
       return false;
     } catch (Exception failure) {
-      finishLocked(operation.token());
+      synchronized (this) {
+        finishLocked(ticket.operation().token());
+      }
       return false;
     }
+  }
+
+  private DispatchTicket prepareDispatchLocked(Active operation, Object message, long nowNanos) {
+    if (!isCurrentLocked(operation, nowNanos)) return null;
+    if (active.state() == State.SENDING_READY) {
+      active = new Active(operation.request(), operation.session(), operation.token(),
+          State.STREAMING, operation.deadlineNanos());
+    }
+    if (!isCurrentLocked(operation, nowNanos)) return null;
+    return new DispatchTicket(operation, Objects.requireNonNull(message, "message"));
   }
 
   private synchronized Active replaceState(State next, long deadline) {
@@ -508,40 +528,36 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     int total =
         CheckedFileTransferValidation.totalChunks(
             snapshot.size(), EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES);
-    // Check before READY. A late screen callback must never emit a new transfer.
+    SeekableByteChannel input = snapshot.openExactReadChannel();
+    if (!input.isOpen() || input.size() != snapshot.size() || input.position() != 0) {
+      throw new IOException("snapshot changed");
+    }
+    // Check exact handle and session before READY. A late callback must never emit a transfer.
     if (!valid.getAsBoolean()) return;
     sender.accept(control(request, CheckedFileTransferControl.ready(transferId, snapshot.size(), snapshot.sha256())));
-    try (InputStream input = Files.newInputStream(snapshot.path(), StandardOpenOption.READ)) {
-      byte[] buffer = new byte[EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES];
-      for (int index = 0; index < total; index++) {
-        int expected =
-            (int)
-                Math.min(buffer.length, snapshot.size() - (long) index * buffer.length);
-        int offset = 0;
-        while (offset < expected) {
-          int read = input.read(buffer, offset, expected - offset);
-          if (read < 0) throw new EOFException("snapshot ended early");
-          offset += read;
-        }
-        if (!valid.getAsBoolean()) return;
-        byte[] raw = expected == buffer.length ? buffer : Arrays.copyOf(buffer, expected);
-        String encoded =
-            new String(Base64.getEncoder().encode(raw), StandardCharsets.US_ASCII);
-        if (!valid.getAsBoolean()) return;
-        sender.accept(
-            new CheckedFileTransferChunkRequestMessage(
-                request.targetPlayerName(),
-                request.targetPlayerId(),
-                request.requesterPlayerName(),
-                request.requesterPlayerId(),
-                request.checkType(),
-                request.fileName(),
-                transferId,
-                index,
-                total,
-                encoded));
+    byte[] buffer = new byte[EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES];
+    for (int index = 0; index < total; index++) {
+      if (!valid.getAsBoolean()) return;
+      int expected = (int) Math.min(buffer.length,
+          snapshot.size() - (long) index * buffer.length);
+      ByteBuffer target = ByteBuffer.wrap(buffer, 0, expected);
+      while (target.hasRemaining()) {
+        int read = input.read(target);
+        if (read < 0) throw new EOFException("snapshot ended early");
+        if (read == 0 && !valid.getAsBoolean()) return;
       }
-      if (input.read() != -1) throw new IOException("snapshot changed");
+      if (!valid.getAsBoolean()) return;
+      byte[] raw = expected == buffer.length ? buffer : Arrays.copyOf(buffer, expected);
+      String encoded = new String(Base64.getEncoder().encode(raw), StandardCharsets.US_ASCII);
+      if (!valid.getAsBoolean()) return;
+      sender.accept(new CheckedFileTransferChunkRequestMessage(
+          request.targetPlayerName(), request.targetPlayerId(), request.requesterPlayerName(),
+          request.requesterPlayerId(), request.checkType(), request.fileName(), transferId,
+          index, total, encoded));
+    }
+    ByteBuffer extra = ByteBuffer.allocate(1);
+    if (input.read(extra) != -1 || input.position() != snapshot.size()) {
+      throw new IOException("snapshot changed");
     }
   }
 

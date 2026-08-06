@@ -1,6 +1,7 @@
 package com.mo.economy_system.common.transfer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -162,6 +163,23 @@ class CheckedFileTransferOutgoingTest {
     assertTrue(messages.get(1) instanceof CheckedFileTransferChunkRequestMessage);
     await(() -> fixture.outgoing.active() == null);
     assertEquals(0, fixture.outgoing.tempBudget().reservedFiles());
+    fixture.outgoing.close();
+  }
+
+  @Test
+  void sendsExactChannelInsteadOfDisplayPath() throws Exception {
+    Fixture fixture = new Fixture();
+    byte[] authorized = "authorized".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    byte[] decoy = "decoy-data".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    CountDownLatch sent = new CountDownLatch(2);
+    List<Object> messages = java.util.Collections.synchronizedList(new ArrayList<>());
+    assertTrue(fixture.outgoing.allow(fixture.request, fixture.session,
+        deadline -> CheckedFileTransferTestSupport.snapshot(
+            game, authorized, decoy, fixture.outgoing.tempBudget()),
+        (session, token, message) -> { messages.add(message); sent.countDown(); }));
+    assertTrue(sent.await(5, TimeUnit.SECONDS));
+    var chunk = (CheckedFileTransferChunkRequestMessage) messages.get(1);
+    assertArrayEquals(authorized, java.util.Base64.getDecoder().decode(chunk.chunkData()));
     fixture.outgoing.close();
   }
 

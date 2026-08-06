@@ -5,10 +5,18 @@ import com.mo.economy_system.common.check.ClientFileCheckValidation;
 import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -21,6 +29,7 @@ import java.util.UUID;
 public final class CheckedFileTransferReceivedArtifact implements AutoCloseable {
   public enum State {
     PENDING_DECISION,
+    SAVED_CLEANUP_PENDING,
     SAVED,
     DISCARDED
   }
@@ -29,6 +38,8 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
     MOVED,
     NOT_PENDING,
     TARGET_EXISTS,
+    SOURCE_CHANGED,
+    CLEANUP_PENDING,
     MOVE_FAILED
   }
 
@@ -125,7 +136,8 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
 
   /** Compatibility-only display path; ownership remains relative to the secure source handle. */
   public synchronized Path path() {
-    return state == State.SAVED ? savedPath : temporaryFile.path();
+    return state == State.SAVED || state == State.SAVED_CLEANUP_PENDING
+        ? savedPath : temporaryFile.path();
   }
 
   /** Alias used by callers that want to emphasize that the path is currently managed. */
@@ -145,6 +157,10 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
     return state == State.PENDING_DECISION;
   }
 
+  public synchronized boolean isCleanupPending() {
+    return state == State.SAVED_CLEANUP_PENDING;
+  }
+
   public synchronized boolean isTerminal() {
     return state != State.PENDING_DECISION;
   }
@@ -156,7 +172,7 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
    * the move. The synchronized block covers the move and state transition, preventing a concurrent
    * discard or second save from releasing the reservation twice.
    */
-  synchronized MoveResult moveTo(
+  synchronized MoveResult copyVerifiedTo(
       CheckedFileTransferTempDirectory.DirectoryHandle target,
       Path destinationName,
       Path destinationDisplayPath)
@@ -164,21 +180,87 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
     if (state != State.PENDING_DECISION) {
       return MoveResult.NOT_PENDING;
     }
+    SeekableByteChannel destination = null;
     try {
-      temporaryFile.moveTo(target, destinationName);
+      SeekableByteChannel source = temporaryFile.exactReadChannel();
+      if (!source.isOpen() || source.size() != metadata.byteLength()) {
+        return MoveResult.SOURCE_CHANGED;
+      }
+      destination = target.newByteChannel(destinationName,
+          Set.<OpenOption>of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE));
+      MessageDigest digest = sha256();
+      ByteBuffer buffer = ByteBuffer.allocate(8192);
+      long copied = 0;
+      while (copied < metadata.byteLength()) {
+        buffer.clear();
+        buffer.limit((int) Math.min(buffer.capacity(), metadata.byteLength() - copied));
+        int read = source.read(buffer);
+        if (read < 0) {
+          return cleanupCandidate(target, destinationName, destination, MoveResult.SOURCE_CHANGED);
+        }
+        if (read == 0) continue;
+        digest.update(buffer.array(), 0, read);
+        buffer.flip();
+        while (buffer.hasRemaining()) {
+          if (destination.write(buffer) <= 0) {
+            return cleanupCandidate(target, destinationName, destination, MoveResult.MOVE_FAILED);
+          }
+        }
+        copied += read;
+      }
+      ByteBuffer extra = ByteBuffer.allocate(1);
+      if (source.read(extra) != -1 || source.position() != metadata.byteLength()
+          || !HexFormat.of().formatHex(digest.digest()).equals(metadata.sha256())) {
+        return cleanupCandidate(target, destinationName, destination, MoveResult.SOURCE_CHANGED);
+      }
+      destination.close();
+      destination = null;
     } catch (FileAlreadyExistsException alreadyExists) {
       return MoveResult.TARGET_EXISTS;
     } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
       throw unsafe;
     } catch (IOException | SecurityException failure) {
+      if (destination != null) cleanupCandidate(target, destinationName, destination,
+          MoveResult.MOVE_FAILED);
       return MoveResult.MOVE_FAILED;
     }
     savedPath = Objects.requireNonNull(destinationDisplayPath, "destination display path")
         .toAbsolutePath()
         .normalize();
-    state = State.SAVED;
-    reservation.release();
-    return MoveResult.MOVED;
+    try {
+      temporaryFile.delete();
+      state = State.SAVED;
+      reservation.release();
+      return MoveResult.MOVED;
+    } catch (IOException | SecurityException cleanupFailure) {
+      state = State.SAVED_CLEANUP_PENDING;
+      return MoveResult.CLEANUP_PENDING;
+    }
+  }
+
+  private static MessageDigest sha256() {
+    try { return MessageDigest.getInstance("SHA-256"); }
+    catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+  }
+
+  private static MoveResult cleanupCandidate(
+      CheckedFileTransferTempDirectory.DirectoryHandle target, Path name,
+      SeekableByteChannel destination, MoveResult result) {
+    try { destination.close(); } catch (IOException ignored) {}
+    try { target.deleteFile(name); } catch (IOException | RuntimeException ignored) {}
+    return result;
+  }
+
+  public synchronized boolean retrySavedCleanup() {
+    if (state != State.SAVED_CLEANUP_PENDING) return state == State.SAVED;
+    try {
+      temporaryFile.delete();
+      state = State.SAVED;
+      reservation.release();
+      return true;
+    } catch (IOException | SecurityException failure) {
+      return false;
+    }
   }
 
   synchronized BasicFileAttributes sourceAttributesNoFollow() throws IOException {
@@ -196,6 +278,9 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
   }
 
   public synchronized DiscardResult discardResult() {
+    if (state == State.SAVED_CLEANUP_PENDING) {
+      return retrySavedCleanup() ? DiscardResult.DISCARDED : DiscardResult.DELETE_FAILED;
+    }
     if (state != State.PENDING_DECISION) {
       return DiscardResult.NOT_PENDING;
     }

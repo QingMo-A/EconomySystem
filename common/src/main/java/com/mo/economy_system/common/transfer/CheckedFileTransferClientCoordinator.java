@@ -88,6 +88,18 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
           message.fileName());
     }
 
+    public static TerminalMetadata from(CheckedFileTransferChunkResponseMessage message) {
+      return new TerminalMetadata(message.targetPlayerName(), message.targetPlayerId(),
+          message.requesterPlayerName(), message.requesterPlayerId(), message.checkType(),
+          message.fileName());
+    }
+
+    public static TerminalMetadata fromMetadata(CheckedFileTransferIncoming.Metadata metadata) {
+      return new TerminalMetadata(metadata.targetPlayerName(), metadata.targetPlayerId(),
+          metadata.requesterPlayerName(), metadata.requesterPlayerId(), metadata.checkType(),
+          metadata.fileName());
+    }
+
     boolean matches(CheckedFileTransferIncoming.Metadata metadata) {
       return metadata != null
           && targetPlayerName.equals(metadata.targetPlayerName())
@@ -132,6 +144,8 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
   private CheckedFileTransferReceivedArtifact artifact;
   private long artifactDeadlineNanos;
   private TerminalResult terminalResult;
+  private long terminalGeneration;
+  private long notifiedTerminalGeneration;
   private String lastErrorCode;
   private boolean closed;
 
@@ -208,6 +222,13 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
     return terminalResult;
   }
 
+  /** Delivers each terminal UI notification once while retaining queryable TTL state. */
+  public synchronized TerminalResult pollTerminalNotification() {
+    if (terminalResult == null || notifiedTerminalGeneration == terminalGeneration) return null;
+    notifiedTerminalGeneration = terminalGeneration;
+    return terminalResult;
+  }
+
   public synchronized String lastErrorCode() {
     return lastErrorCode;
   }
@@ -244,6 +265,18 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       CheckedFileTransferRequestMessage message,
       ClientFileCheckTaskCoordinator.Session arrivalSession) {
     return isArrivalCurrentLocked(arrivalSession) && outgoing.cancel(message, arrivalSession);
+  }
+
+  public synchronized void publishRequestExpired(
+      CheckedFileTransferRequestMessage message,
+      ClientFileCheckTaskCoordinator.Session expectedSession,
+      long nowNanos) {
+    if (!isArrivalCurrentLocked(expectedSession)) return;
+    publishTerminalLocked(new TerminalResult(
+        new TerminalMetadata(message.targetPlayerName(), message.targetPlayerId(),
+            message.requesterPlayerName(), message.requesterPlayerId(), message.checkType(),
+            message.fileName()), CheckedFileTransferControlStatus.FAILED, "REQUEST_EXPIRED",
+        nowNanos, safeDeadline(nowNanos)));
   }
 
   /** Compatibility entry point for adapters not yet passing an arrival session. */
@@ -286,7 +319,7 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       synchronized (this) {
         lastErrorCode = "INVALID_SERVER_RESPONSE";
         if (incoming != null && incomingMetadataMatches(message)) clearIncomingLocked();
-        terminalResult = terminalFailure(message, "INVALID_SERVER_RESPONSE", nowNanos);
+        publishTerminalLocked(terminalFailure(message, "INVALID_SERVER_RESPONSE", nowNanos));
       }
       return IncomingResult.INVALID;
     }
@@ -303,6 +336,7 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
         if (incoming == null || !incomingMetadataMatches(message)
             || !incoming.transferId().equals(control.transferId())) {
           lastErrorCode = "INVALID_SERVER_RESPONSE";
+          publishTerminalLocked(terminalFailure(message, lastErrorCode, nowNanos));
           return IncomingResult.INVALID;
         }
         try {
@@ -314,16 +348,15 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
         } catch (IOException | RuntimeException failure) {
           lastErrorCode = stableFailureCode(failure, "INVALID_SERVER_RESPONSE");
           clearIncomingLocked();
-          terminalResult = terminalFailure(message, lastErrorCode, nowNanos);
+          publishTerminalLocked(terminalFailure(message, lastErrorCode, nowNanos));
           return IncomingResult.INVALID;
         }
       }
 
       TerminalMetadata metadata = TerminalMetadata.from(message);
       if (incoming != null && metadata.matches(incoming.metadata())) clearIncomingLocked();
-      terminalResult =
-          new TerminalResult(
-              metadata, control.status(), control.errorCode(), nowNanos, safeDeadline(nowNanos));
+      publishTerminalLocked(new TerminalResult(
+          metadata, control.status(), control.errorCode(), nowNanos, safeDeadline(nowNanos)));
       return IncomingResult.TERMINAL;
     }
   }
@@ -343,10 +376,16 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       if (!isArrivalCurrentLocked(arrivalSession) || !requesterIsLocalLocked(message)) {
         return IncomingResult.IGNORED_STALE_SESSION;
       }
-      if (incoming == null) return IncomingResult.IGNORED;
+      if (incoming == null) {
+        if (artifact != null) return IncomingResult.ARTIFACT_PENDING;
+        lastErrorCode = "INVALID_SERVER_RESPONSE";
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, System.nanoTime()));
+        return IncomingResult.INVALID;
+      }
       if (!incomingMetadataMatches(message)) {
         lastErrorCode = "INVALID_SERVER_RESPONSE";
         clearIncomingLocked();
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, System.nanoTime()));
         return IncomingResult.INVALID;
       }
       try {
@@ -355,6 +394,7 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       } catch (IOException | RuntimeException failure) {
         lastErrorCode = stableFailureCode(failure, "INVALID_SERVER_RESPONSE");
         clearIncomingLocked();
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, System.nanoTime()));
         return IncomingResult.INVALID;
       }
     }
@@ -367,10 +407,12 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
     }
     CheckedFileTransferSaveService.Result result =
         new CheckedFileTransferSaveService(gameDirectory).save(artifact);
-    if (result.success()) {
+    if (result.code() == CheckedFileTransferSaveService.ResultCode.SAVED) {
       artifact = null;
       artifactDeadlineNanos = 0;
       closeUnusedTempDirectoryLocked();
+    } else if (result.code() == CheckedFileTransferSaveService.ResultCode.SAVED_CLEANUP_PENDING) {
+      artifactDeadlineNanos = safeDeadline(System.nanoTime());
     }
     return new SaveResult(result.code());
   }
@@ -393,8 +435,19 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
   /** Expires streams, outgoing workers, artifacts, and bounded terminal results. */
   public synchronized boolean tick(long nowNanos) {
     boolean changed = false;
+    if (artifact != null && artifact.isCleanupPending()) {
+      if (artifact.retrySavedCleanup()) {
+        artifact = null;
+        artifactDeadlineNanos = 0;
+        changed = true;
+      }
+    }
     if (incoming != null && incoming.expired(nowNanos)) {
+      TerminalMetadata expiredMetadata = TerminalMetadata.fromMetadata(incoming.metadata());
       clearIncomingLocked();
+      publishTerminalLocked(new TerminalResult(expiredMetadata,
+          CheckedFileTransferControlStatus.FAILED, "TRANSFER_EXPIRED", nowNanos,
+          safeDeadline(nowNanos)));
       changed = true;
     } else if (incoming != null && !incoming.cleanupComplete()) {
       changed |= clearIncomingLocked();
@@ -443,6 +496,7 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       if (control.byteLength() < 0
           || control.byteLength() > EconomyNetworkLimits.MAX_TRANSFER_FILE_BYTES) {
         lastErrorCode = "INVALID_SERVER_RESPONSE";
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, nowNanos));
         return IncomingResult.INVALID;
       }
       try {
@@ -469,9 +523,11 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
         return IncomingResult.OPEN;
       } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
         lastErrorCode = CheckedFileTransferTempDirectory.PROVIDER_UNSAFE;
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, nowNanos));
         return IncomingResult.INVALID;
       } catch (IOException | RuntimeException failure) {
         lastErrorCode = stableFailureCode(failure, "INVALID_SERVER_RESPONSE");
+        publishTerminalLocked(terminalFailure(message, lastErrorCode, nowNanos));
         return IncomingResult.INVALID;
       }
     }
@@ -556,7 +612,8 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
     if (closed) {
       try {
         tempDirectory.close();
-        if (incoming == null && artifact == null && !outgoing.hasPendingSnapshotCleanup()) {
+        if (incoming == null && artifact == null && !outgoing.hasActiveTempUse()
+            && !outgoing.hasPendingSnapshotCleanup()) {
           tempDirectory = null;
         }
       } catch (IOException ignored) {
@@ -564,7 +621,8 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
       }
       return;
     }
-    if (incoming != null || artifact != null || outgoing.hasPendingSnapshotCleanup()) return;
+    if (incoming != null || artifact != null || outgoing.hasActiveTempUse()
+        || outgoing.hasPendingSnapshotCleanup()) return;
     try {
       tempDirectory.close();
       tempDirectory = null;
@@ -581,6 +639,17 @@ public final class CheckedFileTransferClientCoordinator implements AutoCloseable
         errorCode,
         nowNanos,
         safeDeadline(nowNanos));
+  }
+
+  private TerminalResult terminalFailure(
+      CheckedFileTransferChunkResponseMessage message, String errorCode, long nowNanos) {
+    return new TerminalResult(TerminalMetadata.from(message),
+        CheckedFileTransferControlStatus.FAILED, errorCode, nowNanos, safeDeadline(nowNanos));
+  }
+
+  private void publishTerminalLocked(TerminalResult result) {
+    terminalResult = Objects.requireNonNull(result, "terminal result");
+    terminalGeneration = terminalGeneration == Long.MAX_VALUE ? 1 : terminalGeneration + 1;
   }
 
   private static String stableFailureCode(Throwable failure, String fallback) {

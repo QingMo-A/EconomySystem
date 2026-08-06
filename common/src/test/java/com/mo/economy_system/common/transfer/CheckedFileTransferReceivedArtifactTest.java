@@ -48,7 +48,7 @@ class CheckedFileTransferReceivedArtifactTest {
     Path destination = target.absolutePath().resolve("saved.jar");
     assertEquals(
         CheckedFileTransferReceivedArtifact.MoveResult.MOVED,
-        artifact.moveTo(target, Path.of("saved.jar"), destination));
+        artifact.copyVerifiedTo(target, Path.of("saved.jar"), destination));
     target.close();
     assertEquals(CheckedFileTransferReceivedArtifact.State.SAVED, artifact.state());
     assertEquals(destination.toAbsolutePath().normalize(), artifact.path());
@@ -72,7 +72,7 @@ class CheckedFileTransferReceivedArtifactTest {
     temp.close();
   }
 
-  private static CheckedFileTransferReceivedArtifact.Metadata metadata(long size) {
+  private static CheckedFileTransferReceivedArtifact.Metadata metadata(long size) throws Exception {
     return new CheckedFileTransferReceivedArtifact.Metadata(
         "Target",
         UUID.randomUUID(),
@@ -82,7 +82,8 @@ class CheckedFileTransferReceivedArtifactTest {
         "mod.jar",
         UUID.randomUUID(),
         size,
-        "0000000000000000000000000000000000000000000000000000000000000000",
+        java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+            .digest(new byte[] {1, 2, 3})),
         CheckedFileTransferValidation.totalChunks(
             size, com.mo.economy_system.common.network.EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES));
   }

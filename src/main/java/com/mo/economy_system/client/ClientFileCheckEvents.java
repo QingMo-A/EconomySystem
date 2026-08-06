@@ -2,6 +2,7 @@ package com.mo.economy_system.client;
 
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211ClientFileCheckClientRuntime;
+import com.mo.economy_system.target.neoforge1211.client.CheckedFileTransferIncomingRuntime;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -40,6 +41,7 @@ public final class ClientFileCheckEvents {
     if (NeoForge1211ClientFileCheckClientRuntime.isStopped()) return;
     try {
       NeoForge1211ClientFileCheckClientRuntime.transfers().tick(System.nanoTime());
+      CheckedFileTransferIncomingRuntime.pollNotification();
     } catch (RuntimeException ignored) {
       // A transient provider/runtime failure must not take down the client.
     }

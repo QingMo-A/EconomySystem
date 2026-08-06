@@ -356,7 +356,7 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
   public synchronized Path complete(CheckedFileTransferControl control) throws IOException {
     completeInternal(control);
     state = State.COMPLETED;
-    part.closeWriteChannel();
+    part.exactReadChannel();
     return part.path();
   }
 
@@ -367,7 +367,7 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
       throws IOException {
     if (metadata == null || !metadata.matches(message)) fail("INVALID_METADATA");
     completeInternal(control);
-    part.closeWriteChannel();
+    part.exactReadChannel();
     CheckedFileTransferTempBudget.Reservation artifactReservation = reservation;
     if (artifactReservation == null) {
       CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, expectedSize);

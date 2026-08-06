@@ -32,8 +32,8 @@ public final class CheckedFileTransferTempDirectory implements AutoCloseable {
   public static final String ROOT_DIRECTORY = "economy_system";
   public static final String TEMP_DIRECTORY = "transfer-temp";
   private static final int MAX_RANDOM_NAME_ATTEMPTS = 16;
-  private static final Set<OpenOption> CREATE_NEW_WRITE =
-      Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+  private static final Set<OpenOption> CREATE_NEW_READ_WRITE =
+      Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.READ, StandardOpenOption.WRITE);
   private static final Set<OpenOption> READ_NOFOLLOW =
       Set.of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
   private static final DirectoryProvider SYSTEM_PROVIDER = new SystemDirectoryProvider();
@@ -111,7 +111,7 @@ public final class CheckedFileTransferTempDirectory implements AutoCloseable {
     for (int attempt = 0; attempt < MAX_RANDOM_NAME_ATTEMPTS; attempt++) {
       Path relativeName = Path.of(UUID.randomUUID() + ".part");
       try {
-        SeekableByteChannel channel = handle.newByteChannel(relativeName, CREATE_NEW_WRITE);
+        SeekableByteChannel channel = handle.newByteChannel(relativeName, CREATE_NEW_READ_WRITE);
         leases++;
         return new OwnedFile(this, relativeName, channel);
       } catch (FileAlreadyExistsException collision) {
@@ -228,7 +228,7 @@ public final class CheckedFileTransferTempDirectory implements AutoCloseable {
   public static final class OwnedFile {
     private final CheckedFileTransferTempDirectory directory;
     private final Path relativeName;
-    private SeekableByteChannel writeChannel;
+    private SeekableByteChannel exactChannel;
     private boolean ownershipReleased;
 
     private OwnedFile(
@@ -237,7 +237,7 @@ public final class CheckedFileTransferTempDirectory implements AutoCloseable {
         SeekableByteChannel writeChannel) {
       this.directory = directory;
       this.relativeName = relativeName;
-      this.writeChannel = writeChannel;
+      this.exactChannel = writeChannel;
     }
 
     public Path relativeName() {
@@ -251,23 +251,29 @@ public final class CheckedFileTransferTempDirectory implements AutoCloseable {
 
     synchronized SeekableByteChannel writeChannel() throws IOException {
       ensureOwned();
-      if (writeChannel == null || !writeChannel.isOpen()) {
+      if (exactChannel == null || !exactChannel.isOpen()) {
         throw new IOException("TEMP_CHANNEL_CLOSED");
       }
-      return writeChannel;
+      return exactChannel;
+    }
+
+    /** Returns the creation-time channel positioned at zero without resolving the pathname. */
+    public synchronized SeekableByteChannel exactReadChannel() throws IOException {
+      SeekableByteChannel channel = writeChannel();
+      channel.position(0);
+      return channel;
     }
 
     public synchronized void closeWriteChannel() throws IOException {
-      if (writeChannel == null) return;
-      SeekableByteChannel channel = writeChannel;
-      writeChannel = null;
+      if (exactChannel == null) return;
+      SeekableByteChannel channel = exactChannel;
+      exactChannel = null;
       channel.close();
     }
 
     public synchronized SeekableByteChannel openReadChannel() throws IOException {
       ensureOwned();
-      closeWriteChannel();
-      return directory.openRead(relativeName);
+      return exactReadChannel();
     }
 
     synchronized BasicFileAttributes attributesNoFollow() throws IOException {

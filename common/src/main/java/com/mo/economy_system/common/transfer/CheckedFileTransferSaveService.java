@@ -2,9 +2,7 @@ package com.mo.economy_system.common.transfer;
 
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -21,10 +19,12 @@ public final class CheckedFileTransferSaveService {
 
   public enum ResultCode {
     SAVED,
+    SAVED_CLEANUP_PENDING,
     NOT_PENDING,
     INVALID_FILE_NAME,
     SAVE_PARENT_UNSAFE,
     SOURCE_MISSING,
+    SOURCE_CHANGED,
     SAVE_NAME_EXHAUSTED,
     MOVE_FAILED
   }
@@ -32,13 +32,14 @@ public final class CheckedFileTransferSaveService {
   public record Result(ResultCode code, Path savedPath) {
     public Result {
       Objects.requireNonNull(code, "code");
-      if ((code == ResultCode.SAVED) != (savedPath != null)) {
+      if ((code == ResultCode.SAVED || code == ResultCode.SAVED_CLEANUP_PENDING)
+          != (savedPath != null)) {
         throw new IllegalArgumentException("save result");
       }
     }
 
     public boolean success() {
-      return code == ResultCode.SAVED;
+      return code == ResultCode.SAVED || code == ResultCode.SAVED_CLEANUP_PENDING;
     }
   }
 
@@ -89,21 +90,6 @@ public final class CheckedFileTransferSaveService {
       return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
     }
 
-    try {
-      BasicFileAttributes source = artifact.sourceAttributesNoFollow();
-      if (source.isSymbolicLink()
-          || !source.isRegularFile()
-          || source.size() != artifact.metadata().byteLength()) {
-        return new Result(ResultCode.SOURCE_MISSING, null);
-      }
-    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
-      return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
-    } catch (NoSuchFileException missing) {
-      return new Result(ResultCode.SOURCE_MISSING, null);
-    } catch (IOException | SecurityException failure) {
-      return new Result(ResultCode.SOURCE_MISSING, null);
-    }
-
     CheckedFileTransferTempDirectory.DirectoryHandle targetDirectory;
     try {
       targetDirectory = sourceDirectory.openTargetDirectory(targetId);
@@ -150,12 +136,19 @@ public final class CheckedFileTransferSaveService {
       if (candidate == null) return new Result(ResultCode.SAVE_NAME_EXHAUSTED, null);
       Path relativeName = Path.of(candidate);
       CheckedFileTransferReceivedArtifact.MoveResult moved =
-          artifact.moveTo(
+          artifact.copyVerifiedTo(
               targetDirectory,
               relativeName,
               targetDirectory.absolutePath().resolve(relativeName));
       if (moved == CheckedFileTransferReceivedArtifact.MoveResult.MOVED) {
         return new Result(ResultCode.SAVED, targetDirectory.absolutePath().resolve(relativeName));
+      }
+      if (moved == CheckedFileTransferReceivedArtifact.MoveResult.CLEANUP_PENDING) {
+        return new Result(ResultCode.SAVED_CLEANUP_PENDING,
+            targetDirectory.absolutePath().resolve(relativeName));
+      }
+      if (moved == CheckedFileTransferReceivedArtifact.MoveResult.SOURCE_CHANGED) {
+        return new Result(ResultCode.SOURCE_CHANGED, null);
       }
       if (moved == CheckedFileTransferReceivedArtifact.MoveResult.TARGET_EXISTS) continue;
       if (moved == CheckedFileTransferReceivedArtifact.MoveResult.NOT_PENDING) {

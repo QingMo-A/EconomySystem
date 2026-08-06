@@ -81,6 +81,19 @@ final class Screen_CheckedFileTransferConsent extends Screen {
         request, session, (activeSession, token, outgoing) -> send(activeSession, outgoing));
     Minecraft.getInstance().setScreen(null);
   }
+  @Override public void tick() {
+    if (finished) return;
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    var active = coordinator.outgoing().active();
+    if (!current() || active == null || !active.request().equals(request)
+        || active.state() != CheckedFileTransferOutgoing.State.CONSENT
+        || System.nanoTime() >= active.deadlineNanos()) {
+      finished = true;
+      coordinator.publishRequestExpired(request, session, System.nanoTime());
+      Minecraft.getInstance().setScreen(null);
+      CheckedFileTransferIncomingRuntime.pollNotification();
+    }
+  }
 
   private boolean current() {
     var active = NeoForge1211ClientFileCheckClientRuntime.transfers().currentSession();

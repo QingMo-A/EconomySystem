@@ -33,12 +33,17 @@ final class CheckedFileTransferTestSupport {
     SeekableByteChannel channel = part.writeChannel();
     java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(bytes);
     while (buffer.hasRemaining()) channel.write(buffer);
-    part.closeWriteChannel();
+    part.exactReadChannel();
     return part;
   }
 
   static CheckedFileSnapshotter.Outcome snapshot(
       Path game, byte[] bytes, CheckedFileTransferTempBudget budget) throws Exception {
+    return snapshot(game, bytes, null, budget);
+  }
+
+  static CheckedFileSnapshotter.Outcome snapshot(
+      Path game, byte[] bytes, byte[] decoy, CheckedFileTransferTempBudget budget) throws Exception {
     Path root = Files.createDirectories(game.resolve("mods"));
     Path source = root.resolve("mod.jar");
     Files.write(source, bytes);
@@ -74,15 +79,20 @@ final class CheckedFileTransferTestSupport {
       @Override
       public CheckedFileSnapshotter.TempOutput openTemp(Path ignored) throws IOException {
         Path path = temp.resolve("snapshot-" + java.util.UUID.randomUUID() + ".part");
+        Path display = decoy == null ? path
+            : temp.resolve("decoy-" + java.util.UUID.randomUUID() + ".part");
+        if (decoy != null) Files.write(display, decoy, StandardOpenOption.CREATE_NEW);
         SeekableByteChannel channel =
             Files.newByteChannel(
-                path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                path, StandardOpenOption.CREATE_NEW, StandardOpenOption.READ,
+                StandardOpenOption.WRITE);
         return new CheckedFileSnapshotter.TempOutput() {
-          @Override public Path path() { return path; }
+          @Override public Path path() { return display; }
           @Override public SeekableByteChannel channel() { return channel; }
           @Override public void delete() throws IOException {
             channel.close();
             Files.deleteIfExists(path);
+            Files.deleteIfExists(display);
           }
           @Override public void close() throws IOException { channel.close(); }
         };

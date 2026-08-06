@@ -7,7 +7,7 @@ import com.mo.economy_system.common.transfer.CheckedFileTransferClientCoordinato
 import net.minecraft.client.Minecraft;
 
 /** Thin Minecraft adapter; all incoming ownership and validation lives in common. */
-final class CheckedFileTransferIncomingRuntime {
+public final class CheckedFileTransferIncomingRuntime {
   private CheckedFileTransferIncomingRuntime() {}
 
   static void control(
@@ -21,16 +21,25 @@ final class CheckedFileTransferIncomingRuntime {
     if (result == CheckedFileTransferClientCoordinator.IncomingResult.COMPLETE
         && coordinator.completedArtifact() != null) {
       minecraft.setScreen(new Screen_CheckedFileTransferResult(coordinator.completedArtifact()));
-    } else if (result == CheckedFileTransferClientCoordinator.IncomingResult.TERMINAL
-        && coordinator.terminalResult() != null) {
-      minecraft.setScreen(new Screen_CheckedFileTransferResult(coordinator.terminalResult()));
     }
+    pollNotification();
   }
 
   static void chunk(
       CheckedFileTransferChunkResponseMessage message,
       ClientFileCheckTaskCoordinator.Session arrivalSession) {
     NeoForge1211ClientFileCheckClientRuntime.transfers().chunk(message, arrivalSession);
+    pollNotification();
+  }
+
+  public static void pollNotification() {
+    Minecraft minecraft = Minecraft.getInstance();
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    if (coordinator.completedArtifact() != null) return;
+    var notification = coordinator.pollTerminalNotification();
+    if (notification != null) {
+      minecraft.setScreen(new Screen_CheckedFileTransferResult(notification));
+    }
   }
 
   static void clear() {

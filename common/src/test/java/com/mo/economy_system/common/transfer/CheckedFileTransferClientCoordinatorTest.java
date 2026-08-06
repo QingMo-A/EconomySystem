@@ -183,8 +183,11 @@ class CheckedFileTransferClientCoordinatorTest {
         coordinator.control(unrelated, session, game, 1));
     assertTrue(coordinator.incoming() != null);
     assertEquals(CheckedFileTransferControlStatus.DECLINED, coordinator.terminalResult().status());
+    assertEquals(CheckedFileTransferControlStatus.DECLINED,
+        coordinator.pollTerminalNotification().status());
+    assertNull(coordinator.pollTerminalNotification());
     coordinator.tick(11);
-    assertNull(coordinator.terminalResult());
+    assertEquals("TRANSFER_EXPIRED", coordinator.terminalResult().errorCode());
     coordinator.close();
   }
 

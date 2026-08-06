@@ -38,6 +38,8 @@ class CheckedFileTransferLanguageResourcesTest {
           "message.transfer.save_name_exhausted",
           "message.transfer.save_parent_unsafe",
           "message.transfer.source_missing",
+          "message.transfer.source_changed",
+          "message.transfer.save_cleanup_pending",
           "message.transfer.move_failed",
           "message.transfer.not_pending",
           "message.transfer.delete_failed",
@@ -46,6 +48,7 @@ class CheckedFileTransferLanguageResourcesTest {
           "message.transfer.status.not_found",
           "message.transfer.status.failed",
           "message.transfer.state.pending",
+          "message.transfer.state.cleanup_pending",
           "message.transfer.state.saved",
           "message.transfer.state.discarded");
   private static final Pattern KEY = Pattern.compile("\\\"([^\\\"]+)\\\"\\s*:");

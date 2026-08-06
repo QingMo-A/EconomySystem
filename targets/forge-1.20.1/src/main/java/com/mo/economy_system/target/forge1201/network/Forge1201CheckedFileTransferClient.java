@@ -22,7 +22,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-final class Forge1201CheckedFileTransferClient {
+public final class Forge1201CheckedFileTransferClient {
   private Forge1201CheckedFileTransferClient() {}
 
   static void request(
@@ -66,16 +66,23 @@ final class Forge1201CheckedFileTransferClient {
     if (result == CheckedFileTransferClientCoordinator.IncomingResult.COMPLETE
         && coordinator.completedArtifact() != null) {
       minecraft.setScreen(new Result(coordinator.completedArtifact()));
-    } else if (result == CheckedFileTransferClientCoordinator.IncomingResult.TERMINAL
-        && coordinator.terminalResult() != null) {
-      minecraft.setScreen(new Terminal(coordinator.terminalResult()));
     }
+    pollNotification();
   }
 
   static void chunk(
       CheckedFileTransferChunkResponseMessage message,
       ClientFileCheckTaskCoordinator.Session arrivalSession) {
     Forge1201ClientFileCheckClientRuntime.transfers().chunk(message, arrivalSession);
+    pollNotification();
+  }
+
+  public static void pollNotification() {
+    Minecraft minecraft = Minecraft.getInstance();
+    var coordinator = Forge1201ClientFileCheckClientRuntime.transfers();
+    if (coordinator.completedArtifact() != null) return;
+    var notification = coordinator.pollTerminalNotification();
+    if (notification != null) minecraft.setScreen(new Terminal(notification));
   }
 
   private static boolean current(ClientFileCheckTaskCoordinator.Session session) {
@@ -162,6 +169,20 @@ final class Forge1201CheckedFileTransferClient {
       Minecraft.getInstance().setScreen(null);
     }
 
+    @Override public void tick() {
+      if (finished) return;
+      var coordinator = Forge1201ClientFileCheckClientRuntime.transfers();
+      var active = coordinator.outgoing().active();
+      if (!current(session) || active == null || !active.request().equals(request)
+          || active.state() != CheckedFileTransferOutgoing.State.CONSENT
+          || System.nanoTime() >= active.deadlineNanos()) {
+        finished = true;
+        coordinator.publishRequestExpired(request, session, System.nanoTime());
+        Minecraft.getInstance().setScreen(null);
+        pollNotification();
+      }
+    }
+
     @Override public void onClose() { decline(); }
     @Override public void removed() {
       if (!finished) decline();
@@ -182,6 +203,10 @@ final class Forge1201CheckedFileTransferClient {
           .bounds(actions.primary().x(), actions.primary().y(), actions.primary().width(), actions.primary().height()).build());
       addRenderableWidget(Button.builder(Component.translatable("button.transfer.discard"), b -> discard())
           .bounds(actions.secondary().x(), actions.secondary().y(), actions.secondary().width(), actions.secondary().height()).build());
+    }
+    @Override public void tick() {
+      if (Forge1201ClientFileCheckClientRuntime.transfers().completedArtifact()
+          != expectedArtifact) Minecraft.getInstance().setScreen(null);
     }
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
       renderBackground(graphics); super.render(graphics, mouseX, mouseY, partialTick);

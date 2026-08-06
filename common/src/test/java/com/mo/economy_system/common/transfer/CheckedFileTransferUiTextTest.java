@@ -28,6 +28,8 @@ class CheckedFileTransferUiTextTest {
         CheckedFileTransferUiText.errorKey("SAVE_PARENT_UNSAFE"));
     assertEquals("message.transfer.source_missing",
         CheckedFileTransferUiText.errorKey("SOURCE_MISSING"));
+    assertEquals("message.transfer.source_changed",
+        CheckedFileTransferUiText.errorKey("SOURCE_CHANGED"));
     assertEquals("message.transfer.move_failed",
         CheckedFileTransferUiText.errorKey("MOVE_FAILED"));
     assertEquals("message.transfer.invalid_server_response",

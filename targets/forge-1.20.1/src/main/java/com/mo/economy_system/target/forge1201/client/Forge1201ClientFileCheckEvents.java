@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.client;
 
 import com.mo.economy_system.target.forge1201.EconomySystemForge1201;
+import com.mo.economy_system.target.forge1201.network.Forge1201CheckedFileTransferClient;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -43,6 +44,7 @@ public final class Forge1201ClientFileCheckEvents {
         || Forge1201ClientFileCheckClientRuntime.isStopped()) return;
     try {
       Forge1201ClientFileCheckClientRuntime.transfers().tick(System.nanoTime());
+      Forge1201CheckedFileTransferClient.pollNotification();
     } catch (RuntimeException ignored) {
       // A transient provider/runtime failure must not take down the client.
     }

@@ -9,7 +9,9 @@ import com.mo.economy_system.common.check.ClientFileCheckType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.ByteBuffer;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -59,6 +61,50 @@ class CheckedFileTransferSaveServiceTest {
   }
 
   @Test
+  void sameLengthSourceTamperingFailsHashVerificationAndSavesNothing() throws Exception {
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(gameDirectory);
+    UUID targetId = UUID.randomUUID();
+    byte[] verified = new byte[] {1, 2, 3};
+    var part = CheckedFileTransferTestSupport.part(temp, verified);
+    var artifact = artifact(targetId, verified.length, verified, part);
+    part.writeChannel().position(0);
+    part.writeChannel().write(ByteBuffer.wrap(new byte[] {3, 2, 1}));
+
+    var result = new CheckedFileTransferSaveService(gameDirectory).save(artifact);
+    assertEquals(CheckedFileTransferSaveService.ResultCode.SOURCE_CHANGED, result.code());
+    assertEquals(CheckedFileTransferReceivedArtifact.State.PENDING_DECISION, artifact.state());
+    Path target = gameDirectory.resolve("economy_system").resolve("received-check-files")
+        .resolve(targetId.toString());
+    assertTrue(!Files.exists(target.resolve("mod.jar")));
+    artifact.discard();
+    temp.close();
+  }
+
+  @Test
+  void successfulCopyRetainsReservationUntilSourceCleanupRetry() throws Exception {
+    AtomicBoolean failDelete = new AtomicBoolean(true);
+    CheckedFileTransferTempDirectory temp =
+        CheckedFileTransferTestSupport.open(gameDirectory, failDelete);
+    UUID targetId = UUID.randomUUID();
+    byte[] bytes = new byte[] {4, 5, 6};
+    var part = CheckedFileTransferTestSupport.part(temp, bytes);
+    CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, 10);
+    var artifact = new CheckedFileTransferReceivedArtifact(part, budget.reserve(bytes.length),
+        new CheckedFileTransferReceivedArtifact.Metadata("Target", targetId, "Requester",
+            UUID.randomUUID(), ClientFileCheckType.MODS, "mod.jar", UUID.randomUUID(),
+            bytes.length, sha256(bytes), 1));
+
+    var result = new CheckedFileTransferSaveService(gameDirectory).save(artifact);
+    assertEquals(CheckedFileTransferSaveService.ResultCode.SAVED_CLEANUP_PENDING, result.code());
+    assertEquals(CheckedFileTransferReceivedArtifact.State.SAVED_CLEANUP_PENDING, artifact.state());
+    assertEquals(1, budget.reservedFiles());
+    failDelete.set(false);
+    assertTrue(artifact.retrySavedCleanup());
+    assertEquals(0, budget.reservedFiles());
+    temp.close();
+  }
+
+  @Test
   void rejectsSymlinkParentWithoutMovingArtifact() throws Exception {
     CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(gameDirectory);
     CheckedFileTransferTempDirectory.OwnedFile part =
@@ -86,12 +132,18 @@ class CheckedFileTransferSaveServiceTest {
   private CheckedFileTransferReceivedArtifact artifact(
       CheckedFileTransferTempDirectory temp, UUID targetId, long size, byte[] bytes)
       throws IOException {
-    return artifact(targetId, size, CheckedFileTransferTestSupport.part(temp, bytes));
+    return artifact(targetId, size, bytes, CheckedFileTransferTestSupport.part(temp, bytes));
   }
 
   private CheckedFileTransferReceivedArtifact artifact(
       UUID targetId,
       long size,
+      CheckedFileTransferTempDirectory.OwnedFile part) {
+    return artifact(targetId, size, new byte[(int) size], part);
+  }
+
+  private CheckedFileTransferReceivedArtifact artifact(
+      UUID targetId, long size, byte[] bytes,
       CheckedFileTransferTempDirectory.OwnedFile part) {
     CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(2, 10);
     CheckedFileTransferTempBudget.Reservation reservation = budget.reserve(size);
@@ -107,9 +159,18 @@ class CheckedFileTransferSaveServiceTest {
             "mod.jar",
             UUID.randomUUID(),
             size,
-            "0000000000000000000000000000000000000000000000000000000000000000",
+            sha256(bytes),
             CheckedFileTransferValidation.totalChunks(
                 size,
                 com.mo.economy_system.common.network.EconomyNetworkLimits.TRANSFER_RAW_CHUNK_BYTES)));
+  }
+
+  private static String sha256(byte[] bytes) {
+    try {
+      return java.util.HexFormat.of().formatHex(
+          java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+    } catch (java.security.NoSuchAlgorithmException impossible) {
+      throw new AssertionError(impossible);
+    }
   }
 }

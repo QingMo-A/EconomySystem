@@ -23,6 +23,7 @@ public final class CheckedFileTransferUiText {
       case "SAVE_PARENT_UNSAFE" -> "message.transfer.save_parent_unsafe";
       case "SOURCE_MISSING", "NOT_REGULAR_FILE", "SYMLINK" ->
           "message.transfer.source_missing";
+      case "SOURCE_CHANGED" -> "message.transfer.source_changed";
       case "MOVE_FAILED" -> "message.transfer.move_failed";
       case "NOT_PENDING" -> "message.transfer.not_pending";
       case "SNAPSHOT_FAILED" -> "message.transfer.snapshot_failed";
@@ -51,6 +52,7 @@ public final class CheckedFileTransferUiText {
     if (state == null) return "message.transfer.state.pending";
     return switch (state) {
       case PENDING_DECISION -> "message.transfer.state.pending";
+      case SAVED_CLEANUP_PENDING -> "message.transfer.state.cleanup_pending";
       case SAVED -> "message.transfer.state.saved";
       case DISCARDED -> "message.transfer.state.discarded";
     };
@@ -62,10 +64,12 @@ public final class CheckedFileTransferUiText {
       case SAVE_NAME_EXHAUSTED -> "message.transfer.save_name_exhausted";
       case SAVE_PARENT_UNSAFE -> "message.transfer.save_parent_unsafe";
       case SOURCE_MISSING -> "message.transfer.source_missing";
+      case SOURCE_CHANGED -> "message.transfer.source_changed";
       case MOVE_FAILED -> "message.transfer.move_failed";
       case NOT_PENDING -> "message.transfer.not_pending";
       case INVALID_FILE_NAME -> "message.transfer.invalid_file";
       case SAVED -> "message.transfer.not_pending";
+      case SAVED_CLEANUP_PENDING -> "message.transfer.save_cleanup_pending";
     };
   }
 

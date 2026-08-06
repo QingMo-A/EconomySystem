@@ -51,6 +51,11 @@ final class Screen_CheckedFileTransferResult extends Screen {
     }
   }
 
+  @Override public void tick() {
+    if (terminal == null && NeoForge1211ClientFileCheckClientRuntime.transfers().completedArtifact()
+        != initialArtifact) Minecraft.getInstance().setScreen(null);
+  }
+
   @Override
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     renderBackground(graphics, mouseX, mouseY, partialTick);

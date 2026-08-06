@@ -1,4 +1,7 @@
 {
+  "message.transfer.source_changed": "The temporary file content no longer matches the verified transfer",
+  "message.transfer.save_cleanup_pending": "The file was saved; temporary cleanup will continue",
+  "message.transfer.state.cleanup_pending": "Saved; temporary cleanup pending",
   "message.list.invalid_price": "Invalid price",
   "message.list.invalid_quantity": "Invalid quantity",
   "message.list.unsupported_item_data": "This item's data is not supported by the market",

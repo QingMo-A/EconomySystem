@@ -1,4 +1,7 @@
 {
+  "message.transfer.source_changed": "临时文件内容与已验证的传输不一致",
+  "message.transfer.save_cleanup_pending": "文件已保存，临时文件仍在清理",
+  "message.transfer.state.cleanup_pending": "已保存，等待清理临时文件",
   "button.about.back": "返回",
   "button.delivery_box.claim": "领取",
   "button.home.about": "关于本模组",
