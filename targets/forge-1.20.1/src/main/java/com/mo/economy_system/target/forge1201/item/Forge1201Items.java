@@ -7,7 +7,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/** Minimal Forge item registrations required by protocol 19. */
+/** Forge item registrations required by migrated gameplay protocols. */
 public final class Forge1201Items {
   static final int RECALL_POTION_MAX_STACK_SIZE = 1;
   public static final DeferredRegister<Item> ITEMS =
@@ -15,6 +15,8 @@ public final class Forge1201Items {
 
   public static final RegistryObject<Item> RECALL_POTION = ITEMS.register(
       "recall_potion", Forge1201Items::createRecallPotion);
+  public static final RegistryObject<Item> CLAIM_WAND = ITEMS.register(
+      "claim_wand", () -> new Forge1201ClaimWand(new Item.Properties().stacksTo(1)));
 
   private Forge1201Items() {}
 

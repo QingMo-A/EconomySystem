@@ -1,5 +1,13 @@
 # EconomySystem 开发助手文档（1.21.1 分支）
 
+## Bridge 当前权威状态
+
+`bridge` 分支已经将 `EconomyProtocol` 的全部 44 条消息（discriminator `0..43`）迁移为 loader-neutral common 消息。NeoForge 1.21.1 仍是唯一业务基线，Forge 1.20.1 只实现等价适配。本文后续章节中“协议 31+ 仍为 legacy”等说法是历史里程碑记录，不代表当前状态。
+
+最终切片为配送箱 `31..33` 与领地管理 `36..43`。配送条目新写入 schema v1（`schemaVersion`、`entryId`、`item`、`source`），旧 `dataID`/`itemID`/`itemStack`/`source` 仅兼容读取；领取使用 reservation、事务背包插入、持久删除和明确补偿/未知状态。领地管理使用 UUID、稳定 buff/rule ID 与 bounded `Owned` snapshot，玩家名称由服务端解析。Forge 使用 strict raw-NBT copy-on-write、claim wand、tick 会话和目标专属 UI；NeoForge 使用当前 manager 与 UI。对应的 11 个旧 Packet 已删除，禁止恢复。
+
+最终验收（2026-08-06）：Forge 573 项、NeoForge 628 项测试均无 failure/error；两端各跳过同一个需要 Windows 符号链接权限的测试。`buildAllTargets --rerun-tasks` 与双端 JAR 隔离审计通过。
+
 > 适用项目：`QingMo-A/EconomySystem`  
 > 适用分支：`1.21.1`  
 > 用途：给开发者、Codex、Claude Code、ChatGPT 等代码助手快速理解项目架构、开发约束、修改入口与注意事项。  

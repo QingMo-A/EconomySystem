@@ -47,7 +47,8 @@ final class Forge1201TerritoryRemovalHandler {
                 Forge1201TerritoryInviteRuntime.store(server)
                     .discardPendingForTerritory(removed.territoryId(), tick),
             (removed, tick) -> {
-              /* Forge has no legacy resize-session state. */
+              Forge1201TerritoryModifySessions.cancelForTerritory(
+                  server, removed.territoryId(), removed.territoryName());
             },
             (stage, player, id, error) ->
                 LOGGER.warn(

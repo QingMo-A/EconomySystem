@@ -17,9 +17,13 @@ import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
+import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
+import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
+import com.mo.economy_system.common.network.DeliveryBoxDataResponseMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
+import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
@@ -28,6 +32,8 @@ import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.common.network.RemoveTerritoryMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
+import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.SingleTerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
@@ -35,12 +41,19 @@ import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
+import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.CheckedFileTransferWireCodec;
+import com.mo.economy_system.network.DeliveryBoxWireCodec;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
+import com.mo.economy_system.network.TerritoryManagementWireCodec;
 import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
@@ -135,6 +148,94 @@ public final class NeoForge1211MessageCodecs {
     register(codecs, EconomyMessages.CHUNK_RESPONSE, new NeoForge1211MessageCodec<>() {
       public void encode(CheckedFileTransferChunkResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkResponse(m,b); }
       public CheckedFileTransferChunkResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkResponse(b); }
+    });
+    register(codecs, EconomyMessages.DELIVERY_BOX_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
+      public void encode(DeliveryBoxDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
+        DeliveryBoxWireCodec.encodeRequest(message, buffer);
+      }
+      public DeliveryBoxDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
+        return DeliveryBoxWireCodec.decodeRequest(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.DELIVERY_BOX_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(DeliveryBoxDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
+        DeliveryBoxWireCodec.encodeResponse(message, buffer);
+      }
+      public DeliveryBoxDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
+        return DeliveryBoxWireCodec.decodeResponse(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.DELIVERY_BOX_CLAIM_ITEM, new NeoForge1211MessageCodec<>() {
+      public void encode(DeliveryBoxClaimMessage message, RegistryFriendlyByteBuf buffer) {
+        DeliveryBoxWireCodec.encodeClaim(message, buffer);
+      }
+      public DeliveryBoxClaimMessage decode(RegistryFriendlyByteBuf buffer) {
+        return DeliveryBoxWireCodec.decodeClaim(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.MODIFY_MODE, new NeoForge1211MessageCodec<>() {
+      public void encode(ModifyTerritoryModeMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeModifyMode(message, buffer);
+      }
+      public ModifyTerritoryModeMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeModifyMode(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.UNLOCK_TERRITORY_BUFF, new NeoForge1211MessageCodec<>() {
+      public void encode(UnlockTerritoryBuffMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeUnlockBuff(message, buffer);
+      }
+      public UnlockTerritoryBuffMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeUnlockBuff(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.UPGRADE_TERRITORY_BUFF, new NeoForge1211MessageCodec<>() {
+      public void encode(UpgradeTerritoryBuffMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeUpgradeBuff(message, buffer);
+      }
+      public UpgradeTerritoryBuffMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeUpgradeBuff(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.SINGLE_TERRITORY_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
+      public void encode(SingleTerritoryDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeSingleRequest(message, buffer);
+      }
+      public SingleTerritoryDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeSingleRequest(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.SINGLE_TERRITORY_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(SingleTerritoryDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeSingleResponse(message, buffer);
+      }
+      public SingleTerritoryDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeSingleResponse(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.UPDATE_TERRITORY_PERMISSION, new NeoForge1211MessageCodec<>() {
+      public void encode(UpdateTerritoryPermissionMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodePermission(message, buffer);
+      }
+      public UpdateTerritoryPermissionMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodePermission(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP, new NeoForge1211MessageCodec<>() {
+      public void encode(TransferTerritoryOwnershipMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeTransfer(message, buffer);
+      }
+      public TransferTerritoryOwnershipMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeTransfer(buffer);
+      }
+    });
+    register(codecs, EconomyMessages.UPDATE_TERRITORY_RULE, new NeoForge1211MessageCodec<>() {
+      public void encode(UpdateTerritoryRuleMessage message, RegistryFriendlyByteBuf buffer) {
+        TerritoryManagementWireCodec.encodeRule(message, buffer);
+      }
+      public UpdateTerritoryRuleMessage decode(RegistryFriendlyByteBuf buffer) {
+        return TerritoryManagementWireCodec.decodeRule(buffer);
+      }
     });
     register(
         codecs,

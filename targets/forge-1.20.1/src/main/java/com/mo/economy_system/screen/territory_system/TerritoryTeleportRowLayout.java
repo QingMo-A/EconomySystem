@@ -6,7 +6,7 @@ import java.util.UUID;
 
 final class TerritoryTeleportRowLayout {
   static final int ROW_HEIGHT = 26;
-  enum Action { TELEPORT, MEMBERS, DELETE }
+  enum Action { TELEPORT, MANAGE, DELETE }
 
   record TerritoryRow(UUID territoryId, boolean owned) {}
 
@@ -33,7 +33,7 @@ final class TerritoryTeleportRowLayout {
     return List.copyOf(result);
   }
 
-  /** Authorized rows teleport; owned rows also invite and expose a compact delete action. */
+  /** Authorized rows teleport; owned rows also expose management and deletion. */
   static List<ActionArea> layoutActions(List<TerritoryRow> rows, int scroll, int screenWidth,
       int screenHeight, int buttonWidth, int buttonHeight) {
     int first = Math.max(0, Math.min(scroll,
@@ -50,7 +50,7 @@ final class TerritoryTeleportRowLayout {
         result.add(new ActionArea(x, y, buttonWidth, buttonHeight,
             row.territoryId(), Action.TELEPORT));
         result.add(new ActionArea(x + buttonWidth + 4, y, buttonWidth, buttonHeight,
-            row.territoryId(), Action.MEMBERS));
+            row.territoryId(), Action.MANAGE));
         result.add(new ActionArea(x + buttonWidth * 2 + 8, y, deleteWidth, buttonHeight,
             row.territoryId(), Action.DELETE));
       } else {

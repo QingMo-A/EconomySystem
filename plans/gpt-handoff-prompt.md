@@ -1,99 +1,47 @@
 # 给 GPT/Codex 的 EconomySystem Bridge 接手提示词
 
-## 当前领地迁移状态
-
-协议 17–22 已迁移且协议 22 完成最终集成闭环。其 C2S wire 固定为 territory UUID、target player UUID，共 32 字节；sender 来自 authenticated context。实时 owner 才能移除实时成员，owner 不可移除，target 可以离线。NeoForge 保存原始 canonical 名称，使用可注入精确 mutation/rollback，manager 集成复验全部身份与空间索引；Forge raw NBT copy-on-write 在 dirty 后再次证明 candidate raw/cache，静默漂移进入补偿，完整 rollback 证明引用、深内容、strict parse、名称与顺序。成功后只 fail-closed 清理精确 invite。双端 confirmation 为 one-shot，Forge tiny-height/窄宽度隐藏放不下的控件。严格注册、limiter 和四资源 parity 测试已通过。历史协议 22 集成实测 shared-source 285、Forge 362、NeoForge 422，双目标构建通过。协议 23-30 已在后续文件检查/传输阶段迁移；协议 31+ 不得迁移。
-
-协议 21 删除已完成最终空间边界加固，wire 仍严格为一个 16 字节 Territory UUID。后续必须保留闭区间 Bounds（`width/height = max - min`）、全树 identity-based QuadTree 删除，以及覆盖 identity 数、UUID 数、预期节点路径和代表点查询的事务验证。不得把 package-private 的 manager resize 方法重新公开，也不得绕过 `TerritoryResizeTransactionService`。这是历史协议 21 里程碑实测 shared-source 266、Forge 333、NeoForge 382，完整双目标构建通过；协议 22 已在下一里程碑完成。
-
 ```text
-你正在继续开发 QingMo-A/EconomySystem 的 bridge 分支。开始前完整阅读：
+你正在维护 QingMo-A/EconomySystem 仓库的 bridge 分支。Bridge 已完成，不再存在等待迁移的 legacy 协议。
+
+开始前完整阅读：
 
 1. AGENTS_EconomySystem.md
 2. plans/bridge-migration-plan.md
 3. common/README.md
 4. targets/forge-1.20.1/README.md
-5. common/src/main/java/com/mo/economy_system/platform/item/ 下的 Snapshot 与 Bridge 文件
+5. common/src/main/java/com/mo/economy_system/protocol/EconomyProtocol.java
+6. common/src/main/java/com/mo/economy_system/common/network/EconomyMessages.java
 
-先检查 git status 和当前分支。工作区可能有用户自己的未提交文件；不得删除、覆盖、清理或默认全部暂存。
+先执行 git status 和 git branch --show-current。工作区可能存在用户自己的未提交文件；不得删除、覆盖、清理、默认暂存或提交这些文件。禁止 git add .、git add -A、git clean、git reset --hard 和 force push。
 
-架构原则：
-- NeoForge 1.21.1 是唯一业务基线；Forge 1.20.1 只做等价适配。
-- common 不得导入 NeoForge/Forge loader API。
-- EconomyProtocol 的 44 条消息、方向和 Forge discriminator 0..43 不得重排或复用。
-- 跨版本物品转换必须 fail closed，不能静默丢组件。
-- check/get/chunk 23..30 在安全重构前禁止迁移。
+当前架构契约：
 
-阶段 A 已完成并经过安全加固：ItemStackSnapshot schema v1、集中 validator/limits、严格结果式 codec、DATA_LIMIT_EXCEEDED、旧 compact 读取兼容、Damage 对称校验、NeoForge Data Components 适配、Forge 原生 NBT 适配以及双端共享黄金 fixture 已建立。限制值以 common/README.md 和迁移计划为准。旧 saveSimple/loadSimple 只是 deprecated 兼容入口；新代码必须使用 Snapshot schema v1。
+- NeoForge 1.21.1 是唯一业务基线；Forge 1.20.1 只能实现等价 adapter，不能从旧分支恢复过时业务。
+- common 不得导入 net.neoforged 或 net.minecraftforge loader API。
+- EconomyProtocol 共 44 条消息，canonical ID、方向、声明顺序及 Forge discriminator 0..43 不得重排、复用或改变。
+- 两个 target 均已注册 0..43；新增协议只能追加。
+- ItemStackSnapshot schema version 为 1。跨版本物品无法无损表达时必须 fail closed，禁止静默丢组件。
+- 协议 23..30 的文件检查/传输安全事务已经完成，必须保留授权绑定、显式同意、SecureDirectoryStream/handle identity、防重放、大小预算、超时与 no-overwrite 保存语义。
 
-阶段 B 的协议 8（创建销售订单）与协议 9（创建求购订单）已经完成。协议 9 的消息只有 itemId、quantity、totalPrice；totalPrice 是一次冻结的整单金额，不乘 quantity、无销售税。服务端解析默认注册物品、强制 count-one Snapshot、限制 maxStackSize，并生成 UUID、所有者、时间和 delivered=false。ledger 添加失败会退款。下一项任务是协议 10/11 市场数据读取；不要同时迁移购买、确认、交付、取消、配送箱或领地。
+最终 Bridge 切片：
 
-兼容性修复说明：旧 NeoForge 协议 14 的求购交付已使用 common 事务服务和
-MarketLedger 原子 delivered 转换。MarketManager 返回的订单对象是分离的只读兼容
-视图，不得通过 setDelivered 等 setter 假设持久化。该改动不是协议 14 迁移，Forge
-不得注册 discriminator 14。协议 9 已关闭，下一项任务是协议 10/11。
+- 协议 31/32/33 为配送箱查询、响应、领取。消息和 DeliveryBoxWireCodec 位于 common。
+- 配送条目新格式固定为 schemaVersion、entryId、item、source。旧 dataID、itemID、itemStack、source 只允许兼容读取，所有新写入使用 v1。
+- 领取必须按 entry UUID one-shot reserve，先事务性插入主物品栏，再持久删除；已证明失败要补偿，无法证明状态返回 STATE_UNKNOWN，成功后的重放返回 NOT_FOUND。
+- 协议 36..43 为修改范围、Buff 解锁/升级、单领地查询/响应、成员权限、所有权转让与规则修改。
+- 协议 39/40 只传 bounded Owned snapshot；协议 41/42 wire 只传 UUID（41 另有 allowed），玩家名必须服务端解析；协议 43 使用稳定 rule/action ID。
+- NeoForge 使用 canonical TerritoryManager；Forge 使用 strict raw-NBT copy-on-write 并保留未知字段、列表顺序和无关数据。
+- Forge resize 具有两点选择、第三次点击取消、1200 tick 超时、logout/server-stop/删除清理和 /confirm_modify。prepare/commit 必须实时复验 owner、dimension、旧状态与 overlap；扩张按面积差 * 20 扣款；STATE_UNKNOWN 禁止盲目退款。
+- Forge 提供 O 配送箱、I 领地页、管理页和 claim wand；NeoForge UI 已使用 common 消息并有权限管理入口。
+- 11 个旧 Packet 已删除，禁止重新引入。
 
-市场余额事务已经加固。协议 16 已迁移为 common UUID 请求，使用 expected-order 删除、原求购者精确退款和显式市场状态；不要恢复旧 Packet。
+维护时必须运行与改动范围匹配的测试。发布或修改协议/持久化后至少运行：
 
-协议 10/11 已迁移为有界分页读取：SUMMARY 不携带订单，PAGE 固定 9 条并由服务端执行 ALL/MINE/SALES/DEMAND 过滤以及物品 ID/创建者搜索；MINE 身份只取真实发送者。响应只传 schema-v1 Snapshot。ClientMarketState 会忽略旧 requestId，市场变化只广播 INVALIDATED。旧 Packet_MarketDataRequest/Response 已删除。下一步是协议 12，不要同时迁移 13-16。
-
-协议 10/11 初始提交为 `666fccc`，随后已加固为固定 PAGE_SIZE=9、持久化单调 marketRevision 和 768 KiB 整包估算预算。SUMMARY/PAGE 分别维护请求 ID；INVALIDATED revision 阻止旧统计或页面覆盖。NeoForge 必须先完整恢复一页全部 Snapshot，再提交 ClientMarketState。广播仅允许在权威账本成功修改后发生。下一步仍是协议 12。
-
-完成后运行：
+.\gradlew.bat :targets:forge-1.20.1:test --no-daemon --rerun-tasks
+.\gradlew.bat :targets:neoforge-1.21.1:test --no-daemon --rerun-tasks
 .\gradlew.bat buildAllTargets --no-daemon --rerun-tasks
 rg -n "net\.neoforged|net\.minecraftforge" common/src
 git diff --check
 
-协议 10/11 已正式关闭，协议 12–22 已迁移。协议 21 wire 仅为 16 字节 territoryId，删除权限来自 authenticated sender，不退款；NeoForge 使用四索引事务，Forge 使用 raw NBT copy-on-write，成功后清理 pending invite，NeoForge 还会清理 resize session。协议 23-30 已在后续客户端文件检查/传输阶段迁移。
-并检查 Forge JAR 不包含 NeoForge target 类。只在 ForgeGradle TLS 握手失败时，对当次命令临时使用 -Dnet.minecraftforge.gradle.check.certs=false，禁止写入配置。
+仅当 ForgeGradle TLS 证书握手失败时，允许在当次命令临时增加 -Dnet.minecraftforge.gradle.check.certs=false；禁止写入项目配置。构建后审计两个 JAR：Forge 不得含 NeoForge target/API，NeoForge 不得含 Forge target/API，两端不得含已删除 Packet。
 ```
-# Current bridge handoff
-
-Sales purchase and UUID-only sales-order removal are now migrated. Both use the common transactional
-inventory ports and `MarketLedger.removeSalesTransactional`. Do not restore business behavior from the
-Forge 1.20.1 legacy packet. Items removed by an operator must still go only to the original online seller.
-Protocols 12–22 are migrated. Protocol 21 is an exact 16-byte territory UUID delete request; authenticated sender authority is revalidated server-side and deletion never refunds. Do not renumber the append-only manifest; protocols 23-30 are covered below and protocol 31+ remains legacy.
-
-Protocol 13 is now migrated. Protocols 12, 13 and 15 use shared per-target transactional main-inventory
-adapters, `MarketMutationState`, `MarketActionPostPlan`, and `IsolatedPostActions`. Protocol 14 hardening is complete, including real
-failure reporting, expected-order transition, exact supplier credit, independent compensation, and
-shared inventory transaction contract coverage. Protocol 16 cancellation is also migrated with server-owned
-refund semantics and invalidation on CHANGED/UNKNOWN. Territory response 18 is NBT-free,
-uses full owned/minimal authorized snapshots, enforces 1 MiB budgets, and commits only the
-active request ID after complete restore. Protocols 19/20 are complete; do not start protocol 21 without a new task.
-Protocol 16 hardening is closed: illegal result/outcome combinations are rejected, mismatched removals are
-restored before failure, ORDER_CHANGED has no stale transaction order, and target logs combine all errors.
-
-Territory protocols 17/18 are now hardened. Response 18 has stable `data` and `error` kind IDs, uses the one
-common NBT-free wire codec, and encodes through a temporary buffer before touching the destination. The active
-`Screen_Territory` request ID is the sole stale-response authority; the old global tracker no longer exists.
-Both targets use `TerritoryDataClientApplier` for complete restore followed by one atomic commit. ERROR,
-restore failure, and a 200-tick timeout end loading and allow a new-ID retry. Forge has a target-local
-territory page because the NeoForge root UI is excluded from its build, and its client dispatch is hidden behind
-a physical-side-safe indirection. Forge `territory_data` remains a sole overworld read-only protocol-17/18
-adapter: invalid buffs/dimensions fail closed and unknown permissions fall back to MEMBERS. NeoForge treats
-historical null buff upgrade costs as empty. Protocol 19 final hardening is complete: the common reserve factory owns the remaining-stack write and dirty mark, compensates before returning, and reports compensation failure as ROLLBACK_FAILED. Dirty marking is required; client sync is best effort. Commit is an I/O-free state transition, arrival UNKNOWN never auto-refunds and maps to TELEPORT_STATE_UNKNOWN, and cooldowns are weakly server-scoped with tick-epoch reset. Forge/NeoForge production inventory helpers scan only `inventory.items` and provide their native full-stack equality. Protocol 20 finalization restores Forge Chinese resources, verifies canonical invite keys/placeholders with strict JSON parsing, uses local player-list revision for loading/empty, and applies a 15-tick Forge click debounce. Malformed/duplicate Forge raw territory data maps to CREATE_FAILED; NeoForge real membership mutation has dirty/add/rollback fault injection. Protocol 21 removal and resize integration are hardened: the removal request remains a 16-byte UUID; synchronized prepare prices from live bounds, commit revalidates captured state, equal-area reshape is free, explicit repository failure kinds replace message parsing, uncertain mutation never auto-refunds, closed integer bounds cover degenerate rectangles, and QuadTree removal traverses by identity. Protocol 22 is complete; protocol 31+ is the next migration boundary.
-historical null buff upgrade costs as empty. Protocol 19 final hardening is complete: the common reserve factory owns the remaining-stack write and dirty mark, compensates before returning, and reports compensation failure as ROLLBACK_FAILED. Dirty marking is required; client sync is best effort. Commit is an I/O-free state transition, arrival UNKNOWN never auto-refunds and maps to TELEPORT_STATE_UNKNOWN, and cooldowns are weakly server-scoped with tick-epoch reset. Forge/NeoForge production inventory helpers scan only `inventory.items` and provide their native full-stack equality. Protocol 20 finalization restores Forge Chinese resources, verifies canonical invite keys/placeholders with strict JSON parsing, uses local player-list revision for loading/empty, and applies a 15-tick Forge click debounce. Malformed/duplicate Forge raw territory data maps to CREATE_FAILED; NeoForge real membership mutation has dirty/add/rollback fault injection. Protocol 21 removal and its resize integration are hardened: removal remains a 16-byte UUID request; authoritative prepare computes price from live bounds, commit revalidates captured state, equal-area reshape is free, and uncertain mutation never auto-refunds. QuadTree validation proves storage path and representative queries. Repository failure kinds are explicit and both handlers use one overworld game-time value. Protocol 22 is complete; protocol 31+ is the next migration boundary.
-
-Protocols 23-25 are now migrated atomically. Treat the common `ClientFileCheck*` messages, schema-1 strict JSON,
-pending store, scanner, executor and comparison model as authoritative. Forge and NeoForge both expose `/check`
-and explicit consent/result screens; never restore the removed legacy packets, automatic scanning, game-root
-fallback, `Files.readAllBytes`, or remote JSON file writes. The server trusts only the authenticated C2S sender
-and its exact pending key. Protocols 26-30 are covered by the checked-file transfer transaction below; protocol 31+
-remains legacy and requires a separate task.
-
-Protocols 23-25 are lifecycle-hardened. Preserve connection-generation cancellation, no stale protocol 24 send,
-the 4096-entry enumeration cap, deadline coverage through sort/hash, single-channel open-time `NOFOLLOW_LINKS`,
-exact consent-busy semantics, expiring processing claims, shared one-shot result routing, and status-specific UI.
-Consent ownership now spans CONSENT, SCANNING and SENDING. Preserve the shared session-aware protocol-24
-dispatcher, SecureDirectoryStream relative opens or fallback root identity revalidation, task failure callbacks,
-status-specific local result UI, and complete skipped-row rendering. Protocols 26-30 are covered below; protocol 31+ remains legacy.
-The protocol 23-25 safety closure is complete: local SUCCESS compares fully, FAILED has no comparison, and TRUNCATED is READY_INCOMPLETE with preserved skipped/error data. Pre-created task tokens are passed directly to callbacks; scheduling/callback failures terminate and run common-state abandonment cleanup. Scanner roots are authenticated from the opened SecureDirectoryStream handle, and unsupported providers fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocols 26-30 are covered below; protocol 31+ is still legacy.
-
-Protocols 26-30 are migrated as one checked-file transfer transaction. Preserve the legacy field order and canonical IDs. `/get` requires a recent delivered protocol-23 authorization; target full-file consent is independent. Files use an opened-handle-authenticated private snapshot, 18,000-byte ordered chunks, streaming SHA-256, requester part files, and explicit no-overwrite save/discard. Unsupported providers fail closed. Protocol 31+ is still legacy.
-Protocol 26-30 transaction hardening is complete: protocol-23 authorization replacement is atomic and fail-closed; server READY/chunk forwarding uses one-shot prepare/commit claims and consumes on sender failure; target/requester are single-active and transfer IDs are unique; protocol 27 rejects client COMPLETE. Client state is session-bound, uses a bounded daemon worker and shared temp budget, and retains completed artifacts until safe no-overwrite save/discard. Logout, reconnect and server stop must clear exact state. Protocol 31+ remains legacy and must not be migrated as part of protocol 26-30 maintenance.
-Historical transaction-hardening counts are 382 shared-source test methods, 459 Forge tests, and 519 NeoForge tests.
-
-Historical lifecycle-hardening counts at `70cf97b9` are 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests; both target suites and `buildAllTargets` passed. That baseline captures arrival sessions before queueing, uses a secure relative temp directory and shared budget, rejects new READY while an artifact is pending, routes save/discard only through the coordinator, retries failed deletes, and uses bounded terminal/UI translation keys.
-
-The final protocol 26-30 integrity closure uses creation-time exact channels for snapshot sending and save rehashing, never production-reopens compatibility paths, calls sender callbacks outside the outgoing monitor, retains temp handles during active snapshot work, and keeps successful saves with failed source cleanup in `SAVED_CLEANUP_PENDING`. Authenticated exact-key server validation failures consume state and send authoritative protocol-28 `FAILED`; invalid controls/chunks and incoming timeouts publish one-shot terminal notifications handled by control, chunk and client-tick adapters. Current verification is 442 shared-source test methods, 521 Forge tests, and 581 NeoForge tests. Protocol 31+ remains legacy.

@@ -6,9 +6,9 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryBuff;
 import com.mo.economy_system.core.territory_system.TerritoryBuffConfig;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.territory_system.Packet_SingleTerritoryDataRequest;
-import com.mo.economy_system.network.packets.territory_system.Packet_UnlockTerritoryBuff;
-import com.mo.economy_system.network.packets.territory_system.Packet_UpgradeTerritoryBuff;
+import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
+import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -29,11 +29,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 领地增益界面 - 现代卡片风格
  */
 public class Screen_TerritoryBuff extends Screen {
+    private static final AtomicLong REQUEST_IDS = new AtomicLong();
 
     // ==================== 布局常量 ====================
     private static final int BASE_WIDTH = 640;
@@ -54,6 +56,7 @@ public class Screen_TerritoryBuff extends Screen {
 
     // ==================== 数据 ====================
     private Territory territory;
+    private long latestRequestId;
     private List<TerritoryBuff> allBuffs = new ArrayList<>();
     private List<TerritoryBuff> filteredBuffs = new ArrayList<>();
 
@@ -112,6 +115,12 @@ public class Screen_TerritoryBuff extends Screen {
         }
         String currentSearch = searchBox != null ? searchBox.getValue() : "";
         applySearch(currentSearch);
+    }
+
+    public void applyTerritoryResponse(long requestId, Territory territory) {
+        if (requestId < latestRequestId) return;
+        latestRequestId = requestId;
+        updateTerritory(territory);
     }
 
     @Override
@@ -508,17 +517,19 @@ public class Screen_TerritoryBuff extends Screen {
             case "unlock" -> {
                 if (canAffordUpgrade(buff, player)) {
                     EconomySystem_NetworkManager.sendToServer(
-                        new Packet_UnlockTerritoryBuff(territory.getTerritoryID(), buff.getId()));
+                        new UnlockTerritoryBuffMessage(territory.getTerritoryID(), buff.getId()));
+                    latestRequestId = REQUEST_IDS.incrementAndGet();
                     EconomySystem_NetworkManager.sendToServer(
-                        new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
+                        new SingleTerritoryDataRequestMessage(territory.getTerritoryID(), latestRequestId));
                 }
             }
             case "upgrade" -> {
                 if (canAffordUpgrade(buff, player)) {
                     EconomySystem_NetworkManager.sendToServer(
-                        new Packet_UpgradeTerritoryBuff(territory.getTerritoryID(), buff.getId()));
+                        new UpgradeTerritoryBuffMessage(territory.getTerritoryID(), buff.getId()));
+                    latestRequestId = REQUEST_IDS.incrementAndGet();
                     EconomySystem_NetworkManager.sendToServer(
-                        new Packet_SingleTerritoryDataRequest(territory.getTerritoryID()));
+                        new SingleTerritoryDataRequestMessage(territory.getTerritoryID(), latestRequestId));
                 }
             }
             case "max" -> this.player.sendSystemMessage(

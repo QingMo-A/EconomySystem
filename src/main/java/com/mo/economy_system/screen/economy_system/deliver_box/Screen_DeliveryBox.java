@@ -2,8 +2,8 @@ package com.mo.economy_system.screen.economy_system.deliver_box;
 
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxClaimItem;
-import com.mo.economy_system.network.packets.economy_system.Packet_DeliveryBoxDataRequest;
+import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
+import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
 import com.mo.economy_system.screen.Screen_Home;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,8 @@ import java.util.stream.Collectors;
  * - 底部：翻页控制
  */
 public class Screen_DeliveryBox extends Screen {
+
+    private static final AtomicLong REQUEST_IDS = new AtomicLong();
 
     // ==================== 布局常量 ====================
     private static final int BASE_WIDTH = 640;
@@ -87,19 +90,27 @@ public class Screen_DeliveryBox extends Screen {
     // ==================== 玩家信息 ====================
     private UUID playerUUID;
     private String playerName;
+    private long latestRequestId;
 
     private record ItemCardArea(int x, int y, int width, int height, int itemIndex) {}
     private record IconArea(int x, int y, int width, int height, ItemStack itemStack) {}
 
     public Screen_DeliveryBox() {
         super(Component.translatable(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY));
-        EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxDataRequest());
+        latestRequestId = REQUEST_IDS.incrementAndGet();
+        EconomySystem_NetworkManager.sendToServer(new DeliveryBoxDataRequestMessage(latestRequestId));
     }
 
     public void updateDeliveryItems(List<DeliveryItem> items) {
         this.dataLoaded = true;
         this.allItems = items;
         this.filteredItems = new ArrayList<>(items);
+    }
+
+    public void updateDeliveryItems(long requestId, List<DeliveryItem> items) {
+        if (requestId < latestRequestId) return;
+        latestRequestId = requestId;
+        updateDeliveryItems(items);
     }
 
     @Override
@@ -430,7 +441,9 @@ public class Screen_DeliveryBox extends Screen {
                     virtualMouseY >= claimBtnY && virtualMouseY <= claimBtnY + CLAIM_BTN_HEIGHT) {
 
                     DeliveryItem item = filteredItems.get(cardArea.itemIndex());
-                    EconomySystem_NetworkManager.sendToServer(new Packet_DeliveryBoxClaimItem(item.getDataID()));
+                    latestRequestId = REQUEST_IDS.incrementAndGet();
+                    EconomySystem_NetworkManager.sendToServer(
+                        new DeliveryBoxClaimMessage(item.getDataID(), latestRequestId));
                     return true;
                 }
             }

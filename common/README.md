@@ -1,5 +1,15 @@
 # EconomySystem Shared Sources
 
+## Final Bridge status
+
+All 44 canonical messages (`0..43`) are now represented by loader-neutral common message types. Forge 1.20.1 and NeoForge 1.21.1 bind the same IDs, directions and wire semantics while keeping loader registration, version APIs and persistence adapters in their targets. Statements later in this file that call protocol 31 or later "legacy" are historical milestone notes, not the current branch state.
+
+Delivery protocols `31..33` use `DeliveryBoxWireCodec` and immutable `DeliveryBoxEntrySnapshot` values. New persistence entries are schema v1 with `schemaVersion`, `entryId`, `item` and `source`. The legacy `dataID`/`itemID`/`itemStack`/`source` shape is read-only compatibility input. Claims reserve one UUID, transactionally insert the item, persistently remove the entry, compensate proven failures and fail closed as `STATE_UNKNOWN` when the final state cannot be established.
+
+Territory management protocols `36..43` use common UUID-only or stable-ID messages. Protocol `40` carries one bounded `Owned` snapshot, protocols `41/42` resolve player names on the server, and protocol `43` uses stable rule/action IDs. Both targets share the services and codecs; NeoForge uses the canonical manager while Forge adapts strict raw NBT and its own client/session entry points. The eleven superseded target Packet classes for these protocols are deleted.
+
+Final verification on 2026-08-06 executed 573 Forge tests and 628 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed, common contained no loader imports, and both generated JARs passed cross-loader and removed-Packet audits.
+
 ## Protocol 21 spatial boundary hardening
 
 ## Protocol 22 territory member removal
@@ -26,7 +36,9 @@ Its IDs, directions, and Forge discriminators are append-only wire contracts.
 Target codecs and loader payload wrappers bind to that manifest rather than
 maintaining independent registration order.
 
-## Current migration status
+## Historical migration status
+
+This section records intermediate boundaries. The current authoritative status is the completed 44-message Bridge described above.
 
 - Protocol `bridge-1` locks all 44 NeoForge 1.21.1 message IDs, directions,
   and Forge discriminators (`0` through `43`).

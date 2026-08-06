@@ -8,8 +8,11 @@ import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryInviteResult;
 import com.mo.economy_system.common.territory.TerritoryInviteStore;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
+import com.mo.economy_system.common.territory.TerritoryAdministrationService;
+import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
+import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.List;
 import java.util.UUID;
@@ -506,6 +509,308 @@ class Forge1201TerritorySnapshotStoreTest {
         outcome.result());
     assertEquals(before, holder[0].rawCopy());
     assertEquals(2, calls.get());
+  }
+
+  @Test
+  void managementMutationsPreserveUnknownFieldsAndPublishEquivalentCache() {
+    CompoundTag territory = validTerritory();
+    territory.putString("FutureTerritory", "keep");
+    territory.put("AuthorizedPlayers", new ListTag());
+    territory.put("TerritoryBuffs", buffs(false, 0));
+    CompoundTag root = new CompoundTag();
+    root.putString("FutureRoot", "keep-root");
+    ListTag records = new ListTag();
+    records.add(territory);
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+    UUID owner = territory.getUUID("OwnerUUID");
+    UUID target = UUID.randomUUID();
+
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        store.setPermission(territory.getUUID("TerritoryID"), owner, target, "Target", true));
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        store.setRule(
+            territory.getUUID("TerritoryID"),
+            owner,
+            RuleAction.OPEN_CONTAINER,
+            RuleLevel.OWNER_ONLY));
+    assertEquals(
+        TerritoryBuffTransactionService.RepositoryResult.SUCCESS,
+        store.mutateBuff(
+            territory.getUUID("TerritoryID"),
+            owner,
+            "economy_system:speed",
+            false,
+            0,
+            TerritoryBuffTransactionService.Action.UNLOCK));
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        store.transfer(
+            territory.getUUID("TerritoryID"), owner, target, "Target"));
+
+    CompoundTag saved = store.rawCopy();
+    assertEquals("keep-root", saved.getString("FutureRoot"));
+    CompoundTag changed = saved.getList("Territories", Tag.TAG_COMPOUND).getCompound(0);
+    assertEquals("keep", changed.getString("FutureTerritory"));
+    assertEquals(target, changed.getUUID("OwnerUUID"));
+    assertEquals("Target", changed.getString("OwnerName"));
+    assertTrue(changed.getList("TerritoryBuffs", Tag.TAG_COMPOUND)
+        .getCompound(0).getBoolean("unlocked"));
+    assertEquals(
+        RuleLevel.OWNER_ONLY,
+        store.findOwned(territory.getUUID("TerritoryID")).rules().stream()
+            .filter(rule -> rule.action() == RuleAction.OPEN_CONTAINER)
+            .findFirst().orElseThrow().level());
+  }
+
+  @Test
+  void managementDirtyFailureRestoresRawCacheAndAllowsRetry() {
+    CompoundTag territory = validTerritory();
+    territory.put("AuthorizedPlayers", new ListTag());
+    CompoundTag root = new CompoundTag();
+    ListTag records = new ListTag();
+    records.add(territory);
+    root.put("Territories", records);
+    AtomicInteger calls = new AtomicInteger();
+    Forge1201TerritorySnapshotStore store = new Forge1201TerritorySnapshotStore(
+        root,
+        () -> {
+          if (calls.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+        });
+    CompoundTag before = store.rawCopy();
+    UUID target = UUID.randomUUID();
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
+        store.setPermission(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            target,
+            "Target",
+            true));
+    assertEquals(before, store.rawCopy());
+    assertEquals(2, calls.get());
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        store.setPermission(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            target,
+            "Target",
+            true));
+  }
+
+  @Test
+  void managementDetectsSilentPostDirtyCorruptionAndRollsBack() {
+    CompoundTag territory = validTerritory();
+    CompoundTag root = new CompoundTag();
+    ListTag records = new ListTag();
+    records.add(territory);
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore[] holder = new Forge1201TerritorySnapshotStore[1];
+    AtomicInteger calls = new AtomicInteger();
+    holder[0] = new Forge1201TerritorySnapshotStore(
+        root,
+        () -> {
+          if (calls.getAndIncrement() == 0) {
+            holder[0].mutateRawForTest(value -> value.putString("Corrupt", "yes"));
+          }
+        });
+    CompoundTag before = holder[0].rawCopy();
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
+        holder[0].setRule(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK,
+            RuleLevel.OWNER_ONLY));
+    assertEquals(before, holder[0].rawCopy());
+    assertEquals(2, calls.get());
+  }
+
+  @Test
+  void managementRejectsDuplicateRecordsAndChangedExpectedState() {
+    CompoundTag territory = validTerritory();
+    territory.put("TerritoryBuffs", buffs(false, 0));
+    CompoundTag root = new CompoundTag();
+    ListTag records = new ListTag();
+    records.add(territory);
+    records.add(territory.copy());
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore duplicate = Forge1201TerritorySnapshotStore.load(root);
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
+        duplicate.setRule(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK,
+            RuleLevel.OWNER_ONLY));
+
+    records.remove(1);
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+    assertEquals(
+        TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED,
+        store.mutateBuff(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            "economy_system:speed",
+            true,
+            0,
+            TerritoryBuffTransactionService.Action.UPGRADE));
+  }
+
+  @Test
+  void resizePrepareAndCommitPreserveUnknownNbtAndPublishBounds() {
+    CompoundTag territory = validTerritory();
+    territory.putString("FutureTerritory", "keep");
+    CompoundTag backpoint = new CompoundTag();
+    backpoint.putInt("BackX", 0);
+    backpoint.putInt("BackY", 64);
+    backpoint.putInt("BackZ", 0);
+    territory.put("Backpoint", backpoint);
+    CompoundTag root = root(territory);
+    root.putString("FutureRoot", "keep-root");
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+
+    var prepared = store.prepareResize(
+        territory.getUUID("TerritoryID"),
+        territory.getUUID("OwnerUUID"),
+        "minecraft:overworld",
+        new Position(-1, 70, -1),
+        new Position(11, 70, 11));
+    assertEquals(Forge1201TerritorySnapshotStore.ResizePrepareResult.READY, prepared.result());
+    assertEquals(121, prepared.plan().oldArea());
+    assertEquals(169, prepared.plan().newArea());
+    assertEquals(960, prepared.plan().charge());
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizeCommitResult.SUCCESS,
+        store.commitResize(prepared.plan()));
+
+    CompoundTag saved = store.rawCopy();
+    assertEquals("keep-root", saved.getString("FutureRoot"));
+    CompoundTag changed = saved.getList("Territories", Tag.TAG_COMPOUND).getCompound(0);
+    assertEquals("keep", changed.getString("FutureTerritory"));
+    assertEquals(-1, changed.getInt("X1"));
+    assertEquals(70, changed.getInt("Y1"));
+    assertEquals(11, changed.getInt("Z2"));
+    assertEquals(-1, changed.getCompound("Backpoint").getInt("BackX"));
+    assertEquals(
+        new Position(-1, 70, -1),
+        store.findOwned(territory.getUUID("TerritoryID")).summary().pos1());
+  }
+
+  @Test
+  void resizeRejectsOverlapWrongAuthorityAndStalePlan() {
+    CompoundTag first = validTerritory();
+    CompoundTag second = validTerritory();
+    second.putUUID("TerritoryID", UUID.randomUUID());
+    second.putInt("X1", 20);
+    second.putInt("X2", 30);
+    second.putInt("Z1", 20);
+    second.putInt("Z2", 30);
+    CompoundTag root = new CompoundTag();
+    ListTag records = new ListTag();
+    records.add(first);
+    records.add(second);
+    root.put("Territories", records);
+    Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
+
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizePrepareResult.OVERLAP,
+        store.prepareResize(
+                first.getUUID("TerritoryID"),
+                first.getUUID("OwnerUUID"),
+                "minecraft:overworld",
+                new Position(0, 64, 0),
+                new Position(20, 64, 20))
+            .result());
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizePrepareResult.NOT_OWNER,
+        store.prepareResize(
+                first.getUUID("TerritoryID"),
+                UUID.randomUUID(),
+                "minecraft:overworld",
+                new Position(0, 64, 0),
+                new Position(12, 64, 12))
+            .result());
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizePrepareResult.WRONG_DIMENSION,
+        store.prepareResize(
+                first.getUUID("TerritoryID"),
+                first.getUUID("OwnerUUID"),
+                "minecraft:the_nether",
+                new Position(0, 64, 0),
+                new Position(12, 64, 12))
+            .result());
+
+    var prepared = store.prepareResize(
+        first.getUUID("TerritoryID"),
+        first.getUUID("OwnerUUID"),
+        "minecraft:overworld",
+        new Position(0, 64, 0),
+        new Position(12, 64, 12));
+    assertEquals(Forge1201TerritorySnapshotStore.ResizePrepareResult.READY, prepared.result());
+    assertEquals(
+        TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        store.setRule(
+            first.getUUID("TerritoryID"),
+            first.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK,
+            RuleLevel.OWNER_ONLY));
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizeCommitResult.CHANGED,
+        store.commitResize(prepared.plan()));
+  }
+
+  @Test
+  void resizeDirtyFailureRestoresRawAndCacheForRetry() {
+    CompoundTag territory = validTerritory();
+    CompoundTag root = root(territory);
+    AtomicInteger calls = new AtomicInteger();
+    Forge1201TerritorySnapshotStore store = new Forge1201TerritorySnapshotStore(
+        root,
+        () -> {
+          if (calls.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+        });
+    CompoundTag before = store.rawCopy();
+    var prepared = store.prepareResize(
+        territory.getUUID("TerritoryID"),
+        territory.getUUID("OwnerUUID"),
+        "minecraft:overworld",
+        new Position(0, 64, 0),
+        new Position(12, 64, 12));
+    assertEquals(
+        Forge1201TerritorySnapshotStore.ResizeCommitResult.PERSIST_FAILED,
+        store.commitResize(prepared.plan()));
+    assertEquals(before, store.rawCopy());
+    assertEquals(new Position(0, 64, 0), store.findOwned(territory.getUUID("TerritoryID")).summary().pos1());
+    assertEquals(2, calls.get());
+  }
+
+  private static CompoundTag root(CompoundTag territory) {
+    CompoundTag root = new CompoundTag();
+    ListTag records = new ListTag();
+    records.add(territory);
+    root.put("Territories", records);
+    return root;
+  }
+
+  private static ListTag buffs(boolean unlocked, int level) {
+    CompoundTag buff = new CompoundTag();
+    buff.putString("id", "economy_system:speed");
+    buff.putString("displayText", "Speed");
+    buff.putString("effectId", "minecraft:speed");
+    buff.putBoolean("initialUnlockState", false);
+    buff.putInt("initialLevel", 0);
+    buff.putInt("single_Upgrade_Level", 1);
+    buff.putInt("max_Level", 3);
+    buff.putBoolean("unlocked", unlocked);
+    buff.putInt("level", level);
+    buff.put("upgrade_Cost", new ListTag());
+    ListTag buffs = new ListTag();
+    buffs.add(buff);
+    return buffs;
   }
 
   private static CompoundTag validTerritory() {

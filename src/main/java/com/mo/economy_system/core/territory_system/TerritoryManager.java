@@ -905,6 +905,307 @@ public class TerritoryManager {
     return true;
   }
 
+  public static synchronized com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult
+      setTerritoryPermissionAuthoritatively(
+          UUID territoryID,
+          UUID expectedOwner,
+          UUID playerUUID,
+          String playerName,
+          boolean allowed) {
+    if (territoryID == null || expectedOwner == null || playerUUID == null || savedData == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NOT_FOUND;
+    }
+    if (!territory.isOwner(expectedOwner)) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+    }
+    if (territory.isOwner(playerUUID)
+        || (allowed
+            && (playerName == null
+                || playerName.isBlank()
+                || playerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH))) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+    }
+    boolean currentlyAllowed = territory.hasPermission(playerUUID);
+    if (currentlyAllowed == allowed) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+    }
+    com.mo.economy_system.common.territory.TerritorySnapshots.Owned before;
+    try {
+      before = TerritoryNetworkSnapshots.owned(territory);
+    } catch (RuntimeException failure) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    try {
+      if (allowed) territory.addAuthorizedPlayer(playerUUID, playerName.trim());
+      else territory.removeAuthorizedPlayer(playerUUID);
+      if (territory.hasPermission(playerUUID) != allowed) {
+        throw new IllegalStateException("territory permission mutation did not apply");
+      }
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected =
+          TerritoryNetworkSnapshots.owned(territory);
+      savedData.setDirty();
+      verifyAdministrationPublished(territory, expectedOwner, expected);
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.SUCCESS;
+    } catch (RuntimeException failure) {
+      return restoreAdministration(territory, before, expectedOwner, failure);
+    }
+  }
+
+  public static synchronized com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult
+      transferTerritoryAuthoritatively(
+          UUID territoryID, UUID expectedOwner, UUID newOwnerUUID, String newOwnerName) {
+    if (territoryID == null || expectedOwner == null || newOwnerUUID == null || savedData == null
+        || newOwnerName == null || newOwnerName.isBlank()
+        || newOwnerName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+    }
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NOT_FOUND;
+    }
+    if (!territory.isOwner(expectedOwner)) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+    }
+    if (expectedOwner.equals(newOwnerUUID)) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+    }
+    com.mo.economy_system.common.territory.TerritorySnapshots.Owned before;
+    try {
+      before = TerritoryNetworkSnapshots.owned(territory);
+    } catch (RuntimeException failure) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    List<Territory> oldBucket = territoriesByOwner.get(expectedOwner);
+    int oldIndex = oldBucket == null ? -1 : oldBucket.indexOf(territory);
+    try {
+      if (oldIndex < 0 || !oldBucket.remove(territory)) {
+        throw new IllegalStateException("old owner index mismatch");
+      }
+      if (oldBucket.isEmpty()) territoriesByOwner.remove(expectedOwner, oldBucket);
+      String oldOwnerName = territory.getOwnerName();
+      territory.removeAuthorizedPlayer(newOwnerUUID);
+      territory.setOwner(newOwnerUUID, newOwnerName.trim());
+      territory.addAuthorizedPlayer(expectedOwner, oldOwnerName);
+      List<Territory> newBucket = territoriesByOwner.computeIfAbsent(newOwnerUUID, ignored -> new ArrayList<>());
+      if (newBucket.stream().anyMatch(value -> value.getTerritoryID().equals(territoryID))) {
+        throw new IllegalStateException("new owner already indexes territory");
+      }
+      newBucket.add(territory);
+      IllegalStateException invariant = territoryIdentityInvariant(territoryID, newOwnerUUID, territory);
+      if (invariant != null) throw invariant;
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected =
+          TerritoryNetworkSnapshots.owned(territory);
+      savedData.setDirty();
+      verifyAdministrationPublished(territory, newOwnerUUID, expected);
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.SUCCESS;
+    } catch (RuntimeException failure) {
+      boolean restored = restoreMutableState(territory, before);
+      try {
+        for (Iterator<Map.Entry<UUID, List<Territory>>> iterator = territoriesByOwner.entrySet().iterator();
+            iterator.hasNext(); ) {
+          Map.Entry<UUID, List<Territory>> entry = iterator.next();
+          entry.getValue().removeIf(value -> value == territory);
+          if (entry.getValue().isEmpty()) iterator.remove();
+        }
+        List<Territory> restoredBucket =
+            territoriesByOwner.computeIfAbsent(expectedOwner, ignored -> new ArrayList<>());
+        restoredBucket.add(Math.min(Math.max(oldIndex, 0), restoredBucket.size()), territory);
+      } catch (RuntimeException compensation) {
+        restored = false;
+        failure.addSuppressed(compensation);
+      }
+      try {
+        savedData.setDirty();
+      } catch (RuntimeException compensation) {
+        restored = false;
+        failure.addSuppressed(compensation);
+      }
+      IllegalStateException invariant = territoryIdentityInvariant(territoryID, expectedOwner, territory);
+      restored &= invariant == null && TerritoryNetworkSnapshots.owned(territory).equals(before);
+      return restored
+          ? com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED
+          : com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+  }
+
+  public static synchronized com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult
+      setTerritoryRuleAuthoritatively(
+          UUID territoryID,
+          UUID expectedOwner,
+          com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction action,
+          com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel level) {
+    if (territoryID == null || expectedOwner == null || action == null || level == null || savedData == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NOT_FOUND;
+    }
+    if (!territory.isOwner(expectedOwner)) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+    }
+    TerritoryPermissionAction nativeAction = nativeAction(action);
+    TerritoryPermissionLevel nativeLevel = nativeLevel(level);
+    if (territory.getPermissionLevel(nativeAction) == nativeLevel) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+    }
+    com.mo.economy_system.common.territory.TerritorySnapshots.Owned before;
+    try {
+      before = TerritoryNetworkSnapshots.owned(territory);
+    } catch (RuntimeException failure) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    try {
+      territory.setPermissionLevel(nativeAction, nativeLevel);
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected =
+          TerritoryNetworkSnapshots.owned(territory);
+      savedData.setDirty();
+      verifyAdministrationPublished(territory, expectedOwner, expected);
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.SUCCESS;
+    } catch (RuntimeException failure) {
+      return restoreAdministration(territory, before, expectedOwner, failure);
+    }
+  }
+
+  public static synchronized com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult
+      mutateTerritoryBuffAuthoritatively(
+          UUID territoryID,
+          UUID expectedOwner,
+          String buffID,
+          boolean expectedUnlocked,
+          int expectedLevel,
+          com.mo.economy_system.common.territory.TerritoryBuffTransactionService.Action action) {
+    if (territoryID == null || expectedOwner == null || buffID == null || action == null || savedData == null) {
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN;
+    }
+    Territory territory = territoryByID.get(territoryID);
+    if (territory == null) {
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.NOT_FOUND;
+    }
+    if (!territory.isOwner(expectedOwner)) {
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.OWNER_CHANGED;
+    }
+    TerritoryBuff buff = territory.getBuff(buffID);
+    if (buff == null || buff.isUnlocked() != expectedUnlocked || buff.getLevel() != expectedLevel) {
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+    }
+    com.mo.economy_system.common.territory.TerritorySnapshots.Owned before;
+    try {
+      before = TerritoryNetworkSnapshots.owned(territory);
+    } catch (RuntimeException failure) {
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN;
+    }
+    try {
+      boolean changed;
+      if (action == com.mo.economy_system.common.territory.TerritoryBuffTransactionService.Action.UNLOCK) {
+        changed = territory.unlockBuff(buffID);
+      } else {
+        changed = territory.upgradeBuff(buffID);
+      }
+      if (!changed) {
+        return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+      }
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected =
+          TerritoryNetworkSnapshots.owned(territory);
+      savedData.setDirty();
+      verifyAdministrationPublished(territory, expectedOwner, expected);
+      return com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.SUCCESS;
+    } catch (RuntimeException failure) {
+      boolean restored = restoreMutableState(territory, before);
+      try {
+        savedData.setDirty();
+      } catch (RuntimeException compensation) {
+        restored = false;
+        failure.addSuppressed(compensation);
+      }
+      restored &= TerritoryNetworkSnapshots.owned(territory).equals(before);
+      return restored
+          ? com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.PERSIST_FAILED
+          : com.mo.economy_system.common.territory.TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN;
+    }
+  }
+
+  private static com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult
+      restoreAdministration(
+          Territory territory,
+          com.mo.economy_system.common.territory.TerritorySnapshots.Owned before,
+          UUID expectedOwner,
+          RuntimeException failure) {
+    if (before == null) {
+      return com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    boolean restored = restoreMutableState(territory, before);
+    try {
+      savedData.setDirty();
+    } catch (RuntimeException compensation) {
+      restored = false;
+      failure.addSuppressed(compensation);
+    }
+    IllegalStateException invariant =
+        territoryIdentityInvariant(territory.getTerritoryID(), expectedOwner, territory);
+    restored &= invariant == null && TerritoryNetworkSnapshots.owned(territory).equals(before);
+    return restored
+        ? com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED
+        : com.mo.economy_system.common.territory.TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+  }
+
+  private static void verifyAdministrationPublished(
+      Territory territory,
+      UUID expectedOwner,
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected) {
+    IllegalStateException invariant =
+        territoryIdentityInvariant(territory.getTerritoryID(), expectedOwner, territory);
+    if (invariant != null) throw invariant;
+    if (!TerritoryNetworkSnapshots.owned(territory).equals(expected)) {
+      throw new IllegalStateException("territory management state changed during persistence");
+    }
+  }
+
+  private static boolean restoreMutableState(
+      Territory territory,
+      com.mo.economy_system.common.territory.TerritorySnapshots.Owned snapshot) {
+    try {
+      Territory restored = TerritoryNetworkSnapshots.restoreOwned(snapshot);
+      territory.setOwner(restored.getOwnerUUID(), restored.getOwnerName());
+      territory.getAuthorizedPlayers().clear();
+      for (PlayerInfo member : restored.getAuthorizedPlayers()) {
+        territory.addAuthorizedPlayer(member.getUuid(), member.getName());
+      }
+      for (TerritoryPermissionAction action : TerritoryPermissionAction.values()) {
+        territory.setPermissionLevel(action, restored.getPermissionLevel(action));
+      }
+      territory.getTerritoryBuffs().clear();
+      territory.getTerritoryBuffs().addAll(restored.getTerritoryBuffs());
+      return true;
+    } catch (RuntimeException failure) {
+      return false;
+    }
+  }
+
+  private static TerritoryPermissionAction nativeAction(
+      com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction action) {
+    return switch (action) {
+      case PLACE_BLOCK -> TerritoryPermissionAction.PLACE_BLOCK;
+      case BREAK_BLOCK -> TerritoryPermissionAction.BREAK_BLOCK;
+      case USE_ITEM -> TerritoryPermissionAction.USE_ITEM;
+      case INTERACT_BLOCK -> TerritoryPermissionAction.INTERACT_BLOCK;
+      case OPEN_CONTAINER -> TerritoryPermissionAction.OPEN_CONTAINER;
+    };
+  }
+
+  private static TerritoryPermissionLevel nativeLevel(
+      com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel level) {
+    return switch (level) {
+      case OWNER_ONLY -> TerritoryPermissionLevel.OWNER_ONLY;
+      case MEMBERS -> TerritoryPermissionLevel.MEMBERS;
+      case EVERYONE -> TerritoryPermissionLevel.EVERYONE;
+    };
+  }
+
   // 查询指定位置的领地（X 和 Z 轴）
   public static Territory getTerritoryAtIgnoreY(int x, int z) {
     List<Territory> candidates = quadTree.query(x, z);

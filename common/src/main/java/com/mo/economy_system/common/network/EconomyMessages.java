@@ -89,6 +89,13 @@ public final class EconomyMessages {
   public static final EconomyMessageType<CheckedFileTransferChunkResponseMessage> CHUNK_RESPONSE =
       new EconomyMessageType<>(EconomyProtocol.CHUNK_RESPONSE, CheckedFileTransferChunkResponseMessage.class);
 
+  public static final EconomyMessageType<DeliveryBoxDataRequestMessage> DELIVERY_BOX_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.DELIVERY_BOX_DATA_REQUEST, DeliveryBoxDataRequestMessage.class);
+  public static final EconomyMessageType<DeliveryBoxDataResponseMessage> DELIVERY_BOX_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.DELIVERY_BOX_DATA_RESPONSE, DeliveryBoxDataResponseMessage.class);
+  public static final EconomyMessageType<DeliveryBoxClaimMessage> DELIVERY_BOX_CLAIM_ITEM =
+      new EconomyMessageType<>(EconomyProtocol.DELIVERY_BOX_CLAIM_ITEM, DeliveryBoxClaimMessage.class);
+
   public static final EconomyMessageType<ServerPlayerListRequestMessage>
       SERVER_PLAYER_LIST_REQUEST =
           new EconomyMessageType<>(
@@ -98,6 +105,23 @@ public final class EconomyMessages {
       SERVER_PLAYER_LIST_RESPONSE =
           new EconomyMessageType<>(
               EconomyProtocol.SERVER_PLAYER_LIST_RESPONSE, ServerPlayerListResponseMessage.class);
+
+  public static final EconomyMessageType<ModifyTerritoryModeMessage> MODIFY_MODE =
+      new EconomyMessageType<>(EconomyProtocol.MODIFY_MODE, ModifyTerritoryModeMessage.class);
+  public static final EconomyMessageType<UnlockTerritoryBuffMessage> UNLOCK_TERRITORY_BUFF =
+      new EconomyMessageType<>(EconomyProtocol.UNLOCK_TERRITORY_BUFF, UnlockTerritoryBuffMessage.class);
+  public static final EconomyMessageType<UpgradeTerritoryBuffMessage> UPGRADE_TERRITORY_BUFF =
+      new EconomyMessageType<>(EconomyProtocol.UPGRADE_TERRITORY_BUFF, UpgradeTerritoryBuffMessage.class);
+  public static final EconomyMessageType<SingleTerritoryDataRequestMessage> SINGLE_TERRITORY_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.SINGLE_TERRITORY_DATA_REQUEST, SingleTerritoryDataRequestMessage.class);
+  public static final EconomyMessageType<SingleTerritoryDataResponseMessage> SINGLE_TERRITORY_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.SINGLE_TERRITORY_DATA_RESPONSE, SingleTerritoryDataResponseMessage.class);
+  public static final EconomyMessageType<UpdateTerritoryPermissionMessage> UPDATE_TERRITORY_PERMISSION =
+      new EconomyMessageType<>(EconomyProtocol.UPDATE_TERRITORY_PERMISSION, UpdateTerritoryPermissionMessage.class);
+  public static final EconomyMessageType<TransferTerritoryOwnershipMessage> TRANSFER_TERRITORY_OWNERSHIP =
+      new EconomyMessageType<>(EconomyProtocol.TRANSFER_TERRITORY_OWNERSHIP, TransferTerritoryOwnershipMessage.class);
+  public static final EconomyMessageType<UpdateTerritoryRuleMessage> UPDATE_TERRITORY_RULE =
+      new EconomyMessageType<>(EconomyProtocol.UPDATE_TERRITORY_RULE, UpdateTerritoryRuleMessage.class);
 
   private EconomyMessages() {}
 }

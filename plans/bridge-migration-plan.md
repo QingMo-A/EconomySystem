@@ -1,5 +1,22 @@
 # EconomySystem 多版本 Bridge 迁移计划
 
+## 最终状态：全部 Bridge 已实现
+
+当前权威状态是协议 `0..43` 共 44 条消息均已迁移。两端保持 canonical ID、方向、声明顺序和 Forge discriminator 不变；所有消息类型位于 `common`，Forge 1.20.1 与 NeoForge 1.21.1 只保留版本 API、注册、持久化与客户端入口适配。本文后续出现“协议 31+ 仍为 legacy”等文字均是对应里程碑的历史记录，不再描述当前分支状态。
+
+最终切片包含：
+
+- 协议 `31..33` 配送箱使用 loader-neutral 消息、严格 wire codec 和 schema-v1 持久化。新条目固定写入 `schemaVersion`、`entryId`、`item`、`source`；旧 `dataID`、`itemID`、`itemStack`、`source` 仅兼容读取。
+- 配送领取按 entry UUID 做 one-shot reservation，先事务性放入主物品栏，再持久删除条目；持久化失败回滚背包，无法证明最终状态时返回 `STATE_UNKNOWN`，重放已成功领取的 UUID 返回 `NOT_FOUND`。
+- 协议 `36..43` 使用 UUID、稳定 buff/rule/action ID 和 bounded `Owned` snapshot。协议 `39/40` 不暴露完整服务端 Territory 对象；协议 `41/42` 的 wire 不接受客户端名称，玩家名由服务端解析。
+- NeoForge 1.21.1 继续使用业务基线的 Territory manager；Forge 1.20.1 使用 strict raw-NBT copy-on-write，保留未知字段和列表顺序。Forge resize 具有两点选择、第三次点击取消、1200 tick 超时、`/confirm_modify`、实时 overlap/owner/dimension 重验、精确扣款及可证明补偿。
+- Forge 提供配送箱和领地管理 UI、`O`/`I` 快捷入口以及 claim wand；NeoForge 现有 UI 已切换为 common 消息并补齐成员权限入口。
+- 11 个协议 `31..33`、`36..43` 旧 Packet 源文件已删除，不再存在 canonical legacy Packet 实现。
+
+Bridge 完成后只允许兼容性维护、安全加固和新增追加式协议；不得从旧 Forge 分支恢复过时业务逻辑，也不得重新引入已删除 Packet。
+
+最终验收（2026-08-06）：Forge 1.20.1 共 573 项测试、NeoForge 1.21.1 共 628 项测试，均 0 failure / 0 error；两端各有 1 项需要符号链接权限的 Windows 平台测试跳过。`buildAllTargets --no-daemon --rerun-tasks` 通过。新 JAR 的交叉 loader 类与旧 Packet 均为 0，所需 common 消息和 Forge 最终 adapter 均存在。
+
 ## 基线与约束
 
 ### 协议 22：领地成员移除（已迁移）
@@ -33,9 +50,9 @@
 - 跨版本物品转换必须 fail closed；不能无损表示时拒绝，禁止静默丢字段。
 - 不删除、覆盖或默认暂存用户的 `dev2/`、素材库、运行配置和其他未纳入迁移的文件。
 
-## 已完成协议
+## 历史迁移进度
 
-两端已完成：余额 `0/1`、余额日志 `2/3`、转账 `4`、系统商店目录 `5/6`、系统商店购买 `7`、玩家列表 `34/35`。`23..30` 的远程文件分块协议必须先完成安全重构，暂不迁移。
+以下章节按迁移发生顺序保留历史记录；当前两端已经完成全部 `0..43`。早期阶段中“暂不迁移”或“下一步”的文字只描述当时边界。
 
 ## 阶段 A：稳定跨版本物品快照（已完成）
 
@@ -90,7 +107,7 @@ components
 
 旧 compact `{id,count,customData}` 只作为读取兼容输入；读取后会形成仅含 custom data 的 v1 Snapshot。所有新 Snapshot 写入都带 `schemaVersion: 1`。`saveSimple/loadSimple` 暂时保留并标为 deprecated，避免破坏尚未迁移的功能。
 
-## 阶段 B：市场读取与订单创建（进行中）
+## 阶段 B：市场读取与订单创建（历史记录，已完成）
 
 协议 `8` 创建销售订单和协议 `9` 创建求购订单均已完成；下一步才处理 `10/11` 市场数据。本轮未迁移购买、确认、交付、取消、配送箱或领地。
 
@@ -133,7 +150,7 @@ components
 付款。这不是协议 `14` 的正式迁移：旧 NeoForge payload/注册保留，Forge 不注册
 discriminator `14`，下一迁移切片仍是协议 `9`。
 
-## 后续阶段
+## 历史后续阶段
 
 ### 协议 10/11：市场分页读取（已完成）
 

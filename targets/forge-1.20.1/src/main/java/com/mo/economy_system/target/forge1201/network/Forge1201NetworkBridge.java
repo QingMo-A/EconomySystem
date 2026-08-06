@@ -16,9 +16,13 @@ import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
+import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
+import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
+import com.mo.economy_system.common.network.DeliveryBoxDataResponseMessage;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
+import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.common.network.RemoveSalesOrderMessage;
@@ -26,13 +30,20 @@ import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.common.network.RemoveTerritoryMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
+import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
+import com.mo.economy_system.common.network.SingleTerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
 import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.network.TeleportToTerritoryMessage;
 import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
+import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
+import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import net.minecraft.server.level.ServerPlayer;
@@ -126,6 +137,42 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       Forge1201NetworkChannel.sendToServer((RemoveTerritoryMemberMessage) message);
       return;
     }
+    if (message.getClass() == DeliveryBoxDataRequestMessage.class) {
+      Forge1201NetworkChannel.sendToServer((DeliveryBoxDataRequestMessage) message);
+      return;
+    }
+    if (message.getClass() == DeliveryBoxClaimMessage.class) {
+      Forge1201NetworkChannel.sendToServer((DeliveryBoxClaimMessage) message);
+      return;
+    }
+    if (message.getClass() == ModifyTerritoryModeMessage.class) {
+      Forge1201NetworkChannel.sendToServer((ModifyTerritoryModeMessage) message);
+      return;
+    }
+    if (message.getClass() == UnlockTerritoryBuffMessage.class) {
+      Forge1201NetworkChannel.sendToServer((UnlockTerritoryBuffMessage) message);
+      return;
+    }
+    if (message.getClass() == UpgradeTerritoryBuffMessage.class) {
+      Forge1201NetworkChannel.sendToServer((UpgradeTerritoryBuffMessage) message);
+      return;
+    }
+    if (message.getClass() == SingleTerritoryDataRequestMessage.class) {
+      Forge1201NetworkChannel.sendToServer((SingleTerritoryDataRequestMessage) message);
+      return;
+    }
+    if (message.getClass() == UpdateTerritoryPermissionMessage.class) {
+      Forge1201NetworkChannel.sendToServer((UpdateTerritoryPermissionMessage) message);
+      return;
+    }
+    if (message.getClass() == TransferTerritoryOwnershipMessage.class) {
+      Forge1201NetworkChannel.sendToServer((TransferTerritoryOwnershipMessage) message);
+      return;
+    }
+    if (message.getClass() == UpdateTerritoryRuleMessage.class) {
+      Forge1201NetworkChannel.sendToServer((UpdateTerritoryRuleMessage) message);
+      return;
+    }
     throw notPorted(message);
   }
 
@@ -164,6 +211,14 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     }
     if (message.getClass() == TerritoryDataResponseMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (TerritoryDataResponseMessage) message);
+      return;
+    }
+    if (message.getClass() == DeliveryBoxDataResponseMessage.class) {
+      Forge1201NetworkChannel.sendToPlayer(player, (DeliveryBoxDataResponseMessage) message);
+      return;
+    }
+    if (message.getClass() == SingleTerritoryDataResponseMessage.class) {
+      Forge1201NetworkChannel.sendToPlayer(player, (SingleTerritoryDataResponseMessage) message);
       return;
     }
     throw notPorted(message);

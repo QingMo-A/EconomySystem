@@ -144,8 +144,8 @@ public final class Screen_Territory extends Screen
         String actionKey =
             teleport
                 ? "button.territory.teleport"
-                : area.action() == TerritoryTeleportRowLayout.Action.MEMBERS
-                    ? "button.territory.members"
+                : area.action() == TerritoryTeleportRowLayout.Action.MANAGE
+                    ? "button.territory.manage"
                     : "button.territory.delete_short";
         graphics.drawCenteredString(
             font,
@@ -184,7 +184,7 @@ public final class Screen_Territory extends Screen
                   .network()
                   .sendToServer(new TeleportToTerritoryMessage(area.territoryId()));
             }
-          } else if (area.action() == TerritoryTeleportRowLayout.Action.MEMBERS) {
+          } else if (area.action() == TerritoryTeleportRowLayout.Action.MANAGE) {
             TerritoryRow row =
                 visibleRows().stream()
                     .filter(value -> value.summary().territoryId().equals(area.territoryId()))
@@ -192,7 +192,7 @@ public final class Screen_Territory extends Screen
                     .orElse(null);
             if (row != null && row.owned()) {
               Minecraft.getInstance()
-                  .setScreen(new Screen_TerritoryMembers(row.ownedSnapshot(), this));
+                  .setScreen(new Screen_ManageTerritory(row.ownedSnapshot(), this));
             }
           } else {
             TerritoryRow row =

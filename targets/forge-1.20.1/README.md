@@ -1,5 +1,17 @@
 # Forge 1.20.1 Target Status
 
+## Final Bridge status
+
+Forge 1.20.1 now registers all 44 canonical protocol messages (`0..43`) with their fixed discriminators and common message types. The target is an equivalent adapter for the NeoForge 1.21.1 business baseline; older statements below that mark protocol 31 or later as legacy are historical milestone notes.
+
+Protocols `31..33` provide a real delivery-box page opened with `O`, strict schema-v1 persistence, bounded queries and transactional claims. New entries use `schemaVersion`/`entryId`/`item`/`source`; the old `dataID`/`itemID`/`itemStack`/`source` form is read-only compatibility input.
+
+Protocols `36..43` provide the Forge territory management page, buff transactions, bounded single-territory refresh, member permission changes, ownership transfer and stable-ID rule changes. The Forge claim wand supports two-point selection, third-click cancellation, 1200-tick expiry and `/confirm_modify`. Resize prepare/commit revalidates owner, dimension, old state and overlap, charges only positive inclusive-area growth at 20 DreamFish coins per block, preserves unknown raw NBT fields and does not auto-refund an uncertain mutation.
+
+The eleven former delivery and territory-management Packet classes are deleted. Forge uses the shared codecs for every final Bridge message and must remain free of NeoForge target/API classes.
+
+Final verification on 2026-08-06 executed 573 Forge tests with no failures or errors; one symlink-parent test was skipped because the Windows environment could not create a symbolic link. The full two-target build passed, and the generated Forge JAR contained no NeoForge target/API entries or removed Packet classes.
+
 ## Territory protocol 21 boundary status
 
 ## Territory protocol 22 member removal
@@ -23,19 +35,18 @@ services, the Forge SavedData shells, and seven end-to-end protocol slices:
 The Forge shop adapter reads the authoritative `economy_shop.json` schema and
 converts supported 1.21 components to their 1.20 NBT equivalents. Unknown
 components and items unavailable in 1.20 are rejected rather than delivered
-with data loss. The Forge client handlers publish
-immutable common cache snapshots; the root
-NeoForge UI tree is intentionally not copied into this target. This is still
-not a feature-complete release and must not be distributed as the final
-EconomySystem Forge build.
+with data loss. The Forge client handlers publish immutable common cache
+snapshots. The root NeoForge UI tree is intentionally not copied into this
+target; Forge supplies target-local screens for workflows that need
+version-specific rendering.
 
 Gameplay is ported feature by feature from the NeoForge 1.21.1 behavior
 baseline. Code from the historical `1.20.1` branch may be consulted for API
 shape only; obsolete handlers and removed server systems are not restored.
 
-Messages without an implemented Forge codec fail explicitly instead of being
-silently dropped. The checked-file check and transfer messages in protocols
-23-30 are implemented below; protocol 31 and later remain legacy.
+All canonical messages have explicit Forge codecs and handlers. The checked-file
+and transfer safety transaction is described below; the final protocols 31-43
+are described in the authoritative status section above.
 
 ## ItemStack snapshot bridge
 

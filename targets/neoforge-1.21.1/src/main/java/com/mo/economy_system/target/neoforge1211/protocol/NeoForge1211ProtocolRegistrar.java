@@ -1,8 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
 import com.mo.economy_system.common.network.EconomyMessages;
-import com.mo.economy_system.network.packets.economy_system.*;
-import com.mo.economy_system.network.packets.territory_system.*;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageDirection;
 import com.mo.economy_system.protocol.EconomyMessageSpec;
@@ -104,24 +102,18 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(registrar, EconomyMessages.GET_RESULT_RESPONSE, NeoForge1211CheckedFileTransferHandlers::controlResponse);
     bindCommon(registrar, EconomyMessages.CHUNK, NeoForge1211CheckedFileTransferHandlers::chunkRequest);
     bindCommon(registrar, EconomyMessages.CHUNK_RESPONSE, NeoForge1211CheckedFileTransferHandlers::chunkResponse);
-    bind(
+    bindCommon(
         registrar,
-        EconomyProtocol.DELIVERY_BOX_DATA_REQUEST,
-        Packet_DeliveryBoxDataRequest.TYPE,
-        Packet_DeliveryBoxDataRequest.STREAM_CODEC,
-        Packet_DeliveryBoxDataRequest::handle);
-    bind(
+        EconomyMessages.DELIVERY_BOX_DATA_REQUEST,
+        NeoForge1211DeliveryBoxHandlers::request);
+    bindCommon(
         registrar,
-        EconomyProtocol.DELIVERY_BOX_DATA_RESPONSE,
-        Packet_DeliveryBoxDataResponse.TYPE,
-        Packet_DeliveryBoxDataResponse.STREAM_CODEC,
-        Packet_DeliveryBoxDataResponse::handle);
-    bind(
+        EconomyMessages.DELIVERY_BOX_DATA_RESPONSE,
+        NeoForge1211DeliveryBoxHandlers::response);
+    bindCommon(
         registrar,
-        EconomyProtocol.DELIVERY_BOX_CLAIM_ITEM,
-        Packet_DeliveryBoxClaimItem.TYPE,
-        Packet_DeliveryBoxClaimItem.STREAM_CODEC,
-        Packet_DeliveryBoxClaimItem::handle);
+        EconomyMessages.DELIVERY_BOX_CLAIM_ITEM,
+        NeoForge1211DeliveryBoxHandlers::claim);
     bindCommon(
         registrar,
         EconomyMessages.SERVER_PLAYER_LIST_REQUEST,
@@ -130,54 +122,14 @@ public final class NeoForge1211ProtocolRegistrar {
         registrar,
         EconomyMessages.SERVER_PLAYER_LIST_RESPONSE,
         NeoForge1211PlayerListHandlers::handleResponse);
-    bind(
-        registrar,
-        EconomyProtocol.MODIFY_MODE,
-        Packet_ModifyMode.TYPE,
-        Packet_ModifyMode.STREAM_CODEC,
-        Packet_ModifyMode::handle);
-    bind(
-        registrar,
-        EconomyProtocol.UNLOCK_TERRITORY_BUFF,
-        Packet_UnlockTerritoryBuff.TYPE,
-        Packet_UnlockTerritoryBuff.STREAM_CODEC,
-        Packet_UnlockTerritoryBuff::handle);
-    bind(
-        registrar,
-        EconomyProtocol.UPGRADE_TERRITORY_BUFF,
-        Packet_UpgradeTerritoryBuff.TYPE,
-        Packet_UpgradeTerritoryBuff.STREAM_CODEC,
-        Packet_UpgradeTerritoryBuff::handle);
-    bind(
-        registrar,
-        EconomyProtocol.SINGLE_TERRITORY_DATA_REQUEST,
-        Packet_SingleTerritoryDataRequest.TYPE,
-        Packet_SingleTerritoryDataRequest.STREAM_CODEC,
-        Packet_SingleTerritoryDataRequest::handle);
-    bind(
-        registrar,
-        EconomyProtocol.SINGLE_TERRITORY_DATA_RESPONSE,
-        Packet_SingleTerritoryDataResponse.TYPE,
-        Packet_SingleTerritoryDataResponse.STREAM_CODEC,
-        Packet_SingleTerritoryDataResponse::handle);
-    bind(
-        registrar,
-        EconomyProtocol.UPDATE_TERRITORY_PERMISSION,
-        Packet_UpdateTerritoryPermission.TYPE,
-        Packet_UpdateTerritoryPermission.STREAM_CODEC,
-        Packet_UpdateTerritoryPermission::handle);
-    bind(
-        registrar,
-        EconomyProtocol.TRANSFER_TERRITORY_OWNERSHIP,
-        Packet_TransferTerritoryOwnership.TYPE,
-        Packet_TransferTerritoryOwnership.STREAM_CODEC,
-        Packet_TransferTerritoryOwnership::handle);
-    bind(
-        registrar,
-        EconomyProtocol.UPDATE_TERRITORY_RULE,
-        Packet_UpdateTerritoryRule.TYPE,
-        Packet_UpdateTerritoryRule.STREAM_CODEC,
-        Packet_UpdateTerritoryRule::handle);
+    bindCommon(registrar, EconomyMessages.MODIFY_MODE, NeoForge1211TerritoryManagementHandlers::modifyMode);
+    bindCommon(registrar, EconomyMessages.UNLOCK_TERRITORY_BUFF, NeoForge1211TerritoryManagementHandlers::unlockBuff);
+    bindCommon(registrar, EconomyMessages.UPGRADE_TERRITORY_BUFF, NeoForge1211TerritoryManagementHandlers::upgradeBuff);
+    bindCommon(registrar, EconomyMessages.SINGLE_TERRITORY_DATA_REQUEST, NeoForge1211TerritoryManagementHandlers::singleRequest);
+    bindCommon(registrar, EconomyMessages.SINGLE_TERRITORY_DATA_RESPONSE, NeoForge1211TerritoryManagementHandlers::singleResponse);
+    bindCommon(registrar, EconomyMessages.UPDATE_TERRITORY_PERMISSION, NeoForge1211TerritoryManagementHandlers::permission);
+    bindCommon(registrar, EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP, NeoForge1211TerritoryManagementHandlers::transfer);
+    bindCommon(registrar, EconomyMessages.UPDATE_TERRITORY_RULE, NeoForge1211TerritoryManagementHandlers::rule);
   }
 
   private static <T extends EconomyNetworkMessage> void bindCommon(

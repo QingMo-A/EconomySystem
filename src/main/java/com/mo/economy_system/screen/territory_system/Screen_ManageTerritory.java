@@ -3,7 +3,7 @@ package com.mo.economy_system.screen.territory_system;
 import com.mo.economy_system.core.territory_system.PlayerInfo;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.territory_system.Packet_ModifyMode;
+import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -518,7 +518,7 @@ public class Screen_ManageTerritory extends Screen {
             actionPrimaryStyle,
             () -> {
               EconomySystem_NetworkManager.sendToServer(
-                  new Packet_ModifyMode(territory.getTerritoryID()));
+                  new ModifyTerritoryModeMessage(territory.getTerritoryID()));
               if (this.minecraft != null) {
                 this.minecraft.setScreen(null);
               }
@@ -535,6 +535,17 @@ public class Screen_ManageTerritory extends Screen {
             Util_MessageKeys.TERRITORY_MANAGEMENT_BUFF,
             actionWarnStyle,
             () -> Minecraft.getInstance().setScreen(new Screen_TerritoryBuff(territory))));
+
+    actionEntries.add(
+        new ActionEntry(
+            "message.territory_management.access",
+            actionNeutralStyle,
+            () -> {
+              Minecraft.getInstance()
+                  .setScreen(
+                      new Screen_TerritoryPlayerAction(
+                          territory, Screen_TerritoryPlayerAction.Mode.ACCESS));
+            }));
 
     actionEntries.add(
         new ActionEntry(

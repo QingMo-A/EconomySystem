@@ -6,8 +6,11 @@ import com.mo.economy_system.core.territory_system.TerritoryPermissionAction;
 import com.mo.economy_system.core.territory_system.TerritoryPermissionLevel;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.network.packets.territory_system.Packet_TransferTerritoryOwnership;
-import com.mo.economy_system.network.packets.territory_system.Packet_UpdateTerritoryRule;
+import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
+import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
+import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.HighLevelTextField;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -25,6 +28,7 @@ import java.util.UUID;
 public class Screen_TerritoryPlayerAction extends Screen {
     public enum Mode {
         PERMISSION,
+        ACCESS,
         TRANSFER
     }
 
@@ -66,10 +70,10 @@ public class Screen_TerritoryPlayerAction extends Screen {
     private record RuleButtonArea(int x, int y, int width, int height, TerritoryPermissionAction action) {}
 
     public Screen_TerritoryPlayerAction(Territory territory, Mode mode) {
-        super(Component.literal(mode == Mode.TRANSFER ? "转让领地" : "领地权限"));
+        super(Component.literal(mode == Mode.TRANSFER ? "转让领地" : mode == Mode.ACCESS ? "成员权限" : "领地规则"));
         this.territory = territory;
         this.mode = mode;
-        if (mode == Mode.TRANSFER) {
+        if (mode == Mode.TRANSFER || mode == Mode.ACCESS) {
             EconomySystem_NetworkManager.sendToServer(ServerPlayerListRequestMessage.INSTANCE);
         }
     }
@@ -81,7 +85,7 @@ public class Screen_TerritoryPlayerAction extends Screen {
         calculateVirtualSize();
         updateLayout();
         playerNameField = null;
-        if (mode == Mode.TRANSFER) {
+        if (mode != Mode.PERMISSION) {
             initInputField();
         }
         if (!existingValue.isEmpty() && playerNameField != null) {
@@ -118,7 +122,7 @@ public class Screen_TerritoryPlayerAction extends Screen {
             return;
         }
 
-        int buttonCount = mode == Mode.PERMISSION ? 3 : 2;
+        int buttonCount = mode == Mode.ACCESS ? 3 : 2;
         int buttonWidth = Math.max(76, Math.min(104, (panelWidth - PANEL_PADDING * 2 - BUTTON_SPACING * (buttonCount - 1)) / buttonCount));
         int totalWidth = buttonWidth * buttonCount + BUTTON_SPACING * (buttonCount - 1);
         int buttonX = panelX + (panelWidth - totalWidth) / 2;
@@ -134,7 +138,7 @@ public class Screen_TerritoryPlayerAction extends Screen {
         secondaryBtnX2 = secondaryBtnX1 + buttonWidth;
         secondaryBtnY2 = buttonY + BUTTON_HEIGHT;
 
-        backBtnX1 = (mode == Mode.PERMISSION ? secondaryBtnX2 : primaryBtnX2) + BUTTON_SPACING;
+        backBtnX1 = (mode == Mode.ACCESS ? secondaryBtnX2 : primaryBtnX2) + BUTTON_SPACING;
         backBtnY1 = buttonY;
         backBtnX2 = backBtnX1 + buttonWidth;
         backBtnY2 = buttonY + BUTTON_HEIGHT;
@@ -179,7 +183,7 @@ public class Screen_TerritoryPlayerAction extends Screen {
         drawEscHint(guiGraphics);
         guiGraphics.pose().popPose();
 
-        if (mode == Mode.TRANSFER) {
+        if (mode != Mode.PERMISSION) {
             renderInputBackground(guiGraphics);
         }
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -193,14 +197,16 @@ public class Screen_TerritoryPlayerAction extends Screen {
         CardRenderer.drawCard(guiGraphics, panelX, panelY, panelWidth, panelHeight, CardRenderer.THEME_TERRITORY, false);
         int textX = panelX + PANEL_PADDING;
         int titleY = panelY + 8;
-        String title = mode == Mode.TRANSFER ? "转让领地" : "领地权限";
+        String title = mode == Mode.TRANSFER ? "转让领地" : mode == Mode.ACCESS ? "成员权限" : "领地规则";
         guiGraphics.drawString(font, title, textX, titleY, CardRenderer.TEXT_TITLE);
         guiGraphics.drawString(font, "领地: " + CardRenderer.truncateText(font, territory.getName(), panelWidth - 60),
             textX, titleY + font.lineHeight + 2, 0x90FFFFFF);
 
         String hint = mode == Mode.TRANSFER
             ? "选择新领主。转让后你会变为授权成员。"
-            : "每项规则可设置为仅领主、所有成员或所有人。";
+            : mode == Mode.ACCESS
+                ? "选择玩家并添加或移除领地成员权限。"
+                : "每项规则可设置为仅领主、所有成员或所有人。";
         guiGraphics.drawString(font, CardRenderer.truncateText(font, hint, panelWidth - PANEL_PADDING * 2),
             textX, titleY + font.lineHeight * 2 + 8, CardRenderer.TEXT_DESC);
 
@@ -223,7 +229,7 @@ public class Screen_TerritoryPlayerAction extends Screen {
 
         drawStripedButton(guiGraphics, primaryBtnX1, primaryBtnY1, primaryBtnX2 - primaryBtnX1, BUTTON_HEIGHT,
             mode == Mode.TRANSFER ? "转让" : "添加", primaryStyle, primaryHovered);
-        if (mode == Mode.PERMISSION) {
+        if (mode == Mode.ACCESS) {
             drawStripedButton(guiGraphics, secondaryBtnX1, secondaryBtnY1, secondaryBtnX2 - secondaryBtnX1, BUTTON_HEIGHT,
                 "移除", secondaryStyle, secondaryHovered);
         }
@@ -282,10 +288,16 @@ public class Screen_TerritoryPlayerAction extends Screen {
         float virtualMouseX = (float) mouseX / uiScale;
         float virtualMouseY = (float) mouseY / uiScale;
         if (isInside(virtualMouseX, virtualMouseY, primaryBtnX1, primaryBtnY1, primaryBtnX2, primaryBtnY2)) {
-            if (mode == Mode.PERMISSION) {
-                return true;
+            if (mode == Mode.TRANSFER) {
+                submitTransfer();
+            } else if (mode == Mode.ACCESS) {
+                submitAccess(true);
             }
-            submitTransfer();
+            return true;
+        }
+        if (mode == Mode.ACCESS
+            && isInside(virtualMouseX, virtualMouseY, secondaryBtnX1, secondaryBtnY1, secondaryBtnX2, secondaryBtnY2)) {
+            submitAccess(false);
             return true;
         }
         if (mode == Mode.PERMISSION) {
@@ -313,14 +325,32 @@ public class Screen_TerritoryPlayerAction extends Screen {
             this.minecraft.player.sendSystemMessage(Component.literal("请选择有效玩家。"));
             return;
         }
-        EconomySystem_NetworkManager.sendToServer(new Packet_TransferTerritoryOwnership(territory.getTerritoryID(), target.getKey(), target.getValue()));
+        EconomySystem_NetworkManager.sendToServer(
+            new TransferTerritoryOwnershipMessage(territory.getTerritoryID(), target.getKey()));
         this.minecraft.setScreen(new Screen_Territory());
+    }
+
+    private void submitAccess(boolean allowed) {
+        if (this.minecraft == null || this.minecraft.player == null || playerNameField == null) {
+            return;
+        }
+        Map.Entry<UUID, String> target = findPlayer(playerNameField.getValue().trim());
+        if (target == null) {
+            this.minecraft.player.sendSystemMessage(Component.literal("请选择有效玩家。"));
+            return;
+        }
+        EconomySystem_NetworkManager.sendToServer(
+            new UpdateTerritoryPermissionMessage(
+                territory.getTerritoryID(), target.getKey(), allowed));
+        backToManage();
     }
 
     private void cycleRule(TerritoryPermissionAction action) {
         TerritoryPermissionLevel next = territory.getPermissionLevel(action).next();
         territory.setPermissionLevel(action, next);
-        EconomySystem_NetworkManager.sendToServer(new Packet_UpdateTerritoryRule(territory.getTerritoryID(), action, next));
+        EconomySystem_NetworkManager.sendToServer(
+            new UpdateTerritoryRuleMessage(
+                territory.getTerritoryID(), ruleAction(action), ruleLevel(next)));
     }
 
     private Map.Entry<UUID, String> findPlayer(String name) {
@@ -377,6 +407,24 @@ public class Screen_TerritoryPlayerAction extends Screen {
             .setBorderAlpha(0x25)
             .setBorderAlphaHover(0x40)
             .setTextShadow(false);
+    }
+
+    private static RuleAction ruleAction(TerritoryPermissionAction action) {
+        return switch (action) {
+            case PLACE_BLOCK -> RuleAction.PLACE_BLOCK;
+            case BREAK_BLOCK -> RuleAction.BREAK_BLOCK;
+            case USE_ITEM -> RuleAction.USE_ITEM;
+            case INTERACT_BLOCK -> RuleAction.INTERACT_BLOCK;
+            case OPEN_CONTAINER -> RuleAction.OPEN_CONTAINER;
+        };
+    }
+
+    private static RuleLevel ruleLevel(TerritoryPermissionLevel level) {
+        return switch (level) {
+            case OWNER_ONLY -> RuleLevel.OWNER_ONLY;
+            case MEMBERS -> RuleLevel.MEMBERS;
+            case EVERYONE -> RuleLevel.EVERYONE;
+        };
     }
 
     @Override

@@ -5,6 +5,8 @@ import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryMemberRemovalService;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
+import com.mo.economy_system.common.territory.TerritoryAdministrationService;
+import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -105,6 +109,542 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         .findFirst()
         .map(Forge1201TerritorySnapshotStore::teleportTarget);
   }
+
+  synchronized Owned findOwned(UUID territoryId) {
+    Objects.requireNonNull(territoryId, "territoryId");
+    StrictRoot parsed = parseStrictRoot(raw);
+    return parsed.snapshots().stream()
+        .filter(value -> value.summary().territoryId().equals(territoryId))
+        .findFirst()
+        .orElse(null);
+  }
+
+  synchronized TerritoryAdministrationService.RepositoryResult setPermission(
+      UUID territoryId,
+      UUID expectedOwner,
+      UUID targetId,
+      String targetName,
+      boolean allowed) {
+    if (territoryId == null || expectedOwner == null || targetId == null) {
+      return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+    }
+    return mutateRaw(
+        territoryId,
+        target -> {
+          Owned before = target.snapshot();
+          if (!before.summary().ownerId().equals(expectedOwner)) {
+            return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+          }
+          if (targetId.equals(expectedOwner)) {
+            return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+          }
+          if (allowed
+              && (targetName == null
+                  || targetName.isBlank()
+                  || targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)) {
+            return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+          }
+          ListTag members = target.tag().contains("AuthorizedPlayers", Tag.TAG_LIST)
+              ? target.tag().getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
+              : new ListTag();
+          int found = -1;
+          for (int index = 0; index < members.size(); index++) {
+            CompoundTag member = members.getCompound(index);
+            if (member.hasUUID("PlayerUUID") && targetId.equals(member.getUUID("PlayerUUID"))) {
+              if (found >= 0) throw integrity("duplicate authorized member");
+              found = index;
+            }
+          }
+          if (allowed == (found >= 0)) return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+          if (allowed) {
+            if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
+              return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+            }
+            CompoundTag member = new CompoundTag();
+            member.putUUID("PlayerUUID", targetId);
+            member.putString("PlayerName", targetName.trim());
+            members.add(member);
+          } else {
+            members.remove(found);
+          }
+          target.tag().put("AuthorizedPlayers", members);
+          return TerritoryAdministrationService.RepositoryResult.SUCCESS;
+        },
+        result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
+        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
+        TerritoryAdministrationService.RepositoryResult.NOT_FOUND);
+  }
+
+  synchronized TerritoryAdministrationService.RepositoryResult transfer(
+      UUID territoryId,
+      UUID expectedOwner,
+      UUID targetId,
+      String targetName) {
+    if (territoryId == null || expectedOwner == null || targetId == null
+        || targetName == null || targetName.isBlank()
+        || targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
+      return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+    }
+    return mutateRaw(
+        territoryId,
+        target -> {
+          Owned before = target.snapshot();
+          if (!before.summary().ownerId().equals(expectedOwner)) {
+            return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+          }
+          if (targetId.equals(expectedOwner)) {
+            return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+          }
+          ListTag members = target.tag().contains("AuthorizedPlayers", Tag.TAG_LIST)
+              ? target.tag().getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
+              : new ListTag();
+          for (int index = members.size() - 1; index >= 0; index--) {
+            CompoundTag member = members.getCompound(index);
+            if (member.hasUUID("PlayerUUID") && targetId.equals(member.getUUID("PlayerUUID"))) {
+              members.remove(index);
+            }
+          }
+          boolean oldOwnerPresent = false;
+          for (Tag value : members) {
+            CompoundTag member = (CompoundTag) value;
+            if (expectedOwner.equals(member.getUUID("PlayerUUID"))) oldOwnerPresent = true;
+          }
+          if (!oldOwnerPresent) {
+            if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
+              return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+            }
+            CompoundTag oldOwner = new CompoundTag();
+            oldOwner.putUUID("PlayerUUID", expectedOwner);
+            oldOwner.putString("PlayerName", before.summary().ownerName());
+            members.add(oldOwner);
+          }
+          target.tag().put("AuthorizedPlayers", members);
+          target.tag().putUUID("OwnerUUID", targetId);
+          target.tag().putString("OwnerName", targetName.trim());
+          return TerritoryAdministrationService.RepositoryResult.SUCCESS;
+        },
+        result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
+        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
+        TerritoryAdministrationService.RepositoryResult.NOT_FOUND);
+  }
+
+  synchronized TerritoryAdministrationService.RepositoryResult setRule(
+      UUID territoryId,
+      UUID expectedOwner,
+      RuleAction action,
+      RuleLevel level) {
+    if (territoryId == null || expectedOwner == null || action == null || level == null) {
+      return TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
+    }
+    return mutateRaw(
+        territoryId,
+        target -> {
+          if (!target.snapshot().summary().ownerId().equals(expectedOwner)) {
+            return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+          }
+          RuleLevel current = target.snapshot().rules().stream()
+              .filter(rule -> rule.action() == action)
+              .map(Rule::level)
+              .findFirst()
+              .orElse(RuleLevel.MEMBERS);
+          if (current == level) return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
+          CompoundTag permissions = target.tag().contains("Permissions", Tag.TAG_COMPOUND)
+              ? target.tag().getCompound("Permissions")
+              : new CompoundTag();
+          permissions.putString(action.name(), level.name());
+          target.tag().put("Permissions", permissions);
+          return TerritoryAdministrationService.RepositoryResult.SUCCESS;
+        },
+        result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
+        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
+        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
+        TerritoryAdministrationService.RepositoryResult.NOT_FOUND);
+  }
+
+  synchronized TerritoryBuffTransactionService.RepositoryResult mutateBuff(
+      UUID territoryId,
+      UUID expectedOwner,
+      String buffId,
+      boolean expectedUnlocked,
+      int expectedLevel,
+      TerritoryBuffTransactionService.Action action) {
+    if (territoryId == null || expectedOwner == null || buffId == null || action == null) {
+      return TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN;
+    }
+    return mutateRaw(
+        territoryId,
+        target -> {
+          if (!target.snapshot().summary().ownerId().equals(expectedOwner)) {
+            return TerritoryBuffTransactionService.RepositoryResult.OWNER_CHANGED;
+          }
+          ListTag buffs = target.tag().getList("TerritoryBuffs", Tag.TAG_COMPOUND);
+          CompoundTag encoded = null;
+          for (Tag value : buffs) {
+            CompoundTag current = (CompoundTag) value;
+            if (buffId.equals(current.getString("id"))) {
+              if (encoded != null) throw integrity("duplicate territory buff id");
+              encoded = current;
+            }
+          }
+          if (encoded == null) return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+          if (encoded.getBoolean("unlocked") != expectedUnlocked
+              || encoded.getInt("level") != expectedLevel) {
+            return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+          }
+          if (action == TerritoryBuffTransactionService.Action.UNLOCK) {
+            if (expectedUnlocked) return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+            encoded.putBoolean("unlocked", true);
+          } else {
+            int max = encoded.getInt("max_Level");
+            int step = encoded.getInt("single_Upgrade_Level");
+            if (!expectedUnlocked || expectedLevel >= max || step <= 0) {
+              return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
+            }
+            encoded.putInt("level", Math.min(max, Math.addExact(expectedLevel, step)));
+          }
+          return TerritoryBuffTransactionService.RepositoryResult.SUCCESS;
+        },
+        result -> result == TerritoryBuffTransactionService.RepositoryResult.SUCCESS,
+        TerritoryBuffTransactionService.RepositoryResult.PERSIST_FAILED,
+        TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN,
+        TerritoryBuffTransactionService.RepositoryResult.NOT_FOUND);
+  }
+
+  enum ResizePrepareResult {
+    READY,
+    UNCHANGED,
+    NOT_FOUND,
+    NOT_OWNER,
+    WRONG_DIMENSION,
+    INVALID_BOUNDS,
+    OVERLAP,
+    PRICE_OVERFLOW,
+    STATE_UNKNOWN
+  }
+
+  enum ResizeCommitResult {
+    SUCCESS,
+    NOT_FOUND,
+    CHANGED,
+    OVERLAP,
+    PERSIST_FAILED,
+    STATE_UNKNOWN
+  }
+
+  record ResizePlan(
+      UUID territoryId,
+      UUID expectedOwner,
+      String dimensionId,
+      Owned expectedSnapshot,
+      Position first,
+      Position second,
+      Position backpoint,
+      long oldArea,
+      long newArea,
+      int charge) {
+    ResizePlan {
+      Objects.requireNonNull(territoryId, "territoryId");
+      Objects.requireNonNull(expectedOwner, "expectedOwner");
+      dimensionId = canonicalDimension(dimensionId);
+      Objects.requireNonNull(expectedSnapshot, "expectedSnapshot");
+      Objects.requireNonNull(first, "first");
+      Objects.requireNonNull(second, "second");
+      Objects.requireNonNull(backpoint, "backpoint");
+      if (oldArea <= 0 || newArea <= 0 || charge < 0) {
+        throw new IllegalArgumentException("invalid resize plan");
+      }
+    }
+  }
+
+  record ResizePrepareOutcome(ResizePrepareResult result, ResizePlan plan, Throwable failure) {
+    ResizePrepareOutcome {
+      Objects.requireNonNull(result, "result");
+      if ((result == ResizePrepareResult.READY) != (plan != null)) {
+        throw new IllegalArgumentException("resize prepare result/plan mismatch");
+      }
+      if (failure instanceof Error error) throw error;
+    }
+
+    static ResizePrepareOutcome of(ResizePrepareResult result) {
+      return new ResizePrepareOutcome(result, null, null);
+    }
+  }
+
+  synchronized ResizePrepareOutcome prepareResize(
+      UUID territoryId,
+      UUID expectedOwner,
+      String expectedDimension,
+      Position first,
+      Position second) {
+    if (territoryId == null
+        || expectedOwner == null
+        || expectedDimension == null
+        || first == null
+        || second == null
+        || first.y() != second.y()
+        || !validCoordinate(first)
+        || !validCoordinate(second)) {
+      return ResizePrepareOutcome.of(ResizePrepareResult.INVALID_BOUNDS);
+    }
+    final String dimension;
+    final StrictRoot source;
+    try {
+      dimension = canonicalDimension(expectedDimension);
+      source = parseStrictRoot(raw);
+      if (!source.snapshots().equals(territories)) {
+        throw integrity("resize raw/cache mismatch");
+      }
+    } catch (RuntimeException failure) {
+      return new ResizePrepareOutcome(ResizePrepareResult.STATE_UNKNOWN, null, failure);
+    }
+    Owned target = source.snapshots().stream()
+        .filter(value -> territoryId.equals(value.summary().territoryId()))
+        .findFirst()
+        .orElse(null);
+    if (target == null) return ResizePrepareOutcome.of(ResizePrepareResult.NOT_FOUND);
+    if (!expectedOwner.equals(target.summary().ownerId())) {
+      return ResizePrepareOutcome.of(ResizePrepareResult.NOT_OWNER);
+    }
+    if (!dimension.equals(target.summary().dimensionId())) {
+      return ResizePrepareOutcome.of(ResizePrepareResult.WRONG_DIMENSION);
+    }
+    if (overlapsOther(source.snapshots(), target.summary().territoryId(), dimension, first, second)) {
+      return ResizePrepareOutcome.of(ResizePrepareResult.OVERLAP);
+    }
+    Position oldFirst = target.summary().pos1();
+    Position oldSecond = target.summary().pos2();
+    Position backpoint = first;
+    if (oldFirst.equals(first)
+        && oldSecond.equals(second)
+        && target.backpoint().equals(Optional.of(backpoint))) {
+      return ResizePrepareOutcome.of(ResizePrepareResult.UNCHANGED);
+    }
+    try {
+      long oldArea = area(oldFirst, oldSecond);
+      long newArea = area(first, second);
+      long difference = Math.subtractExact(newArea, oldArea);
+      long rawCharge = difference <= 0 ? 0 : Math.multiplyExact(difference, 20L);
+      if (rawCharge > Integer.MAX_VALUE) {
+        return ResizePrepareOutcome.of(ResizePrepareResult.PRICE_OVERFLOW);
+      }
+      return new ResizePrepareOutcome(
+          ResizePrepareResult.READY,
+          new ResizePlan(
+              territoryId,
+              expectedOwner,
+              dimension,
+              target,
+              first,
+              second,
+              backpoint,
+              oldArea,
+              newArea,
+              (int) rawCharge),
+          null);
+    } catch (ArithmeticException failure) {
+      return new ResizePrepareOutcome(ResizePrepareResult.PRICE_OVERFLOW, null, failure);
+    }
+  }
+
+  synchronized ResizeCommitResult commitResize(ResizePlan plan) {
+    Objects.requireNonNull(plan, "plan");
+    final StrictRoot source;
+    try {
+      source = parseStrictRoot(raw);
+      if (!source.snapshots().equals(territories)) return ResizeCommitResult.STATE_UNKNOWN;
+    } catch (RuntimeException failure) {
+      return ResizeCommitResult.STATE_UNKNOWN;
+    }
+    Owned current = source.snapshots().stream()
+        .filter(value -> plan.territoryId().equals(value.summary().territoryId()))
+        .findFirst()
+        .orElse(null);
+    if (current == null) return ResizeCommitResult.NOT_FOUND;
+    if (!current.equals(plan.expectedSnapshot())
+        || !plan.expectedOwner().equals(current.summary().ownerId())
+        || !plan.dimensionId().equals(current.summary().dimensionId())) {
+      return ResizeCommitResult.CHANGED;
+    }
+    if (overlapsOther(
+        source.snapshots(),
+        plan.territoryId(),
+        plan.dimensionId(),
+        plan.first(),
+        plan.second())) {
+      return ResizeCommitResult.OVERLAP;
+    }
+    return mutateRaw(
+        plan.territoryId(),
+        target -> {
+          if (!target.snapshot().equals(plan.expectedSnapshot())) {
+            return ResizeCommitResult.CHANGED;
+          }
+          CompoundTag tag = target.tag();
+          tag.putInt("X1", plan.first().x());
+          tag.putInt("Y1", plan.first().y());
+          tag.putInt("Z1", plan.first().z());
+          tag.putInt("X2", plan.second().x());
+          tag.putInt("Y2", plan.second().y());
+          tag.putInt("Z2", plan.second().z());
+          CompoundTag backpoint = new CompoundTag();
+          backpoint.putInt("BackX", plan.backpoint().x());
+          backpoint.putInt("BackY", plan.backpoint().y());
+          backpoint.putInt("BackZ", plan.backpoint().z());
+          tag.put("Backpoint", backpoint);
+          return ResizeCommitResult.SUCCESS;
+        },
+        result -> result == ResizeCommitResult.SUCCESS,
+        ResizeCommitResult.PERSIST_FAILED,
+        ResizeCommitResult.STATE_UNKNOWN,
+        ResizeCommitResult.NOT_FOUND);
+  }
+
+  private static boolean validCoordinate(Position position) {
+    return Math.abs((long) position.x()) <= 30_000_000L
+        && Math.abs((long) position.z()) <= 30_000_000L;
+  }
+
+  private static long area(Position first, Position second) {
+    long width = Math.abs((long) first.x() - second.x()) + 1L;
+    long height = Math.abs((long) first.z() - second.z()) + 1L;
+    return Math.multiplyExact(width, height);
+  }
+
+  private static boolean overlapsOther(
+      List<Owned> values,
+      UUID excludedTerritory,
+      String dimension,
+      Position first,
+      Position second) {
+    int minX = Math.min(first.x(), second.x());
+    int maxX = Math.max(first.x(), second.x());
+    int minZ = Math.min(first.z(), second.z());
+    int maxZ = Math.max(first.z(), second.z());
+    for (Owned value : values) {
+      Summary summary = value.summary();
+      if (summary.territoryId().equals(excludedTerritory)
+          || !summary.dimensionId().equals(dimension)) {
+        continue;
+      }
+      int existingMinX = Math.min(summary.pos1().x(), summary.pos2().x());
+      int existingMaxX = Math.max(summary.pos1().x(), summary.pos2().x());
+      int existingMinZ = Math.min(summary.pos1().z(), summary.pos2().z());
+      int existingMaxZ = Math.max(summary.pos1().z(), summary.pos2().z());
+      if (maxX >= existingMinX
+          && minX <= existingMaxX
+          && maxZ >= existingMinZ
+          && minZ <= existingMaxZ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private synchronized <R> R mutateRaw(
+      UUID territoryId,
+      Function<RawTarget, R> mutation,
+      Predicate<R> publishes,
+      R persistFailed,
+      R stateUnknown,
+      R notFound) {
+    Objects.requireNonNull(territoryId, "territoryId");
+    try {
+      StrictRoot source = parseStrictRoot(raw);
+      int index = -1;
+      for (int current = 0; current < source.snapshots().size(); current++) {
+        if (source.snapshots().get(current).summary().territoryId().equals(territoryId)) {
+          index = current;
+          break;
+        }
+      }
+      if (index < 0) return notFound;
+      CompoundTag candidate = raw.copy();
+      ListTag records = candidate.getList("Territories", Tag.TAG_COMPOUND);
+      R result = mutation.apply(new RawTarget(source.snapshots().get(index), records.getCompound(index)));
+      if (!publishes.test(result)) return result;
+      StrictRoot parsed = parseStrictRoot(candidate);
+      CompoundTag originalRaw = raw;
+      List<Owned> originalCache = territories;
+      CompoundTag originalRawCopy = originalRaw.copy();
+      List<Owned> originalParsed = source.snapshots();
+      CompoundTag candidateCopy = candidate.copy();
+      List<Owned> candidateCache = parsed.snapshots();
+      raw = candidate;
+      territories = candidateCache;
+      try {
+        dirtyMarker.markDirty();
+        verifyManagementPublished(candidate, candidateCopy, candidateCache);
+        return result;
+      } catch (RuntimeException failure) {
+        return rollbackManagement(
+            originalRaw,
+            originalCache,
+            originalRawCopy,
+            originalParsed,
+            persistFailed,
+            stateUnknown,
+            failure);
+      } catch (Error failure) {
+        try {
+          rollbackManagement(
+              originalRaw,
+              originalCache,
+              originalRawCopy,
+              originalParsed,
+              persistFailed,
+              stateUnknown,
+              new IllegalStateException("management dirty error", failure));
+        } catch (RuntimeException rollback) {
+          failure.addSuppressed(rollback);
+        }
+        throw failure;
+      }
+    } catch (RuntimeException failure) {
+      return stateUnknown;
+    }
+  }
+
+  private void verifyManagementPublished(
+      CompoundTag expectedRaw, CompoundTag expectedCopy, List<Owned> expectedCache) {
+    if (raw != expectedRaw || territories != expectedCache) {
+      throw new IllegalStateException("management publication identity changed");
+    }
+    if (!raw.equals(expectedCopy)
+        || !parseStrictRoot(raw).snapshots().equals(expectedCache)) {
+      throw new IllegalStateException("management publication content changed");
+    }
+  }
+
+  private <R> R rollbackManagement(
+      CompoundTag originalRaw,
+      List<Owned> originalCache,
+      CompoundTag originalRawCopy,
+      List<Owned> originalParsed,
+      R persistFailed,
+      R stateUnknown,
+      RuntimeException primary) {
+    raw = originalRaw;
+    territories = originalCache;
+    try {
+      dirtyMarker.markDirty();
+      if (raw != originalRaw || territories != originalCache) {
+        throw new IllegalStateException("management rollback identity changed");
+      }
+      if (!raw.equals(originalRawCopy)
+          || !parseStrictRoot(raw).snapshots().equals(originalParsed)
+          || !originalCache.equals(originalParsed)) {
+        throw new IllegalStateException("management rollback content changed");
+      }
+      return persistFailed;
+    } catch (RuntimeException rollback) {
+      primary.addSuppressed(rollback);
+      return stateUnknown;
+    }
+  }
+
+  private record RawTarget(Owned snapshot, CompoundTag tag) {}
 
   /**
    * Reads the invitation view directly from the raw NBT record. The parsed cache is deliberately
