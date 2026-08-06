@@ -20,7 +20,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -53,10 +52,6 @@ public final class CheckedFileSnapshotter {
     default TempOutput openTemp(Path root) throws IOException {
       return SystemFileAccess.openTempInternal(root);
     }
-
-    default void deleteIfExists(Path path) throws IOException {
-      Files.deleteIfExists(path);
-    }
   }
 
   /** A directory handle bound to one directory identity. */
@@ -79,10 +74,7 @@ public final class CheckedFileSnapshotter {
     SeekableByteChannel channel();
 
     /** Deletes the owned path without following a replaced temp-root ancestor. */
-    default void delete() throws IOException {
-      channel().close();
-      Files.deleteIfExists(path());
-    }
+    void delete() throws IOException;
 
     @Override
     void close() throws IOException;
@@ -100,7 +92,11 @@ public final class CheckedFileSnapshotter {
 
     /** Compatibility constructor for callers that already own an unreserved snapshot. */
     public Snapshot(Path path, long size, String sha256) {
-      this(path, size, sha256, new SystemFileAccess(), Reservation.NONE, null);
+      this(compatibilityOutput(path), size, sha256);
+    }
+
+    private Snapshot(TempOutput output, long size, String sha256) {
+      this(output.path(), size, sha256, new SystemFileAccess(), Reservation.NONE, output);
     }
 
     private Snapshot(
@@ -131,19 +127,41 @@ public final class CheckedFileSnapshotter {
     }
 
     @Override
-    public void close() throws IOException {
-      if (!closed.compareAndSet(false, true)) return;
+    public synchronized void close() throws IOException {
+      if (closed.get()) return;
       IOException deletionFailure = null;
+      boolean deleted = false;
       try {
-        if (output == null) access.deleteIfExists(path);
-        else output.delete();
+        if (output == null) throw new IOException("unmanaged snapshot");
+        output.delete();
+        deleted = true;
       } catch (IOException | RuntimeException failure) {
         deletionFailure = new IOException("snapshot cleanup failed");
       } finally {
         if (output != null) closeQuietly(output);
-        reservation.release();
+        if (deleted) {
+          reservation.release();
+          closed.set(true);
+        }
       }
-      if (deletionFailure != null) throw new IOException("snapshot cleanup failed");
+      if (deletionFailure != null) throw deletionFailure;
+    }
+
+    private static TempOutput compatibilityOutput(Path path) {
+      Objects.requireNonNull(path, "snapshot path");
+      Path absolute = path.toAbsolutePath().normalize();
+      Path parent = absolute.getParent();
+      Path name = absolute.getFileName();
+      if (parent == null || name == null) throw new IllegalArgumentException("snapshot path");
+      CheckedFileTransferTempDirectory directory = null;
+      try {
+        directory = CheckedFileTransferTempDirectory.openFixedRoot(parent);
+        CheckedFileTransferTempDirectory.OwnedFile file = directory.adoptExisting(name);
+        return new DirectoryTempOutput(file, directory, true);
+      } catch (IOException failure) {
+        if (directory != null) closeQuietly(directory);
+        throw new IllegalArgumentException("secure snapshot path required");
+      }
     }
   }
 
@@ -206,6 +224,28 @@ public final class CheckedFileSnapshotter {
             expectedSize,
             expectedHash,
             privateTemp,
+            deadlineNanos);
+  }
+
+  /** Creates a snapshot using a caller-owned secure temp-directory handle. */
+  public static Outcome create(
+      Path gameDirectory,
+      ClientFileCheckType type,
+      String rawName,
+      long expectedSize,
+      String expectedHash,
+      CheckedFileTransferTempDirectory tempDirectory,
+      long deadlineNanos,
+      CheckedFileTransferTempBudget tempBudget) {
+    Objects.requireNonNull(tempDirectory, "temp directory");
+    return new CheckedFileSnapshotter(SYSTEM_CLOCK, SYSTEM, tempBudget)
+        .snapshot(
+            gameDirectory,
+            type,
+            rawName,
+            expectedSize,
+            expectedHash,
+            tempDirectory,
             deadlineNanos);
   }
 
@@ -409,11 +449,11 @@ public final class CheckedFileSnapshotter {
 
       output = access.openTemp(tempRoot);
       if (output == null) return failure("SNAPSHOT_FAILED");
+      outputOwned = true;
       outputPath = output.path();
       if (outputPath == null) return failure("SNAPSHOT_FAILED");
       if (!isPrivateTempFile(tempRoot, outputPath))
         return failure("DIRECTORY_PROVIDER_UNSAFE");
-      outputOwned = true;
       if (output.channel() == null) return failure("SNAPSHOT_FAILED");
       try (SeekableByteChannel source = directory.openNoFollow(relativeName)) {
         directory.validate();
@@ -444,6 +484,8 @@ public final class CheckedFileSnapshotter {
       output = null;
       completed = true;
       return new Outcome(snapshot, null);
+    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
+      return failure("TEMP_DIRECTORY_PROVIDER_UNSAFE");
     } catch (RootChangedException changed) {
       return failure("DIRECTORY_CHANGED");
     } catch (UnsafeDirectoryProviderException unsafe) {
@@ -459,12 +501,51 @@ public final class CheckedFileSnapshotter {
       String stopped = stopped(deadlineNanos);
       return failure(stopped == null ? "SNAPSHOT_FAILED" : stopped);
     } finally {
+      boolean cleaned = true;
       if (output != null) {
-        if (outputOwned) deleteQuietly(output);
+        if (outputOwned) cleaned = deleteQuietly(output);
         closeQuietly(output);
       }
-      if (!completed) reservation.release();
+      if (!completed && cleaned) reservation.release();
     }
+  }
+
+  /** Runs a snapshot while retaining the caller's shared temp-directory lifecycle. */
+  public Outcome snapshot(
+      Path gameDirectory,
+      ClientFileCheckType type,
+      String rawName,
+      long expectedSize,
+      String expectedHash,
+      CheckedFileTransferTempDirectory tempDirectory,
+      long deadlineNanos) {
+    Objects.requireNonNull(tempDirectory, "temp directory");
+    FileAccess sharedAccess =
+        new FileAccess() {
+          @Override
+          public boolean existsNoFollow(Path root) {
+            return access.existsNoFollow(root);
+          }
+
+          @Override
+          public SnapshotDirectory open(Path game, Path root) throws IOException {
+            return access.open(game, root);
+          }
+
+          @Override
+          public TempOutput openTemp(Path ignoredRoot) throws IOException {
+            return new DirectoryTempOutput(tempDirectory.createPart(), tempDirectory, false);
+          }
+        };
+    return new CheckedFileSnapshotter(clock, sharedAccess, tempBudget)
+        .snapshot(
+            gameDirectory,
+            type,
+            rawName,
+            expectedSize,
+            expectedHash,
+            tempDirectory.path(),
+            deadlineNanos);
   }
 
   private static Outcome failure(String code) {
@@ -615,11 +696,13 @@ public final class CheckedFileSnapshotter {
     return method.invoke(receiver, arguments);
   }
 
-  private void deleteQuietly(TempOutput output) {
+  private boolean deleteQuietly(TempOutput output) {
     try {
       output.delete();
+      return true;
     } catch (IOException | RuntimeException ignored) {
       // Do not disclose path/provider details in a protocol error.
+      return false;
     }
   }
 
@@ -707,56 +790,15 @@ public final class CheckedFileSnapshotter {
 
     private static TempOutput openTempInternal(Path root) throws IOException {
       Path game = root.getParent() == null ? null : root.getParent().getParent();
-      if (game == null) throw new UnsafeDirectoryProviderException();
-      ensureDirectory(game);
-      ensureDirectory(game.resolve("economy_system"));
-      ensureDirectory(root);
-      BasicFileAttributes before = Files.readAttributes(root, BasicFileAttributes.class, NOFOLLOW);
-      if (!before.isDirectory() || before.isSymbolicLink() || before.fileKey() == null)
-        throw new UnsafeDirectoryProviderException();
-      DirectoryStream<Path> stream = Files.newDirectoryStream(root);
-      if (!(stream instanceof SecureDirectoryStream<Path> secure)) {
-        stream.close();
-        throw new UnsafeDirectoryProviderException();
-      }
+      if (game == null) throw new CheckedFileTransferTempDirectory.ProviderUnsafeException();
+      CheckedFileTransferTempDirectory directory =
+          CheckedFileTransferTempDirectory.openFixedRoot(root);
       try {
-        BasicFileAttributeView view = secure.getFileAttributeView(BasicFileAttributeView.class);
-        if (view == null) throw new UnsafeDirectoryProviderException();
-        BasicFileAttributes opened = view.readAttributes();
-        if (opened.fileKey() == null || !before.fileKey().equals(opened.fileKey()))
-          throw new RootChangedException();
-        for (int attempt = 0; attempt < 8; attempt++) {
-          String basename = UUID.randomUUID() + ".part";
-          Path relative = Path.of(basename);
-          try {
-            SeekableByteChannel channel =
-                secure.newByteChannel(
-                    relative, Set.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE));
-            return new SystemTempOutput(root.resolve(basename), channel, stream, secure);
-          } catch (java.nio.file.FileAlreadyExistsException collision) {
-            // Generate another random internal basename.
-          }
-        }
-        throw new IOException("temporary name unavailable");
-      } catch (RuntimeException | Error failure) {
-        stream.close();
-        throw failure;
-      } catch (IOException failure) {
-        stream.close();
+        return new DirectoryTempOutput(directory.createPart(), directory, true);
+      } catch (IOException | RuntimeException failure) {
+        closeQuietly(directory);
         throw failure;
       }
-    }
-
-    private static void ensureDirectory(Path path) throws IOException {
-      BasicFileAttributes attributes;
-      try {
-        attributes = Files.readAttributes(path, BasicFileAttributes.class, NOFOLLOW);
-      } catch (java.nio.file.NoSuchFileException missing) {
-        Files.createDirectory(path);
-        attributes = Files.readAttributes(path, BasicFileAttributes.class, NOFOLLOW);
-      }
-      if (!attributes.isDirectory() || attributes.isSymbolicLink())
-        throw new UnsafeDirectoryProviderException();
     }
   }
 
@@ -824,42 +866,38 @@ public final class CheckedFileSnapshotter {
     }
   }
 
-  private static final class SystemTempOutput implements TempOutput {
-    private final Path path;
-    private final SeekableByteChannel channel;
-    private final DirectoryStream<Path> stream;
-    private final SecureDirectoryStream<Path> secure;
+  private static final class DirectoryTempOutput implements TempOutput {
+    private final CheckedFileTransferTempDirectory.OwnedFile file;
+    private final CheckedFileTransferTempDirectory directory;
+    private final boolean closeDirectory;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    private SystemTempOutput(
-        Path path,
-        SeekableByteChannel channel,
-        DirectoryStream<Path> stream,
-        SecureDirectoryStream<Path> secure) {
-      this.path = path;
-      this.channel = channel;
-      this.stream = stream;
-      this.secure = secure;
+    private DirectoryTempOutput(
+        CheckedFileTransferTempDirectory.OwnedFile file,
+        CheckedFileTransferTempDirectory directory,
+        boolean closeDirectory) {
+      this.file = file;
+      this.directory = directory;
+      this.closeDirectory = closeDirectory;
     }
 
     @Override
     public Path path() {
-      return path;
+      return file.path();
     }
 
     @Override
     public SeekableByteChannel channel() {
-      return channel;
+      try {
+        return file.writeChannel();
+      } catch (IOException failure) {
+        throw new IllegalStateException("temporary channel unavailable", failure);
+      }
     }
 
     @Override
     public void delete() throws IOException {
-      channel.close();
-      try {
-        secure.deleteFile(Path.of(path.getFileName().toString()));
-      } catch (java.nio.file.NoSuchFileException ignored) {
-        // Closing an already discarded snapshot is idempotent.
-      }
+      file.delete();
     }
 
     @Override
@@ -867,14 +905,16 @@ public final class CheckedFileSnapshotter {
       if (!closed.compareAndSet(false, true)) return;
       IOException failure = null;
       try {
-        channel.close();
+        file.closeWriteChannel();
       } catch (IOException closeFailure) {
         failure = closeFailure;
       }
-      try {
-        stream.close();
-      } catch (IOException closeFailure) {
-        if (failure == null) failure = closeFailure;
+      if (closeDirectory) {
+        try {
+          directory.close();
+        } catch (IOException closeFailure) {
+          if (failure == null) failure = closeFailure;
+        }
       }
       if (failure != null) throw failure;
     }

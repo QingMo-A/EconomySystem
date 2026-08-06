@@ -736,7 +736,7 @@ EconomySystem.LOGGER.error(..., e);
 
 ### 第三阶段：完善领地系统
 
-协议 17–21 已完成 bridge 迁移。协议 21 固定发送 16 字节 territory UUID，删除身份来自真实 sender，实时 owner 校验且不退款。NeoForge 对 primary map、owner bucket、QuadTree 与 SavedData 做事务删除和补偿，并在成功后清理 pending invite 与 resize session；Forge 对 raw NBT 做 copy-on-write 删除并保留未知字段和顺序。PERSIST_FAILED 表示完整回滚可重试，STATE_UNKNOWN 表示最终状态无法证明。resize session 面积差仅用于预览；最终价格由同步 prepare 从实时 Territory 计算，commit 重验实例、owner、旧边界/backpoint、索引与 overlap。等面积 reshape 免费，完全相同返回 UNCHANGED，STATE_UNKNOWN 不自动退款。QuadTree 还须证明节点路径与代表点查询正确。repository failure kind 为显式枚举，双端 handler 对 limiter 与 cleanup 共用一次 overworld gameTime。协议 22+ 仍为 legacy。
+协议 17–21 已完成 bridge 迁移。协议 21 固定发送 16 字节 territory UUID，删除身份来自真实 sender，实时 owner 校验且不退款。NeoForge 对 primary map、owner bucket、QuadTree 与 SavedData 做事务删除和补偿，并在成功后清理 pending invite 与 resize session；Forge 对 raw NBT 做 copy-on-write 删除并保留未知字段和顺序。PERSIST_FAILED 表示完整回滚可重试，STATE_UNKNOWN 表示最终状态无法证明。resize session 面积差仅用于预览；最终价格由同步 prepare 从实时 Territory 计算，commit 重验实例、owner、旧边界/backpoint、索引与 overlap。等面积 reshape 免费，完全相同返回 UNCHANGED，STATE_UNKNOWN 不自动退款。QuadTree 还须证明节点路径与代表点查询正确。repository failure kind 为显式枚举，双端 handler 对 limiter 与 cleanup 共用一次 overworld gameTime。协议 22 已在后续里程碑完成，协议 23-30 也已在文件检查/传输阶段迁移。
 领地 resize 不再 remove/add Territory：权威事务保持 primary、owner bucket 与 SavedData 的同一实例，只重建 QuadTree；扩容精确扣费，明确失败或完整回滚后精确退款，STATE_UNKNOWN 不自动退款。删除后的 resize cleanup 使用删除快照中的服务端名称。
 
 - 将“面积”命名修正，避免 volume 概念混乱。
@@ -825,9 +825,9 @@ src/main/templates/META-INF/neoforge.mods.toml
 
 ### Bridge 协议 22 成员移除约束
 
-协议 22 已完成最终集成验证：loader-neutral `RemoveTerritoryMemberMessage` 的 wire 固定为 territory UUID 后接 target player UUID，共 32 字节；sender 只能来自 authenticated network context。实时 owner 才能移除实时成员，owner 本身不可移除，target 可离线。NeoForge 保存并严格验证原始 canonical 成员名称，使用可注入精确事务和 dirty rollback；manager 集成复验 primary、owner bucket、SavedData 与 QuadTree。Forge 对 raw NBT 做 copy-on-write，dirty 正常返回后仍复验 candidate raw/cache，静默漂移也进入补偿，完整 rollback 同时证明引用、深拷贝、strict parse、名称和顺序。成功后只 fail-closed 清理 target+territory pending invite。tiny-height/窄宽度不创建不可见控件，并有严格注册与四份资源 parity 测试。最终实测 shared-source 285、Forge 362、NeoForge 422。协议 23 及以后仍为 legacy。
+协议 22 已完成最终集成验证：loader-neutral `RemoveTerritoryMemberMessage` 的 wire 固定为 territory UUID 后接 target player UUID，共 32 字节；sender 只能来自 authenticated network context。实时 owner 才能移除实时成员，owner 本身不可移除，target 可离线。NeoForge 保存并严格验证原始 canonical 成员名称，使用可注入精确事务和 dirty rollback；manager 集成复验 primary、owner bucket、SavedData 与 QuadTree。Forge 对 raw NBT 做 copy-on-write，dirty 正常返回后仍复验 candidate raw/cache，静默漂移也进入补偿，完整 rollback 同时证明引用、深拷贝、strict parse、名称和顺序。成功后只 fail-closed 清理 target+territory pending invite。tiny-height/窄宽度不创建不可见控件，并有严格注册与四份资源 parity 测试。历史协议 22 集成实测 shared-source 285、Forge 362、NeoForge 422；协议 23-30 已在后续文件检查/传输阶段迁移，协议 31+ 仍为 legacy。
 
-协议 21 的权威删除与 resize 共享以下不变量：`Bounds` 的 `width/height` 是最大坐标减最小坐标，实际范围是两端包含的整数闭区间；零宽、零高和单格范围均合法。`QuadTree.remove` 必须按 Java identity 完整遍历，不能依赖可变 Territory 的当前 bounds。事务成功、失败补偿和持久化失败恢复都必须同时证明 identity/UUID 数量、预期节点路径与代表点查询正确。manager 的低层 resize prepare/commit/mutation API 保持 package-private，生产入口只能通过 `TerritoryResizeTransactionService`。本阶段最终实测 shared-source 266、Forge 333、NeoForge 382，双目标构建通过。协议 22 及以后仍为 legacy。
+协议 21 的权威删除与 resize 共享以下不变量：`Bounds` 的 `width/height` 是最大坐标减最小坐标，实际范围是两端包含的整数闭区间；零宽、零高和单格范围均合法。`QuadTree.remove` 必须按 Java identity 完整遍历，不能依赖可变 Territory 的当前 bounds。事务成功、失败补偿和持久化失败恢复都必须同时证明 identity/UUID 数量、预期节点路径与代表点查询正确。manager 的低层 resize prepare/commit/mutation API 保持 package-private，生产入口只能通过 `TerritoryResizeTransactionService`。历史协议 21 边界实测 shared-source 266、Forge 333、NeoForge 382，双目标构建通过；协议 22 已在下一里程碑完成。
 
 当前文档已经覆盖入口、构建、网络注册、账户、商店、市场、配送箱、领地、奖励、物品序列化等核心模块。后续如果要进一步完善，请继续阅读并补充：
 
@@ -845,20 +845,22 @@ Protocols 23-25 are one atomic migrated transaction. Keep the canonical IDs/dire
 The only accepted types and roots are `mods`, `shaderpacks`, and `resourcepacks`. A client must explicitly allow
 each request before a non-recursive, no-follow, streaming SHA-256 scan. Never transmit file contents or paths and
 never write remote result JSON automatically. Server routing must come from the authenticated target and exact
-server-scoped pending requester/type key; malformed results are consumed and replay is rejected. Protocol 26 and
-later remain legacy until a separate task authorizes migration.
+server-scoped pending requester/type key; malformed results are consumed and replay is rejected. Protocols 26-30
+are covered by the checked-file transfer transaction below; protocol 31+ remains legacy.
 
 The hardened client lifecycle is connection-generation scoped. Login creates one bounded daemon worker;
 logout, disconnect, menu return, and shutdown invalidate queued completions before any protocol 24 send.
 Directory enumeration is capped at 4096 entries and its deadline covers opening, enumeration, sorting, and
 hashing. Files are opened once with open-time `NOFOLLOW_LINKS`; size and SHA-256 come from that same channel.
 Concurrent consent requests are exact-identity deduplicated or answered `FAILED/CONSENT_BUSY`.
-Protocol 23-25 safety closure distinguishes local SUCCESS, FAILED, and TRUNCATED; TRUNCATED is exposed as READY_INCOMPLETE and FAILED never produces comparison rows. Task callbacks receive their real pre-created token, scheduling/callback failures terminate the handle and run common-only abandonment cleanup. Directory scans bind the precheck identity to attributes read from the opened SecureDirectoryStream itself; providers without a stable opened-handle identity fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
+Protocol 23-25 safety closure distinguishes local SUCCESS, FAILED, and TRUNCATED; TRUNCATED is exposed as READY_INCOMPLETE and FAILED never produces comparison rows. Task callbacks receive their real pre-created token, scheduling/callback failures terminate the handle and run common-only abandonment cleanup. Directory scans bind the precheck identity to attributes read from the opened SecureDirectoryStream itself; providers without a stable opened-handle identity fail closed with DIRECTORY_PROVIDER_UNSAFE. Protocols 26-30 are covered below; protocol 31+ remains legacy.
 
 Protocols 26-30 are atomically migrated as the checked-file transfer transaction. Recent protocol-23 entries authorize exact target/requester/type/file/size/hash tuples only after protocol-25 delivery. `/get` requires permission level 2, an online player source and that authorization. The target grants separate full-file consent; a SecureDirectoryStream-bound private snapshot is streamed as fixed 18,000-byte Base64 chunks through server-authoritative pending state. Requesters receive into private part files and explicitly save without overwrite under `economy_system/received-check-files/<target-uuid>` or discard. Unsupported providers fail closed. Protocol 31+ remains legacy.
 
-Final protocol-26-30 verification: 360 shared-source tests, 436 Forge tests, and 496 NeoForge tests.
+Historical initial protocol-26-30 migration baseline: 360 shared-source tests, 436 Forge tests, and 496 NeoForge tests.
 
 Protocol 26-30 transaction hardening preserves all canonical IDs, directions, discriminators and legacy UTF/int field order. Protocol-23 manifest scopes are cleared immediately after authenticated claim and replacements are installed atomically only after successful delivery. Server transfers enforce target/requester single-active ownership, unique transfer IDs, authenticated-target-first checks and one-shot READY/chunk prepare/commit; any lookup or forwarding failure consumes exact state before diagnostics, while `Error` is rethrown after cleanup. Client protocol 27 may send READY/DECLINED/NOT_FOUND/FAILED but never COMPLETE. Temporary snapshots and incoming parts share a bounded budget, and completed artifacts remain managed until safe no-overwrite save/discard. Protocol 31+ remains legacy.
-Final hardening verification: 382 shared-source test methods, 459 Forge tests, and 519 NeoForge tests; both target test suites and `buildAllTargets` pass.
+Historical transaction-hardening baseline: 382 shared-source test methods, 459 Forge tests, and 519 NeoForge tests.
+
+Final lifecycle hardening verification: 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests; both target test suites and `buildAllTargets` pass. Arrival sessions are captured before main-thread queueing, outgoing independently owns the current session, secure relative temp handles back snapshots and incoming parts, pending artifacts reject new READY, save/discard are coordinator-only, failed deletes remain managed for tick retry, and bounded terminal/result UI mappings are shared across both targets. Protocol 31+ remains legacy.
 

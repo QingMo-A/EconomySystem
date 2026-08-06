@@ -276,11 +276,6 @@ class CheckedFileSnapshotterTest {
       };
     }
 
-    @Override
-    public void deleteIfExists(Path path) throws IOException {
-      Files.deleteIfExists(path);
-      tempFiles.remove(path);
-    }
   }
 
   private static BasicFileAttributes attributes(

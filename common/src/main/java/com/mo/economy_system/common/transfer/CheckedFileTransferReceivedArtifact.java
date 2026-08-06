@@ -5,9 +5,9 @@ import com.mo.economy_system.common.check.ClientFileCheckValidation;
 import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -92,48 +92,45 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
     }
   }
 
-  private Path path;
+  private final CheckedFileTransferTempDirectory.OwnedFile temporaryFile;
   private final CheckedFileTransferTempBudget.Reservation reservation;
   private final Metadata metadata;
+  private Path savedPath;
   private State state = State.PENDING_DECISION;
 
   public CheckedFileTransferReceivedArtifact(
-      Path temporaryPath,
+      CheckedFileTransferTempDirectory.OwnedFile temporaryFile,
       CheckedFileTransferTempBudget.Reservation reservation,
       Metadata metadata) {
-    path = normalizePath(temporaryPath);
+    this.temporaryFile = Objects.requireNonNull(temporaryFile, "temporary file");
     this.reservation = Objects.requireNonNull(reservation, "reservation");
     this.metadata = Objects.requireNonNull(metadata, "metadata");
     if (reservation.bytes() != metadata.byteLength()) {
-      reservation.release();
+      try {
+        if (temporaryFile.delete()) reservation.release();
+      } catch (IOException ignored) {
+        // Keep the reservation held when exact relative cleanup could not complete.
+      }
       throw new IllegalArgumentException("reservation size");
     }
   }
 
   public CheckedFileTransferReceivedArtifact(
-      Path temporaryPath,
+      CheckedFileTransferTempDirectory.OwnedFile temporaryFile,
       CheckedFileTransferTempBudget.Reservation reservation,
       CheckedFileTransferControlResponseMessage message,
       CheckedFileTransferControl control) {
-    this(temporaryPath, reservation, Metadata.from(message, control));
+    this(temporaryFile, reservation, Metadata.from(message, control));
   }
 
-  private static Path normalizePath(Path value) {
-    Objects.requireNonNull(value, "temporary path");
-    return value.toAbsolutePath().normalize();
-  }
-
+  /** Compatibility-only display path; ownership remains relative to the secure source handle. */
   public synchronized Path path() {
-    return path;
+    return state == State.SAVED ? savedPath : temporaryFile.path();
   }
 
   /** Alias used by callers that want to emphasize that the path is currently managed. */
   public synchronized Path currentPath() {
-    return path;
-  }
-
-  public CheckedFileTransferTempBudget.Reservation reservation() {
-    return reservation;
+    return path();
   }
 
   public Metadata metadata() {
@@ -159,36 +156,38 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
    * the move. The synchronized block covers the move and state transition, preventing a concurrent
    * discard or second save from releasing the reservation twice.
    */
-  synchronized MoveResult moveTo(Path destination) {
+  synchronized MoveResult moveTo(
+      CheckedFileTransferTempDirectory.DirectoryHandle target,
+      Path destinationName,
+      Path destinationDisplayPath)
+      throws CheckedFileTransferTempDirectory.ProviderUnsafeException {
     if (state != State.PENDING_DECISION) {
       return MoveResult.NOT_PENDING;
     }
-    Path target = normalizePath(destination);
     try {
-      // Deliberately omit REPLACE_EXISTING and ATOMIC_MOVE. The no-replace default is the
-      // portable guarantee required by the save service; ATOMIC_MOVE has provider-specific
-      // overwrite behavior.
-      Files.move(path, target);
-    } catch (java.nio.file.FileAlreadyExistsException alreadyExists) {
+      temporaryFile.moveTo(target, destinationName);
+    } catch (FileAlreadyExistsException alreadyExists) {
       return MoveResult.TARGET_EXISTS;
+    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
+      throw unsafe;
     } catch (IOException | SecurityException failure) {
       return MoveResult.MOVE_FAILED;
     }
-    path = target;
+    savedPath = Objects.requireNonNull(destinationDisplayPath, "destination display path")
+        .toAbsolutePath()
+        .normalize();
     state = State.SAVED;
     reservation.release();
     return MoveResult.MOVED;
   }
 
-  /** Marks an artifact as saved after an external no-replace move. */
-  public synchronized boolean markSaved(Path destination) {
-    if (state != State.PENDING_DECISION) {
-      return false;
-    }
-    path = normalizePath(destination);
-    state = State.SAVED;
-    reservation.release();
-    return true;
+  synchronized BasicFileAttributes sourceAttributesNoFollow() throws IOException {
+    if (state != State.PENDING_DECISION) throw new IOException("NOT_PENDING");
+    return temporaryFile.attributesNoFollow();
+  }
+
+  synchronized CheckedFileTransferTempDirectory sourceDirectory() {
+    return temporaryFile.directory();
   }
 
   /** Deletes the temporary artifact and releases its reservation. */
@@ -201,7 +200,7 @@ public final class CheckedFileTransferReceivedArtifact implements AutoCloseable 
       return DiscardResult.NOT_PENDING;
     }
     try {
-      Files.deleteIfExists(path);
+      temporaryFile.delete();
     } catch (IOException | SecurityException failure) {
       return DiscardResult.DELETE_FAILED;
     }

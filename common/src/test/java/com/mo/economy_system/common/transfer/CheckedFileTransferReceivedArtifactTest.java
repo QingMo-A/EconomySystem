@@ -17,8 +17,9 @@ class CheckedFileTransferReceivedArtifactTest {
 
   @Test
   void discardDeletesPartAndReleasesReservation() throws Exception {
-    Path part = temporaryDirectory.resolve("incoming.part");
-    Files.write(part, new byte[] {1, 2, 3});
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(temporaryDirectory);
+    CheckedFileTransferTempDirectory.OwnedFile part =
+        CheckedFileTransferTestSupport.part(temp, new byte[] {1, 2, 3});
     CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, 10);
     CheckedFileTransferTempBudget.Reservation reservation = budget.reserve(3);
     CheckedFileTransferReceivedArtifact artifact =
@@ -26,40 +27,49 @@ class CheckedFileTransferReceivedArtifactTest {
 
     assertTrue(artifact.discard());
     assertEquals(CheckedFileTransferReceivedArtifact.State.DISCARDED, artifact.state());
-    assertFalse(Files.exists(part));
+    assertFalse(Files.exists(part.path()));
     assertEquals(0, budget.reservedFiles());
     assertFalse(artifact.discard());
+    temp.close();
   }
 
   @Test
   void saveTransitionIsTerminalAndMetadataIsRetained() throws Exception {
-    Path part = temporaryDirectory.resolve("incoming.part");
-    Files.write(part, new byte[] {1, 2, 3});
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(temporaryDirectory);
+    CheckedFileTransferTempDirectory.OwnedFile part =
+        CheckedFileTransferTestSupport.part(temp, new byte[] {1, 2, 3});
     CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, 10);
     CheckedFileTransferTempBudget.Reservation reservation = budget.reserve(3);
     CheckedFileTransferReceivedArtifact artifact =
         new CheckedFileTransferReceivedArtifact(part, reservation, metadata(3));
 
-    Path destination = temporaryDirectory.resolve("saved.jar");
-    assertTrue(artifact.markSaved(destination));
+    CheckedFileTransferTempDirectory.DirectoryHandle target =
+        temp.openTargetDirectory(UUID.randomUUID());
+    Path destination = target.absolutePath().resolve("saved.jar");
+    assertEquals(
+        CheckedFileTransferReceivedArtifact.MoveResult.MOVED,
+        artifact.moveTo(target, Path.of("saved.jar"), destination));
+    target.close();
     assertEquals(CheckedFileTransferReceivedArtifact.State.SAVED, artifact.state());
     assertEquals(destination.toAbsolutePath().normalize(), artifact.path());
     assertEquals("mod.jar", artifact.metadata().fileName());
     assertEquals(0, budget.reservedFiles());
-    assertFalse(artifact.markSaved(temporaryDirectory.resolve("other.jar")));
     assertFalse(artifact.discard());
+    temp.close();
   }
 
   @Test
   void mismatchedReservationIsRejectedAndReleased() throws Exception {
-    Path part = temporaryDirectory.resolve("mismatch.part");
-    Files.write(part, new byte[] {1, 2, 3});
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(temporaryDirectory);
+    CheckedFileTransferTempDirectory.OwnedFile part =
+        CheckedFileTransferTestSupport.part(temp, new byte[] {1, 2, 3});
     CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, 10);
     CheckedFileTransferTempBudget.Reservation reservation = budget.reserve(2);
     assertThrows(
         IllegalArgumentException.class,
         () -> new CheckedFileTransferReceivedArtifact(part, reservation, metadata(3)));
     assertEquals(0, budget.reservedFiles());
+    temp.close();
   }
 
   private static CheckedFileTransferReceivedArtifact.Metadata metadata(long size) {

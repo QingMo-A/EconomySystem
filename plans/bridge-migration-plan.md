@@ -10,10 +10,10 @@
 - Forge 使用 strict raw NBT copy-on-write，保留未知字段、成员/领地顺序及无关数据。
 - pending invite 只按 target+territory 精确清理；processing claim 不被破坏。
 - NeoForge 与 Forge 均提供 one-shot 确认页；Forge MEMBERS 页面保留邀请功能。
-- `PERSIST_FAILED` 只用于完整恢复，无法证明状态时使用 `STATE_UNKNOWN`。协议 23+ 仍为 legacy。
+- `PERSIST_FAILED` 只用于完整恢复，无法证明状态时使用 `STATE_UNKNOWN`。后续协议 23-30 在客户端文件传输阶段迁移；协议 31+ 仍为 legacy。
 - 第二轮加固覆盖 invite 索引 fail-closed 精确清理、统一成员名称限制、NeoForge 成员快照/rollback、manager 身份与空间索引复核、Forge raw 深拷贝恢复证明、双端确认页和 Forge tiny-height 布局。
 - 最终集成闭环增加 Forge dirty 后 raw/cache 复验及完整 rollback 证明、NeoForge 原始 canonical 名称快照与可注入 mutation、manager 集成、严格注册/资源/limiter 测试，以及 tiny-height/窄宽度无隐藏组件验证。
-- 最终实测：shared-source 285、Forge 362、NeoForge 422，`buildAllTargets` 通过。
+- 历史协议 22 集成里程碑实测：shared-source 285、Forge 362、NeoForge 422，`buildAllTargets` 通过。
 
 ### 协议 21 最终空间边界加固
 
@@ -22,8 +22,8 @@
 - resize 和权威删除在成功及补偿后都会验证 identity/UUID 数量、预期索引路径和新旧范围代表点查询。
 - resize 补偿会移除原实例的全部 stale identity；遇到相同 UUID 的不同实例时不误删并返回 `STATE_UNKNOWN`。
 - manager 低层 resize API 已收紧为 package-private，生产扣款仍只能经过 `TerritoryResizeTransactionService`。
-- 协议 21 wire 仍为单个 16 字节 UUID；协议 22 `REMOVE_PLAYER` 及以后仍为 legacy。
-- 本阶段最终实测：shared-source 266、Forge 333、NeoForge 382，`buildAllTargets` 通过。
+- 协议 21 wire 仍为单个 16 字节 UUID；协议 22 在下一里程碑迁移，协议 23+ 仍为 legacy（当时状态）。
+- 历史协议 21 边界里程碑实测：shared-source 266、Forge 333、NeoForge 382，`buildAllTargets` 通过。
 
 - NeoForge 1.21.1 当前代码是唯一业务基线。
 - Forge 1.20.1 历史分支只用于查询旧 API，不恢复过时业务逻辑。
@@ -205,7 +205,7 @@ git diff --check
   C2S message and an NBT-free snapshot response. Owned territories contain complete
   members/rules/buffs/costs/backpoint data; authorized territories contain summaries
   only. Both targets enforce identical nested limits plus 1 MiB estimated/wire budgets,
-  and clients reject stale responses before atomic UI commit. Protocols 19/20 are migrated below; protocol 21+ remains legacy.
+  and clients reject stale responses before atomic UI commit. Protocols 19/20 are migrated below; protocol 21+ is covered by the subsequent territory milestones.
 - Protocol 14 hardening is closed: authoritative requester reporting, expected-order transition,
   exact supplier credit, independent payment/inventory compensation, and shared adapter contract
   coverage are complete. Protocol 16 now uses a UUID-only common request, expected-order removal,
@@ -241,10 +241,10 @@ git diff --check
   tick-epoch reset prevent cooldown leakage across server lifetimes. Target inventory helpers contain all
   version-specific ItemStack equality and main-inventory access.
 - Protocol 20 is migrated with an exact 32-byte UUID-only wire. Pending invites are non-persistent server-session data (1200 ticks, maximum 4096), use server-generated UUID invite IDs, and revalidate owner/member state on accept. Forge updates only `AuthorizedPlayers` inside a defensive raw-NBT copy and preserves unknown root/territory fields.
-- Protocol 21 is migrated with an exact 16-byte territory UUID request. The authenticated sender is the deletion identity and current owner; deletion never refunds. Shared results distinguish retry-safe `PERSIST_FAILED` from uncertain `STATE_UNKNOWN`, and pending invites are cleaned only after success. NeoForge removes its primary map, owner index, QuadTree and SavedData transactionally; Forge uses strict raw-NBT copy-on-write while preserving unknown fields and record order. Protocol 22 and later remain legacy.
-- Protocol 21 integration verification adds authoritative synchronized resize prepare/commit. Live Territory bounds determine final price, session differences are preview-only, equal-area reshape is supported, identical bounds return UNCHANGED, commit detects CHANGED before mutation, and QuadTree rollback proves the old spatial query path. Repository failure kind is explicit and handlers share one overworld game-time tick. Protocol 22+ remains legacy.
+- Protocol 21 is migrated with an exact 16-byte territory UUID request. The authenticated sender is the deletion identity and current owner; deletion never refunds. Shared results distinguish retry-safe `PERSIST_FAILED` from uncertain `STATE_UNKNOWN`, and pending invites are cleaned only after success. NeoForge removes its primary map, owner index, QuadTree and SavedData transactionally; Forge uses strict raw-NBT copy-on-write while preserving unknown fields and record order. Protocol 22 is covered by the next milestone; protocol 23+ remains legacy at this point in the history.
+- Protocol 21 integration verification adds authoritative synchronized resize prepare/commit. Live Territory bounds determine final price, session differences are preview-only, equal-area reshape is supported, identical bounds return UNCHANGED, commit detects CHANGED before mutation, and QuadTree rollback proves the old spatial query path. Repository failure kind is explicit and handlers share one overworld game-time tick. Protocol 22 is covered below; protocol 23+ remains the later boundary.
 - NeoForge resize now mutates the existing Territory instance in place: primary, owner and SavedData references remain stable while only the QuadTree entry is rebuilt. Expansion uses exact debit/refund semantics; explicit failure refunds, while STATE_UNKNOWN never refunds automatically. Removal cleanup carries the deleted server snapshot so resize cancellation uses the authoritative territory name.
-- Protocols 23-25 are complete as one client-file-check transaction. IDs, directions, discriminators, manifest order and protocol version are unchanged. Both targets require explicit client consent before scanning only direct regular files in the fixed `mods`, `shaderpacks` or `resourcepacks` directory. Results contain bounded schema-1 names/sizes/SHA-256 data only; server-scoped exact pending keys bind the authenticated target to the authoritative requester and prevent replay. Remote results are never auto-written. Protocol 26 is the next legacy boundary and was not migrated here.
+- Protocols 23-25 are complete as one client-file-check transaction. IDs, directions, discriminators, manifest order and protocol version are unchanged. Both targets require explicit client consent before scanning only direct regular files in the fixed `mods`, `shaderpacks` or `resourcepacks` directory. Results contain bounded schema-1 names/sizes/SHA-256 data only; server-scoped exact pending keys bind the authenticated target to the authoritative requester and prevent replay. Remote results are never auto-written. Protocols 26-30 are covered by the transfer transaction below; protocol 31+ is the current legacy boundary.
 - Protocols 23-25 lifecycle hardening is complete. Connection generations invalidate scans and queued UI/network
   callbacks on logout/disconnect/shutdown; each session owns one bounded daemon executor. Enumeration, sorting,
   opening and hashing share one deadline, candidates cap at 4096, and open-time no-follow prevents final-component
@@ -252,10 +252,9 @@ git diff --check
   and processing/result delivery remain expiring one-shot operations. DECLINED/FAILED never scan locally.
   Final lifecycle verification keeps the active identity through terminal sending, routes all protocol-24 sends
   through one session-aware dispatcher, uses secure relative directory opens or fail-closed root revalidation,
-  and renders every local state plus all skipped rows. Protocol 26+ is legacy.
-  Final safety closure distinguishes local SUCCESS/FAILED/TRUNCATED, exposes READY_INCOMPLETE, terminates scheduling/callback failures with common-only abandonment cleanup, and passes the real pre-created token to every callback. Directory identity is verified from the opened SecureDirectoryStream handle; providers without that guarantee fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
+  and renders every local state plus all skipped rows. Protocols 26-30 are covered below; protocol 31+ is legacy.
+  Final safety closure distinguishes local SUCCESS/FAILED/TRUNCATED, exposes READY_INCOMPLETE, terminates scheduling/callback failures with common-only abandonment cleanup, and passes the real pre-created token to every callback. Directory identity is verified from the opened SecureDirectoryStream handle; providers without that guarantee fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocols 26-30 are covered below; protocol 31+ remains legacy.
   Protocols 26-30 are atomically migrated: delivered protocol-23 manifests authorize `/get`; the target separately consents; a bounded SecureDirectoryStream snapshot flows through strict READY/chunk/COMPLETE server state; requester data remains private until explicit no-overwrite save or discard. Protocol 31+ remains legacy.
   Transaction hardening now clears a claimed protocol-23 authorization scope before processing and installs replacements atomically only after successful delivery. Protocol 26-30 server forwarding uses one-shot prepare/commit claims, target/requester single-active indexes, globally unique transfer IDs, authenticated-target-first validation, and failure consumption with lifecycle cleanup. Client transfer state uses a bounded worker and shared temp budget; received artifacts remain managed until safe no-overwrite save/discard. Client-sent protocol-27 COMPLETE is rejected. Protocol 31+ remains legacy and is the next migration boundary.
-  Hardening verification: 382 shared-source test methods, 459 Forge tests, 519 NeoForge tests, with both target suites and `buildAllTargets` passing.
-  Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.
-  after a separate task.
+  Historical transaction-hardening baseline: 382 shared-source test methods, 459 Forge tests, 519 NeoForge tests, with both target suites and `buildAllTargets` passing.
+  Final lifecycle hardening verification: 435 shared-source test methods, 516 Forge tests, 576 NeoForge tests, with both target suites and `buildAllTargets` passing.

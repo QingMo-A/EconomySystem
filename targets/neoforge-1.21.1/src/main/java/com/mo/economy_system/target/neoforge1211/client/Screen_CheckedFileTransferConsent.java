@@ -3,6 +3,7 @@ package com.mo.economy_system.target.neoforge1211.client;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
 import com.mo.economy_system.common.transfer.CheckedFileSnapshotter;
+import com.mo.economy_system.common.transfer.CheckedFileTransferLayout;
 import com.mo.economy_system.common.transfer.CheckedFileTransferManifestCache;
 import com.mo.economy_system.common.transfer.CheckedFileTransferOutgoing;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
@@ -27,39 +28,48 @@ final class Screen_CheckedFileTransferConsent extends Screen {
   }
 
   @Override protected void init() {
-    if (width < 32 || height < 55) return;
-    int buttonWidth = Math.min(100, Math.max(1, (width - 15) / 2));
-    int total = buttonWidth * 2 + 5; int left = Math.max(0, (width - total) / 2);
-    int y = Math.max(0, height - 25);
+    var actions = CheckedFileTransferLayout.twoActions(width, height);
+    if (actions.primary() == null) return;
     addRenderableWidget(Button.builder(Component.translatable("button.transfer.allow"), b -> allow())
-        .bounds(left, y, buttonWidth, Math.min(20, height - y)).build());
+        .bounds(actions.primary().x(), actions.primary().y(), actions.primary().width(), actions.primary().height()).build());
     addRenderableWidget(Button.builder(Component.translatable("button.transfer.decline"), b -> decline())
-        .bounds(left + buttonWidth + 5, y, buttonWidth, Math.min(20, height - y)).build());
+        .bounds(actions.secondary().x(), actions.secondary().y(), actions.secondary().width(), actions.secondary().height()).build());
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     super.render(graphics, mouseX, mouseY, partialTick);
-    graphics.drawCenteredString(font, title, width / 2, Math.min(18, Math.max(0, height - 1)), 0xffffff);
-    if (width >= 64 && height >= 110) {
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.requester", request.requesterPlayerName()), 4, 42, 0xdddddd);
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.type", request.checkType().id()), 4, 54, 0xdddddd);
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.file", request.fileName()), 4, 66, 0xdddddd);
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.size", entry.size()), 4, 78, 0xdddddd);
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.hash", entry.sha256()), 4, 90, 0xdddddd);
-      graphics.drawString(font, Component.translatable("screen.transfer_consent.warning"), 4, 102, 0xccaa66);
-    }
+    graphics.drawCenteredString(font, title, width / 2,
+        Math.min(18, Math.max(0, height - font.lineHeight)), 0xffffff);
+    var actions = CheckedFileTransferLayout.twoActions(width, height);
+    int rows = CheckedFileTransferLayout.visibleRows(
+        width, height, 64, 38, 12, 6, actions.primary());
+    int maxCharacters = Math.max(4, (width - 8) / 6);
+    if (rows >= 1) graphics.drawString(font, Component.translatable(
+        "screen.transfer_consent.requester", request.requesterPlayerName()), 4, 38, 0xdddddd);
+    if (rows >= 2) graphics.drawString(font, Component.translatable(
+        "screen.transfer_consent.type", request.checkType().id()), 4, 50, 0xdddddd);
+    if (rows >= 3) graphics.drawString(font, Component.translatable(
+        "screen.transfer_consent.file",
+        CheckedFileTransferLayout.truncate(request.fileName(), maxCharacters)), 4, 62, 0xdddddd);
+    if (rows >= 4) graphics.drawString(font, Component.translatable(
+        "screen.transfer_consent.size", entry.size()), 4, 74, 0xdddddd);
+    if (rows >= 5) graphics.drawString(font, Component.translatable(
+        "screen.transfer_consent.hash",
+        CheckedFileTransferLayout.truncate(entry.sha256(), maxCharacters)), 4, 86, 0xdddddd);
+    if (rows >= 6) graphics.drawString(font,
+        Component.translatable("screen.transfer_consent.warning"), 4, 98, 0xccaa66);
   }
 
   private void allow() {
     if (finished || !current()) return;
     finished = true;
     Minecraft minecraft = Minecraft.getInstance();
-    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
-    coordinator.outgoing().allow(request, session,
-        deadline -> CheckedFileSnapshotter.create(minecraft.gameDirectory.toPath(), request.checkType(),
-            request.fileName(), entry.size(), entry.sha256(),
-            minecraft.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"),
-            deadline, coordinator.tempBudget()),
+      var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+      coordinator.outgoing().allow(request, session,
+          deadline -> CheckedFileSnapshotter.create(minecraft.gameDirectory.toPath(), request.checkType(),
+              request.fileName(), entry.size(), entry.sha256(),
+              coordinator.temporaryDirectory(minecraft.gameDirectory.toPath()),
+              deadline, coordinator.tempBudget()),
         (activeSession, token, outgoing) -> send(activeSession, outgoing));
     minecraft.setScreen(null);
   }

@@ -11,9 +11,13 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -92,8 +96,12 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   private final long timeoutNanos;
   private ThreadPoolExecutor worker;
   private long tokenSequence;
+  private ClientFileCheckTaskCoordinator.Session currentSession;
   private Active active;
-  private CheckedFileSnapshotter.Snapshot retainedSnapshot;
+  private final Set<CheckedFileSnapshotter.Snapshot> pendingSnapshots =
+      Collections.newSetFromMap(new IdentityHashMap<>());
+  private final Set<CheckedFileSnapshotter.Snapshot> activeSnapshots =
+      Collections.newSetFromMap(new IdentityHashMap<>());
   private boolean closed;
 
   public CheckedFileTransferOutgoing() {
@@ -130,9 +138,20 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   public synchronized BeginResult receive(
       CheckedFileTransferRequestMessage request,
       ClientFileCheckTaskCoordinator.Session session) {
+    return receive(request, session, System.nanoTime());
+  }
+
+  synchronized BeginResult receive(
+      CheckedFileTransferRequestMessage request,
+      ClientFileCheckTaskCoordinator.Session session,
+      long nowNanos) {
     Objects.requireNonNull(request, "request");
     Objects.requireNonNull(session, "session");
     if (closed) return BeginResult.CLOSED;
+    if (!sameSession(currentSession, session)
+        || !session.localPlayerId().equals(request.targetPlayerId())) {
+      return BeginResult.INVALID_SESSION;
+    }
     if (active == null) {
       active =
           new Active(
@@ -140,10 +159,12 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
               session,
               new WorkerToken(session.generation(), nextRequestId()),
               State.CONSENT,
-              safeDeadline(System.nanoTime()));
+              safeDeadline(nowNanos));
       return BeginResult.OPEN;
     }
-    if (active.request().equals(request) && sameSession(active.session(), session)) {
+    if (active.request().equals(request)
+        && sameSession(active.session(), session)
+        && isCurrentLocked(active, nowNanos)) {
       return BeginResult.DUPLICATE;
     }
     return BeginResult.CONSENT_BUSY;
@@ -170,6 +191,25 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     return tempBudget;
   }
 
+  /** Returns whether a snapshot still needs an exact relative-delete retry. */
+  public synchronized boolean hasPendingSnapshotCleanup() {
+    return !pendingSnapshots.isEmpty();
+  }
+
+  /** Installs the coordinator-owned connection generation used by every dispatch gate. */
+  public synchronized void beginSession(ClientFileCheckTaskCoordinator.Session session) {
+    Objects.requireNonNull(session, "session");
+    if (closed) throw new IllegalStateException("outgoing closed");
+    if (sameSession(currentSession, session)) return;
+    invalidateSessionLocked();
+    currentSession = session;
+  }
+
+  /** Returns the independently stored current connection generation. */
+  public synchronized ClientFileCheckTaskCoordinator.Session currentSession() {
+    return currentSession;
+  }
+
   /**
    * Accepts consent and queues exactly one snapshot worker. The token is created before queueing
    * and is passed to every callback, preventing a late callback from crossing a reconnect.
@@ -193,7 +233,8 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     Objects.requireNonNull(snapshotTask, "snapshot task");
     Objects.requireNonNull(sender, "sender");
     if (closed || active == null || !active.request().equals(request)
-        || !sameSession(active.session(), session) || active.state() != State.CONSENT) {
+        || !sameSession(active.session(), session) || active.state() != State.CONSENT
+        || !isCurrentLocked(active, nowNanos)) {
       return false;
     }
     Active operation = replaceState(State.SNAPSHOTTING, safeDeadline(nowNanos));
@@ -215,7 +256,8 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     Active operation;
     synchronized (this) {
       if (closed || active == null || !active.request().equals(request)
-          || !sameSession(active.session(), session) || active.state() != State.CONSENT) {
+          || !sameSession(active.session(), session) || active.state() != State.CONSENT
+          || !isCurrentLocked(active, System.nanoTime())) {
         return false;
       }
       operation = active;
@@ -230,24 +272,54 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     return delivered;
   }
 
+  /** Abandons a consent operation without sending a protocol control. */
+  public synchronized boolean cancel(
+      CheckedFileTransferRequestMessage request,
+      ClientFileCheckTaskCoordinator.Session session) {
+    if (closed || active == null || !active.request().equals(request)
+        || !sameSession(active.session(), session)
+        || !isCurrentLocked(active, System.nanoTime())) {
+      return false;
+    }
+    finishLocked(active.token());
+    return true;
+  }
+
   /** Cancels all state for a reconnect/logout. No callback may dispatch to the old session. */
   public synchronized void invalidateSession() {
+    currentSession = null;
+    invalidateSessionLocked();
+  }
+
+  /** Invalidates only the exact connection generation supplied by the coordinator. */
+  public synchronized void invalidateSession(ClientFileCheckTaskCoordinator.Session session) {
+    Objects.requireNonNull(session, "session");
+    if (!sameSession(currentSession, session)) return;
+    currentSession = null;
+    invalidateSessionLocked();
+  }
+
+  private void invalidateSessionLocked() {
     if (active != null) finishLocked(active.token());
     worker.getQueue().clear();
     worker.purge();
     worker.shutdownNow();
+    cleanupPendingSnapshotsLocked();
     if (!closed) worker = newWorker();
   }
 
   /** Expires consent or an in-flight operation after the configured local deadline. */
   public synchronized boolean tick(long nowNanos) {
-    if (active == null || nowNanos < active.deadlineNanos()) return false;
-    finishLocked(active.token());
-    worker.getQueue().clear();
-    worker.purge();
-    worker.shutdownNow();
-    if (!closed) worker = newWorker();
-    return true;
+    boolean changed = false;
+    if (active != null && nowNanos >= active.deadlineNanos()) {
+      finishLocked(active.token());
+      worker.getQueue().clear();
+      worker.purge();
+      worker.shutdownNow();
+      if (!closed) worker = newWorker();
+      changed = true;
+    }
+    return cleanupPendingSnapshotsLocked() || changed;
   }
 
   private void run(Active operation, SnapshotTask task, SessionSender sender) {
@@ -260,8 +332,9 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
       }
       snapshot = outcome.snapshot();
       synchronized (this) {
-        if (!isCurrentLocked(operation.token())) return;
-        retainedSnapshot = snapshot;
+        pendingSnapshots.add(snapshot);
+        activeSnapshots.add(snapshot);
+        if (!isCurrentLocked(operation, System.nanoTime())) return;
         active =
             new Active(
                 operation.request(),
@@ -273,10 +346,10 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
       CheckedFileTransferOutgoing.send(
           operation.request(),
           snapshot,
-          () -> valid(operation.token()),
+          () -> valid(operation),
           message -> dispatchOrThrow(operation, sender, message));
       synchronized (this) {
-        if (isCurrentLocked(operation.token())) {
+        if (isCurrentLocked(operation, System.nanoTime())) {
           active =
               new Active(
                   operation.request(),
@@ -293,14 +366,17 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
       throw fatal;
     } finally {
       if (snapshot != null) {
+        boolean cleaned = false;
         try {
-          snapshot.close();
-        } catch (IOException | RuntimeException ignored) {
-          // A terminal transfer must not keep worker state alive because cleanup failed.
+          cleaned = closeSnapshot(snapshot);
+        } finally {
+          synchronized (this) {
+            activeSnapshots.remove(snapshot);
+            if (cleaned) pendingSnapshots.remove(snapshot);
+          }
         }
       }
       synchronized (this) {
-        if (retainedSnapshot == snapshot) retainedSnapshot = null;
         if (active != null && active.token().equals(operation.token())) finishLocked(operation.token());
       }
     }
@@ -323,26 +399,23 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     if (!dispatch(operation, sender, message)) throw new IllegalStateException("session invalid");
   }
 
-  private boolean dispatch(Active operation, SessionSender sender, Object message) {
-    if (!valid(operation.token())) return false;
+  private synchronized boolean dispatch(Active operation, SessionSender sender, Object message) {
+    if (!isCurrentLocked(operation, System.nanoTime())) return false;
     try {
-      synchronized (this) {
-        if (active != null && active.token().equals(operation.token())
-            && active.state() == State.SENDING_READY) {
-          active =
-              new Active(operation.request(), operation.session(), operation.token(), State.STREAMING,
-                  operation.deadlineNanos());
-        }
+      if (active.state() == State.SENDING_READY) {
+        active =
+            new Active(operation.request(), operation.session(), operation.token(), State.STREAMING,
+                operation.deadlineNanos());
       }
-      if (!valid(operation.token())) return false;
+      if (!isCurrentLocked(operation, System.nanoTime())) return false;
       sender.send(operation.session(), operation.token(), message);
       return true;
     } catch (RuntimeException | Error failure) {
-      finish(operation.token());
+      finishLocked(operation.token());
       if (failure instanceof Error error) throw error;
       return false;
     } catch (Exception failure) {
-      finish(operation.token());
+      finishLocked(operation.token());
       return false;
     }
   }
@@ -353,19 +426,21 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
     return active;
   }
 
-  private boolean valid(WorkerToken token) {
+  private boolean valid(Active operation) {
     synchronized (this) {
-      return !closed && isCurrentLocked(token);
+      return isCurrentLocked(operation, System.nanoTime());
     }
   }
 
-  private boolean isCurrentLocked(WorkerToken token) {
-    return active != null && active.token().equals(token)
-        && sameSession(active.session(), sessionOf(active));
-  }
-
-  private static ClientFileCheckTaskCoordinator.Session sessionOf(Active value) {
-    return value.session();
+  private boolean isCurrentLocked(Active expected, long nowNanos) {
+    return !closed
+        && active != null
+        && active.token().equals(expected.token())
+        && active.request().equals(expected.request())
+        && sameSession(active.session(), expected.session())
+        && sameSession(currentSession, expected.session())
+        && currentSession.localPlayerId().equals(expected.request().targetPlayerId())
+        && nowNanos < active.deadlineNanos();
   }
 
   private synchronized void finish(WorkerToken token) {
@@ -375,7 +450,28 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   private void finishLocked(WorkerToken token) {
     if (active == null || !active.token().equals(token)) return;
     active = null;
-    retainedSnapshot = null;
+  }
+
+  private boolean cleanupPendingSnapshotsLocked() {
+    boolean changed = false;
+    for (CheckedFileSnapshotter.Snapshot snapshot : new ArrayList<>(pendingSnapshots)) {
+      if (activeSnapshots.contains(snapshot)) continue;
+      if (closeSnapshot(snapshot)) {
+        pendingSnapshots.remove(snapshot);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  private static boolean closeSnapshot(CheckedFileSnapshotter.Snapshot snapshot) {
+    try {
+      snapshot.close();
+      return true;
+    } catch (IOException | RuntimeException ignored) {
+      // Keep the snapshot and reservation for the next lifecycle cleanup pass.
+      return false;
+    }
   }
 
   private long safeDeadline(long now) {
@@ -390,7 +486,9 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   private static boolean sameSession(
       ClientFileCheckTaskCoordinator.Session left,
       ClientFileCheckTaskCoordinator.Session right) {
-    return left.generation() == right.generation()
+    return left != null
+        && right != null
+        && left.generation() == right.generation()
         && left.connectionIdentity() == right.connectionIdentity()
         && left.localPlayerId().equals(right.localPlayerId());
   }
@@ -465,7 +563,9 @@ public final class CheckedFileTransferOutgoing implements AutoCloseable {
   public synchronized void close() {
     if (closed) return;
     closed = true;
+    currentSession = null;
     if (active != null) finishLocked(active.token());
     worker.shutdownNow();
+    cleanupPendingSnapshotsLocked();
   }
 }

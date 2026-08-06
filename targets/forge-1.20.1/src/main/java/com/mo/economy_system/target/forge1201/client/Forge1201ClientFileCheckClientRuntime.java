@@ -12,19 +12,25 @@ public final class Forge1201ClientFileCheckClientRuntime {
       new ClientFileCheckConsentCoordinator();
   private static final CheckedFileTransferManifestCache MANIFEST = new CheckedFileTransferManifestCache();
   private static CheckedFileTransferClientCoordinator transfers = new CheckedFileTransferClientCoordinator();
+  private static boolean stopped;
 
   private Forge1201ClientFileCheckClientRuntime() {}
 
   public static synchronized ClientFileCheckTaskCoordinator.Session begin(
       Object connection, UUID playerId) {
+    if (stopped) throw new IllegalStateException("client runtime stopped");
     CONSENT.invalidate();
     MANIFEST.clear();
-    transfers.beginSession(connection, playerId);
-    return tasks.beginSession(connection, playerId);
+    ClientFileCheckTaskCoordinator.Session transferSession =
+        transfers.beginSession(connection, playerId);
+    transfers.bindArrivalConnection(connection);
+    tasks.beginSession(connection, playerId);
+    return transferSession;
   }
 
   public static synchronized ClientFileCheckTaskCoordinator.Session currentOrBegin(
       Object connection, UUID playerId) {
+    if (stopped) throw new IllegalStateException("client runtime stopped");
     ClientFileCheckTaskCoordinator.Session current = tasks.currentSession();
     if (current != null
         && current.connectionIdentity() == connection
@@ -33,6 +39,7 @@ public final class Forge1201ClientFileCheckClientRuntime {
   }
 
   public static synchronized void invalidate() {
+    if (stopped) return;
     CONSENT.invalidate();
     MANIFEST.clear();
     transfers.invalidateSession();
@@ -40,12 +47,12 @@ public final class Forge1201ClientFileCheckClientRuntime {
   }
 
   public static synchronized void stop() {
+    if (stopped) return;
+    stopped = true;
     CONSENT.invalidate();
     MANIFEST.clear();
     transfers.close();
-    transfers = new CheckedFileTransferClientCoordinator();
     tasks.close();
-    tasks = new ClientFileCheckTaskCoordinator();
   }
 
   public static ClientFileCheckTaskCoordinator tasks() {
@@ -57,4 +64,14 @@ public final class Forge1201ClientFileCheckClientRuntime {
   }
   public static CheckedFileTransferManifestCache manifest(){return MANIFEST;}
   public static CheckedFileTransferClientCoordinator transfers(){return transfers;}
+
+  /** Captures the transfer session at network arrival, before a callback is queued. */
+  public static synchronized ClientFileCheckTaskCoordinator.Session captureArrival(
+      Object connectionIdentity) {
+    return transfers.captureArrivalSession(connectionIdentity);
+  }
+
+  public static synchronized boolean isStopped() {
+    return stopped;
+  }
 }

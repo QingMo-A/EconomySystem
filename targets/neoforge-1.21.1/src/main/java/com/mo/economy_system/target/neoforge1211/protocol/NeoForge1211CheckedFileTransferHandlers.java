@@ -6,8 +6,10 @@ import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMes
 import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
 import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
 import com.mo.economy_system.common.transfer.CheckedFileTransferRoutingService;
+import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211CheckedFileTransferClient;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211ClientFileCheckClientRuntime;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -39,12 +41,18 @@ final class NeoForge1211CheckedFileTransferHandlers {
   }
 
   static void request(CheckedFileTransferRequestMessage message, IPayloadContext context) {
-    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.handle(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        NeoForge1211ClientFileCheckClientRuntime.captureArrival(context.connection());
+    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.handle(message, arrival));
   }
   static void controlResponse(CheckedFileTransferControlResponseMessage message, IPayloadContext context) {
-    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.control(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        NeoForge1211ClientFileCheckClientRuntime.captureArrival(context.connection());
+    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.control(message, arrival));
   }
   static void chunkResponse(CheckedFileTransferChunkResponseMessage message, IPayloadContext context) {
-    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.chunk(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        NeoForge1211ClientFileCheckClientRuntime.captureArrival(context.connection());
+    context.enqueueWork(() -> NeoForge1211CheckedFileTransferClient.chunk(message, arrival));
   }
 }

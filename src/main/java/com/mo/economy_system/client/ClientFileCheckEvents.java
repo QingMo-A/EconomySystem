@@ -7,6 +7,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.GameShuttingDownEvent;
 
 @EventBusSubscriber(modid = EconomySystem.MODID, value = Dist.CLIENT)
@@ -19,6 +20,8 @@ public final class ClientFileCheckEvents {
     if (minecraft.getConnection() != null && minecraft.player != null) {
       NeoForge1211ClientFileCheckClientRuntime.begin(
           minecraft.getConnection(), minecraft.player.getUUID());
+      NeoForge1211ClientFileCheckClientRuntime.transfers()
+          .bindArrivalConnection(minecraft.getConnection().getConnection());
     }
   }
 
@@ -30,5 +33,15 @@ public final class ClientFileCheckEvents {
   @SubscribeEvent
   public static void onStopping(GameShuttingDownEvent event) {
     NeoForge1211ClientFileCheckClientRuntime.stop();
+  }
+
+  @SubscribeEvent
+  public static void onClientTick(ClientTickEvent.Post event) {
+    if (NeoForge1211ClientFileCheckClientRuntime.isStopped()) return;
+    try {
+      NeoForge1211ClientFileCheckClientRuntime.transfers().tick(System.nanoTime());
+    } catch (RuntimeException ignored) {
+      // A transient provider/runtime failure must not take down the client.
+    }
   }
 }

@@ -3,6 +3,8 @@ package com.mo.economy_system.common.check;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
+import com.mo.economy_system.common.transfer.ClientFileCheckManifestAuthorizationStore;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +31,55 @@ class ClientFileCheckResultRoutingServiceTest {
                     ClientFileCheckResultJsonCodec.decode(response.resultJson()).status()));
     assertEquals(ClientFileCheckResultRoutingService.Outcome.DELIVERED, outcome);
     assertEquals(0, fixture.store.size(2));
+  }
+
+  @Test
+  void malformedResultClearsPreviousAuthorizationScope() {
+    Fixture fixture = new Fixture();
+    fixture.installAuthorization();
+    assertEquals(
+        ClientFileCheckResultRoutingService.Outcome.DELIVERED,
+        fixture.routeWithAuthorizations(fixture.message("{}"), ignored -> new Object(),
+            (requester, response) -> {}));
+    fixture.assertAuthorizationMissing();
+  }
+
+  @Test
+  void requesterOfflineClearsPreviousAuthorizationScope() {
+    Fixture fixture = new Fixture();
+    fixture.installAuthorization();
+    assertEquals(
+        ClientFileCheckResultRoutingService.Outcome.REQUESTER_OFFLINE,
+        fixture.routeWithAuthorizations(fixture.message(validJson()), ignored -> null,
+            (requester, response) -> fail()));
+    fixture.assertAuthorizationMissing();
+  }
+
+  @Test
+  void senderRuntimeFailureClearsPreviousAuthorizationScope() {
+    Fixture fixture = new Fixture();
+    fixture.installAuthorization();
+    assertEquals(
+        ClientFileCheckResultRoutingService.Outcome.DELIVERY_FAILED,
+        fixture.routeWithAuthorizations(fixture.message(validJson()), ignored -> new Object(),
+            (requester, response) -> {
+              throw new IllegalStateException("network");
+            }));
+    fixture.assertAuthorizationMissing();
+  }
+
+  @Test
+  void senderErrorClearsPreviousAuthorizationScopeBeforeRethrow() {
+    Fixture fixture = new Fixture();
+    fixture.installAuthorization();
+    assertThrows(
+        AssertionError.class,
+        () -> fixture.routeWithAuthorizations(
+            fixture.message(validJson()), ignored -> new Object(),
+            (requester, response) -> {
+              throw new AssertionError("fatal");
+            }));
+    fixture.assertAuthorizationMissing();
   }
 
   @Test
@@ -245,6 +296,8 @@ class ClientFileCheckResultRoutingServiceTest {
     final UUID target = UUID.randomUUID();
     final UUID requester = UUID.randomUUID();
     final ClientFileCheckRequestStore store = new ClientFileCheckRequestStore();
+    final ClientFileCheckManifestAuthorizationStore authorizations =
+        new ClientFileCheckManifestAuthorizationStore();
 
     Fixture() {
       assertEquals(
@@ -271,6 +324,42 @@ class ClientFileCheckResultRoutingServiceTest {
           ignored -> new Object(),
           sender,
           (stage, targetId, requesterId, failure) -> {});
+    }
+
+    ClientFileCheckResultRoutingService.Outcome routeWithAuthorizations(
+        ClientFileCheckResultRequestMessage message,
+        ClientFileCheckResultRoutingService.RequesterLookup lookup,
+        ClientFileCheckResultRoutingService.ResponseSender sender) {
+      return ClientFileCheckResultRoutingService.route(
+          message,
+          target,
+          2,
+          store,
+          authorizations,
+          lookup,
+          sender,
+          (stage, targetId, requesterId, failure) -> {});
+    }
+
+    void installAuthorization() {
+      ClientFileCheckResult result =
+          new ClientFileCheckResult(
+              1,
+              ClientFileCheckStatus.SUCCESS,
+              ClientFileCheckType.MODS,
+              List.of(new ClientFileCheckEntry("old.jar", 1, "0".repeat(64))),
+              List.of(),
+              null);
+      assertEquals(
+          ClientFileCheckManifestAuthorizationStore.ReplaceResult.INSTALLED,
+          authorizations.replace(target, requester, result, 1));
+    }
+
+    void assertAuthorizationMissing() {
+      var key =
+          new ClientFileCheckManifestAuthorizationStore.Key(
+              target, requester, ClientFileCheckType.MODS, "old.jar");
+      assertTrue(authorizations.find(key, 2).isEmpty());
     }
   }
 }

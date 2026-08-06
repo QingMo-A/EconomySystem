@@ -2,9 +2,6 @@ package com.mo.economy_system.common.transfer;
 
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -20,7 +17,6 @@ import java.util.UUID;
  */
 public final class CheckedFileTransferSaveService {
   public static final int DEFAULT_MAX_NAME_ATTEMPTS = 100;
-  private static final String ROOT_DIRECTORY = "economy_system";
   private static final String RECEIVED_DIRECTORY = "received-check-files";
 
   public enum ResultCode {
@@ -88,40 +84,80 @@ public final class CheckedFileTransferSaveService {
       return new Result(ResultCode.INVALID_FILE_NAME, null);
     }
 
-    Path targetDirectory;
-    try {
-      targetDirectory = prepareTargetDirectory(targetId);
-    } catch (UnsafeParentException | IOException | SecurityException failure) {
+    CheckedFileTransferTempDirectory sourceDirectory = artifact.sourceDirectory();
+    if (!sourceDirectory.gameDirectory().equals(gameDirectory)) {
       return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
     }
 
-    if (!sourceIsRegular(artifact.path())) {
+    try {
+      BasicFileAttributes source = artifact.sourceAttributesNoFollow();
+      if (source.isSymbolicLink()
+          || !source.isRegularFile()
+          || source.size() != artifact.metadata().byteLength()) {
+        return new Result(ResultCode.SOURCE_MISSING, null);
+      }
+    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
+      return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    } catch (NoSuchFileException missing) {
+      return new Result(ResultCode.SOURCE_MISSING, null);
+    } catch (IOException | SecurityException failure) {
       return new Result(ResultCode.SOURCE_MISSING, null);
     }
 
+    CheckedFileTransferTempDirectory.DirectoryHandle targetDirectory;
+    try {
+      targetDirectory = sourceDirectory.openTargetDirectory(targetId);
+    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
+      return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    } catch (IOException | SecurityException failure) {
+      return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    }
+    Result outcome;
+    try {
+      outcome = saveWithTarget(artifact, targetDirectory, targetId, fileName);
+    } catch (CheckedFileTransferTempDirectory.ProviderUnsafeException unsafe) {
+      outcome = new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    } catch (IOException | SecurityException failure) {
+      outcome = new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    }
+    try {
+      targetDirectory.close();
+    } catch (IOException closeFailure) {
+      // A completed move remains a successful transaction; failed transactions stay pending.
+      if (!outcome.success()) outcome = new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    }
+    return outcome;
+  }
+
+  private Result saveWithTarget(
+      CheckedFileTransferReceivedArtifact artifact,
+      CheckedFileTransferTempDirectory.DirectoryHandle targetDirectory,
+      UUID targetId,
+      String fileName)
+      throws IOException {
+    targetDirectory.validate();
+    Path expectedTarget =
+        gameDirectory
+            .resolve(CheckedFileTransferTempDirectory.ROOT_DIRECTORY)
+            .resolve(RECEIVED_DIRECTORY)
+            .resolve(targetId.toString())
+            .normalize();
+    if (!targetDirectory.absolutePath().toAbsolutePath().normalize().equals(expectedTarget)) {
+      return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
+    }
     for (int attempt = 0; attempt < maxNameAttempts; attempt++) {
       String candidate = candidateName(fileName, attempt);
-      if (candidate == null) {
-        return new Result(ResultCode.SAVE_NAME_EXHAUSTED, null);
-      }
-      Path destination = targetDirectory.resolve(candidate).normalize();
-      if (!destination.startsWith(targetDirectory)) {
-        return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
-      }
-      // Recheck parent identity before every move. This catches a pre-existing or newly swapped
-      // symlink in normal providers; the move itself remains no-replace and race-safe for names.
-      try {
-        verifyDirectoryTree(targetDirectory);
-      } catch (UnsafeParentException | IOException | SecurityException failure) {
-        return new Result(ResultCode.SAVE_PARENT_UNSAFE, null);
-      }
-      CheckedFileTransferReceivedArtifact.MoveResult moved = artifact.moveTo(destination);
+      if (candidate == null) return new Result(ResultCode.SAVE_NAME_EXHAUSTED, null);
+      Path relativeName = Path.of(candidate);
+      CheckedFileTransferReceivedArtifact.MoveResult moved =
+          artifact.moveTo(
+              targetDirectory,
+              relativeName,
+              targetDirectory.absolutePath().resolve(relativeName));
       if (moved == CheckedFileTransferReceivedArtifact.MoveResult.MOVED) {
-        return new Result(ResultCode.SAVED, destination);
+        return new Result(ResultCode.SAVED, targetDirectory.absolutePath().resolve(relativeName));
       }
-      if (moved == CheckedFileTransferReceivedArtifact.MoveResult.TARGET_EXISTS) {
-        continue;
-      }
+      if (moved == CheckedFileTransferReceivedArtifact.MoveResult.TARGET_EXISTS) continue;
       if (moved == CheckedFileTransferReceivedArtifact.MoveResult.NOT_PENDING) {
         return new Result(ResultCode.NOT_PENDING, null);
       }
@@ -133,80 +169,12 @@ public final class CheckedFileTransferSaveService {
   /** Returns the fixed destination directory after validating its complete parent chain. */
   public Path targetDirectory(UUID targetId) throws IOException {
     Objects.requireNonNull(targetId, "target id");
-    try {
-      return prepareTargetDirectory(targetId);
-    } catch (UnsafeParentException unsafe) {
-      throw new IOException("unsafe destination");
-    }
-  }
-
-  private Path prepareTargetDirectory(UUID targetId)
-      throws IOException, UnsafeParentException {
-    verifyDirectoryTree(gameDirectory);
-    Path economy = gameDirectory.resolve(ROOT_DIRECTORY);
-    Path received = economy.resolve(RECEIVED_DIRECTORY);
-    Path target = received.resolve(targetId.toString());
-    ensureDirectory(gameDirectory, economy);
-    ensureDirectory(economy, received);
-    ensureDirectory(received, target);
-    verifyDirectoryTree(target);
-    if (!target.startsWith(gameDirectory)) {
-      throw new UnsafeParentException();
-    }
-    return target;
-  }
-
-  private static void ensureDirectory(Path parent, Path directory)
-      throws IOException, UnsafeParentException {
-    if (!directory.startsWith(parent)) {
-      throw new UnsafeParentException();
-    }
-    try {
-      BasicFileAttributes attributes =
-          Files.readAttributes(directory, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (attributes.isSymbolicLink() || !attributes.isDirectory()) {
-        throw new UnsafeParentException();
-      }
-      return;
-    } catch (NoSuchFileException missing) {
-      // CREATE one segment at a time. If another thread creates it first, inspect it again.
-      try {
-        Files.createDirectory(directory);
-      } catch (FileAlreadyExistsException race) {
-        BasicFileAttributes attributes =
-            Files.readAttributes(directory, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-        if (attributes.isSymbolicLink() || !attributes.isDirectory()) {
-          throw new UnsafeParentException();
-        }
-      }
-    }
-  }
-
-  private static void verifyDirectoryTree(Path directory)
-      throws IOException, UnsafeParentException {
-    Path absolute = directory.toAbsolutePath().normalize();
-    Path root = absolute.getRoot();
-    if (root == null) {
-      throw new UnsafeParentException();
-    }
-    Path current = root;
-    for (Path part : root.relativize(absolute)) {
-      current = current.resolve(part);
-      BasicFileAttributes attributes =
-          Files.readAttributes(current, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (attributes.isSymbolicLink() || !attributes.isDirectory()) {
-        throw new UnsafeParentException();
-      }
-    }
-  }
-
-  private static boolean sourceIsRegular(Path source) {
-    try {
-      BasicFileAttributes attributes =
-          Files.readAttributes(source, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      return attributes.isRegularFile() && !attributes.isSymbolicLink();
-    } catch (IOException | SecurityException failure) {
-      return false;
+    try (CheckedFileTransferTempDirectory temporaryDirectory =
+            CheckedFileTransferTempDirectory.open(gameDirectory);
+        CheckedFileTransferTempDirectory.DirectoryHandle target =
+            temporaryDirectory.openTargetDirectory(targetId)) {
+      target.validate();
+      return target.absolutePath();
     }
   }
 
@@ -227,9 +195,5 @@ public final class CheckedFileTransferSaveService {
     return candidate.length() <= EconomyNetworkLimits.MAX_TRANSFER_FILE_NAME_CHARS
         ? candidate
         : null;
-  }
-
-  private static final class UnsafeParentException extends Exception {
-    private UnsafeParentException() {}
   }
 }

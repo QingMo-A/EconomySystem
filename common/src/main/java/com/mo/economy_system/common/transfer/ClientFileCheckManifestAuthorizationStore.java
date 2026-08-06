@@ -8,6 +8,7 @@ import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,9 +89,11 @@ public final class ClientFileCheckManifestAuthorizationStore {
     }
 
     List<java.util.Map.Entry<Key, Authorization>> replacement = new ArrayList<>();
+    var replacementKeys = new HashSet<Key>();
     for (ClientFileCheckEntry entry : result.files()) {
       if (entry.size() > EconomyNetworkLimits.MAX_TRANSFER_FILE_BYTES) continue;
       Key key = new Key(target, requester, result.checkType(), entry.fileName());
+      if (!replacementKeys.add(key)) return ReplaceResult.CAPACITY_REJECTED;
       Authorization value = new Authorization(
           entry.size(), entry.sha256(), tick, tick + EconomyNetworkLimits.FILE_TRANSFER_TTL_TICKS);
       replacement.add(java.util.Map.entry(key, value));

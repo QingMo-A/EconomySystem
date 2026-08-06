@@ -244,7 +244,7 @@ scanner, bounded daemon executor and local comparison model. The only roots are 
 `resourcepacks`; scanning is non-recursive, rejects symlinks and streams SHA-256 without transmitting contents,
 paths, timestamps or exception details. The server binds every response to authenticated target plus the exact
 pending requester/type key, consumes malformed results as `FAILED/INVALID_RESULT`, and prevents replay.
-Protocol 26 and later remain legacy.
+Protocols 26-30 are covered by the checked-file transfer transaction below; protocol 31 and later remain legacy.
 
 Protocols 23-25 are lifecycle-hardened. Common owns the connection-generation task coordinator, exact consent
 coordinator, status-specific result controller/layout, and the single server result-routing service. Session
@@ -253,11 +253,11 @@ cancellation never becomes a protocol 24 result. Scans cap direct-child enumerat
 CONSENT, SCANNING and SENDING; every protocol-24 result uses one connection/session dispatcher. Secure directory
 providers use relative handle opens, while fallback providers revalidate root identity and canonical parent
 before and after entry opens. The result controller renders local loading/busy/failed/ready states and exposes
-all comparison and skipped rows. Protocol 26+ remains legacy.
-Local SUCCESS produces a complete comparison, local FAILED preserves its bounded error and produces no comparison, and local TRUNCATED preserves skipped/error data as READY_INCOMPLETE with an explicit partial-comparison warning. Task tokens are created before submission and passed directly to callbacks. Scheduling and callback failures reach terminal states and invoke common-state-only abandonment cleanup. Scanning now verifies attributes of the opened SecureDirectoryStream itself against the pre-open identity; providers without a stable opened-directory identity fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26 and later remain legacy.
+all comparison and skipped rows. Protocols 26-30 are covered by the transfer transaction below; protocol 31+ remains legacy.
+Local SUCCESS produces a complete comparison, local FAILED preserves its bounded error and produces no comparison, and local TRUNCATED preserves skipped/error data as READY_INCOMPLETE with an explicit partial-comparison warning. Task tokens are created before submission and passed directly to callbacks. Scheduling and callback failures reach terminal states and invoke common-state-only abandonment cleanup. Scanning now verifies attributes of the opened SecureDirectoryStream itself against the pre-open identity; providers without a stable opened-directory identity fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocols 26-30 are covered below; protocol 31 and later remain legacy.
 
 Protocols 26-30 now use five loader-neutral messages while preserving their legacy UTF/int field order. Protocol-23 manifests become short-lived exact authorizations only after protocol-25 delivery. `/get` creates bounded server pending state, the target separately consents, and an opened-handle-authenticated snapshot is streamed in 18,000-byte chunks with incremental size/SHA-256 verification. Incoming data stays in a private part file until explicit no-overwrite save or discard; nothing is automatically written to an auto-load directory. Protocol 31+ remains legacy.
 
 The protocol 26-30 transaction is hardened around atomic authorization replacement and one-shot server claims. Each target and requester may participate in only one active transfer, transfer IDs are globally unique within the server store, client-sent `COMPLETE` is rejected, and forwarding failures consume the exact transfer before diagnostics or rethrowing an `Error`. Outgoing and incoming artifacts share a bounded temporary-storage budget; completed files remain runtime-managed until an explicit safe no-overwrite save or discard. Snapshot and save providers fail closed on unsafe directory identities or symlink parents. Protocol 31+ remains legacy.
 
-Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.
+Final lifecycle hardening verification: 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests. Historical transaction-hardening baseline: 382 shared-source methods, 459 Forge tests, and 519 NeoForge tests.

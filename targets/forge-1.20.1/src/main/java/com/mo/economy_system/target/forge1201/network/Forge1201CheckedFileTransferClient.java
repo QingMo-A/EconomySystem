@@ -12,8 +12,9 @@ import com.mo.economy_system.common.transfer.CheckedFileTransferControl;
 import com.mo.economy_system.common.transfer.CheckedFileTransferControlStatus;
 import com.mo.economy_system.common.transfer.CheckedFileTransferManifestCache;
 import com.mo.economy_system.common.transfer.CheckedFileTransferOutgoing;
+import com.mo.economy_system.common.transfer.CheckedFileTransferLayout;
 import com.mo.economy_system.common.transfer.CheckedFileTransferReceivedArtifact;
-import com.mo.economy_system.common.transfer.CheckedFileTransferSaveService;
+import com.mo.economy_system.common.transfer.CheckedFileTransferUiText;
 import com.mo.economy_system.target.forge1201.client.Forge1201ClientFileCheckClientRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -24,50 +25,61 @@ import net.minecraft.network.chat.Component;
 final class Forge1201CheckedFileTransferClient {
   private Forge1201CheckedFileTransferClient() {}
 
-  static void request(CheckedFileTransferRequestMessage message) {
+  static void request(
+      CheckedFileTransferRequestMessage message,
+      ClientFileCheckTaskCoordinator.Session arrivalSession) {
     Minecraft minecraft = Minecraft.getInstance();
     if (minecraft.player == null || minecraft.getConnection() == null
         || !minecraft.player.getUUID().equals(message.targetPlayerId())) return;
     var runtime = Forge1201ClientFileCheckClientRuntime.transfers();
-    ClientFileCheckTaskCoordinator.Session session =
-        Forge1201ClientFileCheckClientRuntime.currentOrBegin(
-            minecraft.getConnection(), minecraft.player.getUUID());
+    var requestResult = runtime.receiveRequest(message, arrivalSession);
+    if (requestResult == CheckedFileTransferClientCoordinator.RequestResult.IGNORED_STALE_SESSION
+        || requestResult == CheckedFileTransferClientCoordinator.RequestResult.INVALID
+        || requestResult == CheckedFileTransferClientCoordinator.RequestResult.CLOSED) return;
+    ClientFileCheckTaskCoordinator.Session session = arrivalSession;
     var entry = Forge1201ClientFileCheckClientRuntime.manifest().find(
         new CheckedFileTransferManifestCache.Key(
             message.requesterPlayerId(), message.checkType(), message.fileName()),
         System.nanoTime());
     if (entry.isEmpty()) {
+      runtime.cancelRequest(message, session);
       sendIfCurrent(session, CheckedFileTransferOutgoing.control(message,
           CheckedFileTransferControl.error(CheckedFileTransferControlStatus.FAILED, "STALE_CHECK")));
       return;
     }
-    var result = runtime.outgoing().receive(message, session);
-    if (result == CheckedFileTransferOutgoing.BeginResult.OPEN) {
+    if (requestResult == CheckedFileTransferClientCoordinator.RequestResult.OPEN) {
       minecraft.setScreen(new Consent(message, entry.get(), session));
-    } else if (result == CheckedFileTransferOutgoing.BeginResult.CONSENT_BUSY) {
+    } else if (requestResult == CheckedFileTransferClientCoordinator.RequestResult.CONSENT_BUSY) {
       sendIfCurrent(session, CheckedFileTransferOutgoing.control(message,
           CheckedFileTransferControl.error(CheckedFileTransferControlStatus.FAILED, "CONSENT_BUSY")));
     }
   }
 
-  static void control(CheckedFileTransferControlResponseMessage message) {
+  static void control(
+      CheckedFileTransferControlResponseMessage message,
+      ClientFileCheckTaskCoordinator.Session arrivalSession) {
     Minecraft minecraft = Minecraft.getInstance();
     if (minecraft.player == null || minecraft.getConnection() == null) return;
     var coordinator = Forge1201ClientFileCheckClientRuntime.transfers();
-    var result = coordinator.control(message,
-        minecraft.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"),
-        System.nanoTime());
+    var result = coordinator.control(
+        message, arrivalSession, minecraft.gameDirectory.toPath(), System.nanoTime());
     if (result == CheckedFileTransferClientCoordinator.IncomingResult.COMPLETE
         && coordinator.completedArtifact() != null) {
       minecraft.setScreen(new Result(coordinator.completedArtifact()));
+    } else if (result == CheckedFileTransferClientCoordinator.IncomingResult.TERMINAL
+        && coordinator.terminalResult() != null) {
+      minecraft.setScreen(new Terminal(coordinator.terminalResult()));
     }
   }
 
-  static void chunk(CheckedFileTransferChunkResponseMessage message) {
-    Forge1201ClientFileCheckClientRuntime.transfers().chunk(message);
+  static void chunk(
+      CheckedFileTransferChunkResponseMessage message,
+      ClientFileCheckTaskCoordinator.Session arrivalSession) {
+    Forge1201ClientFileCheckClientRuntime.transfers().chunk(message, arrivalSession);
   }
 
   private static boolean current(ClientFileCheckTaskCoordinator.Session session) {
+    if (session == null) return false;
     var current = Forge1201ClientFileCheckClientRuntime.transfers().currentSession();
     return current != null && current.generation() == session.generation()
         && current.connectionIdentity() == session.connectionIdentity()
@@ -96,28 +108,36 @@ final class Forge1201CheckedFileTransferClient {
     }
 
     @Override protected void init() {
-      if (width < 32 || height < 55) return;
-      int buttonWidth = Math.min(100, Math.max(1, (width - 15) / 2));
-      int total = buttonWidth * 2 + 5;
-      int left = Math.max(0, (width - total) / 2);
-      int y = Math.max(0, height - 25);
+      var actions = CheckedFileTransferLayout.twoActions(width, height);
+      if (actions.primary() == null) return;
       addRenderableWidget(Button.builder(Component.translatable("button.transfer.allow"), b -> allow())
-          .bounds(left, y, buttonWidth, Math.min(20, height - y)).build());
+          .bounds(actions.primary().x(), actions.primary().y(), actions.primary().width(), actions.primary().height()).build());
       addRenderableWidget(Button.builder(Component.translatable("button.transfer.decline"), b -> decline())
-          .bounds(left + buttonWidth + 5, y, buttonWidth, Math.min(20, height - y)).build());
+          .bounds(actions.secondary().x(), actions.secondary().y(), actions.secondary().width(), actions.secondary().height()).build());
     }
 
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
       renderBackground(graphics); super.render(graphics, mouseX, mouseY, partialTick);
-      graphics.drawCenteredString(font, title, width / 2, Math.min(18, Math.max(0, height - 1)), 0xffffff);
-      if (width >= 64 && height >= 110) {
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.requester", request.requesterPlayerName()), 4, 42, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.type", request.checkType().id()), 4, 54, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.file", request.fileName()), 4, 66, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.size", entry.size()), 4, 78, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.hash", entry.sha256()), 4, 90, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_consent.warning"), 4, 102, 0xccaa66);
-      }
+      graphics.drawCenteredString(font, title, width / 2,
+          Math.min(18, Math.max(0, height - font.lineHeight)), 0xffffff);
+      var actions = CheckedFileTransferLayout.twoActions(width, height);
+      int rows = CheckedFileTransferLayout.visibleRows(
+          width, height, 64, 38, 12, 6, actions.primary());
+      int maxCharacters = Math.max(4, (width - 8) / 6);
+      if (rows >= 1) graphics.drawString(font, Component.translatable(
+          "screen.transfer_consent.requester", request.requesterPlayerName()), 4, 38, 0xdddddd);
+      if (rows >= 2) graphics.drawString(font, Component.translatable(
+          "screen.transfer_consent.type", request.checkType().id()), 4, 50, 0xdddddd);
+      if (rows >= 3) graphics.drawString(font, Component.translatable(
+          "screen.transfer_consent.file",
+          CheckedFileTransferLayout.truncate(request.fileName(), maxCharacters)), 4, 62, 0xdddddd);
+      if (rows >= 4) graphics.drawString(font, Component.translatable(
+          "screen.transfer_consent.size", entry.size()), 4, 74, 0xdddddd);
+      if (rows >= 5) graphics.drawString(font, Component.translatable(
+          "screen.transfer_consent.hash",
+          CheckedFileTransferLayout.truncate(entry.sha256(), maxCharacters)), 4, 86, 0xdddddd);
+      if (rows >= 6) graphics.drawString(font,
+          Component.translatable("screen.transfer_consent.warning"), 4, 98, 0xccaa66);
     }
 
     private void allow() {
@@ -128,7 +148,7 @@ final class Forge1201CheckedFileTransferClient {
       coordinator.outgoing().allow(request, session,
           deadline -> CheckedFileSnapshotter.create(minecraft.gameDirectory.toPath(), request.checkType(),
               request.fileName(), entry.size(), entry.sha256(),
-              minecraft.gameDirectory.toPath().resolve("economy_system").resolve("transfer-temp"),
+              coordinator.temporaryDirectory(minecraft.gameDirectory.toPath()),
               deadline, coordinator.tempBudget()),
           (activeSession, token, outgoing) -> sendIfCurrent(activeSession, outgoing));
       minecraft.setScreen(null);
@@ -149,40 +169,106 @@ final class Forge1201CheckedFileTransferClient {
   }
 
   private static final class Result extends Screen {
-    private final CheckedFileTransferReceivedArtifact artifact;
+    private final CheckedFileTransferReceivedArtifact expectedArtifact;
     private String errorKey;
-    Result(CheckedFileTransferReceivedArtifact artifact) {
-      super(Component.translatable("screen.transfer_result.title")); this.artifact = artifact;
+    Result(CheckedFileTransferReceivedArtifact expectedArtifact) {
+      super(Component.translatable("screen.transfer_result.title"));
+      this.expectedArtifact = expectedArtifact;
     }
     @Override protected void init() {
-      if (width < 32 || height < 55) return;
-      int buttonWidth = Math.min(100, Math.max(1, (width - 15) / 2));
-      int total = buttonWidth * 2 + 5; int left = Math.max(0, (width - total) / 2);
-      int y = Math.max(0, height - 25);
+      var actions = CheckedFileTransferLayout.twoActions(width, height);
+      if (actions.primary() == null) return;
       addRenderableWidget(Button.builder(Component.translatable("button.transfer.save"), b -> save())
-          .bounds(left, y, buttonWidth, Math.min(20, height - y)).build());
+          .bounds(actions.primary().x(), actions.primary().y(), actions.primary().width(), actions.primary().height()).build());
       addRenderableWidget(Button.builder(Component.translatable("button.transfer.discard"), b -> discard())
-          .bounds(left + buttonWidth + 5, y, buttonWidth, Math.min(20, height - y)).build());
+          .bounds(actions.secondary().x(), actions.secondary().y(), actions.secondary().width(), actions.secondary().height()).build());
     }
     @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
       renderBackground(graphics); super.render(graphics, mouseX, mouseY, partialTick);
+      var artifact = Forge1201ClientFileCheckClientRuntime.transfers().completedArtifact();
+      if (artifact == null || artifact != expectedArtifact) return;
       var metadata = artifact.metadata();
-      graphics.drawCenteredString(font, title, width / 2, Math.min(18, Math.max(0, height - 1)), 0xffffff);
-      if (width >= 64 && height >= 90) {
-        graphics.drawString(font, Component.translatable("screen.transfer_result.source", metadata.targetPlayerName()), 4, 42, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_result.file", metadata.fileName()), 4, 54, 0xdddddd);
-        graphics.drawString(font, Component.translatable("screen.transfer_result.size", metadata.byteLength()), 4, 66, 0xdddddd);
-        if (errorKey != null) graphics.drawString(font, Component.translatable(errorKey), 4, 78, 0xff7777);
+      graphics.drawCenteredString(font, title, width / 2,
+          Math.min(18, Math.max(0, height - font.lineHeight)), 0xffffff);
+      var actions = CheckedFileTransferLayout.twoActions(width, height);
+      int rows = CheckedFileTransferLayout.visibleRows(
+          width, height, 64, 38, 12, 7, actions.primary());
+      int maxCharacters = Math.max(4, (width - 8) / 6);
+      if (rows >= 1) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.source", metadata.targetPlayerName()), 4, 38, 0xdddddd);
+      if (rows >= 2) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.type", metadata.checkType().id()), 4, 50, 0xdddddd);
+      if (rows >= 3) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.file",
+          CheckedFileTransferLayout.truncate(metadata.fileName(), maxCharacters)), 4, 62, 0xdddddd);
+      if (rows >= 4) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.size", metadata.byteLength()), 4, 74, 0xdddddd);
+      if (rows >= 5) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.hash",
+          CheckedFileTransferLayout.truncate(metadata.sha256(), maxCharacters)), 4, 86, 0xdddddd);
+      if (rows >= 6) graphics.drawString(font, Component.translatable(
+          "screen.transfer_result.state",
+          Component.translatable(CheckedFileTransferUiText.artifactStateKey(artifact.state()))),
+          4, 98, 0xdddddd);
+      if (rows >= 7 && errorKey != null) {
+        graphics.drawString(font, Component.translatable(errorKey), 4, 110, 0xff7777);
       }
     }
     private void save() {
-      var result = new CheckedFileTransferSaveService(Minecraft.getInstance().gameDirectory.toPath()).save(artifact);
+      var coordinator = Forge1201ClientFileCheckClientRuntime.transfers();
+      if (coordinator.completedArtifact() != expectedArtifact) {
+        Minecraft.getInstance().setScreen(null);
+        return;
+      }
+      var result = coordinator.saveCompleted(Minecraft.getInstance().gameDirectory.toPath());
       if (result.success()) Minecraft.getInstance().setScreen(null);
-      else errorKey = result.code() == CheckedFileTransferSaveService.ResultCode.SAVE_NAME_EXHAUSTED
-          ? "message.transfer.save_name_exhausted" : "message.transfer.save_parent_unsafe";
+      else errorKey = CheckedFileTransferUiText.saveErrorKey(result.code());
     }
-    private void discard() { artifact.discard(); Minecraft.getInstance().setScreen(null); }
+    private void discard() {
+      var coordinator = Forge1201ClientFileCheckClientRuntime.transfers();
+      if (coordinator.completedArtifact() != expectedArtifact) {
+        Minecraft.getInstance().setScreen(null);
+        return;
+      }
+      var result = coordinator.discardCompleted();
+      if (result.success()) Minecraft.getInstance().setScreen(null);
+      else errorKey = CheckedFileTransferUiText.discardErrorKey(result.code());
+    }
     @Override public void onClose() { discard(); }
-    @Override public void removed() { if (artifact.isPendingDecision()) artifact.discard(); }
+    @Override public void removed() { }
+  }
+
+  private static final class Terminal extends Screen {
+    private final CheckedFileTransferClientCoordinator.TerminalResult terminal;
+
+    Terminal(CheckedFileTransferClientCoordinator.TerminalResult terminal) {
+      super(Component.translatable("screen.transfer_terminal.title"));
+      this.terminal = terminal;
+    }
+
+    @Override protected void init() {
+      var close = CheckedFileTransferLayout.closeAction(width, height);
+      if (close == null) return;
+      addRenderableWidget(Button.builder(Component.translatable("button.transfer.close"), b -> onClose())
+          .bounds(close.x(), close.y(), close.width(), close.height()).build());
+    }
+
+    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+      renderBackground(graphics); super.render(graphics, mouseX, mouseY, partialTick);
+      graphics.drawCenteredString(font, title, width / 2,
+          Math.min(18, Math.max(0, height - font.lineHeight)), 0xffffff);
+      var close = CheckedFileTransferLayout.closeAction(width, height);
+      int rows = CheckedFileTransferLayout.visibleRows(width, height, 64, 38, 12, 2, close);
+      if (rows >= 1) graphics.drawString(font, Component.translatable(
+          "screen.transfer_terminal.status",
+          Component.translatable(CheckedFileTransferUiText.terminalStatusKey(terminal.status()))),
+          4, 38, 0xff7777);
+      if (rows >= 2) graphics.drawString(font, Component.translatable(
+          "screen.transfer_terminal.reason",
+          Component.translatable(CheckedFileTransferUiText.errorKey(terminal.errorCode()))),
+          4, 50, 0xff7777);
+    }
+
+    @Override public void onClose() { Minecraft.getInstance().setScreen(null); }
   }
 }

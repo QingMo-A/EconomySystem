@@ -15,6 +15,15 @@ import java.util.UUID;
 
 /** Server-scoped ordered streaming state. File content is never accumulated. */
 public final class CheckedFileTransferStore {
+  interface DigestSupport {
+    MessageDigest create();
+    MessageDigest copy(MessageDigest source);
+  }
+
+  private static final DigestSupport DEFAULT_DIGEST_SUPPORT = new DigestSupport() {
+    @Override public MessageDigest create() { return digest(); }
+    @Override public MessageDigest copy(MessageDigest source) { return cloneDigest(source); }
+  };
   public enum State {
     AWAITING_TARGET_RESPONSE, READY_FORWARDING, STREAMING, CHUNK_FORWARDING, FINALIZING
   }
@@ -74,6 +83,7 @@ public final class CheckedFileTransferStore {
   }
 
   private final int capacity;
+  private final DigestSupport digestSupport;
   private final LinkedHashMap<Key, Active> active = new LinkedHashMap<>();
   private final Map<UUID, Key> transferIds = new HashMap<>();
   private final LinkedHashMap<UUID, Long> targetCooldown = new LinkedHashMap<>();
@@ -83,8 +93,14 @@ public final class CheckedFileTransferStore {
 
   public CheckedFileTransferStore() { this(EconomyNetworkLimits.MAX_PENDING_FILE_TRANSFERS); }
   public CheckedFileTransferStore(int capacity) {
+    this(capacity, DEFAULT_DIGEST_SUPPORT, 1);
+  }
+  CheckedFileTransferStore(int capacity, DigestSupport digestSupport, long initialClaimToken) {
     if (capacity < 1) throw new IllegalArgumentException("capacity");
+    if (initialClaimToken < 1) throw new IllegalArgumentException("claim token");
     this.capacity = Math.min(capacity, EconomyNetworkLimits.MAX_ACTIVE_FILE_TRANSFERS);
+    this.digestSupport = Objects.requireNonNull(digestSupport, "digest support");
+    this.nextClaimToken = initialClaimToken;
   }
 
   public synchronized Result create(Pending pending, long tick) {
@@ -147,7 +163,15 @@ public final class CheckedFileTransferStore {
     CheckedFileTransferControl control = claim.control();
     current.transferId = control.transferId();
     current.total = control.totalChunks();
-    current.digest = digest();
+    try {
+      current.digest = digestSupport.create();
+    } catch (RuntimeException failure) {
+      consume(claim.key());
+      return Result.INVALID_METADATA;
+    } catch (Error failure) {
+      consume(claim.key());
+      throw failure;
+    }
     current.state = current.total == 0 ? State.FINALIZING : State.STREAMING;
     transferIds.put(current.transferId, claim.key());
     return current.total == 0 ? Result.COMPLETE : Result.READY;
@@ -178,7 +202,16 @@ public final class CheckedFileTransferStore {
       return new PrepareChunk(Result.INVALID_CHUNK, null);
     }
     boolean terminal = index + 1 == total;
-    MessageDigest candidate = cloneDigest(current.digest);
+    MessageDigest candidate;
+    try {
+      candidate = digestSupport.copy(current.digest);
+    } catch (RuntimeException failure) {
+      consume(key);
+      return new PrepareChunk(Result.INVALID_CHUNK, null);
+    } catch (Error failure) {
+      consume(key);
+      throw failure;
+    }
     candidate.update(raw);
     long byteLength = current.received + raw.length;
     String hash = terminal ? HexFormat.of().formatHex(candidate.digest()) : null;
@@ -250,19 +283,21 @@ public final class CheckedFileTransferStore {
         && current.pending.requesterName().equals(requesterName);
   }
   public synchronized void discardTarget(UUID targetId) {
-    active.keySet().removeIf(key -> {
-      if (!key.targetPlayerId().equals(targetId)) return false;
-      removeTransferIndex(active.get(key));
-      return true;
-    });
+    var removed = active.keySet().stream()
+        .filter(key -> key.targetPlayerId().equals(targetId)).toList();
+    for (Key key : removed) {
+      consume(key);
+      requesterCooldown.remove(key.requesterPlayerId());
+    }
     targetCooldown.remove(targetId);
   }
   public synchronized void discardRequester(UUID requesterId) {
-    active.keySet().removeIf(key -> {
-      if (!key.requesterPlayerId().equals(requesterId)) return false;
-      removeTransferIndex(active.get(key));
-      return true;
-    });
+    var removed = active.keySet().stream()
+        .filter(key -> key.requesterPlayerId().equals(requesterId)).toList();
+    for (Key key : removed) {
+      consume(key);
+      targetCooldown.remove(key.targetPlayerId());
+    }
     requesterCooldown.remove(requesterId);
   }
   public synchronized void clear() {
@@ -314,7 +349,15 @@ public final class CheckedFileTransferStore {
     while (targetCooldown.size() > limit) targetCooldown.remove(targetCooldown.keySet().iterator().next());
     while (requesterCooldown.size() > limit) requesterCooldown.remove(requesterCooldown.keySet().iterator().next());
   }
-  private long claimToken() { if (nextClaimToken == Long.MAX_VALUE) nextClaimToken = 1; return nextClaimToken++; }
+  private long claimToken() {
+    for (int attempts = 0; attempts <= active.size(); attempts++) {
+      long candidate = nextClaimToken;
+      nextClaimToken = nextClaimToken == Long.MAX_VALUE ? 1 : nextClaimToken + 1;
+      boolean inUse = active.values().stream().anyMatch(value -> value.claimToken == candidate);
+      if (!inUse) return candidate;
+    }
+    throw new IllegalStateException("claim token space exhausted");
+  }
   private static MessageDigest digest() {
     try { return MessageDigest.getInstance("SHA-256"); }
     catch (NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }

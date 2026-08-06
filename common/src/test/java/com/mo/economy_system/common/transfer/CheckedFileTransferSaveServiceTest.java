@@ -18,22 +18,20 @@ class CheckedFileTransferSaveServiceTest {
 
   @Test
   void savesOriginalNameAndUsesNoReplaceCollisionNaming() throws Exception {
-    Path firstPart = gameDirectory.resolve("first.part");
-    Files.write(firstPart, new byte[] {1});
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(gameDirectory);
     UUID targetId = UUID.randomUUID();
     CheckedFileTransferSaveService service = new CheckedFileTransferSaveService(gameDirectory);
-    CheckedFileTransferReceivedArtifact first = artifact(firstPart, targetId, 1);
+    CheckedFileTransferReceivedArtifact first = artifact(temp, targetId, 1, new byte[] {1});
     CheckedFileTransferSaveService.Result firstResult = service.save(first);
     assertEquals(CheckedFileTransferSaveService.ResultCode.SAVED, firstResult.code());
     assertTrue(firstResult.savedPath().getFileName().toString().equals("mod.jar"));
 
-    Path secondPart = gameDirectory.resolve("second.part");
-    Files.write(secondPart, new byte[] {2});
-    CheckedFileTransferReceivedArtifact second = artifact(secondPart, targetId, 1);
+    CheckedFileTransferReceivedArtifact second = artifact(temp, targetId, 1, new byte[] {2});
     CheckedFileTransferSaveService.Result secondResult = service.save(second);
     assertEquals(CheckedFileTransferSaveService.ResultCode.SAVED, secondResult.code());
     assertEquals("mod-1.jar", secondResult.savedPath().getFileName().toString());
     assertArrayEquals(new byte[] {1}, Files.readAllBytes(firstResult.savedPath()));
+    temp.close();
   }
 
   @Test
@@ -41,49 +39,60 @@ class CheckedFileTransferSaveServiceTest {
     UUID targetId = UUID.randomUUID();
     CheckedFileTransferSaveService service =
         new CheckedFileTransferSaveService(gameDirectory, 2);
-    Path firstPart = gameDirectory.resolve("first.part");
-    Files.write(firstPart, new byte[] {1});
-    CheckedFileTransferReceivedArtifact first = artifact(firstPart, targetId, 1);
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(gameDirectory);
+    CheckedFileTransferReceivedArtifact first = artifact(temp, targetId, 1, new byte[] {1});
     assertEquals(
         CheckedFileTransferSaveService.ResultCode.SAVED, service.save(first).code());
 
-    Path secondPart = gameDirectory.resolve("second.part");
-    Files.write(secondPart, new byte[] {2});
-    CheckedFileTransferReceivedArtifact second = artifact(secondPart, targetId, 1);
+    CheckedFileTransferReceivedArtifact second = artifact(temp, targetId, 1, new byte[] {2});
     assertEquals(
         CheckedFileTransferSaveService.ResultCode.SAVED, service.save(second).code());
 
-    Path thirdPart = gameDirectory.resolve("third.part");
-    Files.write(thirdPart, new byte[] {3});
-    CheckedFileTransferReceivedArtifact third = artifact(thirdPart, targetId, 1);
+    CheckedFileTransferReceivedArtifact third = artifact(temp, targetId, 1, new byte[] {3});
     assertEquals(
         CheckedFileTransferSaveService.ResultCode.SAVE_NAME_EXHAUSTED,
         service.save(third).code());
     assertEquals(CheckedFileTransferReceivedArtifact.State.PENDING_DECISION, third.state());
     assertTrue(Files.exists(third.path()));
+    third.discard();
+    temp.close();
   }
 
   @Test
   void rejectsSymlinkParentWithoutMovingArtifact() throws Exception {
+    CheckedFileTransferTempDirectory temp = CheckedFileTransferTestSupport.open(gameDirectory);
+    CheckedFileTransferTempDirectory.OwnedFile part =
+        CheckedFileTransferTestSupport.part(temp, new byte[] {1});
     Path outside = Files.createDirectory(gameDirectory.resolve("outside"));
-    Path link = gameDirectory.resolve("economy_system");
+    Path link = gameDirectory.resolve("economy_system").resolve("received-check-files");
     try {
       Files.createSymbolicLink(link, outside);
     } catch (UnsupportedOperationException | IOException | SecurityException unsupported) {
+      part.delete();
+      temp.close();
       assumeTrue(false, "symbolic links unavailable");
       return;
     }
-    Path part = gameDirectory.resolve("symlink.part");
-    Files.write(part, new byte[] {1});
-    CheckedFileTransferReceivedArtifact artifact = artifact(part, UUID.randomUUID(), 1);
+    CheckedFileTransferReceivedArtifact artifact = artifact(UUID.randomUUID(), 1, part);
     CheckedFileTransferSaveService.Result result =
         new CheckedFileTransferSaveService(gameDirectory).save(artifact);
     assertEquals(CheckedFileTransferSaveService.ResultCode.SAVE_PARENT_UNSAFE, result.code());
     assertEquals(CheckedFileTransferReceivedArtifact.State.PENDING_DECISION, artifact.state());
-    assertTrue(Files.exists(part));
+    assertTrue(Files.exists(part.path()));
+    artifact.discard();
+    temp.close();
   }
 
-  private CheckedFileTransferReceivedArtifact artifact(Path part, UUID targetId, long size) {
+  private CheckedFileTransferReceivedArtifact artifact(
+      CheckedFileTransferTempDirectory temp, UUID targetId, long size, byte[] bytes)
+      throws IOException {
+    return artifact(targetId, size, CheckedFileTransferTestSupport.part(temp, bytes));
+  }
+
+  private CheckedFileTransferReceivedArtifact artifact(
+      UUID targetId,
+      long size,
+      CheckedFileTransferTempDirectory.OwnedFile part) {
     CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(2, 10);
     CheckedFileTransferTempBudget.Reservation reservation = budget.reserve(size);
     return new CheckedFileTransferReceivedArtifact(

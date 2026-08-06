@@ -34,8 +34,8 @@ baseline. Code from the historical `1.20.1` branch may be consulted for API
 shape only; obsolete handlers and removed server systems are not restored.
 
 Messages without an implemented Forge codec fail explicitly instead of being
-silently dropped. In particular, legacy `check/get/chunk` messages (`23-30`)
-are intentionally excluded pending a security redesign.
+silently dropped. The checked-file check and transfer messages in protocols
+23-30 are implemented below; protocol 31 and later remain legacy.
 
 ## ItemStack snapshot bridge
 
@@ -88,7 +88,7 @@ Protocols 12 through 19 are migrated on both targets. Territory request 17 carri
 the request ID and response 18 uses explicit, bounded snapshots instead of Territory NBT.
 Forge captures its existing `territory_data` persistence into full owned snapshots and
 minimal authorized summaries; its codec enforces the shared 1 MiB budgets. Protocol 19 is the
-UUID-only teleport transaction described below. Protocol 20 uses the common 32-byte territory/target UUID invite request and a server-scoped expiring store. Forge invite acceptance performs a guarded raw-NBT `AuthorizedPlayers` mutation while retaining unknown fields. Protocols 17-21 are migrated; protocol 22 and later remain legacy.
+UUID-only teleport transaction described below. Protocol 20 uses the common 32-byte territory/target UUID invite request and a server-scoped expiring store. Forge invite acceptance performs a guarded raw-NBT `AuthorizedPlayers` mutation while retaining unknown fields. Protocols 17-22 are migrated; protocol 23 and later remain legacy.
 Protocol-20 finalization uses token claims, raw-NBT exact request lookup, canonical bilingual keys, and an owned-row invite button. Player-list revision drives fresh loading/empty state and a 15-tick debounce blocks duplicate sends. Malformed or duplicate raw territory records map to CREATE_FAILED. Forge Chinese non-invite translations were restored from the pre-protocol-20 baseline.
 Protocol 14 is hardened with real failure reporting, expected-order delivery, exact supplier credit,
 independent payment/inventory compensation, display-name fallback, and shared inventory contract tests.
@@ -156,29 +156,29 @@ Full player AABB world-border/collision checks precede teleport. Only an expirin
 ticket is used. Protocol 20 is complete. Protocol 21 removes a territory from the authoritative raw
 `territory_data` NBT with strict copy-on-write validation, preserving unknown fields and record order; dirty-mark
 failure rolls back before reporting retry-safe failure. The wire is only the 16-byte UUID and the server sender
-is the owner authority. Protocol 22+ remains legacy.
+is the owner authority. Protocol 23+ remains legacy.
 
 Protocol-21 final integration classifies repository failures explicitly instead of parsing exception text. The
 removal limiter and invitation cleanup share one overworld game-time value. NeoForge's resize transaction uses
 an authoritative prepare/commit plan: cached session area is preview-only, equal-area reshapes are free,
 UNCHANGED avoids persistence, and uncertain mutation is never refunded. QuadTree validation includes storage
-path and representative spatial queries. Forge has no legacy resize-session state. Protocol 22+ remains legacy.
+path and representative spatial queries. Forge has no legacy resize-session state. Protocol 23+ remains legacy.
 
 Protocols 23-25 now provide the complete Forge client-file-check chain: `/check`, canonical channel
 registrations, authenticated pending-result handling, an explicit consent screen, safe fixed-root streaming
 scanner, and a searchable/scrollable comparison result screen. Opening consent performs no disk access; allow,
-decline and ESC are one-shot. Remote JSON is displayed but never written to disk. Protocol 26+ remains legacy.
+decline and ESC are one-shot. Remote JSON is displayed but never written to disk. Protocols 26-30 are implemented below; protocol 31+ remains legacy.
 
 The Forge 23-25 client creates its scanner runtime per network generation and closes it on logout or shutdown.
 Stale scans cannot send into a later connection or update a closed result page. DECLINED/FAILED responses do not
 trigger a local scan. Both loaders route C2S results through one common one-shot service. Current verified counts
 are recorded from the final build below. Both loaders use one shared session dispatcher. Consent remains owned
 until terminal sending finishes, root replacement fails
-closed, and the result page renders loading/busy/failed/ready plus every skipped row. Protocol 26+ remains legacy.
-Forge uses the shared local-result controller: SUCCESS compares normally, FAILED retains its error without fake ONLY_REMOTE rows, and TRUNCATED is READY_INCOMPLETE with skipped/error details and a warning. Scanner task callbacks carry their pre-created token; dispatch/callback failures terminate and clear common state. Files are scanned only through a SecureDirectoryStream whose opened-handle attributes match the precheck identity. Unsupported providers fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocol 26+ remains legacy.
+closed, and the result page renders loading/busy/failed/ready plus every skipped row. Protocols 26-30 are implemented below; protocol 31+ remains legacy.
+Forge uses the shared local-result controller: SUCCESS compares normally, FAILED retains its error without fake ONLY_REMOTE rows, and TRUNCATED is READY_INCOMPLETE with skipped/error details and a warning. Scanner task callbacks carry their pre-created token; dispatch/callback failures terminate and clear common state. Files are scanned only through a SecureDirectoryStream whose opened-handle attributes match the precheck identity. Unsupported providers fail closed as DIRECTORY_PROVIDER_UNSAFE. Protocols 26-30 are implemented below; protocol 31+ remains legacy.
 
 Forge now registers canonical protocols 26-30 as the five common checked-file transfer messages. `/get` requires a delivered recent-check authorization and creates server-scoped bounded state. The target separately consents; a SecureDirectoryStream snapshot is streamed in 18,000-byte chunks, while the requester writes a private part file and explicitly saves without overwrite or discards it. Unsupported providers fail closed, and no file is automatically written into the game root or loader directories. Protocol 31+ remains legacy.
 
 The hardened Forge adapter uses the shared protocol 26-30 transaction rules: atomic manifest replacement, target/requester single-active limits, unique transfer IDs, authenticated-target-first validation, one-shot forwarding claims, and failure consumption before diagnostics. Client `COMPLETE` is invalid; only the server emits terminal `COMPLETE` after the final chunk is verified and forwarded. Temporary files are budgeted and managed through explicit save/discard lifecycle, and saving never replaces an existing file or follows a symlink parent. Protocol 31+ remains legacy.
 
-Final verified counts: 360 shared-source tests, 436 Forge tests, 496 NeoForge tests.
+Final lifecycle hardening verification: 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests. Historical transaction-hardening baseline: 382 shared-source methods, 459 Forge tests, and 519 NeoForge tests.

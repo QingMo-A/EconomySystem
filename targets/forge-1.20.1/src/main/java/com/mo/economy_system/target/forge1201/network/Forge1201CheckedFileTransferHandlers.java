@@ -6,6 +6,8 @@ import com.mo.economy_system.common.network.CheckedFileTransferControlRequestMes
 import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMessage;
 import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
 import com.mo.economy_system.common.transfer.CheckedFileTransferRoutingService;
+import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
+import com.mo.economy_system.target.forge1201.client.Forge1201ClientFileCheckClientRuntime;
 import java.util.function.Supplier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -54,19 +56,25 @@ final class Forge1201CheckedFileTransferHandlers {
   static void request(CheckedFileTransferRequestMessage message,
                       Supplier<NetworkEvent.Context> supplied) {
     NetworkEvent.Context context = supplied.get();
-    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.request(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        Forge1201ClientFileCheckClientRuntime.captureArrival(context.getNetworkManager());
+    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.request(message, arrival));
     context.setPacketHandled(true);
   }
   static void controlResponse(CheckedFileTransferControlResponseMessage message,
                               Supplier<NetworkEvent.Context> supplied) {
     NetworkEvent.Context context = supplied.get();
-    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.control(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        Forge1201ClientFileCheckClientRuntime.captureArrival(context.getNetworkManager());
+    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.control(message, arrival));
     context.setPacketHandled(true);
   }
   static void chunkResponse(CheckedFileTransferChunkResponseMessage message,
                             Supplier<NetworkEvent.Context> supplied) {
     NetworkEvent.Context context = supplied.get();
-    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.chunk(message));
+    ClientFileCheckTaskCoordinator.Session arrival =
+        Forge1201ClientFileCheckClientRuntime.captureArrival(context.getNetworkManager());
+    context.enqueueWork(() -> Forge1201CheckedFileTransferClient.chunk(message, arrival));
     context.setPacketHandled(true);
   }
 }

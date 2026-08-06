@@ -8,9 +8,7 @@ import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -90,15 +88,17 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
   private final long expectedSize;
   private final String expectedHash;
   private final int total;
-  private final Path path;
+  private final CheckedFileTransferTempDirectory tempDirectory;
+  private final boolean closeTempDirectory;
+  private final CheckedFileTransferTempDirectory.OwnedFile part;
   private final CheckedFileTransferTempBudget.Reservation reservation;
   private final ClientFileCheckTaskCoordinator.Session session;
   private final Metadata metadata;
   private final long deadlineNanos;
-  private final SeekableByteChannel channel;
   private final MessageDigest digest;
   private int next;
   private long received;
+  private boolean ownershipTransferred;
   private State state = State.RECEIVING;
 
   /** Compatibility constructor retained for existing loader adapters. */
@@ -110,9 +110,11 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
         size,
         hash,
         totalChunks,
-        directory,
+        CheckedFileTransferTempDirectory.openFixedRoot(directory),
+        true,
         null,
-        Long.MAX_VALUE);
+        Long.MAX_VALUE,
+        null);
   }
 
   /** Compatibility overload for callers that already track session identity separately. */
@@ -132,7 +134,8 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
         size,
         hash,
         totalChunks,
-        directory,
+        CheckedFileTransferTempDirectory.openFixedRoot(directory),
+        true,
         Objects.requireNonNull(budget, "temp budget"),
         deadlineNanos,
         session);
@@ -152,7 +155,29 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
         metadata.byteLength(),
         metadata.sha256(),
         metadata.totalChunks(),
-        directory,
+        CheckedFileTransferTempDirectory.openFixedRoot(directory),
+        true,
+        Objects.requireNonNull(budget, "temp budget"),
+        deadlineNanos,
+        session);
+  }
+
+  /** Creates a session-bound stream in a caller-owned secure temp directory. */
+  public CheckedFileTransferIncoming(
+      Metadata metadata,
+      ClientFileCheckTaskCoordinator.Session session,
+      CheckedFileTransferTempDirectory tempDirectory,
+      CheckedFileTransferTempBudget budget,
+      long deadlineNanos)
+      throws IOException {
+    this(
+        metadata,
+        metadata.transferId(),
+        metadata.byteLength(),
+        metadata.sha256(),
+        metadata.totalChunks(),
+        Objects.requireNonNull(tempDirectory, "temp directory"),
+        false,
         Objects.requireNonNull(budget, "temp budget"),
         deadlineNanos,
         session);
@@ -164,20 +189,8 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
       long size,
       String hash,
       int totalChunks,
-      Path directory,
-      CheckedFileTransferTempBudget budget,
-      long deadlineNanos)
-      throws IOException {
-    this(metadata, transferId, size, hash, totalChunks, directory, budget, deadlineNanos, null);
-  }
-
-  private CheckedFileTransferIncoming(
-      Metadata metadata,
-      UUID transferId,
-      long size,
-      String hash,
-      int totalChunks,
-      Path directory,
+      CheckedFileTransferTempDirectory tempDirectory,
+      boolean closeTempDirectory,
       CheckedFileTransferTempBudget budget,
       long deadlineNanos,
       ClientFileCheckTaskCoordinator.Session session)
@@ -195,6 +208,8 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
     this.total = totalChunks;
     this.metadata = metadata;
     this.session = session;
+    this.tempDirectory = Objects.requireNonNull(tempDirectory, "temp directory");
+    this.closeTempDirectory = closeTempDirectory;
     if (deadlineNanos <= 0) throw new IllegalArgumentException("deadline");
     this.deadlineNanos = deadlineNanos;
     CheckedFileTransferTempBudget.Reservation held = null;
@@ -203,21 +218,25 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
       if (!result.success()) throw new IOException("TEMP_STORAGE_LIMIT");
       held = result.reservation();
     }
-    this.reservation = held;
+    MessageDigest createdDigest;
     try {
-      Files.createDirectories(directory);
-      path = directory.toAbsolutePath().normalize().resolve(UUID.randomUUID() + ".part");
-      channel =
-          Files.newByteChannel(
-              path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-      digest = MessageDigest.getInstance("SHA-256");
-    } catch (IOException | RuntimeException failure) {
-      if (held != null) held.release();
-      throw failure;
+      createdDigest = MessageDigest.getInstance("SHA-256");
     } catch (NoSuchAlgorithmException impossible) {
       if (held != null) held.release();
+      closeOwnedDirectoryQuietly();
       throw new IllegalStateException(impossible);
     }
+    CheckedFileTransferTempDirectory.OwnedFile createdPart;
+    try {
+      createdPart = tempDirectory.createPart();
+    } catch (IOException | RuntimeException failure) {
+      if (held != null) held.release();
+      closeOwnedDirectoryQuietly();
+      throw failure;
+    }
+    this.reservation = held;
+    this.part = createdPart;
+    this.digest = createdDigest;
   }
 
   public synchronized UUID transferId() {
@@ -257,7 +276,11 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
   }
 
   public synchronized Path path() {
-    return path;
+    return part.path();
+  }
+
+  public synchronized Path relativeName() {
+    return part.relativeName();
   }
 
   public synchronized boolean expired(long nowNanos) {
@@ -268,6 +291,19 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
     if (!expired(nowNanos)) return false;
     abortLocked();
     return true;
+  }
+
+  /** Indicates whether the part and its reservation have been cleaned up exactly. */
+  public synchronized boolean cleanupComplete() {
+    if (ownershipTransferred || !part.isOwned()) return true;
+    try {
+      part.delete();
+      if (reservation != null) reservation.release();
+      closeOwnedDirectoryQuietly();
+      return true;
+    } catch (IOException ignored) {
+      return false;
+    }
   }
 
   /** Legacy field-level append API. */
@@ -308,7 +344,7 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
     }
     ByteBuffer buffer = ByteBuffer.wrap(raw);
     while (buffer.hasRemaining()) {
-      int written = channel.write(buffer);
+      int written = part.writeChannel().write(buffer);
       if (written <= 0) fail("WRITE_FAILED");
     }
     digest.update(raw);
@@ -320,8 +356,8 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
   public synchronized Path complete(CheckedFileTransferControl control) throws IOException {
     completeInternal(control);
     state = State.COMPLETED;
-    channel.close();
-    return path;
+    part.closeWriteChannel();
+    return part.path();
   }
 
   /** Completes and retains the reservation inside a managed result artifact. */
@@ -331,27 +367,31 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
       throws IOException {
     if (metadata == null || !metadata.matches(message)) fail("INVALID_METADATA");
     completeInternal(control);
-    channel.close();
-    state = State.COMPLETED;
+    part.closeWriteChannel();
     CheckedFileTransferTempBudget.Reservation artifactReservation = reservation;
     if (artifactReservation == null) {
       CheckedFileTransferTempBudget budget = new CheckedFileTransferTempBudget(1, expectedSize);
       artifactReservation = budget.reserve(expectedSize);
     }
-    return new CheckedFileTransferReceivedArtifact(
-        path,
-        artifactReservation,
-        new CheckedFileTransferReceivedArtifact.Metadata(
-            metadata.targetPlayerName(),
-            metadata.targetPlayerId(),
-            metadata.requesterPlayerName(),
-            metadata.requesterPlayerId(),
-            metadata.checkType(),
-            metadata.fileName(),
-            metadata.transferId(),
-            metadata.byteLength(),
-            metadata.sha256(),
-            metadata.totalChunks()));
+    CheckedFileTransferReceivedArtifact artifact =
+        new CheckedFileTransferReceivedArtifact(
+            part,
+            artifactReservation,
+            new CheckedFileTransferReceivedArtifact.Metadata(
+                metadata.targetPlayerName(),
+                metadata.targetPlayerId(),
+                metadata.requesterPlayerName(),
+                metadata.requesterPlayerId(),
+                metadata.checkType(),
+                metadata.fileName(),
+                metadata.transferId(),
+                metadata.byteLength(),
+                metadata.sha256(),
+                metadata.totalChunks()));
+    ownershipTransferred = true;
+    state = State.COMPLETED;
+    closeOwnedDirectoryQuietly();
+    return artifact;
   }
 
   /** Exact session-aware completion helper. */
@@ -390,17 +430,21 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
 
   private void abortLocked() {
     try {
-      channel.close();
+      if (!ownershipTransferred && part.delete() && reservation != null) reservation.release();
     } catch (IOException ignored) {
-      // Continue deleting the private part and releasing the budget.
+      // Keep both the relative-file ownership and reservation so cleanup can be retried.
     }
-    try {
-      Files.deleteIfExists(path);
-    } catch (IOException ignored) {
-      // The coordinator has no safe path to expose; future cleanup may remove the orphan.
-    }
-    if (reservation != null) reservation.release();
     state = State.ABORTED;
+    closeOwnedDirectoryQuietly();
+  }
+
+  private void closeOwnedDirectoryQuietly() {
+    if (!closeTempDirectory) return;
+    try {
+      tempDirectory.close();
+    } catch (IOException ignored) {
+      // An owned file lease keeps the handle alive until exact cleanup completes.
+    }
   }
 
   private static boolean sameSession(
@@ -414,15 +458,11 @@ public final class CheckedFileTransferIncoming implements AutoCloseable {
 
   @Override
   public synchronized void close() {
-    if (state == State.RECEIVING) abortLocked();
-    else {
-      try {
-        channel.close();
-      } catch (IOException ignored) {
-        // Idempotent terminal cleanup.
-      }
-      if (state == State.COMPLETED) state = State.CLOSED;
-      if (reservation != null && !reservation.isReleased()) reservation.release();
+    if (!ownershipTransferred && part.isOwned()) {
+      abortLocked();
+    } else if (state == State.COMPLETED) {
+      state = State.CLOSED;
     }
+    closeOwnedDirectoryQuietly();
   }
 }
