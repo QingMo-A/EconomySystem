@@ -2,16 +2,15 @@ package com.mo.economy_system.screen;
 
 import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
+import com.mo.economy_system.common.client.ui.EconomyUiMenu;
+import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
 import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
-import com.mo.economy_system.screen.economy_system.logs.Screen_BalanceLog;
-import com.mo.economy_system.screen.economy_system.market.Screen_Market;
-import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
-import com.mo.economy_system.screen.territory_system.Screen_Territory;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211UiBridge;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -57,13 +56,7 @@ public class Screen_Home extends Screen {
         CardRenderer.UiIcon.TERRITORY,
         CardRenderer.UiIcon.ABOUT
     };
-    private static final String[] NAV_NAME_KEYS = {
-        Util_MessageKeys.HOME_SHOP_BUTTON_KEY,
-        Util_MessageKeys.HOME_MARKET_BUTTON_KEY,
-        Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY,
-        Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY,
-        Util_MessageKeys.HOME_ABOUT_BUTTON_KEY
-    };
+    private static final List<EconomyUiMenu.Entry> NAV_ITEMS = EconomyUiMenu.defaultEntries();
     private static final int[] NAV_COLORS = {
         CardRenderer.THEME_SHOP,
         CardRenderer.THEME_MARKET,
@@ -202,7 +195,7 @@ public class Screen_Home extends Screen {
             boolean isHovered = (mouseX >= cardX && mouseX <= cardX + cardWidth &&
                                 mouseY >= cardY && mouseY <= cardY + cardHeight);
             UiButtonRenderer.drawStripedButton(guiGraphics, font, cardX, cardY, cardWidth, cardHeight,
-                Component.translatable(NAV_NAME_KEYS[i]).getString(), NAV_ICONS[i], navButtonStyles[i], isHovered);
+                Component.translatable(NAV_ITEMS.get(i).labelKey()).getString(), NAV_ICONS[i], navButtonStyles[i], isHovered);
         }
     }
 
@@ -276,7 +269,8 @@ public class Screen_Home extends Screen {
         if (virtualMouseX >= balanceCardX1 && virtualMouseX <= balanceCardX2 &&
             virtualMouseY >= balanceCardY1 && virtualMouseY <= balanceCardY2) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_BalanceLog());
+                NeoForge1211UiBridge.INSTANCE.create(EconomyUiRoute.BALANCE_LOG)
+                        .ifPresent(this.minecraft::setScreen);
             }
             return true;
         }
@@ -285,7 +279,8 @@ public class Screen_Home extends Screen {
         if (virtualMouseX >= tradeCardX1 && virtualMouseX <= tradeCardX2 &&
             virtualMouseY >= tradeCardY1 && virtualMouseY <= tradeCardY2) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Market());
+                NeoForge1211UiBridge.INSTANCE.create(EconomyUiRoute.MARKET)
+                        .ifPresent(this.minecraft::setScreen);
             }
             return true;
         }
@@ -295,13 +290,8 @@ public class Screen_Home extends Screen {
 
     private void handleNavClick(int index) {
         if (this.minecraft == null) return;
-        switch (index) {
-            case 0 -> this.minecraft.setScreen(new Screen_Shop());
-            case 1 -> this.minecraft.setScreen(new Screen_Market());
-            case 2 -> this.minecraft.setScreen(new Screen_DeliveryBox());
-            case 3 -> this.minecraft.setScreen(new Screen_Territory());
-            case 4 -> this.minecraft.setScreen(new Screen_About());
-        }
+        NeoForge1211UiBridge.INSTANCE.create(NAV_ITEMS.get(index).route())
+                .ifPresent(this.minecraft::setScreen);
     }
 
     @Override

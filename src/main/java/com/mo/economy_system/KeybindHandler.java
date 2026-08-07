@@ -1,6 +1,7 @@
 package com.mo.economy_system;
 
-import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.common.client.ui.EconomyUiRoute;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211UiBridge;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
@@ -29,7 +30,8 @@ public class KeybindHandler {
         @SubscribeEvent
         public static void onKeyInput(InputEvent.Key event) {
             if (OPEN_SCREEN_KEY.consumeClick()) {
-                Minecraft.getInstance().setScreen(new Screen_Home());
+                NeoForge1211UiBridge.INSTANCE.create(EconomyUiRoute.HOME)
+                        .ifPresent(Minecraft.getInstance()::setScreen);
             }
         }
     }

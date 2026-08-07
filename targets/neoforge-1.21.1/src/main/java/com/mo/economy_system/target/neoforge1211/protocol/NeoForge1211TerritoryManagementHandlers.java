@@ -26,6 +26,8 @@ import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
 import com.mo.economy_system.item.items.Item_ClaimWand;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211SingleTerritoryClientState;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryManageScreen;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +116,11 @@ public final class NeoForge1211TerritoryManagementHandlers {
       SingleTerritoryDataResponseMessage message, IPayloadContext context) {
     context.enqueueWork(() -> {
       Minecraft minecraft = Minecraft.getInstance();
+      if (minecraft.screen instanceof NeoForge1211TerritoryManageScreen screen) {
+        NeoForge1211SingleTerritoryClientState.apply(message);
+        screen.applyResponse(message.requestId(), message);
+        return;
+      }
       if (!(minecraft.screen instanceof Screen_TerritoryBuff screen)) return;
       if (message.kind() != SingleTerritoryDataResponseKind.DATA) {
         screen.applyTerritoryResponse(message.requestId(), null);
