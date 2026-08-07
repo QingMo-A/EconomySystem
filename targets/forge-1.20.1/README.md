@@ -40,6 +40,14 @@ snapshots. The root NeoForge UI tree is intentionally not copied into this
 target; Forge supplies target-local screens for workflows that need
 version-specific rendering.
 
+Forge now also consumes the loader-neutral `common/client/ui` route model.
+`Forge1201UiBridge` is the target page factory and `Screen_Home` is its native
+1.20.1 renderer. The `I` key opens this home screen, while `O` remains the direct
+delivery-box shortcut. Delivery-box and territory routes are currently
+available; shop, market, and about are represented in the shared menu but are
+explicitly disabled until their Forge renderers are migrated. This keeps UI
+construction extensible without compiling NeoForge `Screen` classes into Forge.
+
 Gameplay is ported feature by feature from the NeoForge 1.21.1 behavior
 baseline. Code from the historical `1.20.1` branch may be consulted for API
 shape only; obsolete handlers and removed server systems are not restored.
@@ -195,3 +203,13 @@ The hardened Forge adapter uses the shared protocol 26-30 transaction rules: ato
 Historical lifecycle-hardening baseline at `70cf97b9`: 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests. Historical transaction-hardening baseline: 382 shared-source methods, 459 Forge tests, and 519 NeoForge tests.
 
 The final protocol 26-30 integrity closure sends snapshots from their creation-time exact channel and invokes Forge network callbacks outside the outgoing monitor. Active snapshot work retains the secure temp handle. Save recopies to a `CREATE_NEW` destination while checking exact size, EOF and SHA-256; verified saves with failed source deletion remain coordinator-managed as `SAVED_CLEANUP_PENDING`. Server validation failures generate authoritative protocol-28 `FAILED`, and Forge control/chunk/END-tick paths poll terminal notifications once while consent and result screens close on expiry. Current verification: 442 shared-source test methods, 521 Forge tests, and 581 NeoForge tests. Protocol 31+ remains legacy.
+
+## Common territory UI pilot
+
+`Forge1201TerritoryManageScreen` is a thin 1.20.1 shell around the common
+territory state, controller, 640x360 layout, theme, and view. It sends the same
+request, member-removal, and resize messages as NeoForge and only translates
+the semantic renderer to Forge GuiGraphics and native widgets. Paging,
+filtering, scrolling, loading/error/retry behavior, request IDs, and button
+enablement are no longer independently implemented by this target. Existing
+nested territory screens remain an explicit fallback until the next stage.

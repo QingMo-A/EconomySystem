@@ -36,6 +36,22 @@ Its IDs, directions, and Forge discriminators are append-only wire contracts.
 Target codecs and loader payload wrappers bind to that manifest rather than
 maintaining independent registration order.
 
+## Client UI bridge
+
+Client UI follows the same boundary. `common/client/ui` defines stable route IDs,
+the shared home-menu entries, and the generic `EconomyUiBridge<S>` page factory.
+It deliberately has no Minecraft, Forge, or NeoForge imports. Each target owns
+the native `Screen` renderer and reports unsupported routes explicitly through
+`supports`; a target must not silently fall back to a different page or discard
+an action. NeoForge remains the visual and behavior baseline, while Forge adds
+target-local renderers against the same route model.
+
+The first UI slice is the shared home-menu contract. Forge 1.20.1 opens that
+menu from `I`, with delivery-box and territory routes available and the remaining
+routes visibly unavailable until their target renderers are migrated. The next
+UI slice is to migrate shop, market, balance-log, and about renderers behind the
+same bridge; this is independent of protocol wire IDs.
+
 ## Historical migration status
 
 This section records intermediate boundaries. The current authoritative status is the completed 44-message Bridge described above.
@@ -275,3 +291,18 @@ The protocol 26-30 transaction is hardened around atomic authorization replaceme
 Historical lifecycle-hardening baseline at `70cf97b9`: 435 shared-source test methods, 516 Forge tests, and 576 NeoForge tests. Historical transaction-hardening baseline: 382 shared-source methods, 459 Forge tests, and 519 NeoForge tests.
 
 The final protocol 26-30 integrity closure keeps each snapshot and incoming part on its creation-time read/write channel. Production send/save paths never reopen the compatibility display pathname. Outgoing network callbacks run outside its state monitor; temp handles remain retained while snapshot work is active. Saving uses a `CREATE_NEW` target channel, recopies from the exact source handle, and rechecks byte length, EOF and SHA-256. A successful target copy whose source cleanup fails remains `SAVED_CLEANUP_PENDING` until bounded coordinator cleanup succeeds. Authenticated exact-key validation failures consume server state and send an authoritative protocol-28 `FAILED`; client invalid/timeout paths publish one-shot bounded terminal notifications. Current verification: 442 shared-source test methods, 521 Forge tests, and 581 NeoForge tests. Protocol 31+ remains legacy.
+
+## Territory management UI pilot
+
+The territory-management entry now runs through `common/ui/territory`.
+`TerritoryManageState`, `TerritoryManageController`, `TerritoryManageLayout`,
+`TerritoryManageView`, `EconomyUiTheme`, and `EconomyUiRenderer` are
+loader-neutral and compile on Java 17. The layout uses a 640x360 virtual canvas;
+the controller owns loading, empty, error, timeout, retry, filtering, paging,
+wheel-scroll bounds, request IDs, button enablement, and navigation intent.
+
+Both targets consume the same immutable UUID/name/member snapshots, stable
+action IDs, theme tokens, layout, and semantic render operations. Target code
+only adapts Screen lifecycle, EditBox, GuiGraphics, player heads, clipboard, and
+network sends. Nested buffs, access/rules, transfer, invite, and delete pages
+remain explicit target fallbacks for the next territory-family migration.

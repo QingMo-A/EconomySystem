@@ -45,3 +45,12 @@ git diff --check
 
 仅当 ForgeGradle TLS 证书握手失败时，允许在当次命令临时增加 -Dnet.minecraftforge.gradle.check.certs=false；禁止写入项目配置。构建后审计两个 JAR：Forge 不得含 NeoForge target/API，NeoForge 不得含 Forge target/API，两端不得含已删除 Packet。
 ```
+
+Current UI pilot checkpoint: territory management entry is now implemented via
+`common/ui/territory` and the common `EconomyUiRenderer` contract. Read
+`plans/multiversion-ui-inventory.md` and the `TerritoryManage*` sources before
+editing. Both target shells use the same state/controller/layout/theme/view;
+only target lifecycle, widgets, GuiGraphics, player-head, clipboard and network
+adapters differ. Nested buffs/access/rules/transfer/invite/delete screens are
+explicit fallback and are the next territory-family work. Do not migrate shop,
+market, delivery, file-check UI, or detach NeoForge root sources in this slice.

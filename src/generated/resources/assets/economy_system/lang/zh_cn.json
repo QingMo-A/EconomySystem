@@ -598,5 +598,13 @@
   "message.territory.rule.place_block": "放置方块",
   "message.territory.rule.use_item": "使用物品",
   "message.territory_management.access": "成员权限",
-  "screen.territory.manage": "管理领地"
+  "screen.territory.manage": "管理领地",
+  "screen.territory.search": "筛选成员",
+  "screen.territory.members": "成员：{0}",
+  "screen.territory.actions": "管理操作",
+  "screen.territory.loading": "正在加载领地数据……",
+  "screen.territory.manage_empty": "暂无授权成员",
+  "screen.territory.sync_failed": "领地数据加载失败",
+  "screen.territory.sync_timeout": "领地数据请求超时",
+  "screen.territory.retry": "重试"
 }

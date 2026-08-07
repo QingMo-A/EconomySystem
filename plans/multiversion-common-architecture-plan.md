@@ -1,11 +1,11 @@
 # EconomySystem 多版本 Common 架构统一计划
 
-> 文档状态：Architecture Plan / Proposed Baseline  
-> 适用仓库：`QingMo-A/EconomySystem`  
-> 适用分支：`bridge`  
-> 当前主要目标版本：Forge 1.20.1、NeoForge 1.21.1  
-> 当前行为与视觉基准：NeoForge 1.21.1 现有成熟实现  
-> 最终唯一 Source of Truth：`common`  
+> 文档状态：Architecture Plan / Proposed Baseline
+> 适用仓库：`QingMo-A/EconomySystem`
+> 适用分支：`bridge`
+> 当前主要目标版本：Forge 1.20.1、NeoForge 1.21.1
+> 当前行为与视觉基准：NeoForge 1.21.1 现有成熟实现
+> 最终唯一 Source of Truth：`common`
 > 目标：将现有 1.21.1 的模组业务逻辑、UI 行为、布局、视觉规范和交互状态抽象为版本无关的 common 层，各 Minecraft/Loader target 仅负责使用对应版本 API 表达同一套 common 语义。
 
 ---
@@ -1520,3 +1520,22 @@ Forge 使用同一个 common UI Core，不再使用独立简化设计。
 12. **任何跨版本差异都必须可以解释为 API 差异，而不能只是两份代码逐渐漂移。**
 
 该规则应作为后续 UI、业务模块和新增 Minecraft 版本适配的长期架构约束。
+
+## Current UI pilot checkpoint (2026-08-07)
+
+The first common UI pilot is complete for the territory-management entry. The
+common layer contains Java-17-only geometry, theme, controller, state, layout,
+view, navigation, and semantic renderer contracts with no loader imports.
+NeoForge 1.21.1 and Forge 1.20.1 use the same `TerritoryManageState`,
+`TerritoryManageController`, `TerritoryManageLayout`, `TerritoryManageView`,
+and `EconomyUiTheme`; target shells only translate Screen lifecycle, widgets,
+GuiGraphics, player-head drawing, clipboard, and network sends.
+
+The contract includes a 640x360 virtual canvas, explicit loading/empty/error/
+timeout/retry states, request-ID stale-response rejection, filtering, viewport
+page-size synchronization, paging and wheel-scroll bounds, translation-key
+rendering, and semantic player-head operations. The NeoForge implementation is
+the visual baseline. Existing nested buffs, access/rules, transfer, invite and
+delete pages remain an explicit target fallback and are the next territory-family
+work. Shop, market, delivery, file-check UI, root-source detachment, and new
+target skeletons are outside this checkpoint.

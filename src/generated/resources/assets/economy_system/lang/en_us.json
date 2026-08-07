@@ -598,5 +598,13 @@
   "message.territory.rule.place_block": "Place blocks",
   "message.territory.rule.use_item": "Use items",
   "message.territory_management.access": "Member access",
-  "screen.territory.manage": "Manage territory"
+  "screen.territory.manage": "Manage territory",
+  "screen.territory.search": "Filter members",
+  "screen.territory.members": "Members: {0}",
+  "screen.territory.actions": "Actions",
+  "screen.territory.loading": "Loading territory data...",
+  "screen.territory.manage_empty": "No authorized members",
+  "screen.territory.sync_failed": "Territory data could not be loaded",
+  "screen.territory.sync_timeout": "Territory data request timed out",
+  "screen.territory.retry": "Retry"
 }

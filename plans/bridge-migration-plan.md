@@ -276,3 +276,19 @@ git diff --check
   Historical transaction-hardening baseline: 382 shared-source test methods, 459 Forge tests, 519 NeoForge tests, with both target suites and `buildAllTargets` passing.
   Historical lifecycle-hardening baseline at `70cf97b9`: 435 shared-source test methods, 516 Forge tests, 576 NeoForge tests, with both target suites and `buildAllTargets` passing.
   Final integrity closure removes production snapshot pathname reopening, retains exact source channels through send/save, moves sender callbacks outside the outgoing monitor, protects active snapshot temp handles, rehashes `CREATE_NEW` save copies, manages `SAVED_CLEANUP_PENDING`, sends authoritative server-generated protocol-28 failures, and exposes one-shot client terminal notifications to both adapters. Current verification is 442 shared-source test methods, 521 Forge tests, and 581 NeoForge tests. Protocol 31+ remains legacy and is not migrated.
+
+## Client UI bridge foundation (current)
+
+The protocol bridge does not by itself make the client experience identical:
+Minecraft screen APIs are version-specific and must remain in each target. The
+loader-neutral `common/client/ui` package now defines stable `EconomyUiRoute`
+identifiers, the default home-menu entries, and the generic
+`EconomyUiBridge<S>` page factory. Target code owns rendering, widgets, key
+events, and native screen construction; unsupported routes are reported through
+`supports` instead of silently opening an unrelated page.
+
+NeoForge 1.21.1 remains the visual baseline. Forge 1.20.1 now renders the
+shared home menu and maps `I` to it, with delivery-box and territory pages
+available. Shop, market, balance-log, and about remain explicit target UI
+milestones. The next UI work is to migrate those renderers behind the same route
+factory, without changing protocol discriminators or restoring legacy packets.
