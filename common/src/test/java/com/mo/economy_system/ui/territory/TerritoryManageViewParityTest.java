@@ -1,0 +1,117 @@
+package com.mo.economy_system.ui.territory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.mo.economy_system.ui.core.ScreenState;
+import com.mo.economy_system.ui.geometry.UiRect;
+import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
+import com.mo.economy_system.ui.renderer.UiIcon;
+import com.mo.economy_system.ui.theme.EconomyUiTheme;
+import com.mo.economy_system.ui.theme.UiButtonStyle;
+import com.mo.economy_system.ui.theme.UiCardStyle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class TerritoryManageViewParityTest {
+    @Test
+    void bothTargetsReceiveTheSameSemanticOperations() {
+        TerritoryManageState state = new TerritoryManageState(
+                new UUID(0, 1), "spawn", new UUID(0, 2), "owner",
+                List.of(new MemberRow(new UUID(0, 3), "alice")),
+                0, 5, 0, "", ScreenState.READY, null, -1,
+                Set.of(TerritoryManageAction.values()));
+        TerritoryManageLayout.Layout layout = TerritoryManageLayout.calculate(854, 480, state);
+        RecordingRenderer forge = new RecordingRenderer();
+        RecordingRenderer neoForge = new RecordingRenderer();
+
+        TerritoryManageView.render(forge, state, layout, 0, 0);
+        TerritoryManageView.render(neoForge, state, layout, 0, 0);
+
+        assertEquals(forge.operations, neoForge.operations);
+        assertTrue(forge.operations.stream().anyMatch(value -> value.kind.equals("playerHead")));
+        assertTrue(forge.operations.stream().anyMatch(value ->
+                value.kind.equals("translatedButton")
+                        && value.text.equals("message.territory_management.resize_territory")
+                        && value.buttonStyle.equals(EconomyUiTheme.TERRITORY_PRIMARY_BUTTON)));
+        assertTrue(forge.operations.stream().anyMatch(value ->
+                value.kind.equals("translatedButton")
+                        && value.text.equals("message.territory_management.delete_territory")
+                        && value.buttonStyle.equals(EconomyUiTheme.TERRITORY_DANGER_BUTTON)));
+    }
+
+    @Test
+    void errorStateProducesAReachableRetryOperation() {
+        TerritoryManageState state = new TerritoryManageState(
+                new UUID(0, 1), "spawn", new UUID(0, 2), "owner", List.of(),
+                0, 4, 0, "", ScreenState.ERROR, "screen.territory.sync_failed", -1,
+                Set.of(TerritoryManageAction.RETRY, TerritoryManageAction.BACK));
+        TerritoryManageLayout.Layout layout = TerritoryManageLayout.calculate(640, 360, state);
+        RecordingRenderer renderer = new RecordingRenderer();
+
+        TerritoryManageView.render(renderer, state, layout,
+                layout.retryButton().x(), layout.retryButton().y());
+
+        assertTrue(renderer.operations.stream().anyMatch(value ->
+                value.kind.equals("translatedButton")
+                        && value.text.equals("screen.territory.retry")
+                        && value.rect.equals(layout.retryButton())
+                        && value.enabled));
+    }
+
+    private static final class RecordingRenderer implements EconomyUiRenderer {
+        private final List<Operation> operations = new ArrayList<>();
+
+        @Override
+        public void fill(UiRect rect, int argb) {
+            operations.add(new Operation("fill", rect, null, null, null, false, true));
+        }
+
+        @Override
+        public void text(String text, int x, int y, int argb) {
+            operations.add(new Operation("text", new UiRect(x, y, 0, 0), text,
+                    null, null, false, true));
+        }
+
+        @Override
+        public void translatedText(String key, List<String> arguments, int x, int y, int argb) {
+            operations.add(new Operation("translatedText", new UiRect(x, y, 0, 0),
+                    key + arguments, null, null, false, true));
+        }
+
+        @Override
+        public void card(UiRect rect, UiCardStyle style, boolean hovered) {
+            operations.add(new Operation("card", rect, null, style, null, hovered, true));
+        }
+
+        @Override
+        public void button(UiRect rect, UiButtonStyle style, String text,
+                           boolean hovered, boolean enabled) {
+            operations.add(new Operation("button", rect, text, null, style, hovered, enabled));
+        }
+
+        @Override
+        public void translatedButton(UiRect rect, UiButtonStyle style, String key,
+                                     List<String> arguments, boolean hovered, boolean enabled) {
+            operations.add(new Operation("translatedButton", rect, key, null, style, hovered, enabled));
+        }
+
+        @Override
+        public void icon(UiIcon icon, UiRect rect) {
+            operations.add(new Operation("icon", rect, icon.name(), null, null, false, true));
+        }
+
+        @Override
+        public void playerHead(UUID playerId, String playerName, UiRect rect) {
+            operations.add(new Operation("playerHead", rect, playerId + ":" + playerName,
+                    null, null, false, true));
+        }
+    }
+
+    private record Operation(String kind, UiRect rect, String text, UiCardStyle cardStyle,
+                             UiButtonStyle buttonStyle, boolean hovered, boolean enabled) {
+    }
+}

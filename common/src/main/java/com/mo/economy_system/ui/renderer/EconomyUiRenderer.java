@@ -1,0 +1,27 @@
+package com.mo.economy_system.ui.renderer;
+
+import com.mo.economy_system.ui.geometry.UiRect;
+import com.mo.economy_system.ui.theme.UiButtonStyle;
+import com.mo.economy_system.ui.theme.UiCardStyle;
+import java.util.List;
+import java.util.UUID;
+
+/** Semantic renderer port implemented by each Minecraft target. */
+public interface EconomyUiRenderer {
+    void fill(UiRect rect, int argb);
+
+    void text(String text, int x, int y, int argb);
+
+    void translatedText(String key, List<String> arguments, int x, int y, int argb);
+
+    void card(UiRect rect, UiCardStyle style, boolean hovered);
+
+    void button(UiRect rect, UiButtonStyle style, String text, boolean hovered, boolean enabled);
+
+    void translatedButton(UiRect rect, UiButtonStyle style, String key,
+                          List<String> arguments, boolean hovered, boolean enabled);
+
+    void icon(UiIcon icon, UiRect rect);
+
+    void playerHead(UUID playerId, String playerName, UiRect rect);
+}
