@@ -8,7 +8,7 @@ Delivery protocols `31..33` use `DeliveryBoxWireCodec` and immutable `DeliveryBo
 
 Territory management protocols `36..43` use common UUID-only or stable-ID messages. Protocol `40` carries one bounded `Owned` snapshot, protocols `41/42` resolve player names on the server, and protocol `43` uses stable rule/action IDs. Both targets share the services and codecs; NeoForge uses the canonical manager while Forge adapts strict raw NBT and its own client/session entry points. The eleven superseded target Packet classes for these protocols are deleted.
 
-Latest verification on 2026-08-08 executed 737 Forge tests and 804 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed after recompiling both targets. The cross-loader, gameplay-parity and removed-Packet audits remain covered by the target test suites.
+Latest verification on 2026-08-09 executed 816 Forge tests and 881 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed after recompiling both targets. The cross-loader, gameplay-parity and removed-Packet audits remain covered by the target test suites.
 
 ## Protocol 21 spatial boundary hardening
 
@@ -349,10 +349,48 @@ Forge and NeoForge package the same resources from common; target-specific icon
 copies are not active. Legacy root screens remain read-only visual references.
 
 Other UI families have common architecture but their visual parity remains
-pending. This pass does not begin Home or alter Shop, Market, Delivery, About,
-Balance, nested Territory, File Check or Transfer layouts.
+pending. The Home pass leaves Shop, Market, Delivery, About, Balance, nested
+Territory, File Check and Transfer layouts unchanged.
 
 Verification for this pass: Forge and NeoForge target test suites, and
 `buildAllTargets`, pass locally. The pixel-parity code commit is `finish
 territory manage pixel parity`; this documentation update is kept in a
 separate `document territory manage pixel parity` commit.
+
+## Home visual parity (current bridge)
+
+Home (`Screen_Home`) now uses one loader-neutral semantic view on Forge 1.20.1
+and NeoForge 1.21.1. Structural parity, interaction parity and reference
+visual parity are accepted. The canonical 640x360 layout is preserved exactly:
+the left panel is 160px, the right panel starts at x=172 and is 456px wide,
+navigation cards are 136x28 at y=12/48/84/120/156, the top cards are 224x70,
+and the leaderboard is 456x258 at y=90. Fractional viewport scales use the
+same truncation semantics as the legacy screen.
+
+Home navigation uses the real shared 64x64 icon textures and its dedicated
+accent button style (black 0x99/0xAA backgrounds, 4px stripe, 10px padding,
+left alignment and text shadow). Balance, trade and leaderboard cards retain
+their legacy colors and semantic content, including rank hints, thousand-grouped
+balances, two-column sell/buy statistics, fixed rank colors, gold self rows and
+one-row mouse-wheel scrolling. Leaderboard pagination controls are removed.
+The footer reuses `VERSION_CARD`, the HOME icon, aqua `Economy` and
+light-purple `System` spans, whole-content scaling and the reference decoration
+line.
+
+Opening animation is common and deterministic: 500ms ease-out cubic, -50px
+left-panel and +50px right-panel offsets. Layout and hitboxes are calculated
+from the same animated rectangles. Loading, error, timeout and retry states are
+retained, but a data error never disables Home navigation.
+
+Territory Manage: pixel parity accepted.
+
+Home: structural parity accepted; behavior parity accepted; visual/reference
+parity accepted. Home request/revision safety and loading/error/timeout recovery
+are retained.
+
+Other UI: visual parity pending.
+
+Verification for the Home pass: Forge and NeoForge target test suites and
+`buildAllTargets` pass locally. The code commit is `restore home visual parity`;
+this migration note is intentionally kept in the separate
+`document home visual parity` commit.
