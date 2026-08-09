@@ -93,10 +93,19 @@ public final class DemandOrderDeliveryService {
     BalanceMutationResult credit;
     RuntimeException creditError = null;
     try {
-      credit = context.account().creditExact(order.totalPrice());
+      credit = Objects.requireNonNull(
+          context.account().creditExact(order.totalPrice()), "credit result");
     } catch (RuntimeException error) {
       credit = null;
       creditError = error;
+    }
+    if (credit == null) {
+      safeReport(context, new DemandOrderDeliveryFailure(
+          tradeId, context.supplierId(), requesterId, "payment-credit",
+          DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, MarketMutationState.UNKNOWN,
+          null, null, null, null, null, creditError, null, creditError, null));
+      return DemandOrderDeliveryOutcome.uncertainFailure(
+          DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN);
     }
     if (credit != BalanceMutationResult.SUCCESS) {
       RollbackAttempt inventory = rollback(rollback);
@@ -123,27 +132,37 @@ public final class DemandOrderDeliveryService {
       transition = null;
     }
 
-    MarketMutationState marketState = transition == null
-        ? MarketMutationState.UNKNOWN
-        : transition.status() == DemandDeliveryTransitionStatus.PERSIST_FAILED
-            ? MarketMutationState.UNCHANGED : MarketMutationState.CHANGED;
-    DemandDeliveryTransitionStatus status = transition == null ? null : transition.status();
+    if (transition == null) {
+      safeReport(context, new DemandOrderDeliveryFailure(
+          tradeId, context.supplierId(), requesterId, "ledger-transition",
+          DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN, MarketMutationState.UNKNOWN,
+          null, null, null, true, null, repositoryError, null, null, repositoryError));
+      return DemandOrderDeliveryOutcome.uncertainFailure(
+          DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN);
+    }
+
+    MarketMutationState marketState =
+        transition.status() == DemandDeliveryTransitionStatus.PERSIST_FAILED
+            ? MarketMutationState.UNCHANGED
+            : MarketMutationState.CHANGED;
+    DemandDeliveryTransitionStatus status = transition.status();
     safeReport(context, new DemandOrderDeliveryFailure(tradeId, context.supplierId(), requesterId,
-        "ledger-transition", transition == null ? DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN
-            : map(transition.status()), marketState, status, null, null, true, null,
+        "ledger-transition", map(transition.status()), marketState, status, null, null, true, null,
         repositoryError, null, null, repositoryError));
     DemandDeliveryCompensation compensation = compensate(context, order.totalPrice(), rollback);
     DemandOrderDeliveryResult result;
     if (!compensation.complete()) result = DemandOrderDeliveryResult.ROLLBACK_FAILED;
-    else if (transition == null) result = DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN;
     else result = map(transition.status());
+    MarketMutationState compensatedState = compensation.complete()
+        ? marketState
+        : MarketMutationState.UNKNOWN;
     safeReport(context, new DemandOrderDeliveryFailure(tradeId, context.supplierId(), requesterId,
-        "compensation", result, marketState, status, null, compensation.inventoryRestored(), true,
+        "compensation", result, compensatedState, status, null, compensation.inventoryRestored(), true,
         compensation.paymentReverted(), repositoryError, compensation.inventoryError(),
         compensation.paymentError(), repositoryError));
-    if (marketState == MarketMutationState.UNKNOWN)
+    if (compensatedState == MarketMutationState.UNKNOWN)
       return DemandOrderDeliveryOutcome.uncertainFailure(result);
-    if (marketState == MarketMutationState.CHANGED)
+    if (compensatedState == MarketMutationState.CHANGED)
       return DemandOrderDeliveryOutcome.changedFailure(result, order);
     return DemandOrderDeliveryOutcome.rolledBackFailure(result, order);
   }
@@ -161,12 +180,18 @@ public final class DemandOrderDeliveryService {
 
   private static DemandDeliveryCompensation compensate(Context context, int amount,
       InventoryRemovalRollback rollback) {
-    boolean payment = false;
+    BalanceMutationResult reversal;
     RuntimeException paymentError = null;
     try {
-      payment = context.account().debitExact(amount) == BalanceMutationResult.SUCCESS;
+      reversal = Objects.requireNonNull(context.account().debitExact(amount), "debit result");
     } catch (RuntimeException error) {
+      reversal = null;
       paymentError = error;
+    }
+    boolean payment = reversal == BalanceMutationResult.SUCCESS;
+    if (!payment) {
+      return new DemandDeliveryCompensation(
+          true, false, false, false, paymentError, null);
     }
     RollbackAttempt inventory = rollback(rollback);
     return new DemandDeliveryCompensation(true, payment, true, inventory.succeeded(),
@@ -203,10 +228,15 @@ public final class DemandOrderDeliveryService {
   private static DemandOrderDeliveryOutcome rolledBack(Context context, UUID tradeId,
       MarketOrder order, String stage, DemandOrderDeliveryResult result, Boolean removalRestored,
       Boolean rollbackSucceeded, RuntimeException primaryError, RuntimeException inventoryError) {
+    MarketMutationState state = Boolean.FALSE.equals(removalRestored)
+            || Boolean.FALSE.equals(rollbackSucceeded)
+        ? MarketMutationState.UNKNOWN : MarketMutationState.UNCHANGED;
     safeReport(context, new DemandOrderDeliveryFailure(tradeId, context.supplierId(), order.sellerId(),
-        stage, result, MarketMutationState.UNCHANGED, null, removalRestored, rollbackSucceeded,
+        stage, result, state, null, removalRestored, rollbackSucceeded,
         false, null, primaryError, inventoryError, null, null));
-    return DemandOrderDeliveryOutcome.rolledBackFailure(result, order);
+    return state == MarketMutationState.UNKNOWN
+        ? DemandOrderDeliveryOutcome.uncertainFailure(result)
+        : DemandOrderDeliveryOutcome.rolledBackFailure(result, order);
   }
 
   private static DemandOrderDeliveryOutcome fail(Context context, UUID tradeId, UUID requesterId,

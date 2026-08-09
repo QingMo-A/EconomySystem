@@ -3,11 +3,24 @@ package com.mo.economy_system.ui.renderer;
 /** Semantic icon IDs; target renderers map them to textures or native icons. */
 public enum UiIcon {
     TERRITORY,
+    SHOP,
+    MARKET,
+    DELIVERY,
+    ABOUT,
+    LEADERBOARD,
+    BALANCE,
     MEMBER,
     OWNER,
     MANAGE,
     ARROW_LEFT,
     ARROW_RIGHT,
     RETRY,
-    BACK
+    BACK,
+    BUFF,
+    OVERWORLD,
+    NETHER,
+    END,
+    AUTHORIZED,
+    KEY,
+    TELEPORT
 }

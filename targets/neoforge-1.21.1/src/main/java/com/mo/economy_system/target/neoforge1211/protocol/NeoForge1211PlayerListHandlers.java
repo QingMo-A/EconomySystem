@@ -6,7 +6,7 @@ import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.neoforge1211.player.NeoForge1211PlayerLookup;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -33,7 +33,7 @@ public final class NeoForge1211PlayerListHandlers {
             }
 
             EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
-            List<PlayerSummary> players = Util_Player.getAllPlayerName(data, player.server).stream()
+            List<PlayerSummary> players = NeoForge1211PlayerLookup.knownPlayers(data, player.server).stream()
                     .map(entry -> new PlayerSummary(entry.getKey(), entry.getValue()))
                     .toList();
             EconomySystem_NetworkManager.sendToClient(
@@ -59,19 +59,7 @@ public final class NeoForge1211PlayerListHandlers {
         }
 
         private static void apply(ServerPlayerListResponseMessage message) {
-            List<Map.Entry<UUID, String>> players = message.players().stream()
-                    .<Map.Entry<UUID, String>>map(player -> new AbstractMap.SimpleImmutableEntry<>(
-                            player.playerId(),
-                            player.playerName()
-                    ))
-                    .toList();
-            net.minecraft.client.gui.screens.Screen screen =
-                    net.minecraft.client.Minecraft.getInstance().screen;
-            if (screen instanceof com.mo.economy_system.screen.territory_system.Screen_InvitePlayer invitePlayer) {
-                invitePlayer.update(message.players());
-            } else if (screen instanceof com.mo.economy_system.screen.territory_system.Screen_TerritoryPlayerAction playerAction) {
-                playerAction.update(players);
-            }
+            // The common client state is consumed by the common invite/detail shells on their next tick.
         }
     }
 }

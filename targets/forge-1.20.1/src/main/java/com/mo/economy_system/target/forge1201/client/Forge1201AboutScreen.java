@@ -1,0 +1,72 @@
+package com.mo.economy_system.target.forge1201.client;
+
+import com.mo.economy_system.common.client.ui.EconomyUiRoute;
+import com.mo.economy_system.ui.about.AboutAction;
+import com.mo.economy_system.ui.about.AboutController;
+import com.mo.economy_system.ui.about.AboutEvent;
+import com.mo.economy_system.ui.about.AboutLayout;
+import com.mo.economy_system.ui.about.AboutPort;
+import com.mo.economy_system.ui.about.AboutView;
+import com.mo.economy_system.ui.core.UiNavigation;
+import com.mo.economy_system.ui.geometry.UiScale;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+/** Forge Screen shell for the common About page. */
+public final class Forge1201AboutScreen extends Screen {
+  private final Screen parent;
+  private final Port port = new Port();
+  private final AboutController controller = new AboutController(port);
+
+  public Forge1201AboutScreen() { this(null); }
+  public Forge1201AboutScreen(Screen parent) {
+    super(Component.translatable(EconomyUiRoute.ABOUT.titleKey()));
+    this.parent = parent;
+  }
+
+  @Override protected void init() {}
+
+  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    AboutLayout.Layout layout = AboutLayout.calculate(width, height);
+    UiScale scale = layout.scale();
+    graphics.pose().pushPose();
+    graphics.pose().scale(scale.value(), scale.value(), 1.0f);
+    AboutView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+        scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
+    graphics.pose().popPose();
+    super.render(graphics, mouseX, mouseY, partialTick);
+  }
+
+  @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    AboutLayout.Layout layout = AboutLayout.calculate(width, height);
+    int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
+    if (layout.github().contains(x, y)) {
+      controller.handle(new AboutEvent.ActionClicked(AboutAction.COPY_GITHUB));
+      return true;
+    }
+    if (layout.backButton().contains(x, y) || layout.esc().contains(x, y)) {
+      controller.handle(new AboutEvent.ActionClicked(AboutAction.BACK));
+      return true;
+    }
+    return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    if (keyCode == 256) { onClose(); return true; }
+    return super.keyPressed(keyCode, scanCode, modifiers);
+  }
+
+  @Override public void onClose() {
+    if (minecraft == null) return;
+    if (parent != null) minecraft.setScreen(parent); else minecraft.setScreen(new Forge1201HomeScreen());
+  }
+  @Override public boolean isPauseScreen() { return false; }
+
+  private final class Port implements AboutPort {
+    @Override public void copyToClipboard(String value) {
+      Minecraft.getInstance().keyboardHandler.setClipboard(value);
+    }
+  }
+}

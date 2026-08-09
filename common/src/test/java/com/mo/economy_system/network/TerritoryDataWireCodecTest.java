@@ -7,8 +7,7 @@ import com.mo.economy_system.common.territory.TerritoryResponseBudget;
 import com.mo.economy_system.common.territory.TerritoryTestFixtures;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Summary;
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
+import com.mo.economy_system.testsupport.TestWireBuffer;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
@@ -17,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 class TerritoryDataWireCodecTest {
   @Test void errorHasStableGoldenBytes() {
-    FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer buffer = new TestWireBuffer();
     TerritoryDataWireCodec.encodeResponse(TerritoryDataResponseMessage.error(7), buffer);
     byte[] bytes = new byte[buffer.readableBytes()];
     buffer.getBytes(buffer.readerIndex(), bytes);
@@ -26,7 +25,7 @@ class TerritoryDataWireCodecTest {
   }
 
   @Test void dataHasStableGoldenDigest() throws Exception {
-    FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer buffer = new TestWireBuffer();
     TerritoryDataWireCodec.encodeResponse(TerritoryTestFixtures.response(7), buffer);
     byte[] bytes = new byte[buffer.readableBytes()];
     buffer.getBytes(buffer.readerIndex(), bytes);
@@ -48,7 +47,7 @@ class TerritoryDataWireCodecTest {
   }
 
   @Test void failedEncodeLeavesDestinationWriterIndexAndBytesUnchanged() {
-    FriendlyByteBuf destination = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer destination = new TestWireBuffer();
     destination.writeInt(0x12345678);
     int writerIndex = destination.writerIndex();
     assertThrows(IllegalArgumentException.class, () -> TerritoryDataWireCodec.encodeResponse(
@@ -58,7 +57,7 @@ class TerritoryDataWireCodecTest {
   }
 
   private static void assertCovered(TerritoryDataResponseMessage message) {
-    FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer buffer = new TestWireBuffer();
     TerritoryDataWireCodec.encodeResponse(message, buffer);
     assertTrue(TerritoryResponseBudget.estimate(message.owned(), message.authorized())
         >= buffer.readableBytes());

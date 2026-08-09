@@ -2,7 +2,6 @@ package com.mo.economy_system.target.neoforge1211;
 
 import com.mo.economy_system.platform.EconomyPlatform;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.target.neoforge1211.item.NeoForge1211ItemStackBridge;
 import com.mo.economy_system.target.neoforge1211.network.NeoForge1211NetworkBridge;
 import com.mo.economy_system.platform.shop.EconomyShopCatalogBridge;
@@ -15,9 +14,9 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.nio.file.Path;
 
 public final class NeoForge1211Platform implements EconomyPlatform {
+    private static final NeoForge1211ItemStackBridge ITEM_STACKS = new NeoForge1211ItemStackBridge();
+    private static final NeoForge1211ShopCatalogBridge SHOP_CATALOG = new NeoForge1211ShopCatalogBridge();
     private final EconomyNetworkBridge network = new NeoForge1211NetworkBridge();
-    private final EconomyItemStackBridge itemStacks = new NeoForge1211ItemStackBridge();
-    private final EconomyShopCatalogBridge shopCatalog = new NeoForge1211ShopCatalogBridge();
 
     @Override
     public String targetName() {
@@ -29,9 +28,18 @@ public final class NeoForge1211Platform implements EconomyPlatform {
         return FMLPaths.CONFIGDIR.get();
     }
 
-    @Override
-    public MinecraftServer currentServer() {
+    public static MinecraftServer activeServer() {
         return ServerLifecycleHooks.getCurrentServer();
+    }
+
+    /** Target-native ItemStack adapter; shared code never receives this API. */
+    public static NeoForge1211ItemStackBridge nativeItemStacks() {
+        return ITEM_STACKS;
+    }
+
+    /** Target-native catalog operations such as ItemStack reconstruction. */
+    public static NeoForge1211ShopCatalogBridge nativeShopCatalog() {
+        return SHOP_CATALOG;
     }
 
     @Override
@@ -52,12 +60,7 @@ public final class NeoForge1211Platform implements EconomyPlatform {
     }
 
     @Override
-    public EconomyItemStackBridge itemStacks() {
-        return itemStacks;
-    }
-
-    @Override
     public EconomyShopCatalogBridge shopCatalog() {
-        return shopCatalog;
+        return SHOP_CATALOG;
     }
 }

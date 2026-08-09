@@ -16,7 +16,7 @@ class NeoForge1211TerritoryTeleportProtocolTest {
     FriendlyByteBuf shared=new FriendlyByteBuf(Unpooled.buffer());
     RegistryFriendlyByteBuf target=new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
     try {
-      TerritoryTeleportWireCodec.encode(message,shared);
+      TerritoryTeleportWireCodec.encode(message, NeoForge1211WireBuffer.wrap(shared));
       NeoForge1211MessageCodecs.codec(EconomyMessages.TELEPORT_TO_TERRITORY).encode(message,target);
       assertEquals(shared,target);
       assertEquals(message,NeoForge1211MessageCodecs.codec(EconomyMessages.TELEPORT_TO_TERRITORY).decode(target));

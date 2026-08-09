@@ -1,0 +1,54 @@
+package com.mo.economy_system.core.economy_system.market;
+
+import com.mo.economy_system.utils.ItemStackDataHelper;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import java.util.UUID;
+
+public class DemandOrder extends MarketItem {
+    private boolean delivered;
+
+    public DemandOrder(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID, long listingTime, boolean delivered) {
+        super(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime);
+        this.delivered = delivered;
+    }
+
+    public DemandOrder(UUID tradeID, String itemID, ItemStack itemStack, int basePrice, String sellerName, UUID sellerID,
+                       long listingTime, long expirationTime, boolean delivered) {
+        super(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime);
+        this.delivered = delivered;
+    }
+
+    @Override
+    public CompoundTag toNBT() {
+        CompoundTag tag = super.toNBT(); // 复用父类逻辑
+        tag.putBoolean("delivered", delivered); // 添加子类字段
+        return tag;
+    }
+
+    public static DemandOrder fromNBT(CompoundTag tag) {
+        return fromNBT(tag, null);
+    }
+
+    public static DemandOrder fromNBT(CompoundTag tag, HolderLookup.Provider registries) {
+        UUID tradeID = tag.getUUID("tradeID");
+        String itemID = tag.getString("itemID");
+        ItemStack itemStack = registries == null
+                ? ItemStackDataHelper.loadSimple(tag.getCompound("itemStack"))
+                : ItemStackDataHelper.loadFullTag(tag.getCompound("itemStack"), registries);
+        if (tag.contains("listedCount")) {
+            itemStack.setCount(Math.max(1, tag.getInt("listedCount")));
+        }
+        int basePrice = tag.getInt("basePrice");
+        String sellerName = tag.getString("sellerName");
+        UUID sellerID = tag.getUUID("sellerID");
+        long listingTime = tag.getLong("listingTime");
+        boolean delivered = tag.getBoolean("delivered");
+        long expirationTime = tag.contains("expirationTime") ? tag.getLong("expirationTime") : listingTime + 3L * 24L * 60L * 60L * 1000L;
+        return new DemandOrder(tradeID, itemID, itemStack, basePrice, sellerName, sellerID, listingTime, expirationTime, delivered);
+    }
+
+    public boolean isDelivered() { return delivered; }
+    public void setDelivered(boolean delivered) { this.delivered = delivered; }
+}

@@ -1,16 +1,22 @@
 package com.mo.economy_system.common.territory;
 
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
+import com.mo.economy_system.common.territory.TerritorySnapshots.Member;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
+import com.mo.economy_system.common.territory.TerritorySnapshots.Rule;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
+import com.mo.economy_system.common.territory.TerritorySnapshots.Summary;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Server-authoritative protocols 41-43. Client-provided display names are never accepted. */
+/** Server-authoritative protocols 41-43 and their common state-transition policy. */
 public final class TerritoryAdministrationService {
   private TerritoryAdministrationService() {}
 
@@ -30,14 +36,9 @@ public final class TerritoryAdministrationService {
       targetName = validName(context.players().name(message.targetPlayerId()));
       if (targetName == null) return TerritoryManagementResult.INVALID_TARGET;
     }
-    try {
-      RepositoryResult result = context.repository().setPermission(
-          message.territoryId(), senderId, message.targetPlayerId(), targetName, message.allowed());
-      return map(result);
-    } catch (RuntimeException failure) {
-      report(context, message.territoryId(), senderId, "permission", failure);
-      return TerritoryManagementResult.STATE_UNKNOWN;
-    }
+    Prepared prepared = preparePermission(territory, message.targetPlayerId(), targetName,
+        message.allowed());
+    return apply(prepared, context, message.territoryId(), senderId, "permission");
   }
 
   public static TerritoryManagementResult transfer(
@@ -53,14 +54,8 @@ public final class TerritoryAdministrationService {
     if (message.targetPlayerId().equals(senderId)) return TerritoryManagementResult.SELF_TARGET;
     String targetName = validName(context.players().name(message.targetPlayerId()));
     if (targetName == null) return TerritoryManagementResult.INVALID_TARGET;
-    try {
-      RepositoryResult result = context.repository().transfer(
-          message.territoryId(), senderId, message.targetPlayerId(), targetName);
-      return map(result);
-    } catch (RuntimeException failure) {
-      report(context, message.territoryId(), senderId, "transfer", failure);
-      return TerritoryManagementResult.STATE_UNKNOWN;
-    }
+    Prepared prepared = prepareTransfer(territory, message.targetPlayerId(), targetName);
+    return apply(prepared, context, message.territoryId(), senderId, "transfer");
   }
 
   public static TerritoryManagementResult rule(
@@ -73,13 +68,110 @@ public final class TerritoryAdministrationService {
     Owned territory = lookup.territory();
     TerritoryManagementResult authority = authority(territory, senderId);
     if (authority != TerritoryManagementResult.SUCCESS) return authority;
+    Prepared prepared = prepareRule(territory, message.action(), message.level());
+    return apply(prepared, context, message.territoryId(), senderId, "rule");
+  }
+
+  private static TerritoryManagementResult apply(
+      Prepared prepared,
+      Context context,
+      UUID territoryId,
+      UUID senderId,
+      String stage) {
+    if (prepared.result() != RepositoryResult.SUCCESS) return map(prepared.result());
     try {
-      return map(context.repository().setRule(
-          message.territoryId(), senderId, message.action(), message.level()));
+      return map(context.repository().apply(prepared.expected(), prepared.replacement()));
     } catch (RuntimeException failure) {
-      report(context, message.territoryId(), senderId, "rule", failure);
+      report(context, territoryId, senderId, stage, failure);
       return TerritoryManagementResult.STATE_UNKNOWN;
     }
+  }
+
+  private static Prepared preparePermission(
+      Owned current, UUID targetId, String targetName, boolean allowed) {
+    List<Member> members = new ArrayList<>(current.authorizedMembers());
+    int index = indexOf(members, targetId);
+    if (allowed == (index >= 0)) return Prepared.noChange();
+    if (allowed) {
+      if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
+        return Prepared.invalidTarget();
+      }
+      members.add(new Member(targetId, targetName));
+    } else {
+      members.remove(index);
+    }
+    return Prepared.success(current, copy(current, members, current.rules(), current.buffs()));
+  }
+
+  private static Prepared prepareTransfer(Owned current, UUID targetId, String targetName) {
+    List<Member> members = new ArrayList<>(current.authorizedMembers());
+    members.removeIf(member -> member.playerId().equals(targetId));
+    UUID oldOwner = current.summary().ownerId();
+    if (indexOf(members, oldOwner) < 0) {
+      if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
+        return Prepared.invalidTarget();
+      }
+      members.add(new Member(oldOwner, current.summary().ownerName()));
+    }
+    Summary old = current.summary();
+    Summary summary = new Summary(
+        old.territoryId(),
+        targetId,
+        targetName,
+        old.name(),
+        old.pos1(),
+        old.pos2(),
+        old.dimensionId());
+    return Prepared.success(current,
+        new Owned(summary, members, current.backpoint(), current.rules(), current.buffs()));
+  }
+
+  private static Prepared prepareRule(Owned current, RuleAction action, RuleLevel level) {
+    if (action == null || level == null) return Prepared.invalidTarget();
+    List<Rule> rules = new ArrayList<>(current.rules());
+    int index = -1;
+    for (int i = 0; i < rules.size(); i++) {
+      if (rules.get(i).action() == action) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) return Prepared.invalidTarget();
+    if (rules.get(index).level() == level) return Prepared.noChange();
+    rules.set(index, new Rule(action, level));
+    return Prepared.success(current, copy(current, current.authorizedMembers(), rules, current.buffs()));
+  }
+
+  private static int indexOf(List<Member> members, UUID playerId) {
+    for (int i = 0; i < members.size(); i++) {
+      if (members.get(i).playerId().equals(playerId)) return i;
+    }
+    return -1;
+  }
+
+  private static Owned copy(Owned current, List<Member> members, List<Rule> rules,
+      List<TerritorySnapshots.Buff> buffs) {
+    return new Owned(current.summary(), members, current.backpoint(), rules, buffs);
+  }
+
+  /**
+   * Validates the repository contract for an administration replacement. Administration may
+   * change only ownership, authorized members, and rules; geometry, identity, return point, and
+   * buff state are owned by their respective common transactions.
+   */
+  public static boolean isValidReplacement(Owned expected, Owned replacement) {
+    if (expected == null || replacement == null) return false;
+    Summary before = expected.summary();
+    Summary after = replacement.summary();
+    return before.territoryId().equals(after.territoryId())
+        && before.name().equals(after.name())
+        && before.pos1().equals(after.pos1())
+        && before.pos2().equals(after.pos2())
+        && before.dimensionId().equals(after.dimensionId())
+        && before.ownerId() != null
+        && before.ownerName() != null
+        && replacement.backpoint().equals(expected.backpoint())
+        && replacement.buffs().equals(expected.buffs());
   }
 
   private static Lookup find(UUID territoryId, Context context) {
@@ -93,6 +185,28 @@ public final class TerritoryAdministrationService {
 
   private record Lookup(Owned territory, boolean failed) {}
 
+  private record Prepared(RepositoryResult result, Owned expected, Owned replacement) {
+    private Prepared {
+      Objects.requireNonNull(result, "result");
+      if (result == RepositoryResult.SUCCESS) {
+        Objects.requireNonNull(expected, "expected");
+        Objects.requireNonNull(replacement, "replacement");
+      }
+    }
+
+    static Prepared success(Owned expected, Owned replacement) {
+      return new Prepared(RepositoryResult.SUCCESS, expected, replacement);
+    }
+
+    static Prepared noChange() {
+      return new Prepared(RepositoryResult.NO_CHANGE, null, null);
+    }
+
+    static Prepared invalidTarget() {
+      return new Prepared(RepositoryResult.INVALID_TARGET, null, null);
+    }
+  }
+
   private static TerritoryManagementResult authority(Owned territory, UUID senderId) {
     if (territory == null) return TerritoryManagementResult.NOT_FOUND;
     return territory.summary().ownerId().equals(senderId)
@@ -103,7 +217,7 @@ public final class TerritoryAdministrationService {
   private static String validName(Optional<String> value) {
     if (value == null || value.isEmpty()) return null;
     String name = value.get().trim();
-    return name.isEmpty() || name.length() > com.mo.economy_system.common.network.EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH
+    return name.isEmpty() || name.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH
         ? null : name;
   }
 
@@ -138,12 +252,7 @@ public final class TerritoryAdministrationService {
 
   public interface Repository {
     Owned find(UUID territoryId);
-    RepositoryResult setPermission(
-        UUID territoryId, UUID expectedOwner, UUID targetId, String targetName, boolean allowed);
-    RepositoryResult transfer(
-        UUID territoryId, UUID expectedOwner, UUID targetId, String targetName);
-    RepositoryResult setRule(
-        UUID territoryId, UUID expectedOwner, RuleAction action, RuleLevel level);
+    RepositoryResult apply(Owned expected, Owned replacement);
   }
 
   public enum RepositoryResult {

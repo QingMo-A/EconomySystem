@@ -1,7 +1,7 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
-import com.mo.economy_system.common.economy.TransferService;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211TransferAdapter;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -13,7 +13,7 @@ public final class NeoForge1211TransferHandler {
     public static void handle(TransferMessage message, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer sender) {
-                TransferService.execute(sender, message);
+                NeoForge1211TransferAdapter.execute(sender, message);
             }
         });
     }

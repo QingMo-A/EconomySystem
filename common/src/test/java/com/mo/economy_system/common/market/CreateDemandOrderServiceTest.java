@@ -6,7 +6,7 @@ import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import java.util.*;
-import net.minecraft.nbt.CompoundTag;
+import com.mo.economy_system.platform.nbt.NbtData;
 import org.junit.jupiter.api.Test;
 
 class CreateDemandOrderServiceTest {
@@ -81,15 +81,26 @@ class CreateDemandOrderServiceTest {
   }
 
   @Test
-  void debitFailuresNeverAddAnOrder() {
+  void knownDebitFailureIsRejectedAndUnknownDebitStateIsSurfaced() {
     Fixture rejected = new Fixture();
     rejected.account.debitFalse = true;
     assertEquals(CreateDemandOrderResult.PAYMENT_FAILED, rejected.execute());
     assertState(rejected, 1000, 1, 0);
+
     Fixture thrown = new Fixture();
     thrown.account.debitThrows = true;
-    assertEquals(CreateDemandOrderResult.PAYMENT_FAILED, thrown.execute());
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, thrown.execute());
     assertState(thrown, 1000, 1, 0);
+
+    Fixture returnedNull = new Fixture();
+    returnedNull.account.debitNull = true;
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, returnedNull.execute());
+    assertState(returnedNull, 1000, 1, 0);
+
+    Fixture mutatedThenThrew = new Fixture();
+    mutatedThenThrew.account.debitMutatesThenThrows = true;
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, mutatedThenThrew.execute());
+    assertState(mutatedThenThrew, 900, 1, 0);
   }
 
   @Test
@@ -105,17 +116,30 @@ class CreateDemandOrderServiceTest {
   }
 
   @Test
-  void refundFailuresAreExplicitAndStillLeaveNoOrder() {
+  void knownRefundFailureIsExplicitAndUnknownRefundStateIsSurfaced() {
     Fixture rejected = new Fixture();
     rejected.repository.addFalse = true;
     rejected.account.creditFalse = true;
     assertEquals(CreateDemandOrderResult.REFUND_FAILED, rejected.execute());
     assertState(rejected, 900, 1, 1);
+
     Fixture thrown = new Fixture();
     thrown.repository.addFalse = true;
     thrown.account.creditThrows = true;
-    assertEquals(CreateDemandOrderResult.REFUND_FAILED, thrown.execute());
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, thrown.execute());
     assertState(thrown, 900, 1, 1);
+
+    Fixture returnedNull = new Fixture();
+    returnedNull.repository.addFalse = true;
+    returnedNull.account.creditNull = true;
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, returnedNull.execute());
+    assertState(returnedNull, 900, 1, 1);
+
+    Fixture mutatedThenThrew = new Fixture();
+    mutatedThenThrew.repository.addFalse = true;
+    mutatedThenThrew.account.creditMutatesThenThrows = true;
+    assertEquals(CreateDemandOrderResult.STATE_UNKNOWN, mutatedThenThrew.execute());
+    assertState(mutatedThenThrew, 1000, 1, 1);
   }
 
   @Test
@@ -162,7 +186,8 @@ class CreateDemandOrderServiceTest {
 
   private static final class FakeAccount implements CreateDemandOrderService.Account {
     int balance = 1000, debits, credits;
-    boolean debitFalse, debitThrows, creditFalse, creditThrows;
+    boolean debitFalse, debitThrows, debitNull, debitMutatesThenThrows;
+    boolean creditFalse, creditThrows, creditNull, creditMutatesThenThrows;
 
     public boolean canDebit(int amount) {
       return balance >= amount;
@@ -170,7 +195,12 @@ class CreateDemandOrderServiceTest {
 
     public BalanceMutationResult debitExact(int amount) {
       debits++;
+      if (debitMutatesThenThrows) {
+        balance -= amount;
+        throw new IllegalStateException();
+      }
       if (debitThrows) throw new IllegalStateException();
+      if (debitNull) return null;
       if (debitFalse) return BalanceMutationResult.PERSIST_FAILED;
       balance -= amount;
       return BalanceMutationResult.SUCCESS;
@@ -178,7 +208,12 @@ class CreateDemandOrderServiceTest {
 
     public BalanceMutationResult creditExact(int amount) {
       credits++;
+      if (creditMutatesThenThrows) {
+        balance += amount;
+        throw new IllegalStateException();
+      }
       if (creditThrows) throw new IllegalStateException();
+      if (creditNull) return null;
       if (creditFalse) return BalanceMutationResult.PERSIST_FAILED;
       balance += amount;
       return BalanceMutationResult.SUCCESS;
@@ -220,7 +255,7 @@ class CreateDemandOrderServiceTest {
             OptionalInt.empty(),
             true,
             OptionalInt.empty(),
-            new CompoundTag())
+            NbtData.emptyCompound())
         .orElseThrow();
   }
 }

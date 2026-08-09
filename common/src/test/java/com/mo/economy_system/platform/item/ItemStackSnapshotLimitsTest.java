@@ -1,6 +1,6 @@
 package com.mo.economy_system.platform.item;
 
-import net.minecraft.nbt.CompoundTag;
+import com.mo.economy_system.platform.nbt.NbtData;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
@@ -15,11 +15,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class ItemStackSnapshotLimitsTest {
     @Test
     void rejectsOversizedNameAndLoreWithLimitError() {
-        assertLimit(create(Optional.of("x".repeat(ItemStackSnapshotLimits.MAX_CUSTOM_NAME_JSON_LENGTH + 1)), List.of(), Map.of(), new CompoundTag()));
-        assertLimit(create(Optional.empty(), IntStream.range(0, ItemStackSnapshotLimits.MAX_LORE_LINES + 1).mapToObj(i -> "x").toList(), Map.of(), new CompoundTag()));
-        assertLimit(create(Optional.empty(), List.of("x".repeat(ItemStackSnapshotLimits.MAX_LORE_LINE_JSON_LENGTH + 1)), Map.of(), new CompoundTag()));
+        assertLimit(create(Optional.of("x".repeat(ItemStackSnapshotLimits.MAX_CUSTOM_NAME_JSON_LENGTH + 1)), List.of(), Map.of(), NbtData.emptyCompound()));
+        assertLimit(create(Optional.empty(), IntStream.range(0, ItemStackSnapshotLimits.MAX_LORE_LINES + 1).mapToObj(i -> "x").toList(), Map.of(), NbtData.emptyCompound()));
+        assertLimit(create(Optional.empty(), List.of("x".repeat(ItemStackSnapshotLimits.MAX_LORE_LINE_JSON_LENGTH + 1)), Map.of(), NbtData.emptyCompound()));
         List<String> totalLore = IntStream.range(0, 5).mapToObj(i -> "x".repeat(7_000)).toList();
-        assertLimit(create(Optional.empty(), totalLore, Map.of(), new CompoundTag()));
+        assertLimit(create(Optional.empty(), totalLore, Map.of(), NbtData.emptyCompound()));
     }
 
     @Test
@@ -27,22 +27,20 @@ class ItemStackSnapshotLimitsTest {
         Map<String, Integer> tooMany = new LinkedHashMap<>();
         IntStream.range(0, ItemStackSnapshotLimits.MAX_ENCHANTMENTS + 1)
                 .forEach(i -> tooMany.put("test:enchantment_" + i, 1));
-        assertLimit(create(Optional.empty(), List.of(), tooMany, new CompoundTag()));
-        assertLimit(create(Optional.empty(), List.of(), Map.of("x".repeat(ItemStackSnapshotLimits.MAX_ENCHANTMENT_ID_LENGTH + 1), 1), new CompoundTag()));
+        assertLimit(create(Optional.empty(), List.of(), tooMany, NbtData.emptyCompound()));
+        assertLimit(create(Optional.empty(), List.of(), Map.of("x".repeat(ItemStackSnapshotLimits.MAX_ENCHANTMENT_ID_LENGTH + 1), 1), NbtData.emptyCompound()));
     }
 
     @Test
     void rejectsOversizedOrOvernestedCustomDataWithLimitError() {
-        CompoundTag oversized = new CompoundTag();
-        oversized.putString("payload", "x".repeat(ItemStackSnapshotLimits.MAX_CUSTOM_DATA_BYTES + 1));
+        NbtData.Compound oversized = NbtData.compoundBuilder()
+                .putString("payload", "x".repeat(ItemStackSnapshotLimits.MAX_CUSTOM_DATA_BYTES + 1))
+                .build();
         assertLimit(create(Optional.empty(), List.of(), Map.of(), oversized));
 
-        CompoundTag root = new CompoundTag();
-        CompoundTag cursor = root;
+        NbtData.Compound root = NbtData.emptyCompound();
         for (int i = 1; i <= ItemStackSnapshotLimits.MAX_CUSTOM_DATA_DEPTH; i++) {
-            CompoundTag child = new CompoundTag();
-            cursor.put("child", child);
-            cursor = child;
+            root = NbtData.compoundBuilder().put("child", root).build();
         }
         assertLimit(create(Optional.empty(), List.of(), Map.of(), root));
     }
@@ -69,7 +67,7 @@ class ItemStackSnapshotLimitsTest {
     }
 
     private static ItemStackSnapshotResult<ItemStackSnapshot> create(Optional<String> name, List<String> lore,
-                                                                      Map<String, Integer> enchantments, CompoundTag data) {
+                                                                      Map<String, Integer> enchantments, NbtData.Compound data) {
         return ItemStackSnapshot.create("minecraft:stone", 1, name, lore, enchantments, Map.of(), true, true,
                 0, 0, false, true, OptionalInt.empty(), true, OptionalInt.empty(), data);
     }
@@ -77,13 +75,11 @@ class ItemStackSnapshotLimitsTest {
     private static ItemStackSnapshotResult<ItemStackSnapshot> base(String id, int count, Map<String, Integer> enchantments,
                                                                     int damage, int repair, OptionalInt color) {
         return ItemStackSnapshot.create(id, count, Optional.empty(), List.of(), enchantments, Map.of(), true, true,
-                damage, repair, false, true, color, true, OptionalInt.empty(), new CompoundTag());
+                damage, repair, false, true, color, true, OptionalInt.empty(), NbtData.emptyCompound());
     }
 
-    private static CompoundTag customData(int length) {
-        CompoundTag tag = new CompoundTag();
-        tag.putString("payload", "x".repeat(length));
-        return tag;
+    private static NbtData.Compound customData(int length) {
+        return NbtData.compoundBuilder().putString("payload", "x".repeat(length)).build();
     }
 
     private static void assertLimit(ItemStackSnapshotResult<?> result) {

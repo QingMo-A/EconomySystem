@@ -27,7 +27,7 @@ public final class CreateDemandOrderFeedback {
             case INSUFFICIENT_FUNDS -> INSUFFICIENT_FUNDS;
             case REPOSITORY_FULL -> MARKET_FULL;
             case SNAPSHOT_REJECTED -> UNSUPPORTED_ITEM;
-            case REFUND_FAILED -> REFUND_FAILED;
+            case REFUND_FAILED, STATE_UNKNOWN -> REFUND_FAILED;
             default -> FAILED;
         };
     }
@@ -35,7 +35,7 @@ public final class CreateDemandOrderFeedback {
     public static boolean internalFailure(CreateDemandOrderResult result) {
         return switch (result) {
             case INVALID_CONTEXT, ID_GENERATION_FAILED, TIME_OVERFLOW, PAYMENT_FAILED,
-                    ORDER_PERSIST_FAILED, REFUND_FAILED -> true;
+                    ORDER_PERSIST_FAILED, REFUND_FAILED, STATE_UNKNOWN -> true;
             default -> false;
         };
     }

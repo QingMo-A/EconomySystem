@@ -1,11 +1,12 @@
 # EconomySystem 多版本 Common 架构统一计划
 
-> 文档状态：Architecture Plan / Proposed Baseline
+> 文档状态：已完成，完成度审计通过（Complete / Audit Passed）
 > 适用仓库：`QingMo-A/EconomySystem`
 > 适用分支：`bridge`
 > 当前主要目标版本：Forge 1.20.1、NeoForge 1.21.1
 > 当前行为与视觉基准：NeoForge 1.21.1 现有成熟实现
 > 最终唯一 Source of Truth：`common`
+> 最近一次完整验证：2026-08-09，Forge 1.20.1 test、NeoForge 1.21.1 test 与 buildAllTargets 均以 `--rerun-tasks` 通过；Buff、商店事务、回忆药水和领地调整 common policy 均有双 target 回归覆盖
 > 目标：将现有 1.21.1 的模组业务逻辑、UI 行为、布局、视觉规范和交互状态抽象为版本无关的 common 层，各 Minecraft/Loader target 仅负责使用对应版本 API 表达同一套 common 语义。
 
 ---
@@ -1521,21 +1522,105 @@ Forge 使用同一个 common UI Core，不再使用独立简化设计。
 
 该规则应作为后续 UI、业务模块和新增 Minecraft 版本适配的长期架构约束。
 
-## Current UI pilot checkpoint (2026-08-07)
+## Current architecture checkpoint (2026-08-08)
 
-The first common UI pilot is complete for the territory-management entry. The
-common layer contains Java-17-only geometry, theme, controller, state, layout,
-view, navigation, and semantic renderer contracts with no loader imports.
-NeoForge 1.21.1 and Forge 1.20.1 use the same `TerritoryManageState`,
-`TerritoryManageController`, `TerritoryManageLayout`, `TerritoryManageView`,
-and `EconomyUiTheme`; target shells only translate Screen lifecycle, widgets,
-GuiGraphics, player-head drawing, clipboard, and network sends.
+The territory pilot has been expanded through every UI family in the migration
+inventory: home, about, balance log, shop and purchase, market list/create/
+confirm, delivery, territory list/manage/detail/buff/invite/confirmation,
+client-file-check consent/result, and checked-file-transfer consent/result.
+Each active Forge 1.20.1 and NeoForge 1.21.1 Screen composes the same common
+state, controller, layout, theme and semantic view. Target shells retain only
+Minecraft Screen/widget/GuiGraphics, item/player-head/texture drawing,
+filesystem, registry, clipboard and network translation.
 
-The contract includes a 640x360 virtual canvas, explicit loading/empty/error/
-timeout/retry states, request-ID stale-response rejection, filtering, viewport
-page-size synchronization, paging and wheel-scroll bounds, translation-key
-rendering, and semantic player-head operations. The NeoForge implementation is
-the visual baseline. Existing nested buffs, access/rules, transfer, invite and
-delete pages remain an explicit target fallback and are the next territory-family
-work. Shop, market, delivery, file-check UI, root-source detachment, and new
-target skeletons are outside this checkpoint.
+The market list uses the protocol's fixed nine-order page size end to end; a
+640x360 layout exposes all nine cards, and offsets are `0, 9, 18, ...` without
+skipped orders. Shop dynamic-pricing state, demand/stock modes, numeric bounds,
+purchase statistics and twice-daily refresh scheduling are common policy.
+Territory closed-rectangle geometry, inclusive area, overlap, coordinate
+bounds, per-cell pricing and resize transaction policy are common as well.
+
+Both target source sets compile only `common/src/main/java` plus their target
+tree and exclude legacy `com/mo/economy_system/screen/**`; neither compiles root
+`src/main/java`. `targets/future-target-skeleton` demonstrates the required
+source-set and adapter-only shape. Repository gates reject loader imports in
+common, Minecraft Screen inheritance in UI core, active target Screens without
+common UI contracts, known target-local pricing/geometry/resize duplication,
+root-source reattachment and business/layout code in the future skeleton.
+
+The allowed remaining target code is API adaptation: SavedData/NBT, native
+ItemStack/player/registry access, spatial indexes, config/file I/O, loader
+network registration, HTTP/server-thread dispatch, command/event registration
+and Screen rendering. A target-local class name such as `Manager`, `Store` or
+`SavedData` does not waive the gate: version-independent policy found there
+must continue to move into common.
+
+The gameplay and lifecycle services are also part of the parity boundary:
+`common/redpacket`, `common/reward`, `common/tpa`, `common/starter` and
+`common/update` are the single sources of truth for packet allocation and
+refunds, reward calculation, TPA request/teleport transactions, starter-kit
+claims and update-version policy. The former NeoForge-only entry points now
+call these common services on both targets; only their Minecraft/loader API
+adapters remain target-local.
+
+## Completion audit (2026-08-09)
+
+The Definition of Done in section 23 is verified for the current worktree.
+Both target source sets compile `common/src/main/java` plus their version
+adapter trees; the root `src/main/java` tree and legacy screen trees are
+excluded from production and test source sets. A repository gate rejects loader
+imports in common, Minecraft Screen inheritance in UI core, target-local UI or
+business policy duplication, root-source reattachment, and non-adapter code in
+the future target skeleton.
+
+The final territory audit closed the remaining state-transition duplication:
+creation defaults (UUID, members, backpoint and Buff catalog), administration
+(permission, transfer and rules), Buff unlock/upgrade transitions, and
+`/setbackpoint` authorization/geometry all have common policies. Forge applies
+complete administration snapshots through an NBT CAS that preserves unknown
+fields; NeoForge applies the same snapshots to the native object and owner index
+with rollback on persistence failure. Raw/cache consistency is checked before
+Forge mutations so stale adapter state fails closed.
+
+Common production sources contain no Minecraft, Forge or NeoForge API imports.
+Target-local managers/stores retain only persistence, native snapshot conversion,
+spatial-index, registry, player/inventory, filesystem, network registration and
+screen-rendering responsibilities. The root and excluded legacy implementations
+remain available as historical reference material, but are not an alternative
+compiled behavior source.
+
+The final fail-closed transaction audit also corrected uncertain mutation
+handling. Throwing or null balance/resource/inventory ports no longer trigger
+blind compensation, territory creation never refunds when repository state is
+unknown, and delivery claims keep inserted inventory when entry removal cannot
+be proven. NeoForge's retired native permission-cycle, permission-decision and
+Buff unlock/upgrade algorithms were removed; those policies now exist only in
+common. Regression tests pin these uncertainty boundaries on both targets.
+
+The market closeout audit extended that rule to demand/sales creation, demand
+delivery and expiration, and to red-packet create/claim/cancel/expiration.
+Known `PERSIST_FAILED` results remain distinguishable from throwing or null
+mutations; unknown writes are not blindly reversed, and every incomplete
+compensation is surfaced as unknown state. Both red-packet SavedData adapters
+validate and mark dirty before replacing authoritative state. Legacy shop
+entries now receive the same deterministic common identity on both targets.
+NeoForge native territory X/Z geometry delegates to `TerritoryGeometry`, and
+the unused QuadTree overload that read an X coordinate as Z was removed.
+
+### Requirement-by-requirement closeout
+
+| Definition of Done area | Enforced evidence | Result |
+|---|---|---|
+| Source structure | Both source sets use only `common/src/main/java` plus their target tree; root and legacy Screen trees are excluded. | PASS |
+| UI ownership and parity | Exactly 19 active Screen classes per target; every Screen constructs common controller state, calculates common layout and renders one common semantic View. Direct target Screen drawing and color literals are rejected. | PASS |
+| Business and transaction ownership | Market, territory, shop, delivery, red-packet, reward, TPA, starter-kit and update entry points delegate version-independent policy to common services. | PASS |
+| Version boundary | Common production Java has no Minecraft/Forge/NeoForge references; target code retains native API conversion, persistence, registration and rendering adapters. | PASS |
+| Regression protection | Architecture gates cover root detachment, all active Screens, market transaction delegation, deterministic shop identity, common territory geometry and the future-target skeleton. | PASS |
+| Target tests | Forge 1.20.1: 805 tests; NeoForge 1.21.1: 870 tests; both have zero failures and errors. | PASS |
+| Aggregate build | `buildAllTargets --no-daemon --rerun-tasks` on the final worktree. | PASS |
+
+Verification completed:
+
+- Forge 1.20.1: 805 tests, 0 failures, 0 errors, 1 skipped.
+- NeoForge 1.21.1: 870 tests, 0 failures, 0 errors, 1 skipped.
+- `buildAllTargets --no-daemon --rerun-tasks`: passed (19 tasks executed).

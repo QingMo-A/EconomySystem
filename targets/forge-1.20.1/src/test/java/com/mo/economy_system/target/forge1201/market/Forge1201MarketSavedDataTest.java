@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.platform.nbt.NbtData;
+import com.mo.economy_system.target.forge1201.item.Forge1201NbtAdapter;
 import java.util.*;
 import net.minecraft.nbt.*;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,7 @@ class Forge1201MarketSavedDataTest {
   void roundTripsStableOrderAndPreservesDemandAlongsideNewSale() {
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
-    list.add(MarketOrderCodec.encode(demand()));
+    list.add(nativeOrder(demand()));
     root.put("marketItems", list);
     MarketSavedData data = MarketSavedData.load(root);
     assertTrue(data.addOrder(sale()));
@@ -54,7 +56,7 @@ class Forge1201MarketSavedDataTest {
   @Test
   void duplicateTradeIdsFailClosedWithoutProducingReplacementData() {
     MarketOrder order = sale();
-    CompoundTag encoded = MarketOrderCodec.encode(order);
+    CompoundTag encoded = nativeOrder(order);
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
     list.add(encoded);
@@ -68,7 +70,7 @@ class Forge1201MarketSavedDataTest {
   void tooManyOrdersFailClosed() {
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
-    for (int i = 0; i <= MarketLedger.MAX_ORDERS; i++) list.add(MarketOrderCodec.encode(sale()));
+    for (int i = 0; i <= MarketLedger.MAX_ORDERS; i++) list.add(nativeOrder(sale()));
     root.put("marketItems", list);
     assertThrows(IllegalArgumentException.class, () -> MarketSavedData.load(root));
   }
@@ -101,7 +103,7 @@ class Forge1201MarketSavedDataTest {
   private static CompoundTag root(MarketOrder... orders) {
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
-    for (MarketOrder order : orders) list.add(MarketOrderCodec.encode(order));
+    for (MarketOrder order : orders) list.add(nativeOrder(order));
     root.put("marketItems", list);
     return root;
   }
@@ -144,7 +146,11 @@ class Forge1201MarketSavedDataTest {
             OptionalInt.empty(),
             true,
             OptionalInt.empty(),
-            new CompoundTag())
+            NbtData.emptyCompound())
         .orElseThrow();
+  }
+
+  private static CompoundTag nativeOrder(MarketOrder order) {
+    return Forge1201NbtAdapter.toNative(MarketOrderCodec.encode(order));
   }
 }

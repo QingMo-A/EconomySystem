@@ -46,7 +46,11 @@ import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
 import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+
+import java.util.UUID;
 
 /**
  * Forge delivery adapter. Codec registration is enabled message-by-message as the NeoForge 1.21.1
@@ -177,7 +181,11 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
   }
 
   @Override
-  public void sendToPlayer(ServerPlayer player, EconomyNetworkMessage message) {
+  public void sendToPlayer(UUID playerId, EconomyNetworkMessage message) {
+    MinecraftServer server = Forge1201Platform.activeServer();
+    if (server == null) return;
+    ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+    if (player == null) return;
     if(message instanceof CheckedFileTransferRequestMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}
     if(message instanceof CheckedFileTransferControlResponseMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}
     if(message instanceof CheckedFileTransferChunkResponseMessage value){Forge1201NetworkChannel.sendToPlayer(player,value);return;}

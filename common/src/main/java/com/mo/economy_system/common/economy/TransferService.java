@@ -2,60 +2,71 @@ package com.mo.economy_system.common.economy;
 
 import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.core.economy_system.BalanceTransferResult;
-import com.mo.economy_system.core.economy_system.EconomySavedData;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
-/** Shared online-player transfer behavior used by every loader target. */
+/** Loader-neutral, server-authoritative online-player transfer policy. */
 public final class TransferService {
-    private static final String TRANSFER_CATEGORY = "转账";
-    private static final String TRANSFER_SUCCESS_KEY = "message.transfer.transfer_successfully";
-    private static final String RECEIVE_SUCCESS_KEY = "message.transfer.receive_successfully";
-    private static final String TRANSFER_FAILED_KEY = "message.transfer.transfer_failed";
+    public static final String TRANSFER_CATEGORY = "转账";
+    public static final String TRANSFER_SUCCESS_KEY = "message.transfer.transfer_successfully";
+    public static final String RECEIVE_SUCCESS_KEY = "message.transfer.receive_successfully";
+    public static final String TRANSFER_FAILED_KEY = "message.transfer.transfer_failed";
 
     private TransferService() {
     }
 
-    public static BalanceTransferResult execute(ServerPlayer sender, TransferMessage message) {
+    public static BalanceTransferResult execute(
+            PlayerIdentity sender,
+            TransferMessage message,
+            TransferPort port) {
         Objects.requireNonNull(sender, "sender");
         Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(port, "port");
 
-        ServerPlayer recipient = sender.server.getPlayerList().getPlayer(message.targetPlayerId());
-        if (recipient == null) {
-            sendFailure(sender);
+        Optional<PlayerIdentity> recipient = port.onlinePlayer(message.targetPlayerId());
+        if (recipient.isEmpty()) {
+            port.send(sender.id(), TRANSFER_FAILED_KEY);
             return BalanceTransferResult.TARGET_NOT_AVAILABLE;
         }
 
-        EconomySavedData data = EconomySavedData.getInstance(sender.serverLevel());
-        BalanceTransferResult result = data.transferExact(
-                sender.getUUID(),
-                recipient.getUUID(),
+        PlayerIdentity target = recipient.orElseThrow();
+        BalanceTransferResult result = port.transfer(
+                sender.id(),
+                target.id(),
                 message.amount(),
                 TRANSFER_CATEGORY,
-                "赠与 " + recipient.getName().getString(),
-                "来自 " + sender.getName().getString() + " 的赠与"
-        );
+                "赠与 " + target.name(),
+                "来自 " + sender.name() + " 的赠与");
         if (result != BalanceTransferResult.SUCCESS) {
-            sendFailure(sender);
+            port.send(sender.id(), TRANSFER_FAILED_KEY);
             return result;
         }
 
-        sender.sendSystemMessage(Component.translatable(
-                TRANSFER_SUCCESS_KEY,
-                message.amount(),
-                recipient.getName().getString()
-        ));
-        recipient.sendSystemMessage(Component.translatable(
-                RECEIVE_SUCCESS_KEY,
-                sender.getName().getString(),
-                message.amount()
-        ));
+        port.send(sender.id(), TRANSFER_SUCCESS_KEY, message.amount(), target.name());
+        port.send(target.id(), RECEIVE_SUCCESS_KEY, sender.name(), message.amount());
         return result;
     }
 
-    private static void sendFailure(ServerPlayer sender) {
-        sender.sendSystemMessage(Component.translatable(TRANSFER_FAILED_KEY));
+    public record PlayerIdentity(UUID id, String name) {
+        public PlayerIdentity {
+            Objects.requireNonNull(id, "id");
+            name = Objects.requireNonNull(name, "name");
+        }
+    }
+
+    /** Target adapter for online-player lookup, atomic account mutation and translated feedback. */
+    public interface TransferPort {
+        Optional<PlayerIdentity> onlinePlayer(UUID id);
+
+        BalanceTransferResult transfer(
+                UUID senderId,
+                UUID recipientId,
+                int amount,
+                String category,
+                String senderReason,
+                String recipientReason);
+
+        void send(UUID playerId, String translationKey, Object... arguments);
     }
 }

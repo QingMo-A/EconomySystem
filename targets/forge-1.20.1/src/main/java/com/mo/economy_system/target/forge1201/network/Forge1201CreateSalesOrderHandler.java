@@ -7,6 +7,7 @@ import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
 import net.minecraft.network.chat.Component;
@@ -73,15 +74,15 @@ final class Forge1201CreateSalesOrderHandler {
         public Object copySlot(int slot) { ItemStack stack = inventory.items.get(slot); return stack.isEmpty() ? null : stack.copy(); }
         public Object unitTemplate(Object value) { ItemStack stack = ((ItemStack) value).copy(); stack.setCount(1); return stack; }
         public ItemStackSnapshotResult<ItemStackSnapshot> capture(Object value) {
-            return EconomyServices.platform().itemStacks().captureSnapshot((ItemStack) value, player.serverLevel().registryAccess());
+            return Forge1201Platform.nativeItemStacks().captureSnapshot((ItemStack) value, player.serverLevel().registryAccess());
         }
         public long countMatching(Object value) { ItemStack template = (ItemStack) value; long total = 0;
-            for (ItemStack stack : inventory.items) if (!stack.isEmpty() && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) total += stack.getCount(); return total; }
+            for (ItemStack stack : inventory.items) if (!stack.isEmpty() && Forge1201Platform.nativeItemStacks().sameItemAndData(stack, template)) total += stack.getCount(); return total; }
         public CreateSalesOrderService.RemovalResult removeMatching(Object value, int quantity) {
             ItemStack template = (ItemStack) value; List<ItemStack> before = inventory.items.stream().map(ItemStack::copy).toList();
             try {
                 int remaining = quantity;
-                for (ItemStack stack : inventory.items) if (remaining > 0 && !stack.isEmpty() && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
+                for (ItemStack stack : inventory.items) if (remaining > 0 && !stack.isEmpty() && Forge1201Platform.nativeItemStacks().sameItemAndData(stack, template)) {
                     int removed = Math.min(remaining, stack.getCount()); stack.shrink(removed); remaining -= removed;
                 }
                 if (remaining != 0) return CreateSalesOrderService.RemovalResult.failure(restore(before));

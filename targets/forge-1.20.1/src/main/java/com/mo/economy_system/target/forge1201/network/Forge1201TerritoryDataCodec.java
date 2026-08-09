@@ -10,18 +10,18 @@ final class Forge1201TerritoryDataCodec {
   private Forge1201TerritoryDataCodec() {}
 
   public static void encodeRequest(TerritoryDataRequestMessage message, FriendlyByteBuf buffer) {
-    TerritoryDataWireCodec.encodeRequest(message, buffer);
+    TerritoryDataWireCodec.encodeRequest(message, Forge1201WireBuffer.wrap(buffer));
   }
 
   public static TerritoryDataRequestMessage decodeRequest(FriendlyByteBuf buffer) {
-    return TerritoryDataWireCodec.decodeRequest(buffer);
+    return TerritoryDataWireCodec.decodeRequest(Forge1201WireBuffer.wrap(buffer));
   }
 
   public static void encodeResponse(TerritoryDataResponseMessage message, FriendlyByteBuf buffer) {
-    TerritoryDataWireCodec.encodeResponse(message, buffer);
+    TerritoryDataWireCodec.encodeResponse(message, Forge1201WireBuffer.wrap(buffer));
   }
 
   public static TerritoryDataResponseMessage decodeResponse(FriendlyByteBuf buffer) {
-    return TerritoryDataWireCodec.decodeResponse(buffer);
+    return TerritoryDataWireCodec.decodeResponse(Forge1201WireBuffer.wrap(buffer));
   }
 }

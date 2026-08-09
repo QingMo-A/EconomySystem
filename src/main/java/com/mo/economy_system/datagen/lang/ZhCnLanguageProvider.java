@@ -24,6 +24,10 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
     add("item.economy_system.hanhanyu_doll_hat", "__HanHanYu__");
     add("item.economy_system.player_351987654321_doll_hat", "351987654321");
+    add("tooltip.economy_system.supporter_hat.unbound", "未绑定赞助者身份");
+    add("message.supporter_hat.hold_hat", "请将赞助者帽子拿在主手中。");
+    add("message.supporter_hat.invalid_identity", "赞助者身份无效。");
+    add("message.supporter_hat.bound", "赞助者帽子已绑定到 %s (%s)");
 
     // Enchantment | 附魔
     add("enchantment.economy_system.carefully", "细心");
@@ -72,12 +76,61 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY, "收货箱");
     add(Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY, "我的领地");
     add(Util_MessageKeys.HOME_ABOUT_BUTTON_KEY, "关于本模组");
+    add("screen.home.balance", "余额");
+    add("screen.home.trade", "交易活动");
+    add("screen.home.sell_orders", "出售订单：%s");
+    add("screen.home.demand_orders", "求购订单：%s");
+    add("screen.home.leaderboard", "排行榜");
+    add("screen.home.loading", "正在加载账户数据…");
+    add("screen.home.sync_failed", "账户数据加载失败");
+    add("screen.home.sync_timeout", "账户数据请求超时");
+    add("screen.home.retry", "重试");
+    add("screen.home.leaderboard.empty", "暂无账户数据");
+    add("screen.home.version", "EconomySystem");
+    add("screen.invite.sync_failed", "玩家列表加载失败");
+    add("screen.invite.sync_timeout", "玩家列表请求超时");
+    add("screen.invite.retry", "重试");
+    add("screen.territory.confirm.remove_title", "删除领地");
+    add("screen.territory.confirm.member_title", "移除授权成员");
+    add("screen.territory.confirm.remove_body", "确定删除领地 %s 吗？此操作无法撤销。");
+    add("screen.territory.confirm.member_body", "确定将 %s 移出该领地吗？");
+    add("screen.territory.confirm.confirm", "删除");
+    add("screen.territory.confirm.cancel", "取消");
 
     // Reward | 击杀奖励
     add(Util_MessageKeys.MOB_REWARD_MESSAGE_KEY, "§b你从 §e%s §b的尸体上找到了 §6%s §b枚梦鱼币");
+    add("message.starter_kit.success", "成功领取新手礼包：获得 %s 枚梦鱼币");
+    add("message.starter_kit.already_claimed", "你已经领取过新手礼包");
+    add("message.starter_kit.balance_limit", "余额已达到上限，无法完整接收新手礼包");
+    add("message.starter_kit.persist_failed", "新手礼包保存失败，本次奖励未保留");
+    add("message.starter_kit.state_unknown", "新手礼包状态无法确认，请联系管理员");
+    add("message.update.available", "发现新版本：%s");
+    add("message.update.current", "EconomySystem 已是最新版本");
+    add("message.update.unavailable", "无法检查 EconomySystem 更新");
+    add("message.update.invalid_response", "EconomySystem 更新响应无效");
+    add("message.update.copy_link", "[复制下载链接]");
+    add("message.update.copy_link_hover", "复制发布页面链接");
 
     // Screen_Shop | 商店
     add(Util_MessageKeys.SHOP_TITLE_KEY, "商店");
+    add("screen.shop.search", "搜索商店");
+    add("screen.shop.esc", "按 ESC 返回");
+    add("screen.shop.loading", "正在加载商店...");
+    add("screen.shop.empty", "没有找到商品");
+    add("screen.shop.sync_failed", "无法加载商店数据");
+    add("screen.shop.sync_timeout", "商店数据请求超时");
+    add("screen.shop.retry", "重试");
+    add("screen.shop.price", "价格: %s");
+    add("screen.shop.buy", "购买");
+    add("screen.shop.purchase.title", "确认购买");
+    add("screen.shop.purchase.quantity", "数量");
+    add("screen.shop.purchase.unit_price", "单价：%s");
+    add("screen.shop.purchase.total", "总价：%s");
+    add("screen.shop.purchase.confirm", "购买");
+    add("screen.shop.purchase.back", "返回");
+    add("screen.shop.purchase.invalid_quantity", "请输入正整数数量");
+    add("screen.shop.purchase.inventory_full", "物品栏空间不足");
+    add("screen.shop.purchase.price_overflow", "购买总价过大");
     add(Util_MessageKeys.SHOP_HINT_TEXT_KEY, "输入商品任意信息");
     add(Util_MessageKeys.SHOP_ITEM_PRICE_KEY, "§6%s §b枚梦鱼币 §6/ §b个");
     add(Util_MessageKeys.SHOP_ITEM_ID_KEY, "§8物品ID: §7%s");
@@ -111,6 +164,64 @@ public class ZhCnLanguageProvider extends LanguageProvider {
 
     // Screen_Market | 市场
     add(Util_MessageKeys.MARKET_TITLE_KEY, "市场");
+    add("screen.market.search", "搜索市场");
+    add("screen.market.esc", "按 ESC 返回");
+    add("screen.market.create_sales", "上架物品");
+    add("screen.market.create_demand", "发布求购");
+    add("screen.market.sales", "出售订单");
+    add("screen.market.demand", "求购订单");
+    add("screen.market.price", "价格: %s");
+    add("screen.market.buy", "购买");
+    add("screen.market.remove_sales", "下架");
+    add("screen.market.deliver", "交付");
+    add("screen.market.confirm", "确认");
+    add("screen.market.remove_demand", "取消");
+    add("screen.market.done", "已完成");
+    add("screen.market.filter.all", "全部");
+    add("screen.market.filter.mine", "我的");
+    add("screen.market.filter.sales", "出售");
+    add("screen.market.filter.demand", "求购");
+    add("screen.market.empty", "没有找到市场订单");
+    add("screen.market.sync_failed", "无法加载市场数据");
+    add("screen.market.sync_timeout", "市场数据请求超时");
+    add("screen.market.retry", "重试");
+    add("screen.market.create.sales_title", "上架市场物品");
+    add("screen.market.create.demand_title", "发布市场求购");
+    add("screen.market.create.inventory", "选择背包物品");
+    add("screen.market.create.selected", "上架设置");
+    add("screen.market.create.item_id", "物品 ID");
+    add("screen.market.create.quantity", "数量");
+    add("screen.market.create.price", "总价");
+    add("screen.market.create.all", "全部");
+    add("screen.market.create.submit", "发布订单");
+    add("screen.market.create.back", "返回");
+    add("screen.market.create.no_item", "请选择要上架的物品");
+    add("screen.market.create.unknown_item", "未知物品 ID");
+    add("screen.market.create.invalid_quantity", "数量不符合物品限制");
+    add("screen.market.create.invalid_price", "请输入正整数总价");
+    add("screen.market.confirm.title", "确认市场操作");
+    add("screen.market.confirm.buy_title", "确认购买");
+    add("screen.market.confirm.remove_sales_title", "确认下架订单");
+    add("screen.market.confirm.remove_demand_title", "确认取消求购");
+    add("screen.market.confirm.deliver_title", "确认交付");
+    add("screen.market.confirm.confirm_title", "确认领取");
+    add("screen.market.confirm.item", "物品：%s");
+    add("screen.market.confirm.price", "总价：%s");
+    add("screen.market.confirm.sales_warning", "此操作会转移订单物品和余额。");
+    add("screen.market.confirm.demand_warning", "此操作会改变求购订单状态。");
+    add("screen.market.confirm.confirm", "确认");
+    add("screen.market.confirm.cancel", "取消");
+
+    // 余额日志页面
+    add("screen.balance_log.title", "余额日志");
+    add("screen.balance_log.esc", "按 ESC 返回");
+    add("screen.balance_log.loading", "正在加载余额日志...");
+    add("screen.balance_log.empty", "暂无余额日志");
+    add("screen.balance_log.sync_failed", "余额日志加载失败");
+    add("screen.balance_log.sync_timeout", "余额日志请求超时");
+    add("screen.balance_log.retry", "重试");
+    add("screen.balance_log.previous", "上一页");
+    add("screen.balance_log.next", "下一页");
     add(Util_MessageKeys.MARKET_HINT_TEXT_KEY, "输入商品任意信息");
     add(Util_MessageKeys.MARKET_SELLER_NAME_KEY, "订单发布者: %s");
     add(Util_MessageKeys.MARKET_SELLER_UUID_KEY, "订单发布者UUID: %s");
@@ -186,6 +297,13 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.DELIVERY_BOX_ITEM_ID_KEY, "物品ID: %s");
     add(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY, "领取");
     add(Util_MessageKeys.DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY, "%s x %s");
+    add("screen.delivery_box.search", "搜索收货箱");
+    add("screen.delivery_box.esc", "按 ESC 返回");
+    add("screen.delivery_box.loading", "正在加载收货箱...");
+    add("screen.delivery_box.empty", "收货箱为空");
+    add("screen.delivery_box.sync_failed", "收货箱加载失败");
+    add("screen.delivery_box.sync_timeout", "收货箱请求超时");
+    add("screen.delivery_box.retry", "重试");
 
     // RedPacket Command | 红包指令
     add(Util_MessageKeys.RED_PACKET_INSUFFICIENT_BALANCE, "§c你没有足够的梦鱼币创建红包");
@@ -204,7 +322,17 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.RED_PACKET_CLAIM_BROADCAST, "%s 从 %s 的红包中抢到了 %s 枚梦鱼币");
 
     // Screen_Territory | 我的领地
-    add(Util_MessageKeys.TERRITORY_TITLE_KEY, "我的领地");
+      add(Util_MessageKeys.TERRITORY_TITLE_KEY, "我的领地");
+      add("screen.territory.list.search", "搜索领地");
+      add("screen.territory.list.loading", "正在加载领地数据……");
+      add("screen.territory.list.empty", "暂无可显示的领地");
+      add("screen.territory.list.esc", "按 ESC 返回");
+      add("screen.territory.list.owned", "我的领地");
+      add("screen.territory.list.authorized", "已授权");
+      add("screen.territory.list.dimension.overworld", "主世界");
+      add("screen.territory.list.dimension.nether", "下界");
+      add("screen.territory.list.dimension.end", "末地");
+      add("screen.territory.list.sync_timeout", "领地数据请求超时");
     add(Util_MessageKeys.TERRITORY_HINT_TEXT_KEY, "输入领地的任意信息");
     add(Util_MessageKeys.TERRITORY_NO_TERRITORIES_TEXT_KEY, "你还没有自己的领地喵~");
     add(Util_MessageKeys.TERRITORY_TERRITORY_NAME_TEXT_KEY, "领地名称: %s");
@@ -345,6 +473,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY, "点击复制");
     add(Util_MessageKeys.ABOUT_COPY_URL, "Github仓库链接已经复制到粘贴板了");
     add(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY, "返回");
+    add("screen.about.esc", "按 ESC 返回");
     add(Util_MessageKeys.REQUEST_CREATE_SUCCESS, "求购订单创建成功");
     add(Util_MessageKeys.REQUEST_INVALID_ITEM_ID, "无效的物品 ID");
     add(Util_MessageKeys.REQUEST_ITEM_NOT_FOUND, "找不到该物品");
@@ -425,6 +554,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add("message.market.deliver_demand.persist_failed", "市场数据保存失败");
     add("message.market.deliver_demand.state_unknown", "市场状态不确定，请刷新后再操作");
     add("message.market.deliver_demand.rollback_failed", "交付回滚失败，请联系管理员");
+    add("message.market.expired.sales_return", "你的出售单 %s x%s 已过期，物品已移入收货箱");
+    add("message.market.expired.demand_refunded", "你的求购单 %s 已过期，已退回 %s 枚梦鱼币");
+    add("message.market.expired.demand_delivered", "已交付的求购物品 %s x%s 已过期，物品已移入收货箱");
     add(Util_MessageKeys.MARKET_DELIVER_DEMAND_FAILED, "交付求购订单失败");
     add(Util_MessageKeys.MARKET_DELIVER_DEMAND_REQUESTER_NOTICE, "%s 已向你的求购订单交付 %s x%s");
   }

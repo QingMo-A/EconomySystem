@@ -3,10 +3,10 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.common.market.MarketOrderType;
 import com.mo.economy_system.common.network.*;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.platform.nbt.NbtData;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
@@ -77,8 +77,9 @@ class NeoForge1211MarketDataProtocolTest {
     }
 
     private static MarketOrderSnapshot order() {
-        CompoundTag customData = new CompoundTag();
-        customData.putString("fixture", "market-page");
+        NbtData.Compound customData = NbtData.compoundBuilder()
+                .putString("fixture", "market-page")
+                .build();
         ItemStackSnapshot snapshot = ItemStackSnapshot.create("minecraft:stone", 1,
                 Optional.of("{\"text\":\"Stone\"}"), List.of("{\"text\":\"Lore\"}"),
                 Map.of(), Map.of(), true, true, 0, 0, false, true,

@@ -2,13 +2,6 @@ package com.mo.economy_system.target.neoforge1211.client;
 
 import com.mo.economy_system.common.client.ui.EconomyUiBridge;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
-import com.mo.economy_system.screen.Screen_About;
-import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
-import com.mo.economy_system.screen.economy_system.logs.Screen_BalanceLog;
-import com.mo.economy_system.screen.economy_system.market.Screen_Market;
-import com.mo.economy_system.screen.economy_system.shop.Screen_Shop;
-import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import java.util.Optional;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -22,13 +15,13 @@ public final class NeoForge1211UiBridge implements EconomyUiBridge<Screen> {
     @Override
     public Optional<Screen> create(EconomyUiRoute route) {
         return switch (route) {
-            case HOME -> Optional.of(new Screen_Home());
-            case SHOP -> Optional.of(new Screen_Shop());
-            case MARKET -> Optional.of(new Screen_Market());
-            case DELIVERY_BOX -> Optional.of(new Screen_DeliveryBox());
-            case TERRITORY -> Optional.of(new Screen_Territory());
-            case ABOUT -> Optional.of(new Screen_About());
-            case BALANCE_LOG -> Optional.of(new Screen_BalanceLog());
+            case HOME -> Optional.of(new NeoForge1211HomeScreen());
+            case SHOP -> Optional.of(new NeoForge1211ShopScreen());
+            case MARKET -> Optional.of(new NeoForge1211MarketScreen());
+            case DELIVERY_BOX -> Optional.of(new NeoForge1211DeliveryBoxScreen());
+            case TERRITORY -> Optional.of(new NeoForge1211TerritoryListScreen());
+            case ABOUT -> Optional.of(new NeoForge1211AboutScreen());
+            case BALANCE_LOG -> Optional.of(new NeoForge1211BalanceLogScreen());
         };
     }
 

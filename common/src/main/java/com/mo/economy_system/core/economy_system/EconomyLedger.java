@@ -217,8 +217,11 @@ public final class EconomyLedger {
 
   public List<String> getOfflineMessages(UUID playerUUID) {
     List<String> messages = offlineMessages.remove(playerUUID);
+    if (messages == null) {
+      return new ArrayList<>();
+    }
     dirtyCallback.run();
-    return messages == null ? new ArrayList<>() : messages;
+    return messages;
   }
 
   /** Returns newest-first balance history for the requested player. */

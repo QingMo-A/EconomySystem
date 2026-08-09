@@ -22,6 +22,7 @@ public final class DemandOrderDeliveryFeedback {
       case INSUFFICIENT_ITEMS -> "message.market.deliver_demand.insufficient_items";
       case RECIPIENT_BALANCE_LIMIT -> "message.market.deliver_demand.balance_limit";
       case PAYMENT_FAILED -> "message.market.deliver_demand.payment_failed";
+      case PAYMENT_STATE_UNKNOWN -> "message.market.deliver_demand.state_unknown";
       case ORDER_CHANGED -> "message.market.deliver_demand.order_changed";
       case LEDGER_UPDATE_FAILED -> "message.market.deliver_demand.persist_failed";
       case LEDGER_STATE_UNKNOWN -> "message.market.deliver_demand.state_unknown";

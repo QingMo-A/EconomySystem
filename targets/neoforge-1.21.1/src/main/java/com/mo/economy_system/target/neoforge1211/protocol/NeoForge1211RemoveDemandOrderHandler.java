@@ -6,7 +6,7 @@ import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.*;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.MarketInvalidationBroadcaster;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.neoforge1211.player.NeoForge1211PlayerLookup;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,7 +25,7 @@ final class NeoForge1211RemoveDemandOrderHandler {
       CancelDemandOrderOutcome outcome = CancelDemandOrderService.execute(
           message,
           new CancelDemandOrderService.Context(
-              player.getUUID(), Util_Player.isOP(player), new Account(accounts),
+              player.getUUID(), NeoForge1211PlayerLookup.isOperator(player), new Account(accounts),
               new Repository(market), NeoForge1211RemoveDemandOrderHandler::report));
       boolean success = outcome.result() == CancelDemandOrderResult.SUCCESS;
       IsolatedPostActions.runAll(

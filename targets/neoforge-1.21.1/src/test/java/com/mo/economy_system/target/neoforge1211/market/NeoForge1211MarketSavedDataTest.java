@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.platform.nbt.NbtData;
+import com.mo.economy_system.target.neoforge1211.item.NeoForge1211NbtAdapter;
 import java.util.*;
 import net.minecraft.nbt.*;
 import org.junit.jupiter.api.Test;
@@ -39,13 +41,13 @@ class NeoForge1211MarketSavedDataTest {
             false);
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
-    list.add(MarketOrderCodec.encode(original));
+    list.add(nativeOrder(original));
     root.put("marketItems", list);
     MarketSavedData data = MarketSavedData.load(root, null);
     CompoundTag saved = data.save(new CompoundTag(), null);
     MarketOrder decoded =
-        MarketOrderCodec.decodeCurrent(
-                saved.getList("marketItems", Tag.TAG_COMPOUND).getCompound(0))
+        MarketOrderCodec.decodeCurrent(NeoForge1211NbtAdapter.fromNative(
+                saved.getList("marketItems", Tag.TAG_COMPOUND).getCompound(0)))
             .orElseThrow();
     assertEquals(original, decoded);
     assertEquals(123456, decoded.expirationTime());
@@ -77,9 +79,9 @@ class NeoForge1211MarketSavedDataTest {
             2,
             888,
             true);
-    CompoundTag saleTag = MarketOrderCodec.encode(sale);
+    CompoundTag saleTag = nativeOrder(sale);
     saleTag.putString("type", "com.mo.economy_system.core.economy_system.market.SalesOrder");
-    CompoundTag demandTag = MarketOrderCodec.encode(demand);
+    CompoundTag demandTag = nativeOrder(demand);
     demandTag.putString("type", "com.mo.economy_system.core.economy_system.market.DemandOrder");
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
@@ -96,7 +98,7 @@ class NeoForge1211MarketSavedDataTest {
   @Test
   void malformedVersionedOrderFailsBeforeAnyRewrite() {
     CompoundTag valid =
-        MarketOrderCodec.encode(
+        nativeOrder(
             new MarketOrder(
                 MarketOrderType.SALES,
                 UUID.randomUUID(),
@@ -147,8 +149,8 @@ class NeoForge1211MarketSavedDataTest {
             false);
     CompoundTag root = new CompoundTag();
     ListTag list = new ListTag();
-    list.add(MarketOrderCodec.encode(demand));
-    list.add(MarketOrderCodec.encode(sale));
+    list.add(nativeOrder(demand));
+    list.add(nativeOrder(sale));
     root.put("marketItems", list);
     MarketSavedData data = MarketSavedData.load(root, null);
     assertEquals(
@@ -185,7 +187,11 @@ class NeoForge1211MarketSavedDataTest {
             OptionalInt.empty(),
             true,
             OptionalInt.empty(),
-            new CompoundTag())
+            NbtData.emptyCompound())
         .orElseThrow();
+  }
+
+  private static CompoundTag nativeOrder(MarketOrder order) {
+    return NeoForge1211NbtAdapter.toNative(MarketOrderCodec.encode(order));
   }
 }

@@ -1,9 +1,7 @@
 package com.mo.economy_system.platform;
 
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.platform.shop.EconomyShopCatalogBridge;
-import net.minecraft.server.MinecraftServer;
 
 import java.nio.file.Path;
 
@@ -14,18 +12,18 @@ import java.nio.file.Path;
 public interface EconomyPlatform {
     String targetName();
 
-    Path configDirectory();
+    /** Target API facts used for explicit, tested fallbacks. */
+    default PlatformCapabilities capabilities() {
+        return PlatformCapabilities.full();
+    }
 
-    /** Returns the active logical server, or {@code null} when none is running. */
-    MinecraftServer currentServer();
+    Path configDirectory();
 
     String modVersion(String modId);
 
     boolean isModLoaded(String modId);
 
     EconomyNetworkBridge network();
-
-    EconomyItemStackBridge itemStacks();
 
     EconomyShopCatalogBridge shopCatalog();
 }

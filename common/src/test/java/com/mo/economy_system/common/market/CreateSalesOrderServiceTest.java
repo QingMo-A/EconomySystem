@@ -66,11 +66,17 @@ class CreateSalesOrderServiceTest {
         assertEquals(CreateSalesOrderResult.ROLLBACK_FAILED, f.execute(5,10));
     }
 
-    @Test void debitFalseOrExceptionRestoresInventory() {
+    @Test void knownDebitFailureRestoresInventoryAndUnknownDebitStateIsSurfaced() {
         Fixture rejected = new Fixture(); rejected.account.debitFalse = true;
         assertEquals(CreateSalesOrderResult.TAX_MUTATION_FAILED, rejected.execute(5,10)); assertUnchanged(rejected,20,1000);
         Fixture thrown = new Fixture(); thrown.account.debitThrows = true;
-        assertEquals(CreateSalesOrderResult.TAX_MUTATION_FAILED, thrown.execute(5,10)); assertUnchanged(thrown,20,1000);
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, thrown.execute(5,10)); assertUnchanged(thrown,20,1000);
+        Fixture returnedNull = new Fixture(); returnedNull.account.debitNull = true;
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, returnedNull.execute(5,10)); assertUnchanged(returnedNull,20,1000);
+        Fixture mutatedThenThrew = new Fixture(); mutatedThenThrew.account.debitMutatesThenThrows = true;
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, mutatedThenThrew.execute(5,10));
+        assertEquals(20, mutatedThenThrew.inventory.count); assertEquals(999, mutatedThenThrew.account.balance);
+        assertEquals(0, mutatedThenThrew.account.creditCalls);
     }
 
     @Test void repositoryFalseOrExceptionRestoresTaxAndInventory() {
@@ -80,11 +86,23 @@ class CreateSalesOrderServiceTest {
         assertEquals(CreateSalesOrderResult.ORDER_PERSIST_FAILED, thrown.execute(5,10)); assertUnchanged(thrown,20,1000);
     }
 
-    @Test void creditFailureStillAttemptsInventoryCompensation() {
-        for (boolean throwsCredit : List.of(false, true)) { Fixture f = new Fixture(); f.repository.reject = true;
-            if (throwsCredit) f.account.creditThrows = true; else f.account.creditFalse = true;
-            assertEquals(CreateSalesOrderResult.ROLLBACK_FAILED, f.execute(5,10));
-            assertEquals(20, f.inventory.count); assertEquals(1, f.inventory.rollbackCalls); assertEquals(1, f.account.creditCalls); }
+    @Test void knownCreditFailureAndUnknownCreditStateStillRestoreInventory() {
+        Fixture rejected = new Fixture(); rejected.repository.reject = true; rejected.account.creditFalse = true;
+        assertEquals(CreateSalesOrderResult.ROLLBACK_FAILED, rejected.execute(5,10));
+        assertEquals(20, rejected.inventory.count); assertEquals(1, rejected.inventory.rollbackCalls);
+
+        Fixture thrown = new Fixture(); thrown.repository.reject = true; thrown.account.creditThrows = true;
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, thrown.execute(5,10));
+        assertEquals(20, thrown.inventory.count); assertEquals(1, thrown.inventory.rollbackCalls);
+
+        Fixture returnedNull = new Fixture(); returnedNull.repository.reject = true; returnedNull.account.creditNull = true;
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, returnedNull.execute(5,10));
+        assertEquals(20, returnedNull.inventory.count); assertEquals(1, returnedNull.inventory.rollbackCalls);
+
+        Fixture mutatedThenThrew = new Fixture(); mutatedThenThrew.repository.reject = true;
+        mutatedThenThrew.account.creditMutatesThenThrows = true;
+        assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, mutatedThenThrew.execute(5,10));
+        assertEquals(20, mutatedThenThrew.inventory.count); assertEquals(1000, mutatedThenThrew.account.balance);
     }
 
     @Test void inventoryRollbackFailureStillAttemptsTaxCompensation() {
@@ -140,10 +158,12 @@ class CreateSalesOrderServiceTest {
         }
     }
     private static final class FakeAccount implements CreateSalesOrderService.Account {
-        int balance=1000,debits,creditCalls; boolean debitFalse,debitThrows,creditFalse,creditThrows;
+        int balance=1000,debits,creditCalls;
+        boolean debitFalse,debitThrows,debitNull,debitMutatesThenThrows;
+        boolean creditFalse,creditThrows,creditNull,creditMutatesThenThrows;
         public boolean canDebit(int amount){return balance>=amount;}
-        public BalanceMutationResult debitExact(int amount){debits++;if(debitThrows)throw new IllegalStateException("debit");if(debitFalse)return BalanceMutationResult.PERSIST_FAILED;balance-=amount;return BalanceMutationResult.SUCCESS;}
-        public BalanceMutationResult creditExact(int amount){creditCalls++;if(creditThrows)throw new IllegalStateException("credit");if(creditFalse)return BalanceMutationResult.PERSIST_FAILED;balance+=amount;return BalanceMutationResult.SUCCESS;}
+        public BalanceMutationResult debitExact(int amount){debits++;if(debitMutatesThenThrows){balance-=amount;throw new IllegalStateException("debit");}if(debitThrows)throw new IllegalStateException("debit");if(debitNull)return null;if(debitFalse)return BalanceMutationResult.PERSIST_FAILED;balance-=amount;return BalanceMutationResult.SUCCESS;}
+        public BalanceMutationResult creditExact(int amount){creditCalls++;if(creditMutatesThenThrows){balance+=amount;throw new IllegalStateException("credit");}if(creditThrows)throw new IllegalStateException("credit");if(creditNull)return null;if(creditFalse)return BalanceMutationResult.PERSIST_FAILED;balance+=amount;return BalanceMutationResult.SUCCESS;}
     }
     private static final class FakeRepository implements CreateSalesOrderService.Repository {
         final List<MarketOrder> orders=new ArrayList<>(); boolean full,reject,throwsOnAdd;

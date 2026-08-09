@@ -8,7 +8,7 @@ import com.mo.economy_system.common.client.TerritoryDataClientApplier;
 import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryManageScreen;
-import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211HomeScreen;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -547,7 +547,7 @@ public class Screen_Territory extends Screen
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Home());
+                this.minecraft.setScreen(new NeoForge1211HomeScreen());
             }
             return true;
         }

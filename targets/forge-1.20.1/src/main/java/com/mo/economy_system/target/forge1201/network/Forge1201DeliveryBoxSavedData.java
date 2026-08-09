@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201.network;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntryCodec;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.delivery.DeliveryBoxLedger;
+import com.mo.economy_system.target.forge1201.item.Forge1201NbtAdapter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,7 +44,7 @@ final class Forge1201DeliveryBoxSavedData extends SavedData {
       ListTag list = tag.getList(key, Tag.TAG_COMPOUND);
       List<DeliveryBoxEntrySnapshot> entries = new ArrayList<>(list.size());
       for (int index = 0; index < list.size(); index++) {
-        entries.add(DeliveryBoxEntryCodec.decode(list.getCompound(index)));
+        entries.add(DeliveryBoxEntryCodec.decode(Forge1201NbtAdapter.fromNative(list.getCompound(index))));
       }
       boxes.put(owner, entries);
     }
@@ -56,7 +57,7 @@ final class Forge1201DeliveryBoxSavedData extends SavedData {
     for (Map.Entry<UUID, List<DeliveryBoxEntrySnapshot>> box : ledger.snapshot().entrySet()) {
       ListTag entries = new ListTag();
       for (DeliveryBoxEntrySnapshot entry : box.getValue()) {
-        entries.add(DeliveryBoxEntryCodec.encode(entry));
+        entries.add(Forge1201NbtAdapter.toNative(DeliveryBoxEntryCodec.encode(entry)));
       }
       tag.put(box.getKey().toString(), entries);
     }

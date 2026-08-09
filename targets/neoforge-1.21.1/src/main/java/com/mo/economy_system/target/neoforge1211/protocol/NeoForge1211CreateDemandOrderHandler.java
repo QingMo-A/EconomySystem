@@ -7,6 +7,7 @@ import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,7 +25,7 @@ public final class NeoForge1211CreateDemandOrderHandler {
             MarketSavedData market = MarketSavedData.getInstance(player.serverLevel());
             CreateDemandOrderResult result = CreateDemandOrderService.execute(message,
                     new CreateDemandOrderService.Context(new NeoForge1211DemandItemResolver(
-                            EconomyServices.platform().itemStacks(), player.registryAccess()), new AccountAdapter(accounts, player),
+                            NeoForge1211Platform.nativeItemStacks(), player.registryAccess()), new AccountAdapter(accounts, player),
                             new RepositoryAdapter(market), player.getUUID(), player.getName().getString(),
                             UUID::randomUUID, System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result));

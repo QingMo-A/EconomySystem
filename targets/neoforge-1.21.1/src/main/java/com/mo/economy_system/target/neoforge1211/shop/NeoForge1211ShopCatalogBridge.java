@@ -24,9 +24,18 @@ public final class NeoForge1211ShopCatalogBridge implements EconomyShopCatalogBr
         return item == null ? null : item.toBridgeSnapshot();
     }
 
-    @Override
     public ItemStack createItemStack(ShopItemSnapshot item, RegistryAccess registryAccess) {
         return ShopItem.fromBridgeSnapshot(item).getItemStack(registryAccess);
+    }
+
+    public ShopItemSnapshot addItemFromStack(
+            ItemStack stack, int basePrice, String description, RegistryAccess registryAccess) {
+        if (stack == null || stack.isEmpty() || basePrice <= 0) {
+            throw new IllegalArgumentException("invalid shop item or base price");
+        }
+        return EconomySystem.SHOP_MANAGER
+                .addItemFromStack(stack, basePrice, description == null ? "" : description, registryAccess)
+                .toBridgeSnapshot();
     }
 
     @Override
@@ -36,6 +45,12 @@ public final class NeoForge1211ShopCatalogBridge implements EconomyShopCatalogBr
             return false;
         }
         EconomySystem.SHOP_MANAGER.recordPurchase(item, quantity);
+        return true;
+    }
+
+    @Override
+    public boolean refreshPrices() {
+        EconomySystem.SHOP_MANAGER.adjustPrices();
         return true;
     }
 }

@@ -9,12 +9,18 @@ import com.mo.economy_system.common.territory.TerritoryInviteResult;
 import com.mo.economy_system.common.territory.TerritoryInviteStore;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
 import com.mo.economy_system.common.territory.TerritoryAdministrationService;
+import com.mo.economy_system.common.territory.TerritoryBackpointService;
 import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
+import com.mo.economy_system.common.territory.TerritoryManagementResult;
+import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.nbt.CompoundTag;
@@ -527,15 +533,12 @@ class Forge1201TerritorySnapshotStoreTest {
     UUID target = UUID.randomUUID();
 
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        store.setPermission(territory.getUUID("TerritoryID"), owner, target, "Target", true));
+        TerritoryManagementResult.SUCCESS,
+        permission(store, territory.getUUID("TerritoryID"), owner, target, true));
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        store.setRule(
-            territory.getUUID("TerritoryID"),
-            owner,
-            RuleAction.OPEN_CONTAINER,
-            RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.SUCCESS,
+        rule(store, territory.getUUID("TerritoryID"), owner,
+            RuleAction.OPEN_CONTAINER, RuleLevel.OWNER_ONLY));
     assertEquals(
         TerritoryBuffTransactionService.RepositoryResult.SUCCESS,
         store.mutateBuff(
@@ -544,11 +547,11 @@ class Forge1201TerritorySnapshotStoreTest {
             "economy_system:speed",
             false,
             0,
-            TerritoryBuffTransactionService.Action.UNLOCK));
+            true,
+            0));
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        store.transfer(
-            territory.getUUID("TerritoryID"), owner, target, "Target"));
+        TerritoryManagementResult.SUCCESS,
+        transfer(store, territory.getUUID("TerritoryID"), owner, target));
 
     CompoundTag saved = store.rawCopy();
     assertEquals("keep-root", saved.getString("FutureRoot"));
@@ -563,6 +566,43 @@ class Forge1201TerritorySnapshotStoreTest {
         store.findOwned(territory.getUUID("TerritoryID")).rules().stream()
             .filter(rule -> rule.action() == RuleAction.OPEN_CONTAINER)
             .findFirst().orElseThrow().level());
+  }
+
+  @Test
+  void backpointDirtyFailureRestoresRawStateBeforeRetry() {
+    CompoundTag territory = validTerritory();
+    CompoundTag oldTag = new CompoundTag();
+    oldTag.putInt("BackX", 0);
+    oldTag.putInt("BackY", 64);
+    oldTag.putInt("BackZ", 0);
+    territory.put("Backpoint", oldTag);
+    CompoundTag root = root(territory);
+    AtomicInteger calls = new AtomicInteger();
+    Forge1201TerritorySnapshotStore store = new Forge1201TerritorySnapshotStore(
+        root, () -> {
+          if (calls.getAndIncrement() == 0) throw new IllegalStateException("dirty");
+        });
+    Position oldPoint = new Position(0, 64, 0);
+    Position next = new Position(3, 70, 3);
+    CompoundTag before = store.rawCopy();
+
+    assertEquals(
+        TerritoryBackpointService.RepositoryResult.PERSIST_FAILED,
+        store.setBackpoint(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            Optional.of(oldPoint),
+            next));
+    assertEquals(before, store.rawCopy());
+    assertEquals(2, calls.get());
+    assertEquals(
+        TerritoryBackpointService.RepositoryResult.UPDATED,
+        store.setBackpoint(
+            territory.getUUID("TerritoryID"),
+            territory.getUUID("OwnerUUID"),
+            Optional.of(oldPoint),
+            next));
+    assertEquals(Optional.of(next), store.findOwned(territory.getUUID("TerritoryID")).backpoint());
   }
 
   @Test
@@ -582,23 +622,13 @@ class Forge1201TerritorySnapshotStoreTest {
     CompoundTag before = store.rawCopy();
     UUID target = UUID.randomUUID();
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        store.setPermission(
-            territory.getUUID("TerritoryID"),
-            territory.getUUID("OwnerUUID"),
-            target,
-            "Target",
-            true));
+        TerritoryManagementResult.PERSIST_FAILED,
+        permission(store, territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), target, true));
     assertEquals(before, store.rawCopy());
     assertEquals(2, calls.get());
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        store.setPermission(
-            territory.getUUID("TerritoryID"),
-            territory.getUUID("OwnerUUID"),
-            target,
-            "Target",
-            true));
+        TerritoryManagementResult.SUCCESS,
+        permission(store, territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"), target, true));
   }
 
   @Test
@@ -619,12 +649,9 @@ class Forge1201TerritorySnapshotStoreTest {
         });
     CompoundTag before = holder[0].rawCopy();
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        holder[0].setRule(
-            territory.getUUID("TerritoryID"),
-            territory.getUUID("OwnerUUID"),
-            RuleAction.PLACE_BLOCK,
-            RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.PERSIST_FAILED,
+        rule(holder[0], territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK, RuleLevel.OWNER_ONLY));
     assertEquals(before, holder[0].rawCopy());
     assertEquals(2, calls.get());
   }
@@ -640,12 +667,9 @@ class Forge1201TerritorySnapshotStoreTest {
     root.put("Territories", records);
     Forge1201TerritorySnapshotStore duplicate = Forge1201TerritorySnapshotStore.load(root);
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
-        duplicate.setRule(
-            territory.getUUID("TerritoryID"),
-            territory.getUUID("OwnerUUID"),
-            RuleAction.PLACE_BLOCK,
-            RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.STATE_UNKNOWN,
+        rule(duplicate, territory.getUUID("TerritoryID"), territory.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK, RuleLevel.OWNER_ONLY));
 
     records.remove(1);
     Forge1201TerritorySnapshotStore store = Forge1201TerritorySnapshotStore.load(root);
@@ -657,7 +681,8 @@ class Forge1201TerritorySnapshotStoreTest {
             "economy_system:speed",
             true,
             0,
-            TerritoryBuffTransactionService.Action.UPGRADE));
+            true,
+            1));
   }
 
   @Test
@@ -752,12 +777,9 @@ class Forge1201TerritorySnapshotStoreTest {
         new Position(12, 64, 12));
     assertEquals(Forge1201TerritorySnapshotStore.ResizePrepareResult.READY, prepared.result());
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        store.setRule(
-            first.getUUID("TerritoryID"),
-            first.getUUID("OwnerUUID"),
-            RuleAction.PLACE_BLOCK,
-            RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.SUCCESS,
+        rule(store, first.getUUID("TerritoryID"), first.getUUID("OwnerUUID"),
+            RuleAction.PLACE_BLOCK, RuleLevel.OWNER_ONLY));
     assertEquals(
         Forge1201TerritorySnapshotStore.ResizeCommitResult.CHANGED,
         store.commitResize(prepared.plan()));
@@ -786,6 +808,61 @@ class Forge1201TerritorySnapshotStoreTest {
     assertEquals(before, store.rawCopy());
     assertEquals(new Position(0, 64, 0), store.findOwned(territory.getUUID("TerritoryID")).summary().pos1());
     assertEquals(2, calls.get());
+  }
+
+  private static TerritoryManagementResult permission(
+      Forge1201TerritorySnapshotStore store,
+      UUID territoryId,
+      UUID owner,
+      UUID target,
+      boolean allowed) {
+    return TerritoryAdministrationService.permission(
+        new UpdateTerritoryPermissionMessage(territoryId, target, allowed),
+        owner,
+        adminContext(store));
+  }
+
+  private static TerritoryManagementResult transfer(
+      Forge1201TerritorySnapshotStore store,
+      UUID territoryId,
+      UUID owner,
+      UUID target) {
+    return TerritoryAdministrationService.transfer(
+        new TransferTerritoryOwnershipMessage(territoryId, target),
+        owner,
+        adminContext(store));
+  }
+
+  private static TerritoryManagementResult rule(
+      Forge1201TerritorySnapshotStore store,
+      UUID territoryId,
+      UUID owner,
+      RuleAction action,
+      RuleLevel level) {
+    return TerritoryAdministrationService.rule(
+        new UpdateTerritoryRuleMessage(territoryId, action, level),
+        owner,
+        adminContext(store));
+  }
+
+  private static TerritoryAdministrationService.Context adminContext(
+      Forge1201TerritorySnapshotStore store) {
+    return new TerritoryAdministrationService.Context(
+        new TerritoryAdministrationService.Repository() {
+          @Override
+          public com.mo.economy_system.common.territory.TerritorySnapshots.Owned find(UUID id) {
+            return store.findOwned(id);
+          }
+
+          @Override
+          public TerritoryAdministrationService.RepositoryResult apply(
+              com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected,
+              com.mo.economy_system.common.territory.TerritorySnapshots.Owned replacement) {
+            return store.applyAdministration(expected, replacement);
+          }
+        },
+        id -> Optional.of("Target"),
+        TerritoryAdministrationService.FailureSink.noop());
   }
 
   private static CompoundTag root(CompoundTag territory) {

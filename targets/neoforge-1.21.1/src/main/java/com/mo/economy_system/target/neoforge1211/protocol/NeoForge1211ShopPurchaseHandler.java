@@ -1,7 +1,7 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
-import com.mo.economy_system.common.economy.ShopPurchaseService;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211ShopPurchaseAdapter;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -16,7 +16,7 @@ public final class NeoForge1211ShopPurchaseHandler {
                     ? serverPlayer
                     : null;
             if (player != null) {
-                ShopPurchaseService.execute(player, message);
+                NeoForge1211ShopPurchaseAdapter.execute(player, message);
             }
         });
     }

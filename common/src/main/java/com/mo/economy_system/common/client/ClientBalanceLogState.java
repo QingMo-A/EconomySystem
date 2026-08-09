@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ClientBalanceLogState {
     private static final AtomicReference<Snapshot> CURRENT = new AtomicReference<>(
             new Snapshot(
+                    0,
                     BalanceLogRequestMessage.ALL_CATEGORIES,
                     0,
                     BalanceLogRequestMessage.DEFAULT_LIMIT,
@@ -40,7 +41,8 @@ public final class ClientBalanceLogState {
             int total,
             List<BalanceLogEntry> logs
     ) {
-        CURRENT.set(new Snapshot(category, offset, limit, total, logs));
+        CURRENT.updateAndGet(previous -> new Snapshot(
+                nextRevision(previous.revision()), category, offset, limit, total, logs));
     }
 
     public static void update(BalanceLogResponseMessage message) {
@@ -48,15 +50,26 @@ public final class ClientBalanceLogState {
         update(message.category(), message.offset(), message.limit(), message.total(), message.logs());
     }
 
+    private static long nextRevision(long revision) {
+        if (revision == Long.MAX_VALUE) throw new IllegalStateException("balance-log revision exhausted");
+        return revision + 1;
+    }
+
     /** One atomically published, immutable balance-log page. */
     public record Snapshot(
+            long revision,
             String category,
             int offset,
             int limit,
             int total,
             List<BalanceLogEntry> logs
     ) {
+        public Snapshot(String category, int offset, int limit, int total, List<BalanceLogEntry> logs) {
+            this(0, category, offset, limit, total, logs);
+        }
+
         public Snapshot {
+            if (revision < 0) throw new IllegalArgumentException("revision");
             Objects.requireNonNull(category, "category");
             logs = List.copyOf(Objects.requireNonNull(logs, "logs"));
         }

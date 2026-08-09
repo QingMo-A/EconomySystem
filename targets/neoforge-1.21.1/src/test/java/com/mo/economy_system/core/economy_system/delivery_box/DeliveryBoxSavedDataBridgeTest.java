@@ -6,6 +6,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxEntryCodec;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.delivery.DeliveryBoxTestFixtures;
 import com.mo.economy_system.platform.item.ItemStackSnapshotCodec;
+import com.mo.economy_system.target.neoforge1211.item.NeoForge1211NbtAdapter;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -21,10 +22,11 @@ class DeliveryBoxSavedDataBridgeTest {
     CompoundTag legacy = new CompoundTag();
     legacy.putUUID("dataID", legacyEntry.entryId());
     legacy.putString("itemID", legacyEntry.item().itemId());
-    legacy.put("itemStack", ItemStackSnapshotCodec.encode(legacyEntry.item()).orElseThrow());
+    legacy.put("itemStack", NeoForge1211NbtAdapter.toNative(
+        ItemStackSnapshotCodec.encode(legacyEntry.item()).orElseThrow()));
     legacy.putString("source", legacyEntry.source());
     ListTag entries = new ListTag();
-    entries.add(DeliveryBoxEntryCodec.encode(versioned));
+    entries.add(NeoForge1211NbtAdapter.toNative(DeliveryBoxEntryCodec.encode(versioned)));
     entries.add(legacy);
     CompoundTag root = new CompoundTag();
     root.put(owner.toString(), entries);
@@ -42,8 +44,8 @@ class DeliveryBoxSavedDataBridgeTest {
   void malformedRootFailsClosedWithoutPartialLedger() {
     UUID owner = UUID.randomUUID();
     ListTag entries = new ListTag();
-    entries.add(DeliveryBoxEntryCodec.encode(
-        DeliveryBoxTestFixtures.entry(UUID.randomUUID(), 1)));
+    entries.add(NeoForge1211NbtAdapter.toNative(DeliveryBoxEntryCodec.encode(
+        DeliveryBoxTestFixtures.entry(UUID.randomUUID(), 1))));
     CompoundTag malformed = new CompoundTag();
     malformed.putString("schemaVersion", "wrong");
     entries.add(malformed);

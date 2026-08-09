@@ -1,7 +1,7 @@
 package com.mo.economy_system.target.forge1201.network;
 
 import com.mo.economy_system.common.market.*;
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
+import com.mo.economy_system.target.forge1201.item.Forge1201ItemStackBridge;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -9,7 +9,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-record Forge1201DemandItemResolver(EconomyItemStackBridge bridge, HolderLookup.Provider registries)
+record Forge1201DemandItemResolver(Forge1201ItemStackBridge bridge, HolderLookup.Provider registries)
         implements CreateDemandOrderService.ItemResolver {
     public DemandItemResolveResult resolve(String rawId) {
         ResourceLocation id;

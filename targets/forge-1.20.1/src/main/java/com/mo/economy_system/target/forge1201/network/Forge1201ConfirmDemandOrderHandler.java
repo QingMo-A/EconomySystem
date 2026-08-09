@@ -4,6 +4,7 @@ import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mojang.logging.LogUtils;
 import java.util.*;
 import java.util.function.Supplier;
@@ -76,8 +77,7 @@ final class Forge1201ConfirmDemandOrderHandler {
 
   private static Object name(ServerPlayer p, MarketOrder o) {
     try {
-      return EconomyServices.platform()
-          .itemStacks()
+      return Forge1201Platform.nativeItemStacks()
           .restoreSnapshot(o.item(), p.serverLevel().registryAccess())
           .orElseThrow()
           .getHoverName();

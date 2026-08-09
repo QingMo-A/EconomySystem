@@ -2,6 +2,7 @@ package com.mo.economy_system.target.forge1201.network;
 
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mojang.logging.LogUtils;
 import java.util.*;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,12 +10,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
-final class Forge1201TransactionalInventoryAdapter
+public final class Forge1201TransactionalInventoryAdapter
     implements MarketItemMaterializer, TransactionalInventory, TransactionalInventoryRemoval {
   private static final Logger LOGGER = LogUtils.getLogger();
   private final ServerPlayer player;
 
-  Forge1201TransactionalInventoryAdapter(ServerPlayer player) {
+  public Forge1201TransactionalInventoryAdapter(ServerPlayer player) {
     this.player = Objects.requireNonNull(player);
   }
 
@@ -23,8 +24,7 @@ final class Forge1201TransactionalInventoryAdapter
   }
 
   public Object restore(MarketOrder order) {
-    return EconomyServices.platform()
-        .itemStacks()
+    return Forge1201Platform.nativeItemStacks()
         .restoreSnapshot(order.item(), player.serverLevel().registryAccess())
         .orElseThrow();
   }
@@ -37,7 +37,7 @@ final class Forge1201TransactionalInventoryAdapter
     long result = 0;
     for (ItemStack stack : player.getInventory().items) {
       if (stack.isEmpty()) result += template.getMaxStackSize();
-      else if (EconomyServices.platform().itemStacks().sameItemAndData(stack, template))
+      else if (Forge1201Platform.nativeItemStacks().sameItemAndData(stack, template))
         result += Math.max(0, stack.getMaxStackSize() - stack.getCount());
       if (result >= Integer.MAX_VALUE) return Integer.MAX_VALUE;
     }
@@ -54,7 +54,7 @@ final class Forge1201TransactionalInventoryAdapter
       for (ItemStack stack : inventory.items)
         if (remaining > 0
             && !stack.isEmpty()
-            && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
+            && Forge1201Platform.nativeItemStacks().sameItemAndData(stack, template)) {
           int add = Math.min(remaining, Math.max(0, stack.getMaxStackSize() - stack.getCount()));
           if (add > 0) {
             stack.grow(add);
@@ -111,7 +111,7 @@ final class Forge1201TransactionalInventoryAdapter
       public void set(int index, ItemStack value) { player.getInventory().setItem(index, value); }
       public ItemStack copy(ItemStack value) { return value.copy(); }
       public boolean isEmpty(ItemStack value) { return value.isEmpty(); }
-      public boolean matches(ItemStack value, ItemStack template) { return EconomyServices.platform().itemStacks().sameItemAndData(value, template); }
+      public boolean matches(ItemStack value, ItemStack template) { return Forge1201Platform.nativeItemStacks().sameItemAndData(value, template); }
       public int count(ItemStack value) { return value.getCount(); }
       public void setCount(ItemStack value, int count) { value.setCount(count); }
       public int maxStackSize(ItemStack value) { return value.getMaxStackSize(); }

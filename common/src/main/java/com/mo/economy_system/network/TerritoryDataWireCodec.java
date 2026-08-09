@@ -5,39 +5,37 @@ import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseKind;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.network.FriendlyByteBuf;
+import com.mo.economy_system.platform.network.WireBuffer;
+import com.mo.economy_system.platform.network.WireDecodeException;
 
 /** Explicit, NBT-free wire format shared by both target loaders. */
 public final class TerritoryDataWireCodec {
   private TerritoryDataWireCodec() {}
 
-  public static void encodeRequest(TerritoryDataRequestMessage message, FriendlyByteBuf buffer) {
+  public static void encodeRequest(TerritoryDataRequestMessage message, WireBuffer buffer) {
     buffer.writeLong(message.requestId());
   }
 
-  public static TerritoryDataRequestMessage decodeRequest(FriendlyByteBuf buffer) {
+  public static TerritoryDataRequestMessage decodeRequest(WireBuffer buffer) {
     requireBytes(buffer, Long.BYTES);
     TerritoryDataRequestMessage message = new TerritoryDataRequestMessage(buffer.readLong());
     requireConsumed(buffer);
     return message;
   }
 
-  public static void encodeResponse(TerritoryDataResponseMessage message, FriendlyByteBuf buffer) {
+  public static void encodeResponse(TerritoryDataResponseMessage message, WireBuffer buffer) {
     encodeResponse(message, buffer, EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES);
   }
 
   static void encodeResponse(
-      TerritoryDataResponseMessage message, FriendlyByteBuf buffer, int maximumBytes) {
+      TerritoryDataResponseMessage message, WireBuffer buffer, int maximumBytes) {
     if (maximumBytes < 0 || maximumBytes > EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES) {
       throw new IllegalArgumentException("invalid territory wire budget");
     }
-    FriendlyByteBuf temporary = new FriendlyByteBuf(Unpooled.buffer());
-    try {
+    try (WireBuffer temporary = buffer.temporary()) {
       temporary.writeUtf(message.kind().id(), 16);
       temporary.writeLong(message.requestId());
       if (message.kind() == TerritoryDataResponseKind.DATA) {
@@ -50,21 +48,19 @@ public final class TerritoryDataWireCodec {
       if (length > maximumBytes) {
         throw new IllegalArgumentException("territory response exceeds wire budget");
       }
-      buffer.writeBytes(temporary, temporary.readerIndex(), length);
-    } finally {
-      temporary.release();
+      buffer.writeRemaining(temporary);
     }
   }
 
-  public static TerritoryDataResponseMessage decodeResponse(FriendlyByteBuf buffer) {
+  public static TerritoryDataResponseMessage decodeResponse(WireBuffer buffer) {
     if (buffer.readableBytes() > EconomyNetworkLimits.MAX_TERRITORY_RESPONSE_WIRE_BYTES) {
-      throw new DecoderException("territory response exceeds wire budget");
+      throw new WireDecodeException("territory response exceeds wire budget");
     }
     TerritoryDataResponseKind kind;
     try {
       kind = TerritoryDataResponseKind.fromId(buffer.readUtf(16));
     } catch (IllegalArgumentException error) {
-      throw new DecoderException("invalid territory response kind", error);
+      throw new WireDecodeException("invalid territory response kind", error);
     }
     long requestId = buffer.readLong();
     if (kind == TerritoryDataResponseKind.ERROR) {
@@ -72,7 +68,7 @@ public final class TerritoryDataWireCodec {
       try {
         return TerritoryDataResponseMessage.error(requestId);
       } catch (IllegalArgumentException error) {
-        throw new DecoderException("invalid territory error response", error);
+        throw new WireDecodeException("invalid territory error response", error);
       }
     }
     int ownedCount = count(buffer, EconomyNetworkLimits.MAX_TERRITORIES_PER_RESPONSE, "owned");
@@ -86,15 +82,15 @@ public final class TerritoryDataWireCodec {
     try {
       return TerritoryDataResponseMessage.data(requestId, owned, authorized);
     } catch (IllegalArgumentException error) {
-      throw new DecoderException("invalid territory response", error);
+      throw new WireDecodeException("invalid territory response", error);
     }
   }
 
-  private static void writeOwned(FriendlyByteBuf buffer, Owned value) {
+  private static void writeOwned(WireBuffer buffer, Owned value) {
     writeSummary(buffer, value.summary());
     buffer.writeInt(value.authorizedMembers().size());
     for (Member member : value.authorizedMembers()) {
-      buffer.writeUUID(member.playerId());
+      buffer.writeUuid(member.playerId());
       buffer.writeUtf(member.playerName(), EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH);
     }
     buffer.writeBoolean(value.backpoint().isPresent());
@@ -108,11 +104,11 @@ public final class TerritoryDataWireCodec {
     for (Buff buff : value.buffs()) writeBuff(buffer, buff);
   }
 
-  private static Owned readOwned(FriendlyByteBuf buffer) {
+  private static Owned readOwned(WireBuffer buffer) {
     Summary summary = readSummary(buffer);
     int memberCount = count(buffer, EconomyNetworkLimits.MAX_TERRITORY_MEMBERS, "members");
     List<Member> members = new ArrayList<>(memberCount);
-    for (int i = 0; i < memberCount; i++) members.add(new Member(buffer.readUUID(),
+    for (int i = 0; i < memberCount; i++) members.add(new Member(buffer.readUuid(),
         buffer.readUtf(EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)));
     Optional<Position> backpoint = buffer.readBoolean() ? Optional.of(readPosition(buffer)) : Optional.empty();
     int ruleCount = count(buffer, EconomyNetworkLimits.MAX_TERRITORY_RULES, "rules");
@@ -125,9 +121,9 @@ public final class TerritoryDataWireCodec {
     return new Owned(summary, members, backpoint, rules, buffs);
   }
 
-  private static void writeSummary(FriendlyByteBuf buffer, Summary value) {
-    buffer.writeUUID(value.territoryId());
-    buffer.writeUUID(value.ownerId());
+  private static void writeSummary(WireBuffer buffer, Summary value) {
+    buffer.writeUuid(value.territoryId());
+    buffer.writeUuid(value.ownerId());
     buffer.writeUtf(value.ownerName(), EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH);
     buffer.writeUtf(value.name(), EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH);
     writePosition(buffer, value.pos1());
@@ -135,21 +131,21 @@ public final class TerritoryDataWireCodec {
     buffer.writeUtf(value.dimensionId(), EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
   }
 
-  private static Summary readSummary(FriendlyByteBuf buffer) {
-    return new Summary(buffer.readUUID(), buffer.readUUID(),
+  private static Summary readSummary(WireBuffer buffer) {
+    return new Summary(buffer.readUuid(), buffer.readUuid(),
         buffer.readUtf(EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH),
         buffer.readUtf(EconomyNetworkLimits.MAX_TERRITORY_NAME_LENGTH), readPosition(buffer),
         readPosition(buffer), buffer.readUtf(EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH));
   }
 
-  private static void writePosition(FriendlyByteBuf buffer, Position value) {
+  private static void writePosition(WireBuffer buffer, Position value) {
     buffer.writeInt(value.x()); buffer.writeInt(value.y()); buffer.writeInt(value.z());
   }
-  private static Position readPosition(FriendlyByteBuf buffer) {
+  private static Position readPosition(WireBuffer buffer) {
     return new Position(buffer.readInt(), buffer.readInt(), buffer.readInt());
   }
 
-  private static void writeBuff(FriendlyByteBuf buffer, Buff value) {
+  private static void writeBuff(WireBuffer buffer, Buff value) {
     buffer.writeUtf(value.id(), EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
     buffer.writeUtf(value.displayText(), EconomyNetworkLimits.MAX_TERRITORY_TEXT_LENGTH);
     buffer.writeUtf(value.effectId(), EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
@@ -167,7 +163,7 @@ public final class TerritoryDataWireCodec {
     }
   }
 
-  private static Buff readBuff(FriendlyByteBuf buffer) {
+  private static Buff readBuff(WireBuffer buffer) {
     String id = buffer.readUtf(EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
     String display = buffer.readUtf(EconomyNetworkLimits.MAX_TERRITORY_TEXT_LENGTH);
     String effect = buffer.readUtf(EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
@@ -186,15 +182,15 @@ public final class TerritoryDataWireCodec {
     return new Buff(id, display, effect, initialUnlocked, initialLevel, step, max, unlocked, level, costs);
   }
 
-  private static int count(FriendlyByteBuf buffer, int max, String name) {
+  private static int count(WireBuffer buffer, int max, String name) {
     int value = buffer.readInt();
-    if (value < 0 || value > max) throw new DecoderException("invalid " + name + " count: " + value);
+    if (value < 0 || value > max) throw new WireDecodeException("invalid " + name + " count: " + value);
     return value;
   }
-  private static void requireBytes(FriendlyByteBuf buffer, int count) {
-    if (buffer.readableBytes() < count) throw new DecoderException("truncated territory payload");
+  private static void requireBytes(WireBuffer buffer, int count) {
+    if (buffer.readableBytes() < count) throw new WireDecodeException("truncated territory payload");
   }
-  private static void requireConsumed(FriendlyByteBuf buffer) {
-    if (buffer.isReadable()) throw new DecoderException("trailing territory payload data");
+  private static void requireConsumed(WireBuffer buffer) {
+    if (buffer.isReadable()) throw new WireDecodeException("trailing territory payload data");
   }
 }

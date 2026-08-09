@@ -2,10 +2,9 @@ package com.mo.economy_system.common.delivery;
 
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotCodec;
+import com.mo.economy_system.platform.nbt.NbtData;
 import java.util.HashSet;
 import java.util.Set;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 
 /** Stable storage schema with strict new-format reads and legacy compact input support. */
 public final class DeliveryBoxEntryCodec {
@@ -15,53 +14,56 @@ public final class DeliveryBoxEntryCodec {
 
   private DeliveryBoxEntryCodec() {}
 
-  public static CompoundTag encode(DeliveryBoxEntrySnapshot entry) {
-    CompoundTag result = new CompoundTag();
-    result.putInt("schemaVersion", SCHEMA_VERSION);
-    result.putUUID("entryId", entry.entryId());
-    result.put("item", ItemStackSnapshotCodec.encode(entry.item()).orElseThrow());
-    result.putString("source", entry.source());
-    return result;
+  public static NbtData.Compound encode(DeliveryBoxEntrySnapshot entry) {
+    return NbtData.compoundBuilder()
+        .putInt("schemaVersion", SCHEMA_VERSION)
+        .putUuid("entryId", entry.entryId())
+        .put("item", ItemStackSnapshotCodec.encode(entry.item()).orElseThrow())
+        .putString("source", entry.source())
+        .build();
   }
 
-  public static DeliveryBoxEntrySnapshot decode(CompoundTag input) {
+  public static DeliveryBoxEntrySnapshot decode(NbtData.Compound input) {
     if (input == null) throw new IllegalArgumentException("delivery entry is null");
-    CompoundTag tag = input.copy();
+    NbtData.Compound tag = input;
     return tag.contains("schemaVersion") ? decodeV1(tag) : decodeLegacy(tag);
   }
 
-  private static DeliveryBoxEntrySnapshot decodeV1(CompoundTag tag) {
+  private static DeliveryBoxEntrySnapshot decodeV1(NbtData.Compound tag) {
     requireOnly(tag, KEYS);
-    if (!tag.contains("schemaVersion", Tag.TAG_INT)
-        || tag.getInt("schemaVersion") != SCHEMA_VERSION) {
+    if (!(tag.get("schemaVersion") instanceof NbtData.IntValue version)
+        || version.value() != SCHEMA_VERSION) {
       throw new IllegalArgumentException("unsupported delivery entry schema");
     }
-    if (!tag.hasUUID("entryId") || !tag.contains("item", Tag.TAG_COMPOUND)
-        || !tag.contains("source", Tag.TAG_STRING)) {
+    if (!(tag.get("entryId") instanceof NbtData.IntArrayValue)
+        || !(tag.get("item") instanceof NbtData.Compound)
+        || !(tag.get("source") instanceof NbtData.StringValue)) {
       throw new IllegalArgumentException("invalid delivery entry schema");
     }
     return new DeliveryBoxEntrySnapshot(
-        tag.getUUID("entryId"),
-        ItemStackSnapshotCodec.decode(tag.getCompound("item")).orElseThrow(),
-        tag.getString("source"));
+        NbtData.readUuid(tag.get("entryId")),
+        ItemStackSnapshotCodec.decode((NbtData.Compound) tag.get("item")).orElseThrow(),
+        ((NbtData.StringValue) tag.get("source")).value());
   }
 
-  private static DeliveryBoxEntrySnapshot decodeLegacy(CompoundTag tag) {
+  private static DeliveryBoxEntrySnapshot decodeLegacy(NbtData.Compound tag) {
     requireOnly(tag, LEGACY_KEYS);
-    if (!tag.hasUUID("dataID") || !tag.contains("itemID", Tag.TAG_STRING)
-        || !tag.contains("itemStack", Tag.TAG_COMPOUND)
-        || !tag.contains("source", Tag.TAG_STRING)) {
+    if (!(tag.get("dataID") instanceof NbtData.IntArrayValue)
+        || !(tag.get("itemID") instanceof NbtData.StringValue)
+        || !(tag.get("itemStack") instanceof NbtData.Compound)
+        || !(tag.get("source") instanceof NbtData.StringValue)) {
       throw new IllegalArgumentException("invalid legacy delivery entry");
     }
-    ItemStackSnapshot item = ItemStackSnapshotCodec.decode(tag.getCompound("itemStack")).orElseThrow();
-    if (!tag.getString("itemID").equals(item.itemId())) {
+    ItemStackSnapshot item = ItemStackSnapshotCodec.decode((NbtData.Compound) tag.get("itemStack")).orElseThrow();
+    if (!((NbtData.StringValue) tag.get("itemID")).value().equals(item.itemId())) {
       throw new IllegalArgumentException("legacy delivery item id mismatch");
     }
-    return new DeliveryBoxEntrySnapshot(tag.getUUID("dataID"), item, tag.getString("source"));
+    return new DeliveryBoxEntrySnapshot(NbtData.readUuid(tag.get("dataID")), item,
+        ((NbtData.StringValue) tag.get("source")).value());
   }
 
-  private static void requireOnly(CompoundTag tag, Set<String> allowed) {
-    Set<String> unknown = new HashSet<>(tag.getAllKeys());
+  private static void requireOnly(NbtData.Compound tag, Set<String> allowed) {
+    Set<String> unknown = new HashSet<>(tag.keys());
     unknown.removeAll(allowed);
     if (!unknown.isEmpty()) throw new IllegalArgumentException("unknown delivery field: " + unknown);
   }

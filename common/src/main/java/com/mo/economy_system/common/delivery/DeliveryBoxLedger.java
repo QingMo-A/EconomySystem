@@ -22,19 +22,32 @@ public final class DeliveryBoxLedger implements DeliveryBoxRepository {
   }
 
   public synchronized void add(UUID ownerId, DeliveryBoxEntrySnapshot entry, DirtyMarker dirty) {
+    addAll(ownerId, List.of(entry), dirty);
+  }
+
+  /** Adds a group of entries as one persisted mutation, or none of them on failure. */
+  public synchronized void addAll(
+      UUID ownerId, List<DeliveryBoxEntrySnapshot> entries, DirtyMarker dirty) {
     Objects.requireNonNull(ownerId, "ownerId");
-    Objects.requireNonNull(entry, "entry");
+    Objects.requireNonNull(entries, "entries");
     Objects.requireNonNull(dirty, "dirty");
+    if (entries.isEmpty()) throw new IllegalArgumentException("entries must not be empty");
+    List<DeliveryBoxEntrySnapshot> additions = List.copyOf(entries);
     List<DeliveryBoxEntrySnapshot> values = boxes.computeIfAbsent(ownerId, ignored -> new ArrayList<>());
-    if (values.size() >= EconomyNetworkLimits.MAX_DELIVERY_BOX_ENTRIES) {
+    if (additions.size() > EconomyNetworkLimits.MAX_DELIVERY_BOX_ENTRIES - values.size()) {
       throw new IllegalStateException("delivery box is full");
     }
-    if (find(entry.entryId()) != null) throw new IllegalArgumentException("duplicate delivery entry id");
-    values.add(entry);
+    Set<UUID> additionIds = new HashSet<>();
+    for (DeliveryBoxEntrySnapshot entry : additions) {
+      if (!additionIds.add(entry.entryId()) || find(entry.entryId()) != null) {
+        throw new IllegalArgumentException("duplicate delivery entry id");
+      }
+    }
+    values.addAll(additions);
     try {
       dirty.markDirty();
     } catch (RuntimeException failure) {
-      values.remove(values.size() - 1);
+      values.subList(values.size() - additions.size(), values.size()).clear();
       if (values.isEmpty()) boxes.remove(ownerId);
       throw failure;
     }

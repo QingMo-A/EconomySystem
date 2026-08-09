@@ -1,11 +1,8 @@
 package com.mo.economy_system.common.territory;
 
 import com.mo.economy_system.common.territory.TerritorySnapshots.Buff;
-import com.mo.economy_system.common.territory.TerritorySnapshots.BuffUpgradeCost;
-import com.mo.economy_system.common.territory.TerritorySnapshots.ItemRequirement;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -40,10 +37,14 @@ public final class TerritoryBuffTransactionService {
     if (action == Action.UPGRADE && buff.level() >= buff.maxLevel()) {
       return TerritoryManagementResult.MAX_LEVEL;
     }
+    boolean newUnlocked = action == Action.UNLOCK || buff.unlocked();
+    int newLevel = action == Action.UPGRADE
+        ? (int) Math.min((long) buff.maxLevel(), (long) buff.level() + buff.singleUpgradeLevel())
+        : buff.level();
 
-    Cost cost;
+    TerritoryBuffCost cost;
     try {
-      cost = cost(buff);
+      cost = TerritoryBuffCost.aggregate(buff);
     } catch (RuntimeException failure) {
       report(context, territoryId, buffId, "cost", failure);
       return TerritoryManagementResult.INVALID_COST;
@@ -81,9 +82,22 @@ public final class TerritoryBuffTransactionService {
     boolean experienceDebited = false;
     ItemRemoval itemRemoval = null;
     if (cost.currency() > 0) {
-      BalanceMutationResult debit = context.accounts().debit(cost.currency());
+      final BalanceMutationResult debit;
+      try {
+        debit = context.accounts().debit(cost.currency());
+      } catch (RuntimeException failure) {
+        // A throwing debit may have changed the account before failing. The balance state is
+        // therefore unknowable; do not debit any other resource or attempt a blind refund.
+        report(context, territoryId, buffId, "balance-debit", failure);
+        return TerritoryManagementResult.STATE_UNKNOWN;
+      }
       if (debit == BalanceMutationResult.INSUFFICIENT_FUNDS) {
         return TerritoryManagementResult.INSUFFICIENT_BALANCE;
+      }
+      if (debit == null) {
+        report(context, territoryId, buffId, "balance-debit",
+            new IllegalStateException("null balance debit result"));
+        return TerritoryManagementResult.STATE_UNKNOWN;
       }
       if (debit != BalanceMutationResult.SUCCESS) return TerritoryManagementResult.BALANCE_FAILED;
       balanceDebited = true;
@@ -93,6 +107,9 @@ public final class TerritoryBuffTransactionService {
         experienceDebited = context.resources().debitExperience(cost.experience());
       } catch (RuntimeException failure) {
         report(context, territoryId, buffId, "experience-debit", failure);
+        // A throwing resource port may have changed experience before failing. Do not
+        // classify that as insufficient experience or blindly refund the other resources.
+        return TerritoryManagementResult.STATE_UNKNOWN;
       }
       if (!experienceDebited) {
         return compensate(context, territoryId, buffId, cost, balanceDebited, false, null,
@@ -104,9 +121,17 @@ public final class TerritoryBuffTransactionService {
         itemRemoval = context.resources().remove(cost.items());
       } catch (RuntimeException failure) {
         report(context, territoryId, buffId, "item-remove", failure);
+        // The inventory may have been partially changed before the port failed. Keep the
+        // already-debited resources and surface the uncertainty for reconciliation.
+        return TerritoryManagementResult.STATE_UNKNOWN;
       }
-      if (itemRemoval == null || !itemRemoval.succeeded() || itemRemoval.rollback() == null) {
-        boolean alreadyRestored = itemRemoval != null && itemRemoval.failureRestored();
+      if (itemRemoval == null) {
+        report(context, territoryId, buffId, "item-remove",
+            new IllegalStateException("null item removal result"));
+        return TerritoryManagementResult.STATE_UNKNOWN;
+      }
+      if (!itemRemoval.succeeded() || itemRemoval.rollback() == null) {
+        boolean alreadyRestored = itemRemoval.failureRestored();
         return compensate(context, territoryId, buffId, cost, balanceDebited, experienceDebited,
             alreadyRestored ? null : itemRemoval,
             alreadyRestored ? TerritoryManagementResult.INVENTORY_FAILED
@@ -122,7 +147,8 @@ public final class TerritoryBuffTransactionService {
           buffId,
           buff.unlocked(),
           buff.level(),
-          action);
+          newUnlocked,
+          newLevel);
     } catch (RuntimeException failure) {
       report(context, territoryId, buffId, "territory-mutate", failure);
       mutation = RepositoryResult.STATE_UNKNOWN;
@@ -142,28 +168,11 @@ public final class TerritoryBuffTransactionService {
         context, territoryId, buffId, cost, balanceDebited, experienceDebited, itemRemoval, failure);
   }
 
-  private static Cost cost(Buff buff) {
-    long experience = 0;
-    long currency = 0;
-    Map<String, Integer> items = new LinkedHashMap<>();
-    for (BuffUpgradeCost level : buff.upgradeCosts()) {
-      experience = Math.addExact(experience, level.experience());
-      currency = Math.addExact(currency, level.currency());
-      for (ItemRequirement item : level.items()) {
-        items.merge(item.itemId(), item.count(), Math::addExact);
-      }
-    }
-    if (experience > Integer.MAX_VALUE || currency > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("territory buff cost overflow");
-    }
-    return new Cost(Map.copyOf(items), (int) experience, (int) currency);
-  }
-
   private static TerritoryManagementResult compensate(
       Context context,
       UUID territoryId,
       String buffId,
-      Cost cost,
+      TerritoryBuffCost cost,
       boolean balanceDebited,
       boolean experienceDebited,
       ItemRemoval itemRemoval,
@@ -234,7 +243,8 @@ public final class TerritoryBuffTransactionService {
         String buffId,
         boolean expectedUnlocked,
         int expectedLevel,
-        Action action);
+        boolean newUnlocked,
+        int newLevel);
   }
 
   public enum RepositoryResult {
@@ -255,8 +265,13 @@ public final class TerritoryBuffTransactionService {
   public interface Resources {
     int experienceLevel();
     boolean canRemove(Map<String, Integer> items);
+
+    /** Returns false only when the pre-call experience state has been restored. */
     boolean debitExperience(int levels);
+
     boolean refundExperience(int levels);
+
+    /** Returns a failure result after mutation starts; throwing means mutation state is unknown. */
     ItemRemoval remove(Map<String, Integer> items);
   }
 
@@ -286,6 +301,4 @@ public final class TerritoryBuffTransactionService {
       return (playerId, territoryId, buffId, stage, failure) -> {};
     }
   }
-
-  private record Cost(Map<String, Integer> items, int experience, int currency) {}
 }

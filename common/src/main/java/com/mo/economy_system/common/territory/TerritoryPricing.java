@@ -1,0 +1,36 @@
+package com.mo.economy_system.common.territory;
+
+/** Shared territory area pricing and overflow policy. */
+public final class TerritoryPricing {
+  public static final long DEFAULT_PRICE_PER_CELL = 20L;
+
+  private TerritoryPricing() {}
+
+  public static long areaDifference(long oldArea, long newArea) {
+    if (oldArea < 0 || newArea < 0) throw new IllegalArgumentException("negative area");
+    return Math.subtractExact(newArea, oldArea);
+  }
+
+  public static long priceForArea(long area, long pricePerCell) {
+    if (area < 0 || pricePerCell < 0) throw new IllegalArgumentException("negative price input");
+    return Math.multiplyExact(area, pricePerCell);
+  }
+
+  /** UI/command preview policy: an unrepresentable price is displayed as the maximum value. */
+  public static long saturatingPriceForArea(long area, long pricePerCell) {
+    try {
+      return priceForArea(area, pricePerCell);
+    } catch (ArithmeticException overflow) {
+      return Long.MAX_VALUE;
+    }
+  }
+
+  /** Authoritative account charge for an expansion; shrinking and reshaping are free. */
+  public static int expansionCharge(long oldArea, long newArea, long pricePerCell) {
+    long difference = areaDifference(oldArea, newArea);
+    if (difference <= 0) return 0;
+    long charge = priceForArea(difference, pricePerCell);
+    if (charge > Integer.MAX_VALUE) throw new ArithmeticException("territory charge overflow");
+    return (int) charge;
+  }
+}

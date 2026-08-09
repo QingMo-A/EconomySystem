@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mo.economy_system.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "economy_system.refmap.json",
+  "client": [],
+  "server": [],
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

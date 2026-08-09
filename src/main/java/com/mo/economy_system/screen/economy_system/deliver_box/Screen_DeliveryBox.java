@@ -4,7 +4,7 @@ import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
 import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
-import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211HomeScreen;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
@@ -480,7 +480,7 @@ public class Screen_DeliveryBox extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Home());
+                this.minecraft.setScreen(new NeoForge1211HomeScreen());
             }
             return true;
         }

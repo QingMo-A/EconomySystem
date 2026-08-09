@@ -80,7 +80,7 @@ public abstract class MarketItem {
 
     // 判断商品是否过期
     public boolean isExpired() {
-        return System.currentTimeMillis() > expirationTime;
+        return System.currentTimeMillis() >= expirationTime;
     }
 
     // Getters...

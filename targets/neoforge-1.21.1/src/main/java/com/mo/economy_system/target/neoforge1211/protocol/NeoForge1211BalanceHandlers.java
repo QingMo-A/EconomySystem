@@ -6,7 +6,7 @@ import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.common.client.ClientBalanceState;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.neoforge1211.player.NeoForge1211PlayerLookup;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -37,7 +37,7 @@ public final class NeoForge1211BalanceHandlers {
 
             if (message.includeAccountList()) {
                 for (Map.Entry<UUID, Integer> entry : data.getAllAccounts()) {
-                    String playerName = Util_Player.getPlayerNameFromUUID(
+                    String playerName = NeoForge1211PlayerLookup.profileName(
                             player.server,
                             entry.getKey()
                     );
@@ -63,13 +63,6 @@ public final class NeoForge1211BalanceHandlers {
 
         private static void apply(BalanceResponseMessage message) {
             ClientBalanceState.update(message);
-            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-            if (minecraft.screen instanceof com.mo.economy_system.screen.Screen_Home homeScreen) {
-                List<Map.Entry<String, Integer>> accounts = message.accounts().stream()
-                        .map(account -> Map.entry(account.playerName(), account.balance()))
-                        .toList();
-                homeScreen.updateBalance(message.balance(), accounts);
-            }
         }
     }
 }

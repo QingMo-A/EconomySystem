@@ -75,6 +75,33 @@ public final class MarketLedger {
     return false;
   }
 
+  /** Removes an order only when every persisted field still matches the expected snapshot. */
+  public synchronized MarketOrderRemovalResult removeIfUnchanged(MarketOrder expected) {
+    Objects.requireNonNull(expected, "expected");
+    for (int index = 0; index < orders.size(); index++) {
+      MarketOrder current = orders.get(index);
+      if (!current.tradeId().equals(expected.tradeId())) continue;
+      if (!current.equals(expected)) {
+        return MarketOrderRemovalResult.failure(MarketOrderRemovalStatus.ORDER_CHANGED);
+      }
+      if (revision == Long.MAX_VALUE) {
+        return MarketOrderRemovalResult.failure(MarketOrderRemovalStatus.PERSIST_FAILED);
+      }
+      orders.remove(index);
+      try {
+        dirtyCallback.run();
+      } catch (RuntimeException exception) {
+        orders.add(index, current);
+        return MarketOrderRemovalResult.failure(MarketOrderRemovalStatus.PERSIST_FAILED);
+      }
+      int originalIndex = index;
+      revision++;
+      return MarketOrderRemovalResult.removed(
+          new MarketOrderRemoval(current, () -> restoreRemoval(current, originalIndex)));
+    }
+    return MarketOrderRemovalResult.failure(MarketOrderRemovalStatus.NOT_FOUND);
+  }
+
   public synchronized DemandOrderRemovalResult removeUndeliveredDemand(UUID tradeId) {
     Objects.requireNonNull(tradeId, "tradeId");
     for (int index = 0; index < orders.size(); index++) {

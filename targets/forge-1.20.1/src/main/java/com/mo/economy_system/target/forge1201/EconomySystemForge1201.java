@@ -5,6 +5,8 @@ import com.mo.economy_system.EconomyConstants;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.target.forge1201.item.Forge1201Items;
 import com.mo.economy_system.target.forge1201.network.Forge1201NetworkChannel;
+import com.mo.economy_system.target.forge1201.reward.Forge1201RewardEnchantments;
+import com.mo.economy_system.common.settings.EconomySettings;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
@@ -23,7 +25,9 @@ public final class EconomySystemForge1201 {
 
     public EconomySystemForge1201() {
         Forge1201Items.register(FMLJavaModLoadingContext.get().getModEventBus());
+        Forge1201RewardEnchantments.register(FMLJavaModLoadingContext.get().getModEventBus());
         EconomyServices.init(new Forge1201Platform());
+        EconomySettings.initialize();
         Forge1201NetworkChannel.register();
         LOGGER.info("EconomySystem Forge 1.20.1 bridge target initialized");
     }

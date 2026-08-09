@@ -1,7 +1,7 @@
 package com.mo.economy_system.target.forge1201.network;
 
-import com.mo.economy_system.common.economy.ShopPurchaseService;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
+import com.mo.economy_system.target.forge1201.Forge1201ShopPurchaseAdapter;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -19,7 +19,7 @@ final class Forge1201ShopPurchaseHandler {
         NetworkEvent.Context context = contextSupplier.get();
         ServerPlayer player = context.getSender();
         if (player != null) {
-            ShopPurchaseService.execute(player, message);
+            Forge1201ShopPurchaseAdapter.execute(player, message);
         }
         context.setPacketHandled(true);
     }

@@ -76,6 +76,9 @@ sourceSets {
                 rootProject.file('common/src/main/java'),
                 file('src/main/java')
         ])
+        // Legacy target-local screens are retained as reference material only.
+        // Active target UI is expressed through common controllers/layouts/views.
+        java.exclude('com/mo/economy_system/screen/**')
         resources.setSrcDirs([
                 rootProject.file('common/src/main/resources'),
                 file('src/main/resources'),
@@ -89,6 +92,8 @@ sourceSets {
                 rootProject.file('common/src/test/java'),
                 file('src/test/java')
         ])
+        // Tests for the excluded legacy screen tree no longer exercise active UI.
+        java.exclude('com/mo/economy_system/screen/**')
     }
 }
 

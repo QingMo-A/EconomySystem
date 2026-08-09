@@ -1,0 +1,21 @@
+plugins {
+    id 'java-library'
+}
+
+sourceSets {
+    main {
+        java.setSrcDirs([
+                rootProject.file('common/src/main/java'),
+                file('src/main/java')
+        ])
+    }
+    test {
+        java.setSrcDirs([
+                rootProject.file('common/src/test/java'),
+                file('src/test/java')
+        ])
+    }
+}
+
+// Add the chosen loader plugin and Minecraft dependency here. Do not add the
+// repository root src/main/java as a source directory.

@@ -6,6 +6,7 @@ import com.mo.economy_system.common.territory.TerritoryInvite;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
 import com.mo.economy_system.common.territory.TerritoryInviteResult;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -16,10 +17,15 @@ import net.minecraftforge.network.NetworkEvent;
 import org.slf4j.Logger;
 
 /** Server-side Forge protocol-20 invitation request handler. */
-final class Forge1201TerritoryInviteHandler {
+public final class Forge1201TerritoryInviteHandler {
   private static final Logger LOGGER = LogUtils.getLogger();
 
   private Forge1201TerritoryInviteHandler() {}
+
+  /** Command-side entry point; it uses the same common service as protocol 20. */
+  public static void request(ServerPlayer sender, UUID territoryId, UUID targetPlayerId) {
+    execute(sender, new InvitePlayerMessage(territoryId, targetPlayerId));
+  }
 
   static void handle(InvitePlayerMessage message, Supplier<NetworkEvent.Context> supplier) {
     NetworkEvent.Context context = supplier.get();

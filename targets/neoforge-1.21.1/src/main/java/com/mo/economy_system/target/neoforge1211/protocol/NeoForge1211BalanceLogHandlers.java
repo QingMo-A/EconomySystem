@@ -46,27 +46,6 @@ public final class NeoForge1211BalanceLogHandlers {
     public static void handleResponse(BalanceLogResponseMessage message, IPayloadContext context) {
         context.enqueueWork(() -> {
             ClientBalanceLogState.update(message);
-            ClientOnly.apply(message);
         });
-    }
-
-    /** Kept lazy so a dedicated server never resolves client-only screen classes. */
-    private static final class ClientOnly {
-        private ClientOnly() {
-        }
-
-        private static void apply(BalanceLogResponseMessage message) {
-            net.minecraft.client.gui.screens.Screen screen =
-                    net.minecraft.client.Minecraft.getInstance().screen;
-            if (screen instanceof com.mo.economy_system.screen.economy_system.logs.Screen_BalanceLog balanceLog) {
-                balanceLog.updateLogs(
-                        message.logs(),
-                        message.category(),
-                        message.offset(),
-                        message.limit(),
-                        message.total()
-                );
-            }
-        }
     }
 }

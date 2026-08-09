@@ -1,9 +1,9 @@
 package com.mo.economy_system.target.neoforge1211.protocol;
 
 import com.mo.economy_system.EconomySystem;
+import com.mo.economy_system.common.client.ClientDeliveryBoxState;
 import com.mo.economy_system.common.delivery.DeliveryBoxClaimResult;
 import com.mo.economy_system.common.delivery.DeliveryBoxClaimService;
-import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.delivery.DeliveryBoxQueryService;
 import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
 import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
@@ -13,10 +13,7 @@ import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedDa
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.platform.EconomyServices;
-import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
-import java.util.ArrayList;
-import java.util.List;
-import net.minecraft.client.Minecraft;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -47,30 +44,7 @@ public final class NeoForge1211DeliveryBoxHandlers {
   }
 
   public static void response(DeliveryBoxDataResponseMessage message, IPayloadContext context) {
-    context.enqueueWork(() -> {
-      Minecraft minecraft = Minecraft.getInstance();
-      if (!(minecraft.screen instanceof Screen_DeliveryBox screen)) return;
-      if (message.kind() == DeliveryBoxResponseKind.ERROR || minecraft.level == null) {
-        screen.updateDeliveryItems(message.requestId(), List.of());
-        return;
-      }
-      List<DeliveryItem> restored = new ArrayList<>(message.entries().size());
-      try {
-        for (DeliveryBoxEntrySnapshot entry : message.entries()) {
-          ItemStack stack = EconomyServices.platform()
-              .itemStacks()
-              .restoreSnapshot(entry.item(), minecraft.level.registryAccess())
-              .orElseThrow();
-          restored.add(new DeliveryItem(
-              entry.entryId(), entry.item().itemId(), stack, entry.source()));
-        }
-      } catch (RuntimeException failure) {
-        EconomySystem.LOGGER.error("Delivery response restore failed request={}", message.requestId(), failure);
-        screen.updateDeliveryItems(message.requestId(), List.of());
-        return;
-      }
-      screen.updateDeliveryItems(message.requestId(), List.copyOf(restored));
-    });
+    context.enqueueWork(() -> ClientDeliveryBoxState.update(message));
   }
 
   public static void claim(DeliveryBoxClaimMessage message, IPayloadContext context) {
@@ -84,8 +58,7 @@ public final class NeoForge1211DeliveryBoxHandlers {
           new DeliveryBoxClaimService.Context(
               player.getUUID(),
               data.ledger(),
-              entry -> EconomyServices.platform()
-                  .itemStacks()
+              entry -> NeoForge1211Platform.nativeItemStacks()
                   .restoreSnapshot(entry.item(), player.registryAccess())
                   .orElseThrow(),
               inventory,

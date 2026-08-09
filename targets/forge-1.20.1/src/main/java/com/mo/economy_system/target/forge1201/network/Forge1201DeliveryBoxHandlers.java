@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.network;
 
 import com.mojang.logging.LogUtils;
+import com.mo.economy_system.common.client.ClientDeliveryBoxState;
 import com.mo.economy_system.common.delivery.DeliveryBoxClaimResult;
 import com.mo.economy_system.common.delivery.DeliveryBoxClaimService;
 import com.mo.economy_system.common.delivery.DeliveryBoxQueryService;
@@ -8,6 +9,7 @@ import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
 import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
 import com.mo.economy_system.common.network.DeliveryBoxDataResponseMessage;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -48,7 +50,7 @@ final class Forge1201DeliveryBoxHandlers {
       DeliveryBoxDataResponseMessage message, Supplier<NetworkEvent.Context> supplier) {
     NetworkEvent.Context context = supplier.get();
     DistExecutor.unsafeRunWhenOn(
-        Dist.CLIENT, () -> () -> Forge1201DeliveryBoxClientState.apply(message));
+        Dist.CLIENT, () -> () -> ClientDeliveryBoxState.update(message));
     context.setPacketHandled(true);
   }
 
@@ -62,8 +64,7 @@ final class Forge1201DeliveryBoxHandlers {
           new DeliveryBoxClaimService.Context(
               player.getUUID(),
               data.ledger(),
-              entry -> EconomyServices.platform()
-                  .itemStacks()
+              entry -> Forge1201Platform.nativeItemStacks()
                   .restoreSnapshot(entry.item(), player.serverLevel().registryAccess())
                   .orElseThrow(),
               new Forge1201TransactionalInventoryAdapter(player),

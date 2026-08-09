@@ -25,6 +25,8 @@ class TerritoryBuffTransactionServiceTest {
     assertEquals(1, fixture.repository.mutations.get());
     assertFalse(fixture.repository.expectedUnlocked);
     assertEquals(0, fixture.repository.expectedLevel);
+    assertTrue(fixture.repository.newUnlocked);
+    assertEquals(0, fixture.repository.newLevel);
   }
 
   @Test
@@ -103,12 +105,56 @@ class TerritoryBuffTransactionServiceTest {
   }
 
   @Test
+  void balanceDebitExceptionFailsClosedBeforeOtherResourcesChange() {
+    Fixture fixture = new Fixture(owned());
+    fixture.accounts.debitThrows = true;
+
+    assertEquals(TerritoryManagementResult.STATE_UNKNOWN, fixture.execute(Action.UNLOCK));
+    assertEquals(100, fixture.accounts.balance);
+    assertEquals(10, fixture.resources.experience);
+    assertEquals(2, fixture.resources.items.get("minecraft:diamond"));
+    assertEquals(1, fixture.reports.get());
+    assertEquals(0, fixture.repository.mutations.get());
+  }
+
+  @Test
+  void throwingExperienceDebitDoesNotPretendThePlayerWasShortOnExperience() {
+    Fixture fixture = new Fixture(owned());
+    fixture.resources.debitExperienceThrows = true;
+
+    assertEquals(TerritoryManagementResult.STATE_UNKNOWN, fixture.execute(Action.UNLOCK));
+    assertEquals(90, fixture.accounts.balance);
+    assertEquals(10, fixture.resources.experience);
+    assertEquals(2, fixture.resources.items.get("minecraft:diamond"));
+    assertEquals(0, fixture.repository.mutations.get());
+    assertEquals(1, fixture.reports.get());
+  }
+
+  @Test
+  void throwingItemRemovalDoesNotBlindlyRefundKnownResources() {
+    Fixture fixture = new Fixture(owned());
+    fixture.resources.removeThrows = true;
+
+    assertEquals(TerritoryManagementResult.STATE_UNKNOWN, fixture.execute(Action.UNLOCK));
+    assertEquals(90, fixture.accounts.balance);
+    assertEquals(7, fixture.resources.experience);
+    assertEquals(2, fixture.resources.items.get("minecraft:diamond"));
+    assertEquals(0, fixture.repository.mutations.get());
+    assertEquals(1, fixture.reports.get());
+  }
+
+  @Test
   void upgradeUsesLiveExpectedStateAndRejectsMaxLevel() {
     Owned unlocked = withBuffState(true, 1);
     Fixture fixture = new Fixture(unlocked);
     assertEquals(TerritoryManagementResult.SUCCESS, fixture.execute(Action.UPGRADE));
     assertTrue(fixture.repository.expectedUnlocked);
     assertEquals(1, fixture.repository.expectedLevel);
+    assertTrue(fixture.repository.newUnlocked);
+    assertEquals(2, fixture.repository.newLevel);
+    Fixture clamp = new Fixture(withBuffState(true, 2));
+    assertEquals(TerritoryManagementResult.SUCCESS, clamp.execute(Action.UPGRADE));
+    assertEquals(3, clamp.repository.newLevel);
     assertEquals(
         TerritoryManagementResult.MAX_LEVEL,
         new Fixture(withBuffState(true, 3)).execute(Action.UPGRADE));
@@ -168,6 +214,8 @@ class TerritoryBuffTransactionServiceTest {
         TerritoryBuffTransactionService.RepositoryResult.SUCCESS;
     boolean expectedUnlocked;
     int expectedLevel;
+    boolean newUnlocked;
+    int newLevel;
 
     TestRepository(Owned territory) { this.territory = territory; }
     public Owned find(UUID id) { return territory; }
@@ -177,10 +225,13 @@ class TerritoryBuffTransactionServiceTest {
         String buffId,
         boolean unlocked,
         int level,
-        Action action) {
+        boolean desiredUnlocked,
+        int desiredLevel) {
       mutations.incrementAndGet();
       expectedUnlocked = unlocked;
       expectedLevel = level;
+      newUnlocked = desiredUnlocked;
+      newLevel = desiredLevel;
       return result;
     }
   }
@@ -188,6 +239,7 @@ class TerritoryBuffTransactionServiceTest {
   private static final class TestAccounts implements TerritoryBuffTransactionService.Accounts {
     int balance = 100;
     boolean previewThrows;
+    boolean debitThrows;
 
     public BalanceMutationResult preview(int amount) {
       if (previewThrows) throw new IllegalStateException("preview");
@@ -196,6 +248,7 @@ class TerritoryBuffTransactionServiceTest {
           : BalanceMutationResult.INSUFFICIENT_FUNDS;
     }
     public BalanceMutationResult debit(int amount) {
+      if (debitThrows) throw new IllegalStateException("debit");
       if (balance < amount) return BalanceMutationResult.INSUFFICIENT_FUNDS;
       balance -= amount;
       return BalanceMutationResult.SUCCESS;
@@ -210,7 +263,9 @@ class TerritoryBuffTransactionServiceTest {
     int experience = 10;
     final Map<String, Integer> items = new HashMap<>(Map.of("minecraft:diamond", 2));
     boolean debitExperienceSucceeds = true;
+    boolean debitExperienceThrows;
     boolean removeSucceeds = true;
+    boolean removeThrows;
     boolean rollbackSucceeds = true;
     boolean previewThrows;
 
@@ -224,6 +279,7 @@ class TerritoryBuffTransactionServiceTest {
           .allMatch(entry -> items.getOrDefault(entry.getKey(), 0) >= entry.getValue());
     }
     public boolean debitExperience(int levels) {
+      if (debitExperienceThrows) throw new IllegalStateException("experience");
       if (!debitExperienceSucceeds) return false;
       experience -= levels;
       return true;
@@ -233,6 +289,7 @@ class TerritoryBuffTransactionServiceTest {
       return true;
     }
     public TerritoryBuffTransactionService.ItemRemoval remove(Map<String, Integer> required) {
+      if (removeThrows) throw new IllegalStateException("items");
       if (!removeSucceeds) return TerritoryBuffTransactionService.ItemRemoval.failure(true);
       required.forEach((id, count) -> items.compute(id, (key, value) -> value - count));
       return TerritoryBuffTransactionService.ItemRemoval.success(() -> {

@@ -1,6 +1,6 @@
 package com.mo.economy_system.platform.item;
 
-import net.minecraft.nbt.CompoundTag;
+import com.mo.economy_system.platform.nbt.NbtData;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,8 +16,9 @@ public final class ItemStackSnapshotGoldenFixture {
         LinkedHashMap<String, Integer> enchantments = new LinkedHashMap<>();
         enchantments.put("minecraft:protection", 4);
         enchantments.put("minecraft:unbreaking", 3);
-        CompoundTag customData = new CompoundTag();
-        customData.putString("economyOwner", "alice");
+        NbtData.Compound customData = NbtData.compoundBuilder()
+                .putString("economyOwner", "alice")
+                .build();
         return ItemStackSnapshot.create("minecraft:leather_chestplate", 1,
                 Optional.of("{\"text\":\"Golden Coat\"}"),
                 List.of("{\"text\":\"First line\"}", "{\"text\":\"Second line\"}"),
@@ -25,7 +26,7 @@ public final class ItemStackSnapshotGoldenFixture {
                 true, false, OptionalInt.of(0x336699), false, OptionalInt.of(42), customData).orElseThrow();
     }
 
-    public static CompoundTag schema() {
+    public static NbtData.Compound schema() {
         return ItemStackSnapshotCodec.encode(snapshot()).orElseThrow();
     }
 }

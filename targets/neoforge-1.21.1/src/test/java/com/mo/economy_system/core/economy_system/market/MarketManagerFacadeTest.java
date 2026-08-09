@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.platform.nbt.NbtData;
 import java.util.*;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import org.junit.jupiter.api.Test;
 
@@ -92,7 +92,7 @@ class MarketManagerFacadeTest {
             OptionalInt.empty(),
             true,
             OptionalInt.empty(),
-            new CompoundTag())
+            NbtData.emptyCompound())
         .orElseThrow();
   }
 }

@@ -13,28 +13,27 @@ import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
 import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
-import io.netty.buffer.Unpooled;
+import com.mo.economy_system.testsupport.TestWireBuffer;
 import java.util.UUID;
-import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
 class TerritoryManagementWireCodecTest {
   @Test
   void fixedUuidMessagesHaveGoldenFieldOrder() {
-    FriendlyByteBuf modify = buffer();
+    TestWireBuffer modify = buffer();
     TerritoryManagementWireCodec.encodeModifyMode(
         new ModifyTerritoryModeMessage(TERRITORY), modify);
     assertEquals(16, modify.readableBytes());
     assertEquals(TERRITORY, modify.readUUID());
 
-    FriendlyByteBuf request = buffer();
+    TestWireBuffer request = buffer();
     TerritoryManagementWireCodec.encodeSingleRequest(
         new SingleTerritoryDataRequestMessage(TERRITORY, 17), request);
     assertEquals(24, request.readableBytes());
     assertEquals(TERRITORY, request.readUUID());
     assertEquals(17, request.readLong());
 
-    FriendlyByteBuf permission = buffer();
+    TestWireBuffer permission = buffer();
     TerritoryManagementWireCodec.encodePermission(
         new UpdateTerritoryPermissionMessage(TERRITORY, MEMBER, true), permission);
     assertEquals(33, permission.readableBytes());
@@ -42,7 +41,7 @@ class TerritoryManagementWireCodecTest {
     assertEquals(MEMBER, permission.readUUID());
     assertTrue(permission.readBoolean());
 
-    FriendlyByteBuf transfer = buffer();
+    TestWireBuffer transfer = buffer();
     TerritoryManagementWireCodec.encodeTransfer(
         new TransferTerritoryOwnershipMessage(TERRITORY, MEMBER), transfer);
     assertEquals(32, transfer.readableBytes());
@@ -54,32 +53,32 @@ class TerritoryManagementWireCodecTest {
   void variableAndResponseMessagesRoundTrip() {
     UnlockTerritoryBuffMessage unlock =
         new UnlockTerritoryBuffMessage(TERRITORY, "economy_system:speed");
-    FriendlyByteBuf unlockBuffer = buffer();
+    TestWireBuffer unlockBuffer = buffer();
     TerritoryManagementWireCodec.encodeUnlockBuff(unlock, unlockBuffer);
     assertEquals(unlock, TerritoryManagementWireCodec.decodeUnlockBuff(unlockBuffer));
 
     UpgradeTerritoryBuffMessage upgrade =
         new UpgradeTerritoryBuffMessage(TERRITORY, "economy_system:speed");
-    FriendlyByteBuf upgradeBuffer = buffer();
+    TestWireBuffer upgradeBuffer = buffer();
     TerritoryManagementWireCodec.encodeUpgradeBuff(upgrade, upgradeBuffer);
     assertEquals(upgrade, TerritoryManagementWireCodec.decodeUpgradeBuff(upgradeBuffer));
 
     UpdateTerritoryRuleMessage rule = new UpdateTerritoryRuleMessage(
         TERRITORY, RuleAction.OPEN_CONTAINER, RuleLevel.OWNER_ONLY);
-    FriendlyByteBuf ruleBuffer = buffer();
+    TestWireBuffer ruleBuffer = buffer();
     TerritoryManagementWireCodec.encodeRule(rule, ruleBuffer);
     assertEquals(rule, TerritoryManagementWireCodec.decodeRule(ruleBuffer));
 
     SingleTerritoryDataResponseMessage response =
         SingleTerritoryDataResponseMessage.data(91, owned());
-    FriendlyByteBuf responseBuffer = buffer();
+    TestWireBuffer responseBuffer = buffer();
     TerritoryManagementWireCodec.encodeSingleResponse(response, responseBuffer);
     assertEquals(response, TerritoryManagementWireCodec.decodeSingleResponse(responseBuffer));
   }
 
   @Test
   void rejectsUnknownEnumsTrailingBytesAndEveryFixedTruncation() {
-    FriendlyByteBuf unknownAction = buffer();
+    TestWireBuffer unknownAction = buffer();
     unknownAction.writeUUID(TERRITORY);
     unknownAction.writeUtf("future_action");
     unknownAction.writeUtf("members");
@@ -87,7 +86,7 @@ class TerritoryManagementWireCodecTest {
         RuntimeException.class,
         () -> TerritoryManagementWireCodec.decodeRule(unknownAction));
 
-    FriendlyByteBuf trailing = buffer();
+    TestWireBuffer trailing = buffer();
     TerritoryManagementWireCodec.encodeTransfer(
         new TransferTerritoryOwnershipMessage(TERRITORY, MEMBER), trailing);
     trailing.writeByte(1);
@@ -96,7 +95,7 @@ class TerritoryManagementWireCodecTest {
         () -> TerritoryManagementWireCodec.decodeTransfer(trailing));
 
     for (int size = 0; size < 33; size++) {
-      FriendlyByteBuf truncated = buffer();
+      TestWireBuffer truncated = buffer();
       truncated.writeZero(size);
       assertThrows(
           RuntimeException.class,
@@ -106,17 +105,17 @@ class TerritoryManagementWireCodecTest {
 
   @Test
   void clientCannotInjectNamesOrRuntimeEnumsIntoAdministrationWire() {
-    FriendlyByteBuf permission = buffer();
+    TestWireBuffer permission = buffer();
     TerritoryManagementWireCodec.encodePermission(
         new UpdateTerritoryPermissionMessage(TERRITORY, MEMBER, false), permission);
     assertEquals(33, permission.readableBytes());
-    FriendlyByteBuf transfer = buffer();
+    TestWireBuffer transfer = buffer();
     TerritoryManagementWireCodec.encodeTransfer(
         new TransferTerritoryOwnershipMessage(TERRITORY, MEMBER), transfer);
     assertEquals(32, transfer.readableBytes());
   }
 
-  private static FriendlyByteBuf buffer() {
-    return new FriendlyByteBuf(Unpooled.buffer());
+  private static TestWireBuffer buffer() {
+    return new TestWireBuffer();
   }
 }

@@ -5,7 +5,7 @@ import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.ServerPlayerListResponseMessage;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.forge1201.player.Forge1201PlayerLookup;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -29,7 +29,7 @@ final class Forge1201PlayerListHandlers {
         }
 
         EconomySavedData data = EconomySavedData.getInstance(player.serverLevel());
-        List<PlayerSummary> players = Util_Player.getAllPlayerName(data, player.server).stream()
+        List<PlayerSummary> players = Forge1201PlayerLookup.knownPlayers(data, player.server).stream()
                 .map(entry -> new PlayerSummary(entry.getKey(), entry.getValue()))
                 .toList();
         Forge1201NetworkChannel.sendToPlayer(

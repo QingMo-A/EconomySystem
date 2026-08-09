@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
+import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiIcon;
+import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
@@ -83,6 +85,19 @@ class TerritoryManageViewParityTest {
         }
 
         @Override
+        public void textInRect(String text, UiRect rect, int argb, UiTextAlignment alignment) {
+            operations.add(new Operation("textInRect", rect, text + ":" + alignment,
+                    null, null, false, true));
+        }
+
+        @Override
+        public void translatedTextInRect(String key, List<String> arguments, UiRect rect,
+                                         int argb, UiTextAlignment alignment) {
+            operations.add(new Operation("translatedTextInRect", rect,
+                    key + arguments + ":" + alignment, null, null, false, true));
+        }
+
+        @Override
         public void card(UiRect rect, UiCardStyle style, boolean hovered) {
             operations.add(new Operation("card", rect, null, style, null, hovered, true));
         }
@@ -108,6 +123,12 @@ class TerritoryManageViewParityTest {
         public void playerHead(UUID playerId, String playerName, UiRect rect) {
             operations.add(new Operation("playerHead", rect, playerId + ":" + playerName,
                     null, null, false, true));
+        }
+
+        @Override
+        public void tooltip(TooltipModel tooltip, int mouseX, int mouseY) {
+            operations.add(new Operation("tooltip", new UiRect(mouseX, mouseY, 0, 0),
+                    tooltip.toString(), null, null, false, true));
         }
     }
 

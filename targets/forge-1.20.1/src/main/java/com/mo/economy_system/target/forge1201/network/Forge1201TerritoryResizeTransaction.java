@@ -1,12 +1,13 @@
 package com.mo.economy_system.target.forge1201.network;
 
+import com.mo.economy_system.common.territory.TerritoryResizeTransactionService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Forge adapter for the NeoForge 1.21.1 authoritative resize payment semantics. */
+/** Forge coordinate/persistence adapter for the common resize transaction. */
 final class Forge1201TerritoryResizeTransaction {
   enum Result {
     SUCCESS,
@@ -49,123 +50,82 @@ final class Forge1201TerritoryResizeTransaction {
       Diagnostics diagnostics) {
     Objects.requireNonNull(accounts, "accounts");
     Objects.requireNonNull(store, "store");
-    Objects.requireNonNull(playerId, "playerId");
-    Objects.requireNonNull(territoryId, "territoryId");
-    Objects.requireNonNull(diagnostics, "diagnostics");
+    TerritoryResizeTransactionService.Outcome outcome =
+        TerritoryResizeTransactionService.execute(
+            new TerritoryResizeTransactionService.BalancePort() {
+              @Override
+              public BalanceMutationResult debitExact(UUID id, int amount) {
+                return accounts.debitExact(id, amount, "领地", "调整领地大小");
+              }
 
-    Forge1201TerritorySnapshotStore.ResizePrepareOutcome prepared;
-    try {
-      prepared = store.prepareResize(territoryId, playerId, dimensionId, first, second);
-    } catch (RuntimeException failure) {
-      warn(diagnostics, "prepare", playerId, territoryId, failure);
-      return new Outcome(Result.STATE_UNKNOWN, failure);
-    }
-    if (prepared == null) {
-      IllegalStateException failure = new IllegalStateException("null resize prepare outcome");
-      warn(diagnostics, "repository-contract", playerId, territoryId, failure);
-      return new Outcome(Result.STATE_UNKNOWN, failure);
-    }
-    if (prepared.result() != Forge1201TerritorySnapshotStore.ResizePrepareResult.READY) {
-      if (prepared.failure() != null) {
-        warn(diagnostics, "prepare", playerId, territoryId, prepared.failure());
-      }
-      return new Outcome(map(prepared.result()), prepared.failure());
-    }
+              @Override
+              public BalanceMutationResult creditExact(UUID id, int amount) {
+                return accounts.creditExact(id, amount, "领地", "领地调整失败退款");
+              }
+            },
+            new TerritoryResizeTransactionService.ResizeRepository() {
+              @Override
+              public TerritoryResizeTransactionService.PrepareOutcome prepare(
+                  UUID id, UUID owner) {
+                Forge1201TerritorySnapshotStore.ResizePrepareOutcome value =
+                    store.prepareResize(id, owner, dimensionId, first, second);
+                return new TerritoryResizeTransactionService.PrepareOutcome(
+                    switch (value.result()) {
+                      case READY -> TerritoryResizeTransactionService.PrepareResult.READY;
+                      case UNCHANGED -> TerritoryResizeTransactionService.PrepareResult.UNCHANGED;
+                      case NOT_FOUND -> TerritoryResizeTransactionService.PrepareResult.TERRITORY_NOT_FOUND;
+                      case NOT_OWNER -> TerritoryResizeTransactionService.PrepareResult.NO_PERMISSION;
+                      case WRONG_DIMENSION -> TerritoryResizeTransactionService.PrepareResult.WRONG_DIMENSION;
+                      case INVALID_BOUNDS -> TerritoryResizeTransactionService.PrepareResult.INVALID_BOUNDS;
+                      case OVERLAP -> TerritoryResizeTransactionService.PrepareResult.OVERLAP;
+                      case PRICE_OVERFLOW -> TerritoryResizeTransactionService.PrepareResult.PRICE_OVERFLOW;
+                      case STATE_UNKNOWN -> TerritoryResizeTransactionService.PrepareResult.STATE_UNKNOWN;
+                    },
+                    value.plan() == null
+                        ? null
+                        : new TerritoryResizeTransactionService.ResizePlan(
+                            value.plan().charge(), value.plan()),
+                    value.failure());
+              }
 
-    Forge1201TerritorySnapshotStore.ResizePlan plan = prepared.plan();
-    if (plan.charge() > 0) {
-      final BalanceMutationResult debit;
-      try {
-        debit = accounts.debitExact(playerId, plan.charge(), "领地", "调整领地大小");
-      } catch (RuntimeException failure) {
-        warn(diagnostics, "payment-debit", playerId, territoryId, failure);
-        return new Outcome(Result.PAYMENT_FAILED, failure);
-      }
-      if (debit != BalanceMutationResult.SUCCESS) {
-        Result result = debit == BalanceMutationResult.INSUFFICIENT_FUNDS
-            ? Result.INSUFFICIENT_FUNDS
-            : Result.PAYMENT_FAILED;
-        Throwable failure = result == Result.INSUFFICIENT_FUNDS
-            ? null
-            : new IllegalStateException("resize debit result: " + debit);
-        if (failure != null) warn(diagnostics, "payment-debit", playerId, territoryId, failure);
-        return new Outcome(result, failure);
-      }
-    }
-
-    final Forge1201TerritorySnapshotStore.ResizeCommitResult committed;
-    try {
-      committed = store.commitResize(plan);
-    } catch (RuntimeException failure) {
-      warn(diagnostics, "mutation-state-unknown", playerId, territoryId, failure);
-      return new Outcome(Result.STATE_UNKNOWN, failure);
-    }
-    if (committed == null) {
-      IllegalStateException failure = new IllegalStateException("null resize commit result");
-      warn(diagnostics, "repository-contract", playerId, territoryId, failure);
-      return new Outcome(Result.STATE_UNKNOWN, failure);
-    }
-    Result result = map(committed);
-    if (result == Result.SUCCESS) return new Outcome(result, null);
-    if (result == Result.STATE_UNKNOWN) {
-      warn(diagnostics, "mutation-state-unknown", playerId, territoryId, null);
-      return new Outcome(result, null);
-    }
-    if (result == Result.PERSIST_FAILED) {
-      warn(diagnostics, "mutation-persist-failed", playerId, territoryId, null);
-    }
-    if (plan.charge() == 0) return new Outcome(result, null);
-
-    final BalanceMutationResult refund;
-    try {
-      refund = accounts.creditExact(playerId, plan.charge(), "领地", "领地调整失败退款");
-    } catch (RuntimeException failure) {
-      warn(diagnostics, "payment-refund", playerId, territoryId, failure);
-      return new Outcome(Result.REFUND_FAILED, failure);
-    }
-    if (refund != BalanceMutationResult.SUCCESS) {
-      IllegalStateException failure = new IllegalStateException("resize refund result: " + refund);
-      warn(diagnostics, "payment-refund", playerId, territoryId, failure);
-      return new Outcome(Result.REFUND_FAILED, failure);
-    }
-    return new Outcome(result, null);
+              @Override
+              public TerritoryResizeTransactionService.Outcome commit(
+                  TerritoryResizeTransactionService.ResizePlan plan) {
+                Forge1201TerritorySnapshotStore.ResizeCommitResult value =
+                    store.commitResize((Forge1201TerritorySnapshotStore.ResizePlan) plan.token());
+                return new TerritoryResizeTransactionService.Outcome(
+                    switch (value) {
+                      case SUCCESS -> TerritoryResizeTransactionService.Result.SUCCESS;
+                      case NOT_FOUND -> TerritoryResizeTransactionService.Result.TERRITORY_NOT_FOUND;
+                      case CHANGED -> TerritoryResizeTransactionService.Result.CHANGED;
+                      case OVERLAP -> TerritoryResizeTransactionService.Result.OVERLAP;
+                      case PERSIST_FAILED -> TerritoryResizeTransactionService.Result.PERSIST_FAILED;
+                      case STATE_UNKNOWN -> TerritoryResizeTransactionService.Result.STATE_UNKNOWN;
+                    },
+                    null);
+              }
+            },
+            diagnostics::warning,
+            playerId,
+            territoryId);
+    return new Outcome(map(outcome.result()), outcome.failure());
   }
 
-  private static Result map(Forge1201TerritorySnapshotStore.ResizePrepareResult result) {
+  private static Result map(TerritoryResizeTransactionService.Result result) {
     return switch (result) {
+      case SUCCESS -> Result.SUCCESS;
       case UNCHANGED -> Result.UNCHANGED;
-      case NOT_FOUND -> Result.NOT_FOUND;
-      case NOT_OWNER -> Result.NOT_OWNER;
+      case INSUFFICIENT_FUNDS -> Result.INSUFFICIENT_FUNDS;
+      case TERRITORY_NOT_FOUND -> Result.NOT_FOUND;
+      case NO_PERMISSION -> Result.NOT_OWNER;
       case WRONG_DIMENSION -> Result.WRONG_DIMENSION;
       case INVALID_BOUNDS -> Result.INVALID_BOUNDS;
       case OVERLAP -> Result.OVERLAP;
-      case PRICE_OVERFLOW -> Result.PAYMENT_FAILED;
-      case STATE_UNKNOWN -> Result.STATE_UNKNOWN;
-      case READY -> throw new AssertionError();
-    };
-  }
-
-  private static Result map(Forge1201TerritorySnapshotStore.ResizeCommitResult result) {
-    return switch (result) {
-      case SUCCESS -> Result.SUCCESS;
-      case NOT_FOUND -> Result.NOT_FOUND;
       case CHANGED -> Result.CHANGED;
-      case OVERLAP -> Result.OVERLAP;
       case PERSIST_FAILED -> Result.PERSIST_FAILED;
       case STATE_UNKNOWN -> Result.STATE_UNKNOWN;
+      case REFUND_FAILED -> Result.REFUND_FAILED;
+      case PAYMENT_FAILED -> Result.PAYMENT_FAILED;
     };
-  }
-
-  private static void warn(
-      Diagnostics diagnostics,
-      String stage,
-      UUID playerId,
-      UUID territoryId,
-      Throwable failure) {
-    if (failure == null) failure = new IllegalStateException(stage);
-    try {
-      diagnostics.warning(stage, playerId, territoryId, failure);
-    } catch (RuntimeException ignored) {
-    }
   }
 }

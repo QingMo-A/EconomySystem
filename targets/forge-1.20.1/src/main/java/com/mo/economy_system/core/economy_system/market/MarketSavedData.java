@@ -7,8 +7,10 @@ import com.mo.economy_system.common.market.MarketOrder;
 import com.mo.economy_system.common.market.MarketOrderCodec;
 import com.mo.economy_system.common.market.MarketOrderType;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
+import com.mo.economy_system.target.forge1201.item.Forge1201NbtAdapter;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.nbt.CompoundTag;
@@ -49,6 +51,11 @@ public final class MarketSavedData extends SavedData {
     return ledger.find(id);
   }
 
+  public com.mo.economy_system.common.market.MarketOrderRemovalResult removeOrderIfUnchanged(
+      MarketOrder expected) {
+    return ledger.removeIfUnchanged(expected);
+  }
+
   public DemandDeliveryTransition markDemandDeliveredIfUnchanged(
       java.util.UUID id, MarketOrder expected) {
     return ledger.markDemandDeliveredIfUnchanged(id, expected);
@@ -76,7 +83,7 @@ public final class MarketSavedData extends SavedData {
     if (!pendingLegacy.isEmpty())
       throw new IllegalStateException("unresolved legacy market data cannot be overwritten");
     ListTag list = new ListTag();
-    for (MarketOrder order : ledger.orders()) list.add(MarketOrderCodec.encode(order));
+    for (MarketOrder order : ledger.orders()) list.add(Forge1201NbtAdapter.toNative(MarketOrderCodec.encode(order)));
     tag.put("marketItems", list);
     tag.putLong("marketRevision", ledger.revision());
     return tag;
@@ -90,7 +97,7 @@ public final class MarketSavedData extends SavedData {
       ListTag list = tag.getList("marketItems", Tag.TAG_COMPOUND);
       for (int i = 0; i < list.size(); i++) {
         CompoundTag order = list.getCompound(i);
-        ItemStackSnapshotResult<MarketOrder> current = MarketOrderCodec.decodeCurrent(order);
+        ItemStackSnapshotResult<MarketOrder> current = MarketOrderCodec.decodeCurrent(Forge1201NbtAdapter.fromNative(order));
         if (current.isSuccess()) orders.add(current.orElseThrow());
         else if (order.getCompound("itemStack").contains("schemaVersion"))
           throw new IllegalArgumentException(
@@ -131,11 +138,9 @@ public final class MarketSavedData extends SavedData {
             ? tag.getInt("listedCount")
             : nativeStack.getCount();
     nativeStack.setCount(1);
-    ItemStackSnapshot snapshot =
-        EconomyServices.platform()
-            .itemStacks()
-            .captureSnapshot(nativeStack, level.registryAccess())
-            .orElseThrow();
+    ItemStackSnapshot snapshot = Forge1201Platform.nativeItemStacks()
+        .captureSnapshot(nativeStack, level.registryAccess())
+        .orElseThrow();
     long listing = tag.getLong("listingTime");
     long expiration =
         tag.contains("expirationTime", Tag.TAG_LONG)

@@ -52,12 +52,17 @@ public final class CreateDemandOrderService {
         catch (RuntimeException exception) { return CreateDemandOrderResult.SNAPSHOT_REJECTED; }
 
         BalanceMutationResult debitResult;
-        RuntimeException debitError = null;
-        try { debitResult = context.account().debitExact(message.totalPrice()); }
-        catch (RuntimeException exception) { debitResult = BalanceMutationResult.PERSIST_FAILED; debitError = exception; }
+        try {
+            debitResult = Objects.requireNonNull(
+                    context.account().debitExact(message.totalPrice()), "debit result");
+        } catch (RuntimeException exception) {
+            report(context, tradeId, "payment-debit", CreateDemandOrderResult.STATE_UNKNOWN,
+                    exception, false);
+            return CreateDemandOrderResult.STATE_UNKNOWN;
+        }
         if (debitResult != BalanceMutationResult.SUCCESS) {
             if (debitResult == BalanceMutationResult.INSUFFICIENT_FUNDS) return CreateDemandOrderResult.INSUFFICIENT_FUNDS;
-            report(context, tradeId, "payment-debit", CreateDemandOrderResult.PAYMENT_FAILED, debitError, false);
+            report(context, tradeId, "payment-debit", CreateDemandOrderResult.PAYMENT_FAILED, null, false);
             return CreateDemandOrderResult.PAYMENT_FAILED;
         }
 
@@ -67,14 +72,19 @@ public final class CreateDemandOrderService {
         catch (RuntimeException exception) { added = false; repositoryError = exception; }
         if (added) return CreateDemandOrderResult.SUCCESS;
 
-        boolean refunded;
-        RuntimeException refundError = null;
-        try { refunded = context.account().creditExact(message.totalPrice()) == BalanceMutationResult.SUCCESS; }
-        catch (RuntimeException exception) { refunded = false; refundError = exception; }
+        BalanceMutationResult refundResult;
+        try {
+            refundResult = Objects.requireNonNull(
+                    context.account().creditExact(message.totalPrice()), "refund result");
+        } catch (RuntimeException exception) {
+            report(context, tradeId, "payment-refund", CreateDemandOrderResult.STATE_UNKNOWN,
+                    exception, false);
+            return CreateDemandOrderResult.STATE_UNKNOWN;
+        }
+        boolean refunded = refundResult == BalanceMutationResult.SUCCESS;
         CreateDemandOrderResult result = refunded ? CreateDemandOrderResult.ORDER_PERSIST_FAILED
                 : CreateDemandOrderResult.REFUND_FAILED;
         report(context, tradeId, "repository-add", result, repositoryError, refunded);
-        if (refundError != null) report(context, tradeId, "payment-refund", result, refundError, false);
         return result;
     }
 

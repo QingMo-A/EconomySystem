@@ -1,8 +1,6 @@
 package com.mo.economy_system.target.forge1201.client;
 
 import com.mo.economy_system.EconomyConstants;
-import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
-import com.mo.economy_system.screen.Screen_Home;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
@@ -31,8 +29,8 @@ public final class Forge1201TerritoryScreenKey {
   public static final class Input {
     private Input() {}
     @SubscribeEvent public static void key(InputEvent.Key event) {
-      if (OPEN_SCREEN.consumeClick()) Minecraft.getInstance().setScreen(new Screen_Home());
-      if (OPEN_DELIVERY.consumeClick()) Minecraft.getInstance().setScreen(new Screen_DeliveryBox());
+      if (OPEN_SCREEN.consumeClick()) Minecraft.getInstance().setScreen(new Forge1201HomeScreen());
+      if (OPEN_DELIVERY.consumeClick()) Minecraft.getInstance().setScreen(new Forge1201DeliveryBoxScreen());
     }
   }
 }

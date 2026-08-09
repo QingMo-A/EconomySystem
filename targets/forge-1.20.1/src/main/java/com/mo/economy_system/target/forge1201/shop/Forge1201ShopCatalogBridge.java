@@ -8,8 +8,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import com.mo.economy_system.EconomyConstants;
+import com.mo.economy_system.common.economy.ShopCatalogDefaults;
+import com.mo.economy_system.common.economy.ShopItemIdentity;
+import com.mo.economy_system.common.economy.ShopPricingPolicy;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.ShopItemSnapshot;
+import com.mo.economy_system.common.settings.CommonSettingsStore;
+import com.mo.economy_system.common.settings.EconomySettings;
 import com.mo.economy_system.platform.shop.EconomyShopCatalogBridge;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -61,7 +66,6 @@ public final class Forge1201ShopCatalogBridge implements EconomyShopCatalogBridg
         return array == null ? List.of() : parse(array);
     }
 
-    @Override
     public ItemStack createItemStack(ShopItemSnapshot item, RegistryAccess registryAccess) {
         try {
             if (!item.itemData().isBlank()) {
@@ -76,6 +80,31 @@ public final class Forge1201ShopCatalogBridge implements EconomyShopCatalogBridg
             );
             return ItemStack.EMPTY;
         }
+    }
+
+    public synchronized ShopItemSnapshot addItemFromStack(
+            ItemStack stack, int basePrice, String description, RegistryAccess registryAccess) {
+        if (stack == null || stack.isEmpty() || basePrice <= 0) {
+            throw new IllegalArgumentException("invalid shop item or base price");
+        }
+        JsonArray array = readCatalog();
+        if (array == null) {
+            throw new IllegalStateException("shop catalog is unavailable");
+        }
+        ItemStack saved = stack.copy();
+        saved.setCount(1);
+        CompoundTag fullTag = new CompoundTag();
+        saved.save(fullTag);
+        String itemId = BuiltInRegistries.ITEM.getKey(saved.getItem()).toString();
+        ShopItemSnapshot snapshot = new ShopItemSnapshot(
+                UUID.randomUUID().toString(), itemId, basePrice, basePrice, basePrice,
+                description == null ? "" : description, 1.0D, "", fullTag.toString(),
+                0, 0, 0);
+        array.add(encode(snapshot));
+        if (!writeCatalog(array)) {
+            throw new IllegalStateException("shop catalog could not be saved");
+        }
+        return snapshot;
     }
 
     @Override
@@ -96,16 +125,31 @@ public final class Forge1201ShopCatalogBridge implements EconomyShopCatalogBridg
             if (item == null || !shopItemId.equals(item.shopItemId())) {
                 continue;
             }
-            object.addProperty("shopItemId", item.shopItemId());
-            long demand = (long) item.recentDemand() + quantity;
-            object.addProperty("recentDemand", (int) Math.min(Integer.MAX_VALUE, demand));
-            object.addProperty(
-                    "virtualStock",
-                    (int) Math.max(0L, (long) item.virtualStock() - quantity)
-            );
+            applyPricing(object, ShopPricingPolicy.recordPurchase(item, quantity, pricingConfig()));
             return writeCatalog(array);
         }
         return false;
+    }
+
+    @Override
+    public synchronized boolean refreshPrices() {
+        JsonArray array = readCatalog();
+        if (array == null) {
+            return false;
+        }
+        ShopPricingPolicy.Config config = pricingConfig();
+        ShopPricingPolicy.Mode mode = pricingMode();
+        for (JsonElement element : array) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject object = element.getAsJsonObject();
+            ShopItemSnapshot item = snapshotOf(object);
+            if (item != null && item.basePrice() > 0) {
+                applyPricing(object, ShopPricingPolicy.adjust(item, config, mode));
+            }
+        }
+        return writeCatalog(array);
     }
 
     private static ItemStack loadFull121Stack(ShopItemSnapshot item, CompoundTag fullTag) {
@@ -339,12 +383,9 @@ public final class Forge1201ShopCatalogBridge implements EconomyShopCatalogBridg
         int basePrice = integer(object, "basePrice", 0);
         int currentPrice = integer(object, "currentPrice", basePrice);
         String shopItemId = string(object, "shopItemId", "");
-        if (shopItemId.isBlank()) {
-            shopItemId = UUID.nameUUIDFromBytes(
-                    (itemId + '\n' + string(object, "nbt", "") + '\n'
-                            + string(object, "itemData", "")).getBytes(StandardCharsets.UTF_8)
-            ).toString();
-        }
+        shopItemId = ShopItemIdentity.existingOrDeterministic(
+                shopItemId, itemId, string(object, "nbt", ""),
+                string(object, "itemData", ""));
         return new ShopItemSnapshot(
                 shopItemId,
                 itemId,
@@ -361,16 +402,100 @@ public final class Forge1201ShopCatalogBridge implements EconomyShopCatalogBridg
         );
     }
 
+    private static void applyPricing(JsonObject object, ShopItemSnapshot item) {
+        object.addProperty("shopItemId", item.shopItemId());
+        object.addProperty("currentPrice", item.currentPrice());
+        object.addProperty("lastPrice", item.lastPrice());
+        object.addProperty("fluctuationFactor", item.fluctuationFactor());
+        object.addProperty("recentDemand", item.recentDemand());
+        object.addProperty("virtualStock", item.virtualStock());
+        object.addProperty("maxVirtualStock", item.maxVirtualStock());
+    }
+
+    private static JsonObject encode(ShopItemSnapshot item) {
+        JsonObject object = new JsonObject();
+        object.addProperty("shopItemId", item.shopItemId());
+        object.addProperty("itemId", item.itemId());
+        object.addProperty("basePrice", item.basePrice());
+        object.addProperty("currentPrice", item.currentPrice());
+        object.addProperty("lastPrice", item.lastPrice());
+        object.addProperty("description", item.description());
+        object.addProperty("fluctuationFactor", item.fluctuationFactor());
+        object.addProperty("nbt", item.nbt());
+        object.addProperty("itemData", item.itemData());
+        object.addProperty("recentDemand", item.recentDemand());
+        object.addProperty("virtualStock", item.virtualStock());
+        object.addProperty("maxVirtualStock", item.maxVirtualStock());
+        return object;
+    }
+
+    private static JsonArray defaultCatalog() {
+        JsonArray array = new JsonArray();
+        ShopPricingPolicy.Config config = pricingConfig();
+        for (ShopItemSnapshot item : ShopCatalogDefaults.snapshots()) {
+            array.add(encode(ShopPricingPolicy.initialize(item, config)));
+        }
+        return array;
+    }
+
+    private static ShopPricingPolicy.Config pricingConfig() {
+        ShopPricingPolicy.Config defaults = ShopPricingPolicy.Config.defaults();
+        JsonObject object = readObject(auxiliaryConfigPath("shop_pricing.json"));
+        if (object == null) {
+            return defaults;
+        }
+        try {
+            return new ShopPricingPolicy.Config(
+                    decimal(object, "minPriceMultiplier", defaults.minPriceMultiplier()),
+                    decimal(object, "maxPriceMultiplier", defaults.maxPriceMultiplier()),
+                    decimal(object, "maxCycleChangeRate", defaults.maxCycleChangeRate()),
+                    decimal(object, "demandSensitivity", defaults.demandSensitivity()),
+                    decimal(object, "demandDecay", defaults.demandDecay()),
+                    decimal(object, "idleReturnRate", defaults.idleReturnRate()),
+                    integer(object, "defaultMaxStock", defaults.defaultMaxStock()),
+                    integer(object, "minMaxStock", defaults.minMaxStock()),
+                    decimal(object, "restockRate", defaults.restockRate()),
+                    decimal(object, "stockSensitivity", defaults.stockSensitivity())
+            );
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Ignoring invalid Forge shop pricing configuration", exception);
+            return defaults;
+        }
+    }
+
+    private static ShopPricingPolicy.Mode pricingMode() {
+        return ShopPricingPolicy.Mode.parse(
+                EconomySettings.get(CommonSettingsStore.SHOP_PRICING_MODE));
+    }
+
     private static Path configPath() {
         return FMLPaths.CONFIGDIR.get()
                 .resolve(EconomyConstants.MOD_ID)
                 .resolve("economy_shop.json");
     }
 
+    private static Path auxiliaryConfigPath(String fileName) {
+        return FMLPaths.CONFIGDIR.get().resolve(EconomyConstants.MOD_ID).resolve(fileName);
+    }
+
+    private static JsonObject readObject(Path config) {
+        if (!Files.isRegularFile(config)) {
+            return null;
+        }
+        try (Reader reader = Files.newBufferedReader(config, StandardCharsets.UTF_8)) {
+            JsonElement root = JsonParser.parseReader(reader);
+            return root.isJsonObject() ? root.getAsJsonObject() : null;
+        } catch (IOException | RuntimeException exception) {
+            LOGGER.warn("Ignoring invalid configuration {}", config, exception);
+            return null;
+        }
+    }
+
     private static JsonArray readCatalog() {
         Path config = configPath();
         if (!Files.isRegularFile(config)) {
-            return null;
+            JsonArray defaults = defaultCatalog();
+            return writeCatalog(defaults) ? defaults : null;
         }
         try (Reader reader = Files.newBufferedReader(config, StandardCharsets.UTF_8)) {
             JsonElement root = JsonParser.parseReader(reader);

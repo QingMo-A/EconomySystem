@@ -3,16 +3,17 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import java.util.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
-final class NeoForge1211TransactionalInventoryAdapter
+public final class NeoForge1211TransactionalInventoryAdapter
     implements MarketItemMaterializer, TransactionalInventory, TransactionalInventoryRemoval {
   private final ServerPlayer player;
 
-  NeoForge1211TransactionalInventoryAdapter(ServerPlayer player) {
+  public NeoForge1211TransactionalInventoryAdapter(ServerPlayer player) {
     this.player = Objects.requireNonNull(player);
   }
 
@@ -21,8 +22,7 @@ final class NeoForge1211TransactionalInventoryAdapter
   }
 
   public Object restore(MarketOrder order) {
-    return EconomyServices.platform()
-        .itemStacks()
+    return NeoForge1211Platform.nativeItemStacks()
         .restoreSnapshot(order.item(), player.registryAccess())
         .orElseThrow();
   }
@@ -35,7 +35,7 @@ final class NeoForge1211TransactionalInventoryAdapter
     long result = 0;
     for (ItemStack stack : player.getInventory().items) {
       if (stack.isEmpty()) result += template.getMaxStackSize();
-      else if (EconomyServices.platform().itemStacks().sameItemAndData(stack, template))
+      else if (NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template))
         result += Math.max(0, stack.getMaxStackSize() - stack.getCount());
       if (result >= Integer.MAX_VALUE) return Integer.MAX_VALUE;
     }
@@ -52,7 +52,7 @@ final class NeoForge1211TransactionalInventoryAdapter
       for (ItemStack stack : inventory.items)
         if (remaining > 0
             && !stack.isEmpty()
-            && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
+            && NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template)) {
           int add = Math.min(remaining, Math.max(0, stack.getMaxStackSize() - stack.getCount()));
           if (add > 0) {
             stack.grow(add);
@@ -110,7 +110,7 @@ final class NeoForge1211TransactionalInventoryAdapter
       public void set(int index, ItemStack value) { player.getInventory().setItem(index, value); }
       public ItemStack copy(ItemStack value) { return value.copy(); }
       public boolean isEmpty(ItemStack value) { return value.isEmpty(); }
-      public boolean matches(ItemStack value, ItemStack template) { return EconomyServices.platform().itemStacks().sameItemAndData(value, template); }
+      public boolean matches(ItemStack value, ItemStack template) { return NeoForge1211Platform.nativeItemStacks().sameItemAndData(value, template); }
       public int count(ItemStack value) { return value.getCount(); }
       public void setCount(ItemStack value, int count) { value.setCount(count); }
       public int maxStackSize(ItemStack value) { return value.getMaxStackSize(); }

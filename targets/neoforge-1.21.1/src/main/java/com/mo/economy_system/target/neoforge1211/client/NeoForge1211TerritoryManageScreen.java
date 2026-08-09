@@ -17,6 +17,8 @@ import com.mo.economy_system.ui.territory.TerritoryManageEvent;
 import com.mo.economy_system.ui.territory.TerritoryManageLayout;
 import com.mo.economy_system.ui.territory.TerritoryManagePort;
 import com.mo.economy_system.ui.territory.TerritoryManageView;
+import com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind;
+import com.mo.economy_system.ui.territory.confirm.TerritoryConfirmationKind;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
@@ -173,10 +175,29 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
       if (minecraft == null) return;
       if (action == TerritoryManageAction.COPY_ID) {
         minecraft.keyboardHandler.setClipboard(territoryId.toString());
+      } else if (action == TerritoryManageAction.INVITE) {
+        minecraft.setScreen(new NeoForge1211TerritoryInviteScreen(initial,
+            NeoForge1211TerritoryManageScreen.this));
+      } else if (action == TerritoryManageAction.DELETE) {
+        minecraft.setScreen(new NeoForge1211TerritoryConfirmationScreen(TerritoryConfirmationKind.REMOVE_TERRITORY,
+            territoryId, initial.summary().name(), null, "", NeoForge1211TerritoryManageScreen.this));
+      } else if (action == TerritoryManageAction.BUFFS) {
+        minecraft.setScreen(new NeoForge1211BuffManageScreen(initial, NeoForge1211TerritoryManageScreen.this));
       } else {
-        minecraft.setScreen(new com.mo.economy_system.screen.territory_system.Screen_ManageTerritory(
-            com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots.restoreOwned(initial)));
+        NeoForge1211TerritoryDetailScreen detail =
+            new NeoForge1211TerritoryDetailScreen(initial, NeoForge1211TerritoryManageScreen.this);
+        if (action == TerritoryManageAction.ACCESS) detail.selectInitialView(TerritoryDetailViewKind.ACCESS);
+        else if (action == TerritoryManageAction.PERMISSIONS) detail.selectInitialView(TerritoryDetailViewKind.RULES);
+        else if (action == TerritoryManageAction.TRANSFER) detail.selectInitialView(TerritoryDetailViewKind.TRANSFER);
+        minecraft.setScreen(detail);
       }
+    }
+    @Override public void confirm(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId) {
+      if (minecraft == null || action != TerritoryManageAction.KICK || targetPlayerId == null) return;
+      String name = controller.state().members().stream().filter(member -> targetPlayerId.equals(member.playerId()))
+          .map(MemberRow::playerName).findFirst().orElse(targetPlayerId.toString());
+      minecraft.setScreen(new NeoForge1211TerritoryConfirmationScreen(TerritoryConfirmationKind.REMOVE_MEMBER,
+          territoryId, initial.summary().name(), targetPlayerId, name, NeoForge1211TerritoryManageScreen.this));
     }
   }
 }

@@ -15,8 +15,6 @@ import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
 import com.mo.economy_system.common.territory.TerritoryManagementResult;
 import com.mo.economy_system.common.territory.TerritoryModifyModeService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import java.util.List;
@@ -171,17 +169,8 @@ final class Forge1201TerritoryManagementHandlers {
     public Owned find(UUID territoryId) {
       return store.findOwned(territoryId);
     }
-    public TerritoryAdministrationService.RepositoryResult setPermission(
-        UUID territoryId, UUID owner, UUID target, String name, boolean allowed) {
-      return store.setPermission(territoryId, owner, target, name, allowed);
-    }
-    public TerritoryAdministrationService.RepositoryResult transfer(
-        UUID territoryId, UUID owner, UUID target, String name) {
-      return store.transfer(territoryId, owner, target, name);
-    }
-    public TerritoryAdministrationService.RepositoryResult setRule(
-        UUID territoryId, UUID owner, RuleAction action, RuleLevel level) {
-      return store.setRule(territoryId, owner, action, level);
+    public TerritoryAdministrationService.RepositoryResult apply(Owned expected, Owned replacement) {
+      return store.applyAdministration(expected, replacement);
     }
   }
 
@@ -196,8 +185,10 @@ final class Forge1201TerritoryManagementHandlers {
         String buffId,
         boolean unlocked,
         int level,
-        TerritoryBuffTransactionService.Action action) {
-      return store.mutateBuff(territoryId, owner, buffId, unlocked, level, action);
+        boolean newUnlocked,
+        int newLevel) {
+      return store.mutateBuff(
+          territoryId, owner, buffId, unlocked, level, newUnlocked, newLevel);
     }
   }
 
@@ -246,18 +237,27 @@ final class Forge1201TerritoryManagementHandlers {
     public boolean debitExperience(int levels) {
       int before = player.experienceLevel;
       if (levels < 0 || before < levels) return false;
+      RuntimeException mutationFailure = null;
       try {
         player.giveExperienceLevels(-levels);
         if (player.experienceLevel == before - levels) return true;
-        player.giveExperienceLevels(before - player.experienceLevel);
-        return false;
       } catch (RuntimeException failure) {
-        try {
-          player.giveExperienceLevels(before - player.experienceLevel);
-        } catch (RuntimeException ignored) {
-        }
-        return false;
+        mutationFailure = failure;
       }
+      try {
+        if (player.experienceLevel != before) {
+          player.giveExperienceLevels(before - player.experienceLevel);
+        }
+      } catch (RuntimeException rollbackFailure) {
+        if (mutationFailure != null) rollbackFailure.addSuppressed(mutationFailure);
+        throw new IllegalStateException("experience rollback failed", rollbackFailure);
+      }
+      if (player.experienceLevel != before) {
+        IllegalStateException unknown = new IllegalStateException("experience rollback not proven");
+        if (mutationFailure != null) unknown.addSuppressed(mutationFailure);
+        throw unknown;
+      }
+      return false;
     }
 
     public boolean refundExperience(int levels) {

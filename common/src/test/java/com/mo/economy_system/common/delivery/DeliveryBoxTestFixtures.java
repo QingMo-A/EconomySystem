@@ -1,19 +1,20 @@
 package com.mo.economy_system.common.delivery;
 
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
+import com.mo.economy_system.platform.nbt.NbtData;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
-import net.minecraft.nbt.CompoundTag;
 
 public final class DeliveryBoxTestFixtures {
   private DeliveryBoxTestFixtures() {}
 
   public static ItemStackSnapshot item(int count) {
-    CompoundTag customData = new CompoundTag();
-    customData.putString("owner", "snapshot");
+    NbtData.Compound customData = NbtData.compoundBuilder()
+        .putString("owner", "snapshot")
+        .build();
     return ItemStackSnapshot.create(
             "minecraft:diamond_sword",
             count,

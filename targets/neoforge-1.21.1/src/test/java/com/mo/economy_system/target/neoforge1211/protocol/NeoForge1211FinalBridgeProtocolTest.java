@@ -10,6 +10,7 @@ import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.network.DeliveryBoxWireCodec;
 import com.mo.economy_system.network.TerritoryManagementWireCodec;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
+import com.mo.economy_system.platform.network.WireBuffer;
 import com.mo.economy_system.protocol.EconomyMessageType;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -91,7 +92,7 @@ class NeoForge1211FinalBridgeProtocolTest {
     FriendlyByteBuf shared = new FriendlyByteBuf(Unpooled.buffer());
     RegistryFriendlyByteBuf target = new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
     try {
-      sharedEncoder.encode(message, shared);
+      sharedEncoder.encode(message, NeoForge1211WireBuffer.wrap(shared));
       NeoForge1211MessageCodecs.codec(type).encode(message, target);
       assertArrayEquals(
           ByteBufUtil.getBytes(shared, 0, shared.readableBytes(), false),
@@ -106,6 +107,6 @@ class NeoForge1211FinalBridgeProtocolTest {
 
   @FunctionalInterface
   private interface Encoder<T> {
-    void encode(T message, FriendlyByteBuf buffer);
+    void encode(T message, WireBuffer buffer);
   }
 }

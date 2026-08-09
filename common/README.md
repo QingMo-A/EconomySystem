@@ -8,7 +8,7 @@ Delivery protocols `31..33` use `DeliveryBoxWireCodec` and immutable `DeliveryBo
 
 Territory management protocols `36..43` use common UUID-only or stable-ID messages. Protocol `40` carries one bounded `Owned` snapshot, protocols `41/42` resolve player names on the server, and protocol `43` uses stable rule/action IDs. Both targets share the services and codecs; NeoForge uses the canonical manager while Forge adapts strict raw NBT and its own client/session entry points. The eleven superseded target Packet classes for these protocols are deleted.
 
-Final verification on 2026-08-06 executed 573 Forge tests and 628 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed, common contained no loader imports, and both generated JARs passed cross-loader and removed-Packet audits.
+Latest verification on 2026-08-08 executed 737 Forge tests and 804 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed after recompiling both targets. The cross-loader, gameplay-parity and removed-Packet audits remain covered by the target test suites.
 
 ## Protocol 21 spatial boundary hardening
 
@@ -38,19 +38,19 @@ maintaining independent registration order.
 
 ## Client UI bridge
 
-Client UI follows the same boundary. `common/client/ui` defines stable route IDs,
-the shared home-menu entries, and the generic `EconomyUiBridge<S>` page factory.
-It deliberately has no Minecraft, Forge, or NeoForge imports. Each target owns
-the native `Screen` renderer and reports unsupported routes explicitly through
-`supports`; a target must not silently fall back to a different page or discard
-an action. NeoForge remains the visual and behavior baseline, while Forge adds
-target-local renderers against the same route model.
+Client UI follows the same boundary. `common/client/ui` defines stable route IDs
+and `common/ui` owns state, controllers, layouts, theme tokens and semantic
+views. The active home, about, balance-log, shop/purchase, market/create/confirm,
+delivery, complete territory, client-file-check and checked-file-transfer
+families are shared by Forge 1.20.1 and NeoForge 1.21.1. NeoForge remains the
+visual and behavior reference, but it no longer supplies a separately compiled
+Screen implementation.
 
-The first UI slice is the shared home-menu contract. Forge 1.20.1 opens that
-menu from `I`, with delivery-box and territory routes available and the remaining
-routes visibly unavailable until their target renderers are migrated. The next
-UI slice is to migrate shop, market, balance-log, and about renderers behind the
-same bridge; this is independent of protocol wire IDs.
+Targets own only native `Screen` lifecycle, widgets, `GuiGraphics`, item and
+player-head drawing, clipboard/filesystem integration and network sends. The
+architecture suite walks every active target `*Screen.java` and requires a
+common UI contract. Legacy `com/mo/economy_system/screen/**` sources are
+excluded from both target source sets.
 
 ## Historical migration status
 
@@ -292,17 +292,30 @@ Historical lifecycle-hardening baseline at `70cf97b9`: 435 shared-source test me
 
 The final protocol 26-30 integrity closure keeps each snapshot and incoming part on its creation-time read/write channel. Production send/save paths never reopen the compatibility display pathname. Outgoing network callbacks run outside its state monitor; temp handles remain retained while snapshot work is active. Saving uses a `CREATE_NEW` target channel, recopies from the exact source handle, and rechecks byte length, EOF and SHA-256. A successful target copy whose source cleanup fails remains `SAVED_CLEANUP_PENDING` until bounded coordinator cleanup succeeds. Authenticated exact-key validation failures consume server state and send an authoritative protocol-28 `FAILED`; client invalid/timeout paths publish one-shot bounded terminal notifications. Current verification: 442 shared-source test methods, 521 Forge tests, and 581 NeoForge tests. Protocol 31+ remains legacy.
 
-## Territory management UI pilot
+## Gameplay parity
 
-The territory-management entry now runs through `common/ui/territory`.
-`TerritoryManageState`, `TerritoryManageController`, `TerritoryManageLayout`,
-`TerritoryManageView`, `EconomyUiTheme`, and `EconomyUiRenderer` are
-loader-neutral and compile on Java 17. The layout uses a 640x360 virtual canvas;
-the controller owns loading, empty, error, timeout, retry, filtering, paging,
-wheel-scroll bounds, request IDs, button enablement, and navigation intent.
+The former NeoForge-only gameplay and lifecycle entry points now use one common
+implementation on both supported targets. `common/redpacket` owns escrow,
+lucky/even allocation, claims, cancellation, expiry refunds and compensation;
+`common/reward` owns catalog reload, bonus calculation and exact account credit;
+`common/tpa` owns bounded requests, potion reservation and fail-closed teleport
+outcomes; `common/starter` owns exactly-once marker/account compensation; and
+`common/update` owns strict release parsing and SemVer comparison. Target code
+retains only Minecraft/loader APIs, persistence, event/command registration,
+HTTP execution and message rendering.
 
-Both targets consume the same immutable UUID/name/member snapshots, stable
-action IDs, theme tokens, layout, and semantic render operations. Target code
-only adapts Screen lifecycle, EditBox, GuiGraphics, player heads, clipboard, and
-network sends. Nested buffs, access/rules, transfer, invite, and delete pages
-remain explicit target fallbacks for the next territory-family migration.
+## Common UI architecture
+
+The original territory-management pilot is now the foundation for all active
+UI families. The shared layout uses a 640x360 virtual canvas; controllers own
+loading, empty, error, timeout, retry, filtering, paging, wheel bounds, request
+IDs, button enablement and navigation intent. Common views produce semantic
+renderer operations, including item, player-head, texture and tooltip requests.
+
+Territory list/manage/detail/access/rules/buff/invite and destructive
+confirmation flows all use common contracts. Confirmation controllers are
+one-shot, so repeated input cannot submit the same destructive intent twice.
+Market pages use the fixed protocol limit of nine orders and expose all nine at
+the baseline viewport. Shop dynamic pricing and refresh scheduling now also
+live in common; target shop code is limited to configuration persistence and
+native ItemStack materialization.

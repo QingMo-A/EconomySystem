@@ -3,7 +3,7 @@ package com.mo.economy_system.screen.economy_system.shop;
 import com.mo.economy_system.core.economy_system.shop.ShopItem;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
-import com.mo.economy_system.screen.Screen_Home;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211HomeScreen;
 import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -517,7 +517,7 @@ public class Screen_Shop extends Screen {
         // ESC键返回主页
         if (keyCode == 256) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Home());
+                this.minecraft.setScreen(new NeoForge1211HomeScreen());
             }
             return true;
         }

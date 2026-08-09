@@ -3,10 +3,17 @@ package com.mo.economy_system.target.forge1201.network;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.territory.TerritoryInviteDecisionService;
 import com.mo.economy_system.common.territory.TerritoryInviteRequestService;
+import com.mo.economy_system.common.territory.TerritoryGeometry;
 import com.mo.economy_system.common.territory.TerritoryMemberRemovalService;
 import com.mo.economy_system.common.territory.TerritoryRemovalService;
+import com.mo.economy_system.common.territory.TerritoryResizePlanner;
+import com.mo.economy_system.common.territory.TerritoryResizeTransactionService;
 import com.mo.economy_system.common.territory.TerritoryAdministrationService;
+import com.mo.economy_system.common.territory.TerritoryBackpointService;
+import com.mo.economy_system.common.territory.TerritoryBuffCatalogPolicy;
 import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
+import com.mo.economy_system.common.territory.TerritoryClaimService;
+import com.mo.economy_system.common.territory.TerritoryClaimCreationPolicy;
 import com.mo.economy_system.common.territory.TerritorySnapshots.*;
 import com.mo.economy_system.common.territory.TerritoryTeleportTarget;
 import java.util.ArrayList;
@@ -30,9 +37,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /** Read-only 1.20.1 persistence adapter; NBT never crosses the network boundary. */
-final class Forge1201TerritorySnapshotStore extends SavedData
-    implements TerritoryRemovalService.Repository {
+public final class Forge1201TerritorySnapshotStore extends SavedData
+    implements TerritoryRemovalService.Repository, TerritoryBackpointService.Repository {
   private static final String DATA_NAME = "territory_data";
+  private static volatile List<TerritoryBuffCatalogPolicy.Definition> buffCatalog = List.of();
   private CompoundTag raw;
   private List<Owned> territories;
 
@@ -43,7 +51,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
   private final DirtyMarker dirtyMarker;
 
   private Forge1201TerritorySnapshotStore() {
-    this(new CompoundTag());
+    this(emptyRoot());
+  }
+
+  private static CompoundTag emptyRoot() {
+    CompoundTag root = new CompoundTag();
+    root.put("Territories", new ListTag());
+    return root;
   }
 
   /** Test and adapter constructor retained for callers that already have snapshots. */
@@ -67,7 +81,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     this.dirtyMarker = dirtyMarker == null ? this::setDirty : dirtyMarker;
   }
 
-  static Forge1201TerritorySnapshotStore get(ServerLevel level) {
+  public static Forge1201TerritorySnapshotStore get(ServerLevel level) {
     ServerLevel overworld = level.getServer().getLevel(Level.OVERWORLD);
     if (overworld == null) throw new IllegalStateException("overworld is unavailable");
     return overworld
@@ -76,10 +90,203 @@ final class Forge1201TerritorySnapshotStore extends SavedData
             Forge1201TerritorySnapshotStore::load, Forge1201TerritorySnapshotStore::new, DATA_NAME);
   }
 
+  /** Installs the common catalog used when creating and synchronizing Forge snapshots. */
+  public static void configureBuffCatalog(
+      List<TerritoryBuffCatalogPolicy.Definition> definitions) {
+    buffCatalog = List.copyOf(Objects.requireNonNull(definitions, "definitions"));
+  }
+
+  public static void clearBuffCatalog() {
+    buffCatalog = List.of();
+  }
+
+  /**
+   * Applies the common catalog policy to every persisted territory in one copy-on-write update.
+   * Unknown territory fields remain untouched.
+   */
+  public synchronized BuffCatalogSyncResult synchronizeBuffCatalog(
+      List<TerritoryBuffCatalogPolicy.Definition> definitions) {
+    Objects.requireNonNull(definitions, "definitions");
+    final StrictRoot source;
+    try {
+      source = parseStrictRoot(raw);
+      if (!source.snapshots().equals(territories)) return BuffCatalogSyncResult.STATE_UNKNOWN;
+    } catch (RuntimeException failure) {
+      return BuffCatalogSyncResult.STATE_UNKNOWN;
+    }
+
+    CompoundTag candidateRoot = raw.copy();
+    ListTag records = candidateRoot.getList("Territories", Tag.TAG_COMPOUND).copy();
+    boolean changed = false;
+    try {
+      for (int index = 0; index < source.snapshots().size(); index++) {
+        Owned current = source.snapshots().get(index);
+        TerritoryBuffCatalogPolicy.Synchronization sync =
+            TerritoryBuffCatalogPolicy.synchronize(current.buffs(), definitions);
+        if (!sync.changed()) continue;
+        CompoundTag record = records.getCompound(index).copy();
+        record.put("TerritoryBuffs", encodeBuffs(sync.buffs()));
+        records.set(index, record);
+        changed = true;
+      }
+      if (!changed) return BuffCatalogSyncResult.UNCHANGED;
+      candidateRoot.put("Territories", records);
+      List<Owned> candidateCache = parseStrictRoot(candidateRoot).snapshots();
+      CompoundTag originalRaw = raw;
+      List<Owned> originalCache = territories;
+      CompoundTag originalCopy = originalRaw.copy();
+      raw = candidateRoot;
+      territories = candidateCache;
+      try {
+        dirtyMarker.markDirty();
+        verifyManagementPublished(candidateRoot, candidateRoot.copy(), candidateCache);
+        return BuffCatalogSyncResult.UPDATED;
+      } catch (RuntimeException failure) {
+        return rollbackBuffCatalog(
+            originalRaw, originalCache, originalCopy, failure);
+      }
+    } catch (RuntimeException failure) {
+      return BuffCatalogSyncResult.STATE_UNKNOWN;
+    }
+  }
+
+  private BuffCatalogSyncResult rollbackBuffCatalog(
+      CompoundTag originalRaw,
+      List<Owned> originalCache,
+      CompoundTag originalCopy,
+      RuntimeException primary) {
+    raw = originalRaw;
+    territories = originalCache;
+    try {
+      dirtyMarker.markDirty();
+      if (raw != originalRaw || territories != originalCache || !raw.equals(originalCopy)
+          || !parseStrictRoot(raw).snapshots().equals(originalCache)) {
+        throw new IllegalStateException("buff catalog rollback changed state");
+      }
+      return BuffCatalogSyncResult.PERSIST_FAILED;
+    } catch (RuntimeException rollback) {
+      primary.addSuppressed(rollback);
+      return BuffCatalogSyncResult.STATE_UNKNOWN;
+    }
+  }
+
   List<Owned> owned(UUID requester) {
     return territories.stream()
         .filter(value -> value.summary().ownerId().equals(requester))
         .toList();
+  }
+
+  /** Returns an immutable strict snapshot for command-side inspection. */
+  synchronized List<Owned> allSnapshots() {
+    return parseStrictRoot(raw).snapshots();
+  }
+
+  /** Resolves the territory containing an X/Z point in the requested dimension. */
+  public synchronized Optional<Owned> at(String dimensionId, int x, int z) {
+    if (dimensionId == null || dimensionId.isBlank()) return Optional.empty();
+    return allSnapshots().stream()
+        .filter(value -> value.summary().dimensionId().equals(dimensionId))
+        .filter(value -> contains(value, x, z))
+        .findFirst();
+  }
+
+  @Override
+  public synchronized Owned findAt(String dimensionId, int x, int z) {
+    return at(dimensionId, x, z).orElse(null);
+  }
+
+  synchronized boolean overlaps(TerritoryClaimService.Request request) {
+    Objects.requireNonNull(request, "request");
+    TerritoryGeometry.Rectangle candidate =
+        TerritoryGeometry.rectangle(request.first(), request.second());
+    for (Owned value : parseStrictRoot(raw).snapshots()) {
+      if (!value.summary().dimensionId().equals(request.dimensionId())) continue;
+      if (candidate.intersects(TerritoryGeometry.rectangle(
+          value.summary().pos1(), value.summary().pos2()))) return true;
+    }
+    return false;
+  }
+
+  synchronized TerritoryClaimService.RepositoryResult create(
+      TerritoryClaimService.Request request, long area, int price) {
+    Objects.requireNonNull(request, "request");
+    final StrictRoot source;
+    try {
+      source = parseStrictRoot(raw);
+      if (!source.snapshots().equals(territories)) {
+        return TerritoryClaimService.RepositoryResult.STATE_UNKNOWN;
+      }
+      if (overlaps(request)) return TerritoryClaimService.RepositoryResult.OVERLAP;
+    } catch (RuntimeException failure) {
+      return TerritoryClaimService.RepositoryResult.STATE_UNKNOWN;
+    }
+
+    CompoundTag originalRaw = raw;
+    List<Owned> originalCache = territories;
+    try {
+      CompoundTag candidateRoot = originalRaw.copy();
+      ListTag encoded = candidateRoot.contains("Territories", Tag.TAG_LIST)
+          ? candidateRoot.getList("Territories", Tag.TAG_COMPOUND).copy()
+          : new ListTag();
+      Owned created = TerritoryClaimCreationPolicy.create(request, buffCatalog);
+      CompoundTag record = encodeSnapshot(created);
+      encoded.add(record);
+      candidateRoot.put("Territories", encoded);
+      List<Owned> candidateCache = parseStrictRoot(candidateRoot).snapshots();
+      raw = candidateRoot;
+      territories = candidateCache;
+      dirtyMarker.markDirty();
+      return TerritoryClaimService.RepositoryResult.CREATED;
+    } catch (RuntimeException failure) {
+      raw = originalRaw;
+      territories = originalCache;
+      try {
+        dirtyMarker.markDirty();
+      } catch (RuntimeException rollbackFailure) {
+        failure.addSuppressed(rollbackFailure);
+        return TerritoryClaimService.RepositoryResult.STATE_UNKNOWN;
+      }
+      return TerritoryClaimService.RepositoryResult.PERSIST_FAILED;
+    }
+  }
+
+  @Override
+  public synchronized TerritoryBackpointService.RepositoryResult setBackpoint(
+      UUID territoryId,
+      UUID expectedOwner,
+      Optional<Position> expectedBackpoint,
+      Position point) {
+    if (territoryId == null || expectedOwner == null || expectedBackpoint == null || point == null) {
+      return TerritoryBackpointService.RepositoryResult.STATE_UNKNOWN;
+    }
+    return mutateRaw(
+        territoryId,
+        target -> {
+          Owned current = target.snapshot();
+          if (!expectedOwner.equals(current.summary().ownerId())) {
+            return TerritoryBackpointService.RepositoryResult.OWNER_CHANGED;
+          }
+          if (!expectedBackpoint.equals(current.backpoint())) {
+            return TerritoryBackpointService.RepositoryResult.SNAPSHOT_CHANGED;
+          }
+          if (current.backpoint().equals(Optional.of(point))) {
+            return TerritoryBackpointService.RepositoryResult.UNCHANGED;
+          }
+          CompoundTag backpoint = new CompoundTag();
+          backpoint.putInt("BackX", point.x());
+          backpoint.putInt("BackY", point.y());
+          backpoint.putInt("BackZ", point.z());
+          target.tag().put("Backpoint", backpoint);
+          return TerritoryBackpointService.RepositoryResult.UPDATED;
+        },
+        result -> result == TerritoryBackpointService.RepositoryResult.UPDATED,
+        TerritoryBackpointService.RepositoryResult.PERSIST_FAILED,
+        TerritoryBackpointService.RepositoryResult.STATE_UNKNOWN,
+        TerritoryBackpointService.RepositoryResult.NOT_FOUND);
+  }
+
+  private static boolean contains(Owned value, int x, int z) {
+    return TerritoryGeometry.rectangle(value.summary().pos1(), value.summary().pos2()).contains(x, z);
   }
 
   synchronized void mutateRawForTest(Consumer<CompoundTag> mutation) {
@@ -119,142 +326,48 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         .orElse(null);
   }
 
-  synchronized TerritoryAdministrationService.RepositoryResult setPermission(
-      UUID territoryId,
-      UUID expectedOwner,
-      UUID targetId,
-      String targetName,
-      boolean allowed) {
-    if (territoryId == null || expectedOwner == null || targetId == null) {
+  /** Applies a complete common administration replacement with a raw-NBT compare-and-set. */
+  synchronized TerritoryAdministrationService.RepositoryResult applyAdministration(
+      Owned expected, Owned replacement) {
+    if (!TerritoryAdministrationService.isValidReplacement(expected, replacement)) {
       return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
     }
+    UUID territoryId = expected.summary().territoryId();
     return mutateRaw(
         territoryId,
         target -> {
-          Owned before = target.snapshot();
-          if (!before.summary().ownerId().equals(expectedOwner)) {
+          Owned current = target.snapshot();
+          if (!current.summary().ownerId().equals(expected.summary().ownerId())) {
             return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
           }
-          if (targetId.equals(expectedOwner)) {
-            return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
+          if (!current.equals(expected)) {
+            return TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
           }
-          if (allowed
-              && (targetName == null
-                  || targetName.isBlank()
-                  || targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH)) {
-            return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
-          }
-          ListTag members = target.tag().contains("AuthorizedPlayers", Tag.TAG_LIST)
-              ? target.tag().getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
-              : new ListTag();
-          int found = -1;
-          for (int index = 0; index < members.size(); index++) {
-            CompoundTag member = members.getCompound(index);
-            if (member.hasUUID("PlayerUUID") && targetId.equals(member.getUUID("PlayerUUID"))) {
-              if (found >= 0) throw integrity("duplicate authorized member");
-              found = index;
-            }
-          }
-          if (allowed == (found >= 0)) return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
-          if (allowed) {
-            if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
-              return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
-            }
-            CompoundTag member = new CompoundTag();
-            member.putUUID("PlayerUUID", targetId);
-            member.putString("PlayerName", targetName.trim());
-            members.add(member);
-          } else {
-            members.remove(found);
-          }
-          target.tag().put("AuthorizedPlayers", members);
-          return TerritoryAdministrationService.RepositoryResult.SUCCESS;
-        },
-        result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
-        TerritoryAdministrationService.RepositoryResult.NOT_FOUND);
-  }
-
-  synchronized TerritoryAdministrationService.RepositoryResult transfer(
-      UUID territoryId,
-      UUID expectedOwner,
-      UUID targetId,
-      String targetName) {
-    if (territoryId == null || expectedOwner == null || targetId == null
-        || targetName == null || targetName.isBlank()
-        || targetName.length() > EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH) {
-      return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
-    }
-    return mutateRaw(
-        territoryId,
-        target -> {
-          Owned before = target.snapshot();
-          if (!before.summary().ownerId().equals(expectedOwner)) {
-            return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
-          }
-          if (targetId.equals(expectedOwner)) {
+          if (current.equals(replacement)) {
             return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
           }
-          ListTag members = target.tag().contains("AuthorizedPlayers", Tag.TAG_LIST)
-              ? target.tag().getList("AuthorizedPlayers", Tag.TAG_COMPOUND)
-              : new ListTag();
-          for (int index = members.size() - 1; index >= 0; index--) {
-            CompoundTag member = members.getCompound(index);
-            if (member.hasUUID("PlayerUUID") && targetId.equals(member.getUUID("PlayerUUID"))) {
-              members.remove(index);
-            }
-          }
-          boolean oldOwnerPresent = false;
-          for (Tag value : members) {
-            CompoundTag member = (CompoundTag) value;
-            if (expectedOwner.equals(member.getUUID("PlayerUUID"))) oldOwnerPresent = true;
-          }
-          if (!oldOwnerPresent) {
-            if (members.size() >= EconomyNetworkLimits.MAX_TERRITORY_MEMBERS) {
-              return TerritoryAdministrationService.RepositoryResult.INVALID_TARGET;
-            }
-            CompoundTag oldOwner = new CompoundTag();
-            oldOwner.putUUID("PlayerUUID", expectedOwner);
-            oldOwner.putString("PlayerName", before.summary().ownerName());
-            members.add(oldOwner);
-          }
-          target.tag().put("AuthorizedPlayers", members);
-          target.tag().putUUID("OwnerUUID", targetId);
-          target.tag().putString("OwnerName", targetName.trim());
-          return TerritoryAdministrationService.RepositoryResult.SUCCESS;
-        },
-        result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN,
-        TerritoryAdministrationService.RepositoryResult.NOT_FOUND);
-  }
 
-  synchronized TerritoryAdministrationService.RepositoryResult setRule(
-      UUID territoryId,
-      UUID expectedOwner,
-      RuleAction action,
-      RuleLevel level) {
-    if (territoryId == null || expectedOwner == null || action == null || level == null) {
-      return TerritoryAdministrationService.RepositoryResult.STATE_UNKNOWN;
-    }
-    return mutateRaw(
-        territoryId,
-        target -> {
-          if (!target.snapshot().summary().ownerId().equals(expectedOwner)) {
-            return TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED;
+          CompoundTag record = target.tag();
+          Summary summary = replacement.summary();
+          record.putUUID("OwnerUUID", summary.ownerId());
+          record.putString("OwnerName", summary.ownerName());
+
+          ListTag members = new ListTag();
+          for (Member member : replacement.authorizedMembers()) {
+            CompoundTag encoded = new CompoundTag();
+            encoded.putUUID("PlayerUUID", member.playerId());
+            encoded.putString("PlayerName", member.playerName());
+            members.add(encoded);
           }
-          RuleLevel current = target.snapshot().rules().stream()
-              .filter(rule -> rule.action() == action)
-              .map(Rule::level)
-              .findFirst()
-              .orElse(RuleLevel.MEMBERS);
-          if (current == level) return TerritoryAdministrationService.RepositoryResult.NO_CHANGE;
-          CompoundTag permissions = target.tag().contains("Permissions", Tag.TAG_COMPOUND)
-              ? target.tag().getCompound("Permissions")
+          record.put("AuthorizedPlayers", members);
+
+          CompoundTag permissions = record.contains("Permissions", Tag.TAG_COMPOUND)
+              ? record.getCompound("Permissions")
               : new CompoundTag();
-          permissions.putString(action.name(), level.name());
-          target.tag().put("Permissions", permissions);
+          for (Rule rule : replacement.rules()) {
+            permissions.putString(rule.action().name(), rule.level().name());
+          }
+          record.put("Permissions", permissions);
           return TerritoryAdministrationService.RepositoryResult.SUCCESS;
         },
         result -> result == TerritoryAdministrationService.RepositoryResult.SUCCESS,
@@ -269,8 +382,9 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       String buffId,
       boolean expectedUnlocked,
       int expectedLevel,
-      TerritoryBuffTransactionService.Action action) {
-    if (territoryId == null || expectedOwner == null || buffId == null || action == null) {
+      boolean newUnlocked,
+      int newLevel) {
+    if (territoryId == null || expectedOwner == null || buffId == null) {
       return TerritoryBuffTransactionService.RepositoryResult.STATE_UNKNOWN;
     }
     return mutateRaw(
@@ -293,17 +407,11 @@ final class Forge1201TerritorySnapshotStore extends SavedData
               || encoded.getInt("level") != expectedLevel) {
             return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
           }
-          if (action == TerritoryBuffTransactionService.Action.UNLOCK) {
-            if (expectedUnlocked) return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
-            encoded.putBoolean("unlocked", true);
-          } else {
-            int max = encoded.getInt("max_Level");
-            int step = encoded.getInt("single_Upgrade_Level");
-            if (!expectedUnlocked || expectedLevel >= max || step <= 0) {
-              return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
-            }
-            encoded.putInt("level", Math.min(max, Math.addExact(expectedLevel, step)));
+          if (newUnlocked == expectedUnlocked && newLevel == expectedLevel) {
+            return TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED;
           }
+          encoded.putBoolean("unlocked", newUnlocked);
+          encoded.putInt("level", newLevel);
           return TerritoryBuffTransactionService.RepositoryResult.SUCCESS;
         },
         result -> result == TerritoryBuffTransactionService.RepositoryResult.SUCCESS,
@@ -383,9 +491,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         || expectedDimension == null
         || first == null
         || second == null
-        || first.y() != second.y()
-        || !validCoordinate(first)
-        || !validCoordinate(second)) {
+        || !TerritoryResizePlanner.validCandidate(first, second)) {
       return ResizePrepareOutcome.of(ResizePrepareResult.INVALID_BOUNDS);
     }
     final String dimension;
@@ -403,49 +509,27 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         .filter(value -> territoryId.equals(value.summary().territoryId()))
         .findFirst()
         .orElse(null);
-    if (target == null) return ResizePrepareOutcome.of(ResizePrepareResult.NOT_FOUND);
-    if (!expectedOwner.equals(target.summary().ownerId())) {
-      return ResizePrepareOutcome.of(ResizePrepareResult.NOT_OWNER);
-    }
-    if (!dimension.equals(target.summary().dimensionId())) {
-      return ResizePrepareOutcome.of(ResizePrepareResult.WRONG_DIMENSION);
-    }
-    if (overlapsOther(source.snapshots(), target.summary().territoryId(), dimension, first, second)) {
-      return ResizePrepareOutcome.of(ResizePrepareResult.OVERLAP);
-    }
-    Position oldFirst = target.summary().pos1();
-    Position oldSecond = target.summary().pos2();
     Position backpoint = first;
-    if (oldFirst.equals(first)
-        && oldSecond.equals(second)
-        && target.backpoint().equals(Optional.of(backpoint))) {
-      return ResizePrepareOutcome.of(ResizePrepareResult.UNCHANGED);
+    TerritoryResizePlanner.PlanningOutcome planning = TerritoryResizePlanner.prepare(
+        territoryId, expectedOwner, dimension, first, second, backpoint, target, source.snapshots());
+    if (planning.result() != TerritoryResizeTransactionService.PrepareResult.READY) {
+      return new ResizePrepareOutcome(mapPlanningResult(planning.result()), null, planning.failure());
     }
-    try {
-      long oldArea = area(oldFirst, oldSecond);
-      long newArea = area(first, second);
-      long difference = Math.subtractExact(newArea, oldArea);
-      long rawCharge = difference <= 0 ? 0 : Math.multiplyExact(difference, 20L);
-      if (rawCharge > Integer.MAX_VALUE) {
-        return ResizePrepareOutcome.of(ResizePrepareResult.PRICE_OVERFLOW);
-      }
-      return new ResizePrepareOutcome(
-          ResizePrepareResult.READY,
-          new ResizePlan(
-              territoryId,
-              expectedOwner,
-              dimension,
-              target,
-              first,
-              second,
-              backpoint,
-              oldArea,
-              newArea,
-              (int) rawCharge),
-          null);
-    } catch (ArithmeticException failure) {
-      return new ResizePrepareOutcome(ResizePrepareResult.PRICE_OVERFLOW, null, failure);
-    }
+    TerritoryResizePlanner.Plan plan = planning.plan();
+    return new ResizePrepareOutcome(
+        ResizePrepareResult.READY,
+        new ResizePlan(
+            plan.territoryId(),
+            plan.expectedOwner(),
+            plan.dimensionId(),
+            plan.expectedSnapshot(),
+            plan.first(),
+            plan.second(),
+            plan.backpoint(),
+            plan.oldArea(),
+            plan.newArea(),
+            plan.charge()),
+        null);
   }
 
   synchronized ResizeCommitResult commitResize(ResizePlan plan) {
@@ -467,7 +551,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         || !plan.dimensionId().equals(current.summary().dimensionId())) {
       return ResizeCommitResult.CHANGED;
     }
-    if (overlapsOther(
+    if (TerritoryResizePlanner.overlapsOther(
         source.snapshots(),
         plan.territoryId(),
         plan.dimensionId(),
@@ -501,45 +585,19 @@ final class Forge1201TerritorySnapshotStore extends SavedData
         ResizeCommitResult.NOT_FOUND);
   }
 
-  private static boolean validCoordinate(Position position) {
-    return Math.abs((long) position.x()) <= 30_000_000L
-        && Math.abs((long) position.z()) <= 30_000_000L;
-  }
-
-  private static long area(Position first, Position second) {
-    long width = Math.abs((long) first.x() - second.x()) + 1L;
-    long height = Math.abs((long) first.z() - second.z()) + 1L;
-    return Math.multiplyExact(width, height);
-  }
-
-  private static boolean overlapsOther(
-      List<Owned> values,
-      UUID excludedTerritory,
-      String dimension,
-      Position first,
-      Position second) {
-    int minX = Math.min(first.x(), second.x());
-    int maxX = Math.max(first.x(), second.x());
-    int minZ = Math.min(first.z(), second.z());
-    int maxZ = Math.max(first.z(), second.z());
-    for (Owned value : values) {
-      Summary summary = value.summary();
-      if (summary.territoryId().equals(excludedTerritory)
-          || !summary.dimensionId().equals(dimension)) {
-        continue;
-      }
-      int existingMinX = Math.min(summary.pos1().x(), summary.pos2().x());
-      int existingMaxX = Math.max(summary.pos1().x(), summary.pos2().x());
-      int existingMinZ = Math.min(summary.pos1().z(), summary.pos2().z());
-      int existingMaxZ = Math.max(summary.pos1().z(), summary.pos2().z());
-      if (maxX >= existingMinX
-          && minX <= existingMaxX
-          && maxZ >= existingMinZ
-          && minZ <= existingMaxZ) {
-        return true;
-      }
-    }
-    return false;
+  private static ResizePrepareResult mapPlanningResult(
+      TerritoryResizeTransactionService.PrepareResult result) {
+    return switch (result) {
+      case READY -> ResizePrepareResult.READY;
+      case UNCHANGED -> ResizePrepareResult.UNCHANGED;
+      case TERRITORY_NOT_FOUND -> ResizePrepareResult.NOT_FOUND;
+      case NO_PERMISSION -> ResizePrepareResult.NOT_OWNER;
+      case WRONG_DIMENSION -> ResizePrepareResult.WRONG_DIMENSION;
+      case INVALID_BOUNDS -> ResizePrepareResult.INVALID_BOUNDS;
+      case OVERLAP -> ResizePrepareResult.OVERLAP;
+      case PRICE_OVERFLOW -> ResizePrepareResult.PRICE_OVERFLOW;
+      case STATE_UNKNOWN -> ResizePrepareResult.STATE_UNKNOWN;
+    };
   }
 
   private synchronized <R> R mutateRaw(
@@ -552,6 +610,7 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     Objects.requireNonNull(territoryId, "territoryId");
     try {
       StrictRoot source = parseStrictRoot(raw);
+      if (!source.snapshots().equals(territories)) return stateUnknown;
       int index = -1;
       for (int current = 0; current < source.snapshots().size(); current++) {
         if (source.snapshots().get(current).summary().territoryId().equals(territoryId)) {
@@ -1386,6 +1445,12 @@ final class Forge1201TerritorySnapshotStore extends SavedData
     return tag;
   }
 
+  private static ListTag encodeBuffs(List<Buff> buffs) {
+    ListTag encoded = new ListTag();
+    for (Buff buff : buffs) encoded.add(encodeBuff(buff));
+    return encoded;
+  }
+
   private static TerritoryTeleportTarget teleportTarget(Owned value) {
     return new TerritoryTeleportTarget(
         value.summary().territoryId(),
@@ -1478,6 +1543,13 @@ final class Forge1201TerritorySnapshotStore extends SavedData
       case "MEMBERS" -> RuleLevel.MEMBERS;
       default -> RuleLevel.MEMBERS;
     };
+  }
+
+  public enum BuffCatalogSyncResult {
+    UPDATED,
+    UNCHANGED,
+    PERSIST_FAILED,
+    STATE_UNKNOWN
   }
 
   static String canonicalDimension(String value) {

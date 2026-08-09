@@ -23,7 +23,7 @@ class Forge1201TerritoryMemberRemovalProtocolTest {
     UUID target = UUID.fromString("ffeeddcc-bbaa-9988-7766-554433221100");
     FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
     TerritoryMemberRemovalWireCodec.encode(
-        new RemoveTerritoryMemberMessage(territory, target), buffer);
+        new RemoveTerritoryMemberMessage(territory, target), Forge1201WireBuffer.wrap(buffer));
     assertEquals(32, buffer.readableBytes());
     assertEquals(territory, buffer.readUUID());
     assertEquals(target, buffer.readUUID());

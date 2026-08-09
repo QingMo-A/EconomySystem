@@ -5,9 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
-import io.netty.buffer.Unpooled;
+import com.mo.economy_system.testsupport.TestWireBuffer;
 import java.util.UUID;
-import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
 class ClientFileCheckWireCodecTest {
@@ -19,9 +18,9 @@ class ClientFileCheckWireCodecTest {
     var request =
         new ClientFileCheckRequestMessage(
             "Target", TARGET, "Admin", REQUESTER, ClientFileCheckType.MODS);
-    FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer buffer = new TestWireBuffer();
     ClientFileCheckWireCodec.encodeRequest(request, buffer);
-    FriendlyByteBuf fields = new FriendlyByteBuf(buffer.copy());
+    TestWireBuffer fields = buffer.copy();
     assertEquals("Target", fields.readUtf(16));
     assertEquals(TARGET.toString(), fields.readUtf(36));
     assertEquals("Admin", fields.readUtf(16));
@@ -35,21 +34,21 @@ class ClientFileCheckWireCodecTest {
     var result =
         new ClientFileCheckResultRequestMessage(
             "Target", TARGET, "Admin", REQUESTER, ClientFileCheckType.MODS, json);
-    FriendlyByteBuf resultBuffer = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer resultBuffer = new TestWireBuffer();
     ClientFileCheckWireCodec.encodeResultRequest(result, resultBuffer);
     assertEquals(result, ClientFileCheckWireCodec.decodeResultRequest(resultBuffer));
   }
 
   @Test
   void rejectsTrailingAndNonCanonicalUuid() {
-    FriendlyByteBuf trailing = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer trailing = new TestWireBuffer();
     ClientFileCheckWireCodec.encodeRequest(
         new ClientFileCheckRequestMessage(
             "Target", TARGET, "Admin", REQUESTER, ClientFileCheckType.MODS),
         trailing);
     trailing.writeByte(1);
     assertThrows(RuntimeException.class, () -> ClientFileCheckWireCodec.decodeRequest(trailing));
-    FriendlyByteBuf bad = new FriendlyByteBuf(Unpooled.buffer());
+    TestWireBuffer bad = new TestWireBuffer();
     bad.writeUtf("Target", 16);
     bad.writeUtf(TARGET.toString().toUpperCase(), 36);
     bad.writeUtf("Admin", 16);

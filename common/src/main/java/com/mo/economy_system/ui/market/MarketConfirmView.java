@@ -1,0 +1,40 @@
+package com.mo.economy_system.ui.market;
+
+import com.mo.economy_system.common.market.MarketOrderType;
+import com.mo.economy_system.ui.geometry.UiRect;
+import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
+import com.mo.economy_system.ui.renderer.UiIcon;
+import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.theme.EconomyUiTheme;
+import java.util.List;
+
+/** Semantic market confirmation renderer shared by Forge and NeoForge. */
+public final class MarketConfirmView {
+  private MarketConfirmView() {}
+
+  public static void render(EconomyUiRenderer renderer, MarketConfirmState state,
+                            MarketConfirmLayout.Layout layout, int mouseX, int mouseY) {
+    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
+    renderer.card(layout.card(), EconomyUiTheme.MARKET_CARD, false);
+    renderer.icon(UiIcon.MARKET, new UiRect(layout.card().x() + 12, layout.card().y() + 12, 14, 14));
+    renderer.translatedTextInRect(titleKey(state.action()), List.of(),
+        new UiRect(layout.card().x() + 32, layout.card().y() + 10, layout.card().width() - 44, 18), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+    renderer.item(state.row().order().item().itemId(), layout.item());
+    renderer.translatedTextInRect("screen.market.confirm.item", List.of(state.row().order().item().itemId()), layout.details(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+    renderer.translatedTextInRect("screen.market.confirm.price", List.of(Integer.toString(state.row().order().totalPrice())), new UiRect(layout.details().x(), layout.details().y() + 16, layout.details().width(), 16), EconomyUiTheme.MARKET_ACCENT, UiTextAlignment.LEFT);
+    renderer.translatedTextInRect(state.row().order().type() == MarketOrderType.SALES ? "screen.market.confirm.sales_warning" : "screen.market.confirm.demand_warning", List.of(), new UiRect(layout.card().x() + 18, layout.card().y() + 88, layout.card().width() - 36, 24), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.CENTER);
+    renderer.translatedButton(layout.confirm(), EconomyUiTheme.MARKET_BUTTON, "screen.market.confirm.confirm", List.of(), layout.confirm().contains(mouseX, mouseY), state.can(MarketConfirmAction.CONFIRM));
+    renderer.translatedButton(layout.cancel(), EconomyUiTheme.DISABLED_BUTTON, "screen.market.confirm.cancel", List.of(), layout.cancel().contains(mouseX, mouseY), state.can(MarketConfirmAction.CANCEL));
+  }
+
+  private static String titleKey(MarketAction action) {
+    return switch (action) {
+      case BUY -> "screen.market.confirm.buy_title";
+      case REMOVE_SALES -> "screen.market.confirm.remove_sales_title";
+      case REMOVE_DEMAND -> "screen.market.confirm.remove_demand_title";
+      case DELIVER_DEMAND -> "screen.market.confirm.deliver_title";
+      case CONFIRM_DEMAND -> "screen.market.confirm.confirm_title";
+      default -> "screen.market.confirm.title";
+    };
+  }
+}

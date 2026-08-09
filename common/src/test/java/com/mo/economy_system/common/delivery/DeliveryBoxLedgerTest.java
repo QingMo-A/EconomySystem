@@ -71,4 +71,26 @@ class DeliveryBoxLedgerTest {
         () -> ledger.restore(Map.of(owner, List.of(entry), UUID.randomUUID(), List.of(entry))));
     assertTrue(ledger.snapshot().isEmpty());
   }
+
+  @Test
+  void batchAddIsAtomicAndMarksPersistenceOnce() {
+    UUID owner = UUID.randomUUID();
+    DeliveryBoxEntrySnapshot first = DeliveryBoxTestFixtures.entry(UUID.randomUUID(), 1);
+    DeliveryBoxEntrySnapshot second = DeliveryBoxTestFixtures.entry(UUID.randomUUID(), 2);
+    DeliveryBoxLedger ledger = new DeliveryBoxLedger();
+    AtomicInteger dirty = new AtomicInteger();
+
+    ledger.addAll(owner, List.of(first, second), dirty::incrementAndGet);
+
+    assertEquals(List.of(first, second), ledger.list(owner));
+    assertEquals(1, dirty.get());
+
+    DeliveryBoxLedger failing = new DeliveryBoxLedger();
+    assertThrows(
+        IllegalStateException.class,
+        () -> failing.addAll(owner, List.of(first, second), () -> {
+          throw new IllegalStateException("dirty");
+        }));
+    assertTrue(failing.list(owner).isEmpty());
+  }
 }

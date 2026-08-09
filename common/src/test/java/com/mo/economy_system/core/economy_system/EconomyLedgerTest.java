@@ -133,9 +133,11 @@ class EconomyLedgerTest {
         restored.restore(snapshot);
         assertEquals(0, dirtyCalls.get());
         assertEquals(42, restored.getBalance(player));
-        assertEquals(List.of("hello"), restored.getOfflineMessages(player));
-        assertEquals(1, dirtyCalls.get());
-    }
+    assertEquals(List.of("hello"), restored.getOfflineMessages(player));
+    assertEquals(1, dirtyCalls.get());
+    assertEquals(List.of(), restored.getOfflineMessages(UUID.randomUUID()));
+    assertEquals(1, dirtyCalls.get());
+  }
 
     @Test void exactMutationsNeverClampAndWriteOneLog() {
         AtomicInteger dirty=new AtomicInteger();EconomyLedger ledger=new EconomyLedger(dirty::incrementAndGet);UUID player=UUID.randomUUID();

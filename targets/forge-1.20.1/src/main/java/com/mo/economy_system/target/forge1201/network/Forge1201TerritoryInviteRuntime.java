@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
@@ -24,6 +25,11 @@ public final class Forge1201TerritoryInviteRuntime {
 
   public static TerritoryInviteStore store(MinecraftServer server) {
     return STORES.get(server);
+  }
+
+  /** Eagerly opens the server-scoped territory persistence used by all adapters. */
+  public static void initialize(ServerLevel level) {
+    Forge1201TerritorySnapshotStore.get(level);
   }
 
   public static TerritoryInviteRateLimiter limiter(MinecraftServer server) {

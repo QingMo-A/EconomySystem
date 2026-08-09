@@ -5,6 +5,7 @@ import com.mo.economy_system.client.util.UiAnimation;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
 import com.mo.economy_system.screen.components.UiButtonStyle;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211HomeScreen;
 import com.mo.economy_system.utils.Util_MessageKeys;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -223,7 +224,7 @@ public class Screen_About extends Screen {
         if (leftMouseX >= backBtnX1 && leftMouseX <= backBtnX2 &&
             leftMouseY >= backBtnY1 && leftMouseY <= backBtnY2) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Home());
+                this.minecraft.setScreen(new NeoForge1211HomeScreen());
             }
             return true;
         }
@@ -235,7 +236,7 @@ public class Screen_About extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256 && this.shouldCloseOnEsc()) {
             if (this.minecraft != null) {
-                this.minecraft.setScreen(new Screen_Home());
+                this.minecraft.setScreen(new NeoForge1211HomeScreen());
             }
             return true;
         }

@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class ClientBalanceState {
     private static final AtomicReference<Snapshot> CURRENT =
-            new AtomicReference<>(new Snapshot(0, List.of()));
+            new AtomicReference<>(new Snapshot(0, 0, List.of()));
 
     private ClientBalanceState() {
     }
@@ -24,7 +24,8 @@ public final class ClientBalanceState {
     }
 
     public static void update(int balance, List<AccountBalance> accounts) {
-        CURRENT.set(new Snapshot(balance, accounts));
+        List<AccountBalance> copy = List.copyOf(Objects.requireNonNull(accounts, "accounts"));
+        CURRENT.updateAndGet(previous -> new Snapshot(nextRevision(previous.revision()), balance, copy));
     }
 
     public static void update(com.mo.economy_system.common.network.BalanceResponseMessage message) {
@@ -33,8 +34,17 @@ public final class ClientBalanceState {
     }
 
     /** One atomically published, immutable view of the client's balance data. */
-    public record Snapshot(int balance, List<AccountBalance> accounts) {
+    private static long nextRevision(long revision) {
+        if (revision == Long.MAX_VALUE) throw new IllegalStateException("balance revision exhausted");
+        return revision + 1;
+    }
+
+    public record Snapshot(long revision, int balance, List<AccountBalance> accounts) {
+        public Snapshot(int balance, List<AccountBalance> accounts) {
+            this(0, balance, accounts);
+        }
         public Snapshot {
+            if (revision < 0) throw new IllegalArgumentException("revision");
             accounts = List.copyOf(Objects.requireNonNull(accounts, "accounts"));
         }
     }

@@ -1,6 +1,6 @@
 package com.mo.economy_system.platform.item;
 
-import net.minecraft.nbt.CompoundTag;
+import com.mo.economy_system.platform.nbt.NbtData;
 
 import java.util.List;
 import java.util.Collections;
@@ -29,13 +29,13 @@ public final class ItemStackSnapshot {
     private final OptionalInt dyedColor;
     private final boolean dyedColorShown;
     private final OptionalInt customModelData;
-    private final CompoundTag customData;
+    private final NbtData.Compound customData;
 
     private ItemStackSnapshot(String itemId, int count, Optional<String> customNameJson, List<String> loreJson,
                              Map<String, Integer> enchantments, Map<String, Integer> storedEnchantments,
                              boolean enchantmentsShown, boolean storedEnchantmentsShown, int damage, int repairCost,
                              boolean unbreakable, boolean unbreakableShown, OptionalInt dyedColor,
-                             boolean dyedColorShown, OptionalInt customModelData, CompoundTag customData) {
+                             boolean dyedColorShown, OptionalInt customModelData, NbtData.Compound customData) {
         this.itemId = Objects.requireNonNull(itemId, "itemId");
         this.count = count;
         this.customNameJson = Objects.requireNonNull(customNameJson, "customNameJson");
@@ -51,7 +51,7 @@ public final class ItemStackSnapshot {
         this.dyedColor = Objects.requireNonNull(dyedColor, "dyedColor");
         this.dyedColorShown = dyedColorShown;
         this.customModelData = Objects.requireNonNull(customModelData, "customModelData");
-        this.customData = Objects.requireNonNull(customData, "customData").copy();
+        this.customData = Objects.requireNonNull(customData, "customData");
     }
 
     public static ItemStackSnapshotResult<ItemStackSnapshot> create(
@@ -59,7 +59,7 @@ public final class ItemStackSnapshot {
             Map<String, Integer> enchantments, Map<String, Integer> storedEnchantments,
             boolean enchantmentsShown, boolean storedEnchantmentsShown, int damage, int repairCost,
             boolean unbreakable, boolean unbreakableShown, OptionalInt dyedColor,
-            boolean dyedColorShown, OptionalInt customModelData, CompoundTag customData) {
+            boolean dyedColorShown, OptionalInt customModelData, NbtData.Compound customData) {
         try {
             ItemStackSnapshot snapshot = new ItemStackSnapshot(itemId, count, customNameJson, loreJson, enchantments,
                     storedEnchantments, enchantmentsShown, storedEnchantmentsShown, damage, repairCost, unbreakable,
@@ -85,7 +85,7 @@ public final class ItemStackSnapshot {
     public OptionalInt dyedColor() { return dyedColor; }
     public boolean dyedColorShown() { return dyedColorShown; }
     public OptionalInt customModelData() { return customModelData; }
-    public CompoundTag customData() { return customData.copy(); }
+    public NbtData.Compound customData() { return customData; }
 
     @Override
     public boolean equals(Object value) {

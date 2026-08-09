@@ -2,7 +2,6 @@ package com.mo.economy_system.target.forge1201;
 
 import com.mo.economy_system.platform.EconomyPlatform;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.target.forge1201.item.Forge1201ItemStackBridge;
 import com.mo.economy_system.target.forge1201.network.Forge1201NetworkBridge;
 import com.mo.economy_system.platform.shop.EconomyShopCatalogBridge;
@@ -15,9 +14,9 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import java.nio.file.Path;
 
 public final class Forge1201Platform implements EconomyPlatform {
+    private static final Forge1201ItemStackBridge ITEM_STACKS = new Forge1201ItemStackBridge();
+    private static final Forge1201ShopCatalogBridge SHOP_CATALOG = new Forge1201ShopCatalogBridge();
     private final EconomyNetworkBridge network = new Forge1201NetworkBridge();
-    private final EconomyItemStackBridge itemStacks = new Forge1201ItemStackBridge();
-    private final EconomyShopCatalogBridge shopCatalog = new Forge1201ShopCatalogBridge();
 
     @Override
     public String targetName() {
@@ -29,9 +28,18 @@ public final class Forge1201Platform implements EconomyPlatform {
         return FMLPaths.CONFIGDIR.get();
     }
 
-    @Override
-    public MinecraftServer currentServer() {
+    public static MinecraftServer activeServer() {
         return ServerLifecycleHooks.getCurrentServer();
+    }
+
+    /** Target-native ItemStack adapter; shared code never receives this API. */
+    public static Forge1201ItemStackBridge nativeItemStacks() {
+        return ITEM_STACKS;
+    }
+
+    /** Target-native catalog operations such as ItemStack reconstruction. */
+    public static Forge1201ShopCatalogBridge nativeShopCatalog() {
+        return SHOP_CATALOG;
     }
 
     @Override
@@ -52,12 +60,7 @@ public final class Forge1201Platform implements EconomyPlatform {
     }
 
     @Override
-    public EconomyItemStackBridge itemStacks() {
-        return itemStacks;
-    }
-
-    @Override
     public EconomyShopCatalogBridge shopCatalog() {
-        return shopCatalog;
+        return SHOP_CATALOG;
     }
 }

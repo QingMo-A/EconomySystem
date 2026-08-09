@@ -1,8 +1,6 @@
 package com.mo.economy_system.platform.item;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import com.mo.economy_system.platform.nbt.NbtData;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -23,47 +21,42 @@ public final class ItemStackSnapshotCodec {
 
     private ItemStackSnapshotCodec() {}
 
-    public static ItemStackSnapshotResult<CompoundTag> encode(ItemStackSnapshot snapshot) {
+    public static ItemStackSnapshotResult<NbtData.Compound> encode(ItemStackSnapshot snapshot) {
         ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
         if (!validation.isSuccess()) return copyFailure(validation);
         return ItemStackSnapshotResult.success(encodeUnchecked(snapshot));
     }
 
-    static CompoundTag encodeUnchecked(ItemStackSnapshot snapshot) {
-        CompoundTag root = new CompoundTag();
-        root.putInt("schemaVersion", ItemStackSnapshot.CURRENT_SCHEMA_VERSION);
-        root.putString("id", snapshot.itemId());
-        root.putInt("count", snapshot.count());
-        CompoundTag components = new CompoundTag();
+    static NbtData.Compound encodeUnchecked(ItemStackSnapshot snapshot) {
+        NbtData.CompoundBuilder components = NbtData.compoundBuilder();
         snapshot.customNameJson().ifPresent(value -> components.putString("customName", value));
         if (!snapshot.loreJson().isEmpty()) {
-            ListTag lore = new ListTag();
-            snapshot.loreJson().forEach(value -> lore.add(net.minecraft.nbt.StringTag.valueOf(value)));
-            components.put("lore", lore);
+            components.put("lore", NbtData.list(snapshot.loreJson().stream().map(NbtData::string).toList()));
         }
         putEnchantments(components, "enchantments", snapshot.enchantments(), snapshot.enchantmentsShown());
         putEnchantments(components, "storedEnchantments", snapshot.storedEnchantments(), snapshot.storedEnchantmentsShown());
         if (snapshot.damage() != 0) components.putInt("damage", snapshot.damage());
         if (snapshot.repairCost() != 0) components.putInt("repairCost", snapshot.repairCost());
         if (snapshot.unbreakable()) {
-            CompoundTag value = new CompoundTag();
-            value.putBoolean("showInTooltip", snapshot.unbreakableShown());
-            components.put("unbreakable", value);
+            components.put("unbreakable", NbtData.compoundBuilder()
+                    .putBoolean("showInTooltip", snapshot.unbreakableShown()).build());
         }
         if (snapshot.dyedColor().isPresent()) {
-            CompoundTag value = new CompoundTag();
-            value.putInt("rgb", snapshot.dyedColor().getAsInt());
-            value.putBoolean("showInTooltip", snapshot.dyedColorShown());
-            components.put("dyedColor", value);
+            components.put("dyedColor", NbtData.compoundBuilder()
+                    .putInt("rgb", snapshot.dyedColor().getAsInt())
+                    .putBoolean("showInTooltip", snapshot.dyedColorShown()).build());
         }
         snapshot.customModelData().ifPresent(value -> components.putInt("customModelData", value));
-        CompoundTag customData = snapshot.customData();
-        if (!customData.isEmpty()) components.put("customData", customData);
-        root.put("components", components);
-        return root;
+        if (!snapshot.customData().isEmpty()) components.put("customData", snapshot.customData());
+        return NbtData.compoundBuilder()
+                .putInt("schemaVersion", ItemStackSnapshot.CURRENT_SCHEMA_VERSION)
+                .putString("id", snapshot.itemId())
+                .putInt("count", snapshot.count())
+                .put("components", components.build())
+                .build();
     }
 
-    public static ItemStackSnapshotResult<ItemStackSnapshot> decode(CompoundTag input) {
+    public static ItemStackSnapshotResult<ItemStackSnapshot> decode(NbtData.Compound input) {
         if (input == null) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "snapshot is null");
         if (ItemStackSnapshotValidator.maxDepth(input) > ItemStackSnapshotLimits.MAX_CUSTOM_DATA_DEPTH + 2) {
             return failure(ItemStackSnapshotError.DATA_LIMIT_EXCEEDED, "encoded snapshot exceeds nesting limit");
@@ -71,13 +64,13 @@ public final class ItemStackSnapshotCodec {
         if (ItemStackSnapshotValidator.estimatedBytes(input) > ItemStackSnapshotLimits.MAX_ENCODED_SNAPSHOT_BYTES) {
             return failure(ItemStackSnapshotError.DATA_LIMIT_EXCEEDED, "encoded snapshot exceeds byte limit");
         }
-        CompoundTag root = input.copy();
+        NbtData.Compound root = input;
         try {
             if (!root.contains("schemaVersion")) return decodeLegacy(root);
             String unknownRoot = unknownKey(root, ROOT_KEYS);
             if (unknownRoot != null) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "unknown root field: " + unknownRoot);
-            if (!root.contains("schemaVersion", Tag.TAG_INT)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "schemaVersion must be an int");
-            int version = root.getInt("schemaVersion");
+            if (!(root.get("schemaVersion") instanceof NbtData.IntValue value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "schemaVersion must be an int");
+            int version = value.value();
             if (version != ItemStackSnapshot.CURRENT_SCHEMA_VERSION) {
                 return failure(ItemStackSnapshotError.UNSUPPORTED_SCHEMA_VERSION, "schemaVersion=" + version);
             }
@@ -87,34 +80,33 @@ public final class ItemStackSnapshotCodec {
         }
     }
 
-    private static ItemStackSnapshotResult<ItemStackSnapshot> decodeLegacy(CompoundTag root) {
+    private static ItemStackSnapshotResult<ItemStackSnapshot> decodeLegacy(NbtData.Compound root) {
         String unknown = unknownKey(root, LEGACY_KEYS);
         if (unknown != null) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "unknown legacy field: " + unknown);
         ItemStackSnapshotResult<BaseFields> base = readBase(root);
         if (!base.isSuccess()) return copyFailure(base);
-        if (root.contains("customData") && !root.contains("customData", Tag.TAG_COMPOUND)) {
+        if (root.contains("customData") && !(root.get("customData") instanceof NbtData.Compound)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customData must be a compound");
         }
         BaseFields fields = base.orElseThrow();
-        CompoundTag customData = root.contains("customData", Tag.TAG_COMPOUND) ? root.getCompound("customData") : new CompoundTag();
+        NbtData.Compound customData = root.get("customData") instanceof NbtData.Compound value ? value : NbtData.emptyCompound();
         return create(fields, Optional.empty(), List.of(), Map.of(), Map.of(), true, true, 0, 0,
                 false, true, OptionalInt.empty(), true, OptionalInt.empty(), customData);
     }
 
-    private static ItemStackSnapshotResult<ItemStackSnapshot> decodeV1(CompoundTag root) {
+    private static ItemStackSnapshotResult<ItemStackSnapshot> decodeV1(NbtData.Compound root) {
         ItemStackSnapshotResult<BaseFields> base = readBase(root);
         if (!base.isSuccess()) return copyFailure(base);
-        if (!root.contains("components", Tag.TAG_COMPOUND)) {
+        if (!(root.get("components") instanceof NbtData.Compound components)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "components must be a compound");
         }
-        CompoundTag components = root.getCompound("components");
         String unknown = unknownKey(components, COMPONENT_KEYS);
         if (unknown != null) return failure(ItemStackSnapshotError.UNSUPPORTED_COMPONENT, "unknown component: " + unknown);
 
         Optional<String> name = Optional.empty();
         if (components.contains("customName")) {
-            if (!components.contains("customName", Tag.TAG_STRING)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customName must be a string");
-            name = Optional.of(components.getString("customName"));
+            if (!(components.get("customName") instanceof NbtData.StringValue value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customName must be a string");
+            name = Optional.of(value.value());
         }
         ItemStackSnapshotResult<List<String>> loreResult = readStringList(components, "lore");
         if (!loreResult.isSuccess()) return copyFailure(loreResult);
@@ -132,13 +124,13 @@ public final class ItemStackSnapshotCodec {
         if (!color.isSuccess()) return copyFailure(color);
         OptionalInt model = OptionalInt.empty();
         if (components.contains("customModelData")) {
-            if (!components.contains("customModelData", Tag.TAG_INT)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customModelData must be an int");
-            model = OptionalInt.of(components.getInt("customModelData"));
+            if (!(components.get("customModelData") instanceof NbtData.IntValue value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customModelData must be an int");
+            model = OptionalInt.of(value.value());
         }
-        if (components.contains("customData") && !components.contains("customData", Tag.TAG_COMPOUND)) {
+        if (components.contains("customData") && !(components.get("customData") instanceof NbtData.Compound)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "customData must be a compound");
         }
-        CompoundTag customData = components.contains("customData", Tag.TAG_COMPOUND) ? components.getCompound("customData") : new CompoundTag();
+        NbtData.Compound customData = components.get("customData") instanceof NbtData.Compound value ? value : NbtData.emptyCompound();
         BaseFields fields = base.orElseThrow();
         Enchantments normal = enchantments.orElseThrow();
         Enchantments book = stored.orElseThrow();
@@ -153,101 +145,90 @@ public final class ItemStackSnapshotCodec {
             BaseFields fields, Optional<String> name, List<String> lore, Map<String, Integer> enchantments,
             Map<String, Integer> storedEnchantments, boolean enchantmentsShown, boolean storedEnchantmentsShown,
             int damage, int repairCost, boolean unbreakable, boolean unbreakableShown, OptionalInt color,
-            boolean colorShown, OptionalInt model, CompoundTag customData) {
+            boolean colorShown, OptionalInt model, NbtData.Compound customData) {
         return ItemStackSnapshot.create(fields.id, fields.count, name, lore, enchantments, storedEnchantments,
                 enchantmentsShown, storedEnchantmentsShown, damage, repairCost, unbreakable, unbreakableShown,
                 color, colorShown, model, customData);
     }
 
-    private static ItemStackSnapshotResult<BaseFields> readBase(CompoundTag root) {
-        if (!root.contains("id", Tag.TAG_STRING) || root.getString("id").isBlank()) {
+    private static ItemStackSnapshotResult<BaseFields> readBase(NbtData.Compound root) {
+        if (!(root.get("id") instanceof NbtData.StringValue id) || id.value().isBlank()) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "id must be a non-empty string");
         }
-        if (!root.contains("count", Tag.TAG_INT)) return failure(ItemStackSnapshotError.INVALID_COUNT, "count must be an int");
-        int count = root.getInt("count");
+        if (!(root.get("count") instanceof NbtData.IntValue countValue)) return failure(ItemStackSnapshotError.INVALID_COUNT, "count must be an int");
+        int count = countValue.value();
         if (count <= 0) return failure(ItemStackSnapshotError.INVALID_COUNT, "count must be positive");
-        return ItemStackSnapshotResult.success(new BaseFields(root.getString("id"), count));
+        return ItemStackSnapshotResult.success(new BaseFields(id.value(), count));
     }
 
-    private static ItemStackSnapshotResult<List<String>> readStringList(CompoundTag components, String key) {
+    private static ItemStackSnapshotResult<List<String>> readStringList(NbtData.Compound components, String key) {
         if (!components.contains(key)) return ItemStackSnapshotResult.success(List.of());
-        if (!components.contains(key, Tag.TAG_LIST)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a list");
-        ListTag list = (ListTag) components.get(key);
-        if (list.stream().anyMatch(entry -> entry.getId() != Tag.TAG_STRING)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " entries must be strings");
-        return ItemStackSnapshotResult.success(list.stream().map(Tag::getAsString).toList());
+        if (!(components.get(key) instanceof NbtData.ListValue list)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a list");
+        if (list.values().stream().anyMatch(entry -> !(entry instanceof NbtData.StringValue))) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " entries must be strings");
+        return ItemStackSnapshotResult.success(list.values().stream().map(entry -> ((NbtData.StringValue) entry).value()).toList());
     }
 
-    private static void putEnchantments(CompoundTag components, String key, Map<String, Integer> values, boolean shown) {
+    private static void putEnchantments(NbtData.CompoundBuilder components, String key, Map<String, Integer> values, boolean shown) {
         if (values.isEmpty() && shown) return;
-        CompoundTag value = new CompoundTag();
-        value.putBoolean("showInTooltip", shown);
-        ListTag entries = new ListTag();
-        values.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            CompoundTag encoded = new CompoundTag();
-            encoded.putString("id", entry.getKey());
-            encoded.putInt("level", entry.getValue());
-            entries.add(encoded);
-        });
-        value.put("entries", entries);
-        components.put(key, value);
+        List<NbtData> entries = values.entrySet().stream().sorted(Map.Entry.comparingByKey()).<NbtData>map(entry ->
+                NbtData.compoundBuilder().putString("id", entry.getKey()).putInt("level", entry.getValue()).build()).toList();
+        components.put(key, NbtData.compoundBuilder().putBoolean("showInTooltip", shown)
+                .put("entries", NbtData.list(entries)).build());
     }
 
-    private static ItemStackSnapshotResult<Enchantments> readEnchantments(CompoundTag components, String key) {
+    private static ItemStackSnapshotResult<Enchantments> readEnchantments(NbtData.Compound components, String key) {
         if (!components.contains(key)) return ItemStackSnapshotResult.success(new Enchantments(Map.of(), true));
-        if (!components.contains(key, Tag.TAG_COMPOUND)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a compound");
-        CompoundTag value = components.getCompound(key);
+        if (!(components.get(key) instanceof NbtData.Compound value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a compound");
         String unknown = unknownKey(value, Set.of("showInTooltip", "entries"));
         if (unknown != null) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "unknown " + key + " field: " + unknown);
-        if (!value.contains("showInTooltip", Tag.TAG_BYTE) || !value.contains("entries", Tag.TAG_LIST)) {
+        if (!(value.get("showInTooltip") instanceof NbtData.ByteValue) || !(value.get("entries") instanceof NbtData.ListValue)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " requires showInTooltip and entries");
         }
-        ListTag entries = (ListTag) value.get("entries");
-        if (entries.stream().anyMatch(entry -> entry.getId() != Tag.TAG_COMPOUND)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " entries must be compounds");
+        NbtData.ListValue entries = (NbtData.ListValue) value.get("entries");
+        if (entries.values().stream().anyMatch(entry -> !(entry instanceof NbtData.Compound))) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " entries must be compounds");
         Map<String, Integer> decoded = new LinkedHashMap<>();
-        for (Tag entryTag : entries) {
-            CompoundTag entry = (CompoundTag) entryTag;
-            if (unknownKey(entry, Set.of("id", "level")) != null || !entry.contains("id", Tag.TAG_STRING) || !entry.contains("level", Tag.TAG_INT)) {
+        for (NbtData entryTag : entries.values()) {
+            NbtData.Compound entry = (NbtData.Compound) entryTag;
+            if (unknownKey(entry, Set.of("id", "level")) != null || !(entry.get("id") instanceof NbtData.StringValue idValue) || !(entry.get("level") instanceof NbtData.IntValue levelValue)) {
                 return failure(ItemStackSnapshotError.INVALID_SCHEMA, "invalid " + key + " entry");
             }
-            int level = entry.getInt("level");
-            String id = entry.getString("id");
+            int level = levelValue.value();
+            String id = idValue.value();
             if (id.isBlank() || level <= 0 || decoded.put(id, level) != null) {
                 return failure(ItemStackSnapshotError.INVALID_SCHEMA, "invalid or duplicate " + key + " entry: " + id);
             }
         }
-        return ItemStackSnapshotResult.success(new Enchantments(decoded, value.getBoolean("showInTooltip")));
+        return ItemStackSnapshotResult.success(new Enchantments(decoded, ((NbtData.ByteValue) value.get("showInTooltip")).value() != 0));
     }
 
-    private static ItemStackSnapshotResult<Integer> readNonNegativeInt(CompoundTag components, String key) {
+    private static ItemStackSnapshotResult<Integer> readNonNegativeInt(NbtData.Compound components, String key) {
         if (!components.contains(key)) return ItemStackSnapshotResult.success(0);
-        if (!components.contains(key, Tag.TAG_INT) || components.getInt(key) < 0) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a non-negative int");
-        return ItemStackSnapshotResult.success(components.getInt(key));
+        if (!(components.get(key) instanceof NbtData.IntValue value) || value.value() < 0) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a non-negative int");
+        return ItemStackSnapshotResult.success(value.value());
     }
 
-    private static ItemStackSnapshotResult<ShownValue> readShownValue(CompoundTag components, String key, boolean defaultPresent) {
+    private static ItemStackSnapshotResult<ShownValue> readShownValue(NbtData.Compound components, String key, boolean defaultPresent) {
         if (!components.contains(key)) return ItemStackSnapshotResult.success(new ShownValue(defaultPresent, true));
-        if (!components.contains(key, Tag.TAG_COMPOUND)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a compound");
-        CompoundTag value = components.getCompound(key);
-        if (!value.getAllKeys().equals(Set.of("showInTooltip")) || !value.contains("showInTooltip", Tag.TAG_BYTE)) {
+        if (!(components.get(key) instanceof NbtData.Compound value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, key + " must be a compound");
+        if (!value.keys().equals(Set.of("showInTooltip")) || !(value.get("showInTooltip") instanceof NbtData.ByteValue shown)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "invalid " + key);
         }
-        return ItemStackSnapshotResult.success(new ShownValue(true, value.getBoolean("showInTooltip")));
+        return ItemStackSnapshotResult.success(new ShownValue(true, shown.value() != 0));
     }
 
-    private static ItemStackSnapshotResult<ColorValue> readColor(CompoundTag components) {
+    private static ItemStackSnapshotResult<ColorValue> readColor(NbtData.Compound components) {
         if (!components.contains("dyedColor")) return ItemStackSnapshotResult.success(new ColorValue(OptionalInt.empty(), true));
-        if (!components.contains("dyedColor", Tag.TAG_COMPOUND)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "dyedColor must be a compound");
-        CompoundTag value = components.getCompound("dyedColor");
-        if (!value.getAllKeys().equals(Set.of("rgb", "showInTooltip")) || !value.contains("rgb", Tag.TAG_INT) || !value.contains("showInTooltip", Tag.TAG_BYTE)) {
+        if (!(components.get("dyedColor") instanceof NbtData.Compound value)) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "dyedColor must be a compound");
+        if (!value.keys().equals(Set.of("rgb", "showInTooltip")) || !(value.get("rgb") instanceof NbtData.IntValue rgbValue) || !(value.get("showInTooltip") instanceof NbtData.ByteValue shown)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "invalid dyedColor");
         }
-        int rgb = value.getInt("rgb");
+        int rgb = rgbValue.value();
         if (rgb < 0 || rgb > 0xFFFFFF) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "dyedColor rgb outside 0x000000..0xFFFFFF");
-        return ItemStackSnapshotResult.success(new ColorValue(OptionalInt.of(rgb), value.getBoolean("showInTooltip")));
+        return ItemStackSnapshotResult.success(new ColorValue(OptionalInt.of(rgb), shown.value() != 0));
     }
 
-    private static String unknownKey(CompoundTag tag, Set<String> allowed) {
-        Set<String> unknown = new HashSet<>(tag.getAllKeys());
+    private static String unknownKey(NbtData.Compound tag, Set<String> allowed) {
+        Set<String> unknown = new HashSet<>(tag.keys());
         unknown.removeAll(allowed);
         return unknown.stream().sorted().findFirst().orElse(null);
     }

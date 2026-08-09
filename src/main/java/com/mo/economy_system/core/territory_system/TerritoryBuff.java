@@ -124,7 +124,7 @@ public class TerritoryBuff {
         if (!unlocked || level >= maxLevel) {
             return false;
         }
-        level += singleUpgradeLevel;
+        level = (int) Math.min((long) maxLevel, (long) level + singleUpgradeLevel);
         return true;
     }
 

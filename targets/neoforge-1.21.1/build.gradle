@@ -29,17 +29,16 @@ repositories {
 
 sourceSets {
     main {
-        // During the incremental migration the current NeoForge 1.21.1 tree
-        // remains in place. Files move to common/ or this target only after a
-        // bridge boundary has been verified on both versions.
+        // The root 1.21.1 baseline has been detached. Both production targets
+        // now compile the shared common tree plus their own API adapters only.
         java.setSrcDirs([
-                rootProject.file('src/main/java'),
                 rootProject.file('common/src/main/java'),
                 file('src/main/java')
         ])
+        // Legacy baseline screens remain in the worktree for reference only.
+        // Active target UI is expressed through common controllers/layouts/views.
+        java.exclude('com/mo/economy_system/screen/**')
         resources.setSrcDirs([
-                rootProject.file('src/main/resources'),
-                rootProject.file('src/generated/resources'),
                 rootProject.file('common/src/main/resources'),
                 file('src/main/resources'),
                 file('src/generated/resources')
@@ -55,6 +54,8 @@ sourceSets {
                 rootProject.file('common/src/test/java'),
                 file('src/test/java')
         ])
+        // Tests for the excluded legacy screen tree no longer exercise active UI.
+        java.exclude('com/mo/economy_system/screen/**')
     }
 }
 

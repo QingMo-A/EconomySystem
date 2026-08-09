@@ -1,6 +1,5 @@
 package com.mo.economy_system.target.forge1201.item;
 
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
@@ -23,7 +22,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
-public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
+public final class Forge1201ItemStackBridge {
     private static final Set<String> NATIVE_KEYS = Set.of(
             "Damage", "RepairCost", "Unbreakable", "display", "Enchantments", "StoredEnchantments",
             "CustomModelData", "HideFlags"
@@ -35,28 +34,23 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
             "generation", "author", "title", "resolved", "pages", "filtered_pages", "filtered_title", "Fireworks",
             "Explosion", "BucketVariantTag", "instrument", "note_block_sound"
     );
-    @Override
     public boolean hasCustomData(ItemStack stack) {
         return stack.hasTag();
     }
 
-    @Override
     public CompoundTag copyCustomData(ItemStack stack) {
         CompoundTag tag = stack.getTag();
         return tag == null ? null : tag.copy();
     }
 
-    @Override
     public void setCustomData(ItemStack stack, CompoundTag tag) {
         stack.setTag(tag == null || tag.isEmpty() ? null : tag.copy());
     }
 
-    @Override
     public boolean sameItemAndData(ItemStack first, ItemStack second) {
         return ItemStack.isSameItemSameTags(first, second);
     }
 
-    @Override
     public ItemStackSnapshotResult<ItemStackSnapshot> captureSnapshot(ItemStack stack, HolderLookup.Provider registries) {
         if (stack == null || stack.isEmpty()) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "cannot capture an empty stack");
         if (stack.getCount() <= 0 || stack.getCount() > stack.getMaxStackSize()) return failure(ItemStackSnapshotError.INVALID_COUNT, "count=" + stack.getCount());
@@ -124,13 +118,12 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
                     BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), stack.getCount(), name, lore,
                     enchantments.orElseThrow(), stored.orElseThrow(), (hideFlags & 1) == 0, (hideFlags & 1) == 0,
                     damage, repairCost, unbreakable, (hideFlags & 4) == 0, color, (hideFlags & 64) == 0,
-                    model, customData);
+                    model, Forge1201NbtAdapter.fromNative(customData));
         } catch (RuntimeException exception) {
             return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, exception.getMessage());
         }
     }
 
-    @Override
     public ItemStackSnapshotResult<ItemStack> restoreSnapshot(ItemStackSnapshot snapshot, HolderLookup.Provider registries) {
         ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
         if (!validation.isSuccess()) return copyFailure(validation);
@@ -144,7 +137,7 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
                 && snapshot.enchantmentsShown() != snapshot.storedEnchantmentsShown()) {
             return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "1.20.1 has one shared enchantment tooltip flag");
         }
-        CompoundTag tag = snapshot.customData();
+        CompoundTag tag = Forge1201NbtAdapter.toNative(snapshot.customData());
         for (String key : NATIVE_KEYS) {
             if (tag.contains(key)) return failure(ItemStackSnapshotError.LOSSY_COMPONENT_CONVERSION, "customData collides with native field: " + key);
         }
@@ -239,7 +232,6 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
         return failure(result.error().orElseThrow(), result.detail());
     }
 
-    @Override
     public CompoundTag saveSimple(ItemStack stack) {
         CompoundTag tag = new CompoundTag();
         tag.putString("id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
@@ -251,7 +243,6 @@ public final class Forge1201ItemStackBridge implements EconomyItemStackBridge {
         return tag;
     }
 
-    @Override
     public ItemStack loadSimple(CompoundTag tag) {
         Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(tag.getString("id")));
         ItemStack stack = new ItemStack(item, Math.max(1, tag.getInt("count")));

@@ -1,23 +1,31 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
-import com.mo.economy_system.common.check.ClientFileCheckLayout;
+import com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
 import com.mo.economy_system.common.check.ClientFileCheckScanner;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
+import com.mo.economy_system.ui.check.CheckConsentAction;
+import com.mo.economy_system.ui.check.CheckConsentController;
+import com.mo.economy_system.ui.check.CheckConsentEvent;
+import com.mo.economy_system.ui.check.CheckConsentLayout;
+import com.mo.economy_system.ui.check.CheckConsentPort;
+import com.mo.economy_system.ui.check.CheckConsentView;
+import com.mo.economy_system.ui.geometry.UiScale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+/** NeoForge shell for the loader-neutral client file-check consent page. */
 public final class Screen_ClientFileCheckConsent extends Screen {
   private final ClientFileCheckRequestMessage request;
   private final ClientFileCheckTaskCoordinator.RequestIdentity identity;
   private final ClientFileCheckTaskCoordinator.Session session;
   private final AtomicBoolean finished = new AtomicBoolean();
   private final long deadline = System.nanoTime() + 60_000_000_000L;
+  private final CheckConsentController controller;
 
   public Screen_ClientFileCheckConsent(
       ClientFileCheckRequestMessage request,
@@ -27,35 +35,14 @@ public final class Screen_ClientFileCheckConsent extends Screen {
     this.request = request;
     this.identity = identity;
     this.session = session;
-  }
-
-  @Override
-  protected void init() {
-    ClientFileCheckLayout.Consent layout = ClientFileCheckLayout.consent(width, height);
-    if (layout.allow() != null) {
-      addRenderableWidget(
-          Button.builder(Component.translatable("button.check_consent.allow"), b -> allow())
-              .bounds(
-                  layout.allow().x(),
-                  layout.allow().y(),
-                  layout.allow().width(),
-                  layout.allow().height())
-              .build());
-      addRenderableWidget(
-          Button.builder(Component.translatable("button.check_consent.decline"), b -> decline())
-              .bounds(
-                  layout.decline().x(),
-                  layout.decline().y(),
-                  layout.decline().width(),
-                  layout.decline().height())
-              .build());
-    }
+    controller = new CheckConsentController(request.requesterPlayerName(), request.checkType().id(), new Port());
   }
 
   private void allow() {
     if (System.nanoTime() > deadline) {
-      if (finished.compareAndSet(false, true))
+      if (finished.compareAndSet(false, true)) {
         terminal(ClientFileCheckResult.failed(request.checkType(), "REQUEST_EXPIRED"), null);
+      }
       Minecraft.getInstance().setScreen(null);
       return;
     }
@@ -66,8 +53,8 @@ public final class Screen_ClientFileCheckConsent extends Screen {
         .transition(
             identity,
             session,
-            com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator.State.CONSENT,
-            com.mo.economy_system.common.check.ClientFileCheckConsentCoordinator.State.SCANNING)) {
+            ClientFileCheckConsentCoordinator.State.CONSENT,
+            ClientFileCheckConsentCoordinator.State.SCANNING)) {
       minecraft.setScreen(null);
       return;
     }
@@ -78,9 +65,7 @@ public final class Screen_ClientFileCheckConsent extends Screen {
                 session,
                 identity,
                 1,
-                () ->
-                    new ClientFileCheckScanner()
-                        .scan(minecraft.gameDirectory.toPath(), request.checkType()),
+                () -> new ClientFileCheckScanner().scan(minecraft.gameDirectory.toPath(), request.checkType()),
                 minecraft::execute,
                 ignored ->
                     minecraft.getConnection() == session.connectionIdentity()
@@ -88,13 +73,10 @@ public final class Screen_ClientFileCheckConsent extends Screen {
                         && minecraft.player.getUUID().equals(session.localPlayerId()),
                 (callbackToken, result) -> terminal(result, callbackToken),
                 (callbackToken, failure) ->
-                    terminal(
-                        ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED"),
-                        callbackToken),
+                    terminal(ClientFileCheckResult.failed(request.checkType(), "SCAN_FAILED"), callbackToken),
                 (abandonedToken, failure) ->
                     NeoForge1211ClientFileCheckClientRuntime.consent().finish(identity, session));
-    if (token == null)
-      terminal(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"), null);
+    if (token == null) terminal(ClientFileCheckResult.failed(request.checkType(), "SCANNER_BUSY"), null);
     minecraft.setScreen(null);
   }
 
@@ -111,7 +93,7 @@ public final class Screen_ClientFileCheckConsent extends Screen {
 
   @Override
   public void onClose() {
-    decline();
+    controller.handle(new CheckConsentEvent.ActionClicked(CheckConsentAction.DECLINE));
   }
 
   @Override
@@ -120,36 +102,55 @@ public final class Screen_ClientFileCheckConsent extends Screen {
   }
 
   @Override
+  public boolean isPauseScreen() {
+    return false;
+  }
+
+  @Override
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    CheckConsentLayout.Layout layout = CheckConsentLayout.calculate(width, height);
+    UiScale scale = layout.scale();
+    graphics.pose().pushPose();
+    graphics.pose().scale(scale.value(), scale.value(), 1.0f);
+    CheckConsentView.render(
+        new NeoForge1211UiRenderer(graphics, font),
+        controller.state(),
+        layout,
+        scale.toVirtualX(mouseX),
+        scale.toVirtualY(mouseY));
+    graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
-    int x = width / 2;
-    int y = 35;
-    graphics.drawCenteredString(font, title, x, y, 0xFFFFFF);
-    graphics.drawCenteredString(
-        font,
-        Component.translatable("screen.check_consent.requester", request.requesterPlayerName()),
-        x,
-        y + 22,
-        0xDDDDDD);
-    graphics.drawCenteredString(
-        font,
-        Component.translatable("screen.check_consent.type", request.checkType().id()),
-        x,
-        y + 38,
-        0xDDDDDD);
-    graphics.drawCenteredString(
-        font,
-        Component.translatable("screen.check_consent.folder", request.checkType().id()),
-        x,
-        y + 54,
-        0xDDDDDD);
-    graphics.drawCenteredString(
-        font, Component.translatable("screen.check_consent.data_notice"), x, y + 76, 0xAAAAAA);
-    graphics.drawCenteredString(
-        font,
-        Component.translatable("screen.check_consent.no_content_notice"),
-        x,
-        y + 92,
-        0xAAAAAA);
+  }
+
+  @Override
+  public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+    CheckConsentLayout.Layout layout = CheckConsentLayout.calculate(width, height);
+    int x = layout.scale().toVirtualX(mouseX);
+    int y = layout.scale().toVirtualY(mouseY);
+    if (layout.allow().contains(x, y)) {
+      controller.handle(new CheckConsentEvent.ActionClicked(CheckConsentAction.ALLOW));
+      return true;
+    }
+    if (layout.decline().contains(x, y)) {
+      controller.handle(new CheckConsentEvent.ActionClicked(CheckConsentAction.DECLINE));
+      return true;
+    }
+    return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  @Override
+  public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
+
+  private final class Port implements CheckConsentPort {
+    @Override
+    public void allow() {
+      Screen_ClientFileCheckConsent.this.allow();
+    }
+
+    @Override
+    public void decline() {
+      Screen_ClientFileCheckConsent.this.decline();
+    }
   }
 }

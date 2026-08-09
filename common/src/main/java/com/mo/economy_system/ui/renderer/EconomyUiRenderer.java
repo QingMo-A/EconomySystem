@@ -14,6 +14,11 @@ public interface EconomyUiRenderer {
 
     void translatedText(String key, List<String> arguments, int x, int y, int argb);
 
+    void textInRect(String text, UiRect rect, int argb, UiTextAlignment alignment);
+
+    void translatedTextInRect(String key, List<String> arguments, UiRect rect,
+                              int argb, UiTextAlignment alignment);
+
     void card(UiRect rect, UiCardStyle style, boolean hovered);
 
     void button(UiRect rect, UiButtonStyle style, String text, boolean hovered, boolean enabled);
@@ -23,5 +28,17 @@ public interface EconomyUiRenderer {
 
     void icon(UiIcon icon, UiRect rect);
 
+    /** Draws a target-native item icon from a loader-neutral item identifier. */
+    default void item(String itemId, UiRect rect) {
+        icon(UiIcon.SHOP, rect);
+    }
+
+    /** Draws a target-owned bitmap/texture identified by a stable resource id. */
+    default void texture(String textureId, UiRect rect) {
+        // A target may omit optional decorative assets while preserving layout.
+    }
+
     void playerHead(UUID playerId, String playerName, UiRect rect);
+
+    void tooltip(TooltipModel tooltip, int mouseX, int mouseY);
 }

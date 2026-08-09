@@ -3,12 +3,15 @@ package com.mo.economy_system.target.neoforge1211.network;
 import com.mo.economy_system.platform.network.EconomyNetworkBridge;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
 import com.mo.economy_system.protocol.EconomyMessageType;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211MessageBindings;
 import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211MessageCodecs;
 import com.mo.economy_system.target.neoforge1211.protocol.NeoForge1211PayloadAdapters;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.UUID;
 
 public final class NeoForge1211NetworkBridge implements EconomyNetworkBridge {
     @Override
@@ -17,7 +20,15 @@ public final class NeoForge1211NetworkBridge implements EconomyNetworkBridge {
     }
 
     @Override
-    public void sendToPlayer(ServerPlayer player, EconomyNetworkMessage message) {
+    public void sendToPlayer(UUID playerId, EconomyNetworkMessage message) {
+        var server = NeoForge1211Platform.activeServer();
+        if (server == null) {
+            return;
+        }
+        ServerPlayer player = server.getPlayerList().getPlayer(playerId);
+        if (player == null) {
+            return;
+        }
         PacketDistributor.sendToPlayer(player, asPayload(message));
     }
 

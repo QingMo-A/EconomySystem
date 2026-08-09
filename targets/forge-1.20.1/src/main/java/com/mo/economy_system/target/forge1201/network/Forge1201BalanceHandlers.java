@@ -5,7 +5,7 @@ import com.mo.economy_system.common.network.AccountBalance;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.forge1201.player.Forge1201PlayerLookup;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -36,7 +36,7 @@ final class Forge1201BalanceHandlers {
         if (message.includeAccountList()) {
             for (Map.Entry<UUID, Integer> entry : data.getAllAccounts()) {
                 accountBalances.add(new AccountBalance(
-                        Util_Player.getPlayerNameFromUUID(player.server, entry.getKey()),
+                        Forge1201PlayerLookup.profileName(player.server, entry.getKey()),
                         entry.getValue()
                 ));
             }

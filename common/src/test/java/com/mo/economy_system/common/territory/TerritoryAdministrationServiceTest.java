@@ -20,22 +20,28 @@ class TerritoryAdministrationServiceTest {
   void permissionResolvesNameOnServerAndRemovalNeedsNoName() {
     CapturingRepository repository = new CapturingRepository();
     var context = context(repository, id -> Optional.of("  ServerName  "), new AtomicInteger());
+    UUID target = UUID.randomUUID();
     assertEquals(
         TerritoryManagementResult.SUCCESS,
         TerritoryAdministrationService.permission(
-            new UpdateTerritoryPermissionMessage(TERRITORY, UUID.randomUUID(), true),
+            new UpdateTerritoryPermissionMessage(TERRITORY, target, true),
             OWNER,
             context));
-    assertEquals("ServerName", repository.targetName.get());
+    assertEquals(
+        "ServerName",
+        repository.replacement.get().authorizedMembers().stream()
+            .filter(member -> member.playerId().equals(target))
+            .findFirst().orElseThrow().playerName());
 
-    repository.targetName.set("not-called");
+    repository.replacement.set(null);
     assertEquals(
         TerritoryManagementResult.SUCCESS,
         TerritoryAdministrationService.permission(
-            new UpdateTerritoryPermissionMessage(TERRITORY, UUID.randomUUID(), false),
+            new UpdateTerritoryPermissionMessage(TERRITORY, target, false),
             OWNER,
             context(repository, id -> { throw new AssertionError("directory called"); }, new AtomicInteger())));
-    assertNull(repository.targetName.get());
+    assertFalse(repository.replacement.get().authorizedMembers().stream()
+        .anyMatch(member -> member.playerId().equals(target)));
   }
 
   @Test
@@ -47,18 +53,21 @@ class TerritoryAdministrationServiceTest {
         TerritoryManagementResult.SUCCESS,
         TerritoryAdministrationService.transfer(
             new TransferTerritoryOwnershipMessage(TERRITORY, target), OWNER, context));
-    assertEquals(target, repository.target.get());
-    assertEquals("Target", repository.targetName.get());
+    assertEquals(target, repository.replacement.get().summary().ownerId());
+    assertEquals("Target", repository.replacement.get().summary().ownerName());
 
     assertEquals(
         TerritoryManagementResult.SUCCESS,
         TerritoryAdministrationService.rule(
             new UpdateTerritoryRuleMessage(
                 TERRITORY, RuleAction.OPEN_CONTAINER, RuleLevel.OWNER_ONLY),
-            OWNER,
+            target,
             context));
-    assertEquals(RuleAction.OPEN_CONTAINER, repository.action.get());
-    assertEquals(RuleLevel.OWNER_ONLY, repository.level.get());
+    assertEquals(
+        RuleLevel.OWNER_ONLY,
+        repository.replacement.get().rules().stream()
+            .filter(rule -> rule.action() == RuleAction.OPEN_CONTAINER)
+            .findFirst().orElseThrow().level());
   }
 
   @Test
@@ -104,7 +113,7 @@ class TerritoryAdministrationServiceTest {
         TerritoryManagementResult.PERSIST_FAILED,
         TerritoryAdministrationService.rule(
             new UpdateTerritoryRuleMessage(
-                TERRITORY, RuleAction.USE_ITEM, RuleLevel.MEMBERS),
+                TERRITORY, RuleAction.USE_ITEM, RuleLevel.EVERYONE),
             OWNER,
             context(dirty, id -> Optional.of("Target"), reports)));
   }
@@ -122,36 +131,19 @@ class TerritoryAdministrationServiceTest {
   private static class CapturingRepository
       implements TerritoryAdministrationService.Repository {
     final AtomicInteger mutations = new AtomicInteger();
-    final AtomicReference<UUID> target = new AtomicReference<>();
-    final AtomicReference<String> targetName = new AtomicReference<>();
-    final AtomicReference<RuleAction> action = new AtomicReference<>();
-    final AtomicReference<RuleLevel> level = new AtomicReference<>();
+    final AtomicReference<Owned> expected = new AtomicReference<>();
+    final AtomicReference<Owned> replacement = new AtomicReference<>();
+    final AtomicReference<Owned> current = new AtomicReference<>(owned());
     TerritoryAdministrationService.RepositoryResult result =
         TerritoryAdministrationService.RepositoryResult.SUCCESS;
 
-    public Owned find(UUID territoryId) { return owned(); }
+    public Owned find(UUID territoryId) { return current.get(); }
 
-    public TerritoryAdministrationService.RepositoryResult setPermission(
-        UUID territoryId, UUID expectedOwner, UUID targetId, String name, boolean allowed) {
+    public TerritoryAdministrationService.RepositoryResult apply(Owned before, Owned after) {
       mutations.incrementAndGet();
-      target.set(targetId);
-      targetName.set(name);
-      return result;
-    }
-
-    public TerritoryAdministrationService.RepositoryResult transfer(
-        UUID territoryId, UUID expectedOwner, UUID targetId, String name) {
-      mutations.incrementAndGet();
-      target.set(targetId);
-      targetName.set(name);
-      return result;
-    }
-
-    public TerritoryAdministrationService.RepositoryResult setRule(
-        UUID territoryId, UUID expectedOwner, RuleAction value, RuleLevel ruleLevel) {
-      mutations.incrementAndGet();
-      action.set(value);
-      level.set(ruleLevel);
+      expected.set(before);
+      replacement.set(after);
+      current.set(after);
       return result;
     }
   }

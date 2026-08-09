@@ -59,10 +59,13 @@ import com.mo.economy_system.network.TerritoryManagementWireCodec;
 import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
+import com.mo.economy_system.platform.network.WireBuffer;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -94,8 +97,8 @@ public final class Forge1201NetworkChannel {
             ClientFileCheckRequestMessage.class,
             EconomyMessages.CHECK.discriminator(),
             NetworkDirection.PLAY_TO_CLIENT)
-        .encoder(ClientFileCheckWireCodec::encodeRequest)
-        .decoder(ClientFileCheckWireCodec::decodeRequest)
+        .encoder(targetEncoder(ClientFileCheckWireCodec::encodeRequest))
+        .decoder(targetDecoder(ClientFileCheckWireCodec::decodeRequest))
         .consumerMainThread(Forge1201ClientFileCheckRequestHandler::handle)
         .add();
     CHANNEL
@@ -103,8 +106,8 @@ public final class Forge1201NetworkChannel {
             ClientFileCheckResultRequestMessage.class,
             EconomyMessages.CHECK_RESULT_REQUEST.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(ClientFileCheckWireCodec::encodeResultRequest)
-        .decoder(ClientFileCheckWireCodec::decodeResultRequest)
+        .encoder(targetEncoder(ClientFileCheckWireCodec::encodeResultRequest))
+        .decoder(targetDecoder(ClientFileCheckWireCodec::decodeResultRequest))
         .consumerMainThread(Forge1201ClientFileCheckResultRequestHandler::handle)
         .add();
     CHANNEL
@@ -112,15 +115,15 @@ public final class Forge1201NetworkChannel {
             ClientFileCheckResultResponseMessage.class,
             EconomyMessages.CHECK_RESULT_RESPONSE.discriminator(),
             NetworkDirection.PLAY_TO_CLIENT)
-        .encoder(ClientFileCheckWireCodec::encodeResultResponse)
-        .decoder(ClientFileCheckWireCodec::decodeResultResponse)
+        .encoder(targetEncoder(ClientFileCheckWireCodec::encodeResultResponse))
+        .decoder(targetDecoder(ClientFileCheckWireCodec::decodeResultResponse))
         .consumerMainThread(Forge1201ClientFileCheckResultResponseHandler::handle)
         .add();
-    CHANNEL.messageBuilder(CheckedFileTransferRequestMessage.class,EconomyMessages.GET.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeRequest).decoder(CheckedFileTransferWireCodec::decodeRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::request).add();
-    CHANNEL.messageBuilder(CheckedFileTransferControlRequestMessage.class,EconomyMessages.GET_RESULT_REQUEST.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(CheckedFileTransferWireCodec::encodeControlRequest).decoder(CheckedFileTransferWireCodec::decodeControlRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlRequest).add();
-    CHANNEL.messageBuilder(CheckedFileTransferControlResponseMessage.class,EconomyMessages.GET_RESULT_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeControlResponse).decoder(CheckedFileTransferWireCodec::decodeControlResponse).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlResponse).add();
-    CHANNEL.messageBuilder(CheckedFileTransferChunkRequestMessage.class,EconomyMessages.CHUNK.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(CheckedFileTransferWireCodec::encodeChunkRequest).decoder(CheckedFileTransferWireCodec::decodeChunkRequest).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkRequest).add();
-    CHANNEL.messageBuilder(CheckedFileTransferChunkResponseMessage.class,EconomyMessages.CHUNK_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(CheckedFileTransferWireCodec::encodeChunkResponse).decoder(CheckedFileTransferWireCodec::decodeChunkResponse).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkResponse).add();
+    CHANNEL.messageBuilder(CheckedFileTransferRequestMessage.class,EconomyMessages.GET.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(targetEncoder(CheckedFileTransferWireCodec::encodeRequest)).decoder(targetDecoder(CheckedFileTransferWireCodec::decodeRequest)).consumerMainThread(Forge1201CheckedFileTransferHandlers::request).add();
+    CHANNEL.messageBuilder(CheckedFileTransferControlRequestMessage.class,EconomyMessages.GET_RESULT_REQUEST.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(targetEncoder(CheckedFileTransferWireCodec::encodeControlRequest)).decoder(targetDecoder(CheckedFileTransferWireCodec::decodeControlRequest)).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlRequest).add();
+    CHANNEL.messageBuilder(CheckedFileTransferControlResponseMessage.class,EconomyMessages.GET_RESULT_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(targetEncoder(CheckedFileTransferWireCodec::encodeControlResponse)).decoder(targetDecoder(CheckedFileTransferWireCodec::decodeControlResponse)).consumerMainThread(Forge1201CheckedFileTransferHandlers::controlResponse).add();
+    CHANNEL.messageBuilder(CheckedFileTransferChunkRequestMessage.class,EconomyMessages.CHUNK.discriminator(),NetworkDirection.PLAY_TO_SERVER).encoder(targetEncoder(CheckedFileTransferWireCodec::encodeChunkRequest)).decoder(targetDecoder(CheckedFileTransferWireCodec::decodeChunkRequest)).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkRequest).add();
+    CHANNEL.messageBuilder(CheckedFileTransferChunkResponseMessage.class,EconomyMessages.CHUNK_RESPONSE.discriminator(),NetworkDirection.PLAY_TO_CLIENT).encoder(targetEncoder(CheckedFileTransferWireCodec::encodeChunkResponse)).decoder(targetDecoder(CheckedFileTransferWireCodec::decodeChunkResponse)).consumerMainThread(Forge1201CheckedFileTransferHandlers::chunkResponse).add();
 
     CHANNEL
         .messageBuilder(
@@ -308,8 +311,8 @@ public final class Forge1201NetworkChannel {
             TeleportToTerritoryMessage.class,
             EconomyMessages.TELEPORT_TO_TERRITORY.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryTeleportWireCodec::encode)
-        .decoder(TerritoryTeleportWireCodec::decode)
+        .encoder(targetEncoder(TerritoryTeleportWireCodec::encode))
+        .decoder(targetDecoder(TerritoryTeleportWireCodec::decode))
         .consumerMainThread(Forge1201TerritoryTeleportHandler::handle)
         .add();
     CHANNEL
@@ -317,8 +320,8 @@ public final class Forge1201NetworkChannel {
             InvitePlayerMessage.class,
             EconomyProtocol.INVITE_PLAYER.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryInviteWireCodec::encode)
-        .decoder(TerritoryInviteWireCodec::decode)
+        .encoder(targetEncoder(TerritoryInviteWireCodec::encode))
+        .decoder(targetDecoder(TerritoryInviteWireCodec::decode))
         .consumerMainThread(Forge1201TerritoryInviteHandler::handle)
         .add();
     CHANNEL
@@ -326,8 +329,8 @@ public final class Forge1201NetworkChannel {
             RemoveTerritoryMessage.class,
             EconomyMessages.REMOVE_TERRITORY.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryRemovalWireCodec::encode)
-        .decoder(TerritoryRemovalWireCodec::decode)
+        .encoder(targetEncoder(TerritoryRemovalWireCodec::encode))
+        .decoder(targetDecoder(TerritoryRemovalWireCodec::decode))
         .consumerMainThread(Forge1201TerritoryRemovalHandler::handle)
         .add();
     CHANNEL
@@ -335,8 +338,8 @@ public final class Forge1201NetworkChannel {
             RemoveTerritoryMemberMessage.class,
             EconomyMessages.REMOVE_PLAYER.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryMemberRemovalWireCodec::encode)
-        .decoder(TerritoryMemberRemovalWireCodec::decode)
+        .encoder(targetEncoder(TerritoryMemberRemovalWireCodec::encode))
+        .decoder(targetDecoder(TerritoryMemberRemovalWireCodec::decode))
         .consumerMainThread(Forge1201TerritoryMemberRemovalHandler::handle)
         .add();
 
@@ -345,8 +348,8 @@ public final class Forge1201NetworkChannel {
             DeliveryBoxDataRequestMessage.class,
             EconomyMessages.DELIVERY_BOX_DATA_REQUEST.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(DeliveryBoxWireCodec::encodeRequest)
-        .decoder(DeliveryBoxWireCodec::decodeRequest)
+        .encoder(targetEncoder(DeliveryBoxWireCodec::encodeRequest))
+        .decoder(targetDecoder(DeliveryBoxWireCodec::decodeRequest))
         .consumerMainThread(Forge1201DeliveryBoxHandlers::request)
         .add();
     CHANNEL
@@ -354,8 +357,8 @@ public final class Forge1201NetworkChannel {
             DeliveryBoxDataResponseMessage.class,
             EconomyMessages.DELIVERY_BOX_DATA_RESPONSE.discriminator(),
             NetworkDirection.PLAY_TO_CLIENT)
-        .encoder(DeliveryBoxWireCodec::encodeResponse)
-        .decoder(DeliveryBoxWireCodec::decodeResponse)
+        .encoder(targetEncoder(DeliveryBoxWireCodec::encodeResponse))
+        .decoder(targetDecoder(DeliveryBoxWireCodec::decodeResponse))
         .consumerMainThread(Forge1201DeliveryBoxHandlers::response)
         .add();
     CHANNEL
@@ -363,8 +366,8 @@ public final class Forge1201NetworkChannel {
             DeliveryBoxClaimMessage.class,
             EconomyMessages.DELIVERY_BOX_CLAIM_ITEM.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(DeliveryBoxWireCodec::encodeClaim)
-        .decoder(DeliveryBoxWireCodec::decodeClaim)
+        .encoder(targetEncoder(DeliveryBoxWireCodec::encodeClaim))
+        .decoder(targetDecoder(DeliveryBoxWireCodec::decodeClaim))
         .consumerMainThread(Forge1201DeliveryBoxHandlers::claim)
         .add();
 
@@ -393,8 +396,8 @@ public final class Forge1201NetworkChannel {
             ModifyTerritoryModeMessage.class,
             EconomyMessages.MODIFY_MODE.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeModifyMode)
-        .decoder(TerritoryManagementWireCodec::decodeModifyMode)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeModifyMode))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeModifyMode))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::modifyMode)
         .add();
     CHANNEL
@@ -402,8 +405,8 @@ public final class Forge1201NetworkChannel {
             UnlockTerritoryBuffMessage.class,
             EconomyMessages.UNLOCK_TERRITORY_BUFF.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeUnlockBuff)
-        .decoder(TerritoryManagementWireCodec::decodeUnlockBuff)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeUnlockBuff))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeUnlockBuff))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::unlockBuff)
         .add();
     CHANNEL
@@ -411,8 +414,8 @@ public final class Forge1201NetworkChannel {
             UpgradeTerritoryBuffMessage.class,
             EconomyMessages.UPGRADE_TERRITORY_BUFF.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeUpgradeBuff)
-        .decoder(TerritoryManagementWireCodec::decodeUpgradeBuff)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeUpgradeBuff))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeUpgradeBuff))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::upgradeBuff)
         .add();
     CHANNEL
@@ -420,8 +423,8 @@ public final class Forge1201NetworkChannel {
             SingleTerritoryDataRequestMessage.class,
             EconomyMessages.SINGLE_TERRITORY_DATA_REQUEST.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeSingleRequest)
-        .decoder(TerritoryManagementWireCodec::decodeSingleRequest)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeSingleRequest))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeSingleRequest))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::singleRequest)
         .add();
     CHANNEL
@@ -429,8 +432,8 @@ public final class Forge1201NetworkChannel {
             SingleTerritoryDataResponseMessage.class,
             EconomyMessages.SINGLE_TERRITORY_DATA_RESPONSE.discriminator(),
             NetworkDirection.PLAY_TO_CLIENT)
-        .encoder(TerritoryManagementWireCodec::encodeSingleResponse)
-        .decoder(TerritoryManagementWireCodec::decodeSingleResponse)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeSingleResponse))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeSingleResponse))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::singleResponse)
         .add();
     CHANNEL
@@ -438,8 +441,8 @@ public final class Forge1201NetworkChannel {
             UpdateTerritoryPermissionMessage.class,
             EconomyMessages.UPDATE_TERRITORY_PERMISSION.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodePermission)
-        .decoder(TerritoryManagementWireCodec::decodePermission)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodePermission))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodePermission))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::permission)
         .add();
     CHANNEL
@@ -447,8 +450,8 @@ public final class Forge1201NetworkChannel {
             TransferTerritoryOwnershipMessage.class,
             EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeTransfer)
-        .decoder(TerritoryManagementWireCodec::decodeTransfer)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeTransfer))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeTransfer))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::transfer)
         .add();
     CHANNEL
@@ -456,8 +459,8 @@ public final class Forge1201NetworkChannel {
             UpdateTerritoryRuleMessage.class,
             EconomyMessages.UPDATE_TERRITORY_RULE.discriminator(),
             NetworkDirection.PLAY_TO_SERVER)
-        .encoder(TerritoryManagementWireCodec::encodeRule)
-        .decoder(TerritoryManagementWireCodec::decodeRule)
+        .encoder(targetEncoder(TerritoryManagementWireCodec::encodeRule))
+        .decoder(targetDecoder(TerritoryManagementWireCodec::decodeRule))
         .consumerMainThread(Forge1201TerritoryManagementHandlers::rule)
         .add();
 
@@ -931,6 +934,16 @@ public final class Forge1201NetworkChannel {
       return false;
     }
     return size == 0 || (long) offset + size <= total;
+  }
+
+  private static <T> BiConsumer<T, FriendlyByteBuf> targetEncoder(
+      BiConsumer<T, WireBuffer> encoder) {
+    return (message, buffer) -> encoder.accept(message, Forge1201WireBuffer.wrap(buffer));
+  }
+
+  private static <T> Function<FriendlyByteBuf, T> targetDecoder(
+      Function<WireBuffer, T> decoder) {
+    return buffer -> decoder.apply(Forge1201WireBuffer.wrap(buffer));
   }
 
   private static void requireRegistered() {

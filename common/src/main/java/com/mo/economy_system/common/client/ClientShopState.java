@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Atomically published, immutable client view of the system-shop catalog. */
 public final class ClientShopState {
     private static final AtomicReference<Snapshot> CURRENT =
-            new AtomicReference<>(new Snapshot(List.of()));
+            new AtomicReference<>(new Snapshot(0, List.of()));
 
     private ClientShopState() {
     }
@@ -21,11 +21,20 @@ public final class ClientShopState {
 
     public static void update(ShopDataResponseMessage message) {
         Objects.requireNonNull(message, "message");
-        CURRENT.set(new Snapshot(message.items()));
+        CURRENT.updateAndGet(previous -> new Snapshot(nextRevision(previous.revision()), message.items()));
     }
 
-    public record Snapshot(List<ShopItemSnapshot> items) {
+    private static long nextRevision(long revision) {
+        if (revision == Long.MAX_VALUE) throw new IllegalStateException("shop revision exhausted");
+        return revision + 1;
+    }
+
+    public record Snapshot(long revision, List<ShopItemSnapshot> items) {
+        public Snapshot(List<ShopItemSnapshot> items) {
+            this(0, items);
+        }
         public Snapshot {
+            if (revision < 0) throw new IllegalArgumentException("revision");
             items = List.copyOf(Objects.requireNonNull(items, "items"));
         }
     }

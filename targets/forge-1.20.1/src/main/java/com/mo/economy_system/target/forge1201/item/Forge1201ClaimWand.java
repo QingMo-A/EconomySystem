@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.item;
 
 import com.mo.economy_system.target.forge1201.network.Forge1201TerritoryModifySessions;
+import com.mo.economy_system.target.forge1201.network.Forge1201TerritoryClaimSessions;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -17,8 +18,9 @@ final class Forge1201ClaimWand extends Item {
     if (!(context.getPlayer() instanceof ServerPlayer player)) {
       return InteractionResult.sidedSuccess(context.getLevel().isClientSide());
     }
-    return Forge1201TerritoryModifySessions.select(player, context.getClickedPos())
-        ? InteractionResult.SUCCESS
-        : InteractionResult.FAIL;
+    boolean selected = Forge1201TerritoryModifySessions.hasSession(player)
+        ? Forge1201TerritoryModifySessions.select(player, context.getClickedPos())
+        : Forge1201TerritoryClaimSessions.select(player, context.getClickedPos());
+    return selected ? InteractionResult.SUCCESS : InteractionResult.FAIL;
   }
 }

@@ -27,7 +27,7 @@ class NeoForge1211TerritoryMemberRemovalProtocolTest {
     FriendlyByteBuf shared = new FriendlyByteBuf(Unpooled.buffer());
     RegistryFriendlyByteBuf target = new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
     try {
-      TerritoryMemberRemovalWireCodec.encode(message, shared);
+      TerritoryMemberRemovalWireCodec.encode(message, NeoForge1211WireBuffer.wrap(shared));
       NeoForge1211MessageCodecs.codec(EconomyMessages.REMOVE_PLAYER).encode(message, target);
       assertEquals(32, target.readableBytes());
       assertEquals(shared, target);

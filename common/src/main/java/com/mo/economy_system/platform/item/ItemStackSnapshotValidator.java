@@ -1,11 +1,8 @@
 package com.mo.economy_system.platform.item;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import com.mo.economy_system.platform.nbt.NbtData;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
 import java.util.Map;
 
 /** Loader-neutral structural and size validation shared by every snapshot boundary. */
@@ -35,7 +32,7 @@ public final class ItemStackSnapshotValidator {
         if (snapshot.dyedColor().isPresent() && (snapshot.dyedColor().getAsInt() < 0 || snapshot.dyedColor().getAsInt() > 0xFFFFFF)) {
             return failure(ItemStackSnapshotError.INVALID_SCHEMA, "dyedColor outside RGB range");
         }
-        CompoundTag customData = snapshot.customData();
+        NbtData.Compound customData = snapshot.customData();
         if (maxDepth(customData) > ItemStackSnapshotLimits.MAX_CUSTOM_DATA_DEPTH) return limit("customData depth");
         if (estimatedBytes(customData) > ItemStackSnapshotLimits.MAX_CUSTOM_DATA_BYTES) return limit("customData bytes");
         if (estimatedBytes(ItemStackSnapshotCodec.encodeUnchecked(snapshot)) > ItemStackSnapshotLimits.MAX_ENCODED_SNAPSHOT_BYTES) {
@@ -44,27 +41,50 @@ public final class ItemStackSnapshotValidator {
         return ItemStackSnapshotResult.success(snapshot);
     }
 
-    public static int estimatedBytes(Tag tag) {
-        return tag.toString().getBytes(StandardCharsets.UTF_8).length;
+    public static int estimatedBytes(NbtData data) {
+        return estimate(data).getBytes(StandardCharsets.UTF_8).length;
     }
 
-    public static int maxDepth(Tag root) {
-        int deepest = 0;
-        ArrayDeque<TagDepth> pending = new ArrayDeque<>();
-        pending.push(new TagDepth(root, 1));
-        while (!pending.isEmpty()) {
-            TagDepth current = pending.pop();
-            deepest = Math.max(deepest, current.depth);
-            if (current.tag instanceof CompoundTag compound) {
-                for (String key : compound.getAllKeys()) {
-                    Tag child = compound.get(key);
-                    if (child != null) pending.push(new TagDepth(child, current.depth + 1));
-                }
-            } else if (current.tag instanceof ListTag list) {
-                for (Tag child : list) pending.push(new TagDepth(child, current.depth + 1));
-            }
+    public static int maxDepth(NbtData root) {
+        if (root instanceof NbtData.Compound compound) {
+            int deepest = 1;
+            for (NbtData child : compound.values().values()) deepest = Math.max(deepest, 1 + maxDepth(child));
+            return deepest;
         }
-        return deepest;
+        if (root instanceof NbtData.ListValue list) {
+            int deepest = 1;
+            for (NbtData child : list.values()) deepest = Math.max(deepest, 1 + maxDepth(child));
+            return deepest;
+        }
+        return 1;
+    }
+
+    private static String estimate(NbtData data) {
+        if (data instanceof NbtData.ByteValue value) return value.value() + "b";
+        if (data instanceof NbtData.ShortValue value) return value.value() + "s";
+        if (data instanceof NbtData.IntValue value) return Integer.toString(value.value());
+        if (data instanceof NbtData.LongValue value) return value.value() + "L";
+        if (data instanceof NbtData.FloatValue value) return value.value() + "f";
+        if (data instanceof NbtData.DoubleValue value) return value.value() + "d";
+        if (data instanceof NbtData.StringValue value) return '"' + escaped(value.value()) + '"';
+        if (data instanceof NbtData.ByteArrayValue value) return "[B;" + value.length() + "]";
+        if (data instanceof NbtData.IntArrayValue value) return "[I;" + value.length() + "]";
+        if (data instanceof NbtData.LongArrayValue value) return "[L;" + value.length() + "]";
+        if (data instanceof NbtData.ListValue list) {
+            StringBuilder result = new StringBuilder("[");
+            for (NbtData child : list.values()) result.append(estimate(child)).append(',');
+            return result.append(']').toString();
+        }
+        NbtData.Compound compound = (NbtData.Compound) data;
+        StringBuilder result = new StringBuilder("{");
+        for (Map.Entry<String, NbtData> entry : compound.values().entrySet()) {
+            result.append(escaped(entry.getKey())).append(':').append(estimate(entry.getValue())).append(',');
+        }
+        return result.append('}').toString();
+    }
+
+    private static String escaped(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static ItemStackSnapshotResult<Boolean> validateEnchantments(Map<String, Integer> values, int maximum, String field) {
@@ -89,6 +109,4 @@ public final class ItemStackSnapshotValidator {
     private static <T, U> ItemStackSnapshotResult<T> copyFailure(ItemStackSnapshotResult<U> result) {
         return failure(result.error().orElseThrow(), result.detail());
     }
-
-    private record TagDepth(Tag tag, int depth) {}
 }

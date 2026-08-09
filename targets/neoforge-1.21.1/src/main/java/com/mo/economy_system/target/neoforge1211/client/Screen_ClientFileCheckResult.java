@@ -1,222 +1,195 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
-import com.mo.economy_system.common.check.ClientFileCheckLayout;
 import com.mo.economy_system.common.check.ClientFileCheckResult;
-import com.mo.economy_system.common.check.ClientFileCheckResultController;
 import com.mo.economy_system.common.check.ClientFileCheckScanner;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
-import java.util.List;
-import java.util.Locale;
+import com.mo.economy_system.ui.check.CheckResultAction;
+import com.mo.economy_system.ui.check.CheckResultController;
+import com.mo.economy_system.ui.check.CheckResultEvent;
+import com.mo.economy_system.ui.check.CheckResultLayout;
+import com.mo.economy_system.ui.check.CheckResultPort;
+import com.mo.economy_system.ui.check.CheckResultView;
+import com.mo.economy_system.ui.geometry.UiScale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+/** NeoForge shell for the common checked-file result state and layout. */
 public final class Screen_ClientFileCheckResult extends Screen {
   private final ClientFileCheckResultResponseMessage message;
-  private final ClientFileCheckResult result;
-  private final ClientFileCheckResultController controller;
+  private final CheckResultController controller;
   private ClientFileCheckTaskCoordinator.TaskToken task;
   private EditBox search;
-  private Button retry;
-  private int offset;
 
   public Screen_ClientFileCheckResult(
       ClientFileCheckResultResponseMessage message, ClientFileCheckResult result) {
     super(Component.translatable("screen.check_result.title"));
     this.message = message;
-    this.result = result;
-    this.controller = new ClientFileCheckResultController(result);
+    controller = new CheckResultController(message.targetPlayerName(), result, new Port());
   }
 
   @Override
   protected void init() {
-    ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, true);
-    ClientFileCheckLayout.Box box = layout.search();
-    if (box != null) {
-      search =
-          new EditBox(
-              font,
-              box.x(),
-              box.y(),
-              box.width(),
-              box.height(),
-              Component.translatable("screen.check_result.search"));
-      search.setHint(Component.translatable("screen.check_result.search"));
-      search.setResponder(ignored -> offset = 0);
-      addRenderableWidget(search);
-    }
-    if (layout.retry() != null && controller.needsComparison()) {
-      retry =
-          addRenderableWidget(
-              Button.builder(
-                      Component.translatable("button.check_result.retry"), ignored -> retry())
-                  .bounds(
-                      layout.retry().x(),
-                      layout.retry().y(),
-                      layout.retry().width(),
-                      layout.retry().height())
-                  .build());
-      retry.visible = false;
-    }
-    if (!controller.needsComparison() || task != null) return;
-    submit(controller.generation());
-  }
-
-  private void submit(long generation) {
-    Minecraft minecraft = Minecraft.getInstance();
-    ClientFileCheckTaskCoordinator coordinator = NeoForge1211ClientFileCheckClientRuntime.tasks();
-    ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
-    ClientFileCheckTaskCoordinator.RequestIdentity identity =
-        new ClientFileCheckTaskCoordinator.RequestIdentity(
-            message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
-    task =
-        session == null
-            ? null
-            : coordinator.submit(
-                session,
-                identity,
-                generation,
-                () ->
-                    new ClientFileCheckScanner()
-                        .scan(minecraft.gameDirectory.toPath(), message.checkType()),
-                minecraft::execute,
-                token ->
-                    minecraft.screen == this
-                        && minecraft.getConnection() == session.connectionIdentity()
-                        && minecraft.player != null
-                        && minecraft.player.getUUID().equals(session.localPlayerId())
-                        && controller.generation() == token.controllerGeneration(),
-                (callbackToken, local) -> {
-                  controller.acceptLocalResult(generation, local);
-                  task = null;
-                },
-                (callbackToken, failure) -> {
-                  controller.failed(generation);
-                  task = null;
-                },
-                (abandonedToken, failure) -> controller.failed(generation));
-    if (task == null) controller.busy(generation);
-  }
-
-  private void retry() {
-    if (Minecraft.getInstance().screen != this) return;
-    long generation = controller.retry();
-    if (generation < 0) return;
-    if (task != null) task.cancel();
-    task = null;
-    submit(generation);
+    String value = search == null ? controller.state().filter() : search.getValue();
+    CheckResultLayout.Layout layout = commonLayout();
+    UiScale scale = layout.scale();
+    search =
+        new EditBox(
+            font,
+            Math.round(layout.search().x() * scale.value()),
+            Math.round(layout.search().y() * scale.value()),
+            Math.max(1, Math.round(layout.search().width() * scale.value())),
+            Math.max(1, Math.round(layout.search().height() * scale.value())),
+            Component.translatable("screen.check_result.search"));
+    search.setMaxLength(64);
+    search.setHint(Component.translatable("screen.check_result.search"));
+    search.setValue(value);
+    search.setResponder(text -> controller.handle(new CheckResultEvent.FilterChanged(text)));
+    addRenderableWidget(search);
+    controller.handle(new CheckResultEvent.Initialize());
   }
 
   @Override
-  public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
-    int visible = ClientFileCheckLayout.visibleRows(height, retry != null);
-    int size = filtered().size();
-    offset = ClientFileCheckLayout.clampOffset(offset - (int) Math.signum(deltaY), size, visible);
-    return true;
+  public void tick() {
+    super.tick();
+    controller.pollNavigation().ifPresent(
+        navigation -> {
+          if (minecraft != null && minecraft.screen == this) minecraft.setScreen(null);
+        });
   }
 
   @Override
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    CheckResultLayout.Layout layout = commonLayout();
+    UiScale scale = layout.scale();
+    graphics.pose().pushPose();
+    graphics.pose().scale(scale.value(), scale.value(), 1.0f);
+    CheckResultView.render(
+        new NeoForge1211UiRenderer(graphics, font),
+        controller.state(),
+        layout,
+        scale.toVirtualX(mouseX),
+        scale.toVirtualY(mouseY));
+    graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
-    graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFF);
-    ClientFileCheckLayout.Result layout = ClientFileCheckLayout.result(width, height, retry != null);
-    ClientFileCheckLayout.Box status = layout.status();
-    ClientFileCheckResultController.LocalState localState = controller.localState();
-    if (retry != null)
-      retry.visible = layout.retry() != null && (localState == ClientFileCheckResultController.LocalState.BUSY
-          || localState == ClientFileCheckResultController.LocalState.FAILED
-          || localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE);
-    if (status != null) {
-    graphics.drawString(
-        font,
-        Component.translatable("screen.check_result.target", message.targetPlayerName()),
-        12,
-        38,
-        0xDDDDDD);
-    graphics.drawString(
-        font,
-        Component.translatable("screen.check_result.type", message.checkType().id()),
-        12,
-        48,
-        0xDDDDDD);
-    graphics.drawString(
-        font,
-        Component.translatable(
-            "screen.check_result.status_" + result.status().name().toLowerCase(Locale.ROOT)),
-        status.x(), status.y(),
-        0xCCCCCC);
-    int lineY = status.y() + 36;
-    if (controller.needsComparison() && localState != ClientFileCheckResultController.LocalState.READY)
-      graphics.drawString(
-          font,
-          Component.translatable(
-              switch (localState) {
-                case LOADING -> "screen.check_result.loading";
-                case BUSY -> "screen.check_result.local_scan_busy";
-                case FAILED -> "screen.check_result.local_scan_failed";
-                case READY_INCOMPLETE -> "screen.check_result.local_incomplete";
-                default -> "screen.check_result.loading";
-              }),
-          status.x(), lineY,
-          0xAAAAAA);
-    if (result.status() == com.mo.economy_system.common.check.ClientFileCheckStatus.TRUNCATED)
-      graphics.drawString(
-            font, Component.translatable("screen.check_result.incomplete"), status.x(), status.y() + 48, 0xCCAA66);
-    graphics.drawString(
-        font,
-        Component.translatable("screen.check_result.counts", result.files().size(), result.skipped().size(), controller.localSkipped().size()),
-        status.x(), status.y() + 12,
-        0xCCCCCC);
-    if (result.errorCode() != null)
-      graphics.drawString(
-          font,
-          Component.translatable(
-              "screen.check_result.error",
-              Component.translatable(
-                  "screen.check_result.error_code." + result.errorCode().toLowerCase(Locale.ROOT))),
-          status.x(), status.y() + 24,
-          0xCC7777);
-    if (controller.localErrorCode() != null)
-      graphics.drawString(font, Component.translatable("screen.check_result.local_error",
-          Component.translatable("screen.check_result.error_code." + controller.localErrorCode().toLowerCase(Locale.ROOT))),
-          status.x(), status.y() + 60, 0xCC7777);
-    if (localState == ClientFileCheckResultController.LocalState.READY_INCOMPLETE)
-      graphics.drawString(font, Component.translatable("screen.check_result.local_comparison_warning"),
-          status.x(), status.y() + 72, 0xCCAA66);
-    }
-    List<ClientFileCheckResultController.UiRow> visibleRows = filtered();
-    ClientFileCheckLayout.Box rows = layout.rows();
-    if (rows == null) return;
-    int visible = rows.height() / 12;
-    int rowY = rows.y();
-    for (int i = offset; i < visibleRows.size() && i < offset + visible; i++) {
-      ClientFileCheckResultController.UiRow row = visibleRows.get(i);
-      String key =
-          row.type() == ClientFileCheckResultController.RowType.SKIPPED
-              ? "screen.check_result.skip_reason." + row.reasonId()
-              : "screen.check_result." + row.reasonId();
-      String line = row.fileName() + "  " + Component.translatable(key).getString();
-      graphics.drawString(
-          font,
-          font.plainSubstrByWidth(line, Math.max(40, width - 24)),
-          rows.x(),
-          rowY + (i - offset) * 12,
-          0xAAAAAA);
-    }
   }
 
-  private List<ClientFileCheckResultController.UiRow> filtered() {
-    return controller.filtered(search == null ? "" : search.getValue());
+  @Override
+  public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+    CheckResultLayout.Layout layout = commonLayout();
+    int x = layout.scale().toVirtualX(mouseX);
+    int y = layout.scale().toVirtualY(mouseY);
+    if (layout.retry().contains(x, y) && controller.state().can(CheckResultAction.RETRY)) {
+      controller.handle(new CheckResultEvent.ActionClicked(CheckResultAction.RETRY));
+      return true;
+    }
+    if (layout.back().contains(x, y)) {
+      controller.handle(new CheckResultEvent.ActionClicked(CheckResultAction.BACK));
+      return true;
+    }
+    return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  @Override
+  public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+    if (deltaY != 0) {
+      controller.handle(new CheckResultEvent.Scroll(deltaY < 0 ? 1 : -1));
+      return true;
+    }
+    return super.mouseScrolled(mouseX, mouseY, deltaX, deltaY);
+  }
+
+  @Override
+  public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    if (keyCode == 256) {
+      onClose();
+      return true;
+    }
+    return super.keyPressed(keyCode, scanCode, modifiers);
+  }
+
+  @Override
+  public void onClose() {
+    controller.handle(new CheckResultEvent.ActionClicked(CheckResultAction.BACK));
+    if (minecraft != null && minecraft.screen == this) minecraft.setScreen(null);
   }
 
   @Override
   public void removed() {
-    controller.invalidate();
-    if (task != null) task.cancel();
+    controller.dispose();
     super.removed();
+  }
+
+  @Override
+  public boolean isPauseScreen() {
+    return false;
+  }
+
+  @Override
+  public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
+
+  private CheckResultLayout.Layout commonLayout() {
+    CheckResultLayout.Layout layout = CheckResultLayout.calculate(width, height, controller.state());
+    if (layout.visibleRows() != controller.state().pageSize()) {
+      controller.handle(new CheckResultEvent.ViewportChanged(layout.visibleRows()));
+      layout = CheckResultLayout.calculate(width, height, controller.state());
+    }
+    return layout;
+  }
+
+  private final class Port implements CheckResultPort {
+    @Override
+    public void startLocalScan(long generation) {
+      if (task != null) task.cancel();
+      task = null;
+      Minecraft minecraft = Minecraft.getInstance();
+      ClientFileCheckTaskCoordinator coordinator = NeoForge1211ClientFileCheckClientRuntime.tasks();
+      ClientFileCheckTaskCoordinator.Session session = coordinator.currentSession();
+      ClientFileCheckTaskCoordinator.RequestIdentity identity =
+          new ClientFileCheckTaskCoordinator.RequestIdentity(
+              message.targetPlayerId(), message.requesterPlayerId(), message.checkType());
+      task =
+          session == null
+              ? null
+              : coordinator.submit(
+                  session,
+                  identity,
+                  generation,
+                  () -> new ClientFileCheckScanner().scan(minecraft.gameDirectory.toPath(), message.checkType()),
+                  minecraft::execute,
+                  token ->
+                      minecraft.screen == Screen_ClientFileCheckResult.this
+                          && minecraft.getConnection() == session.connectionIdentity()
+                          && minecraft.player != null
+                          && minecraft.player.getUUID().equals(session.localPlayerId())
+                          && controller.generation() == token.controllerGeneration(),
+                  (callbackToken, local) -> {
+                    if (task == callbackToken) task = null;
+                    controller.handle(
+                        new CheckResultEvent.LocalScanCompleted(
+                            callbackToken.controllerGeneration(), local));
+                  },
+                  (callbackToken, failure) -> {
+                    if (task == callbackToken) task = null;
+                    controller.handle(
+                        new CheckResultEvent.LocalScanFailed(callbackToken.controllerGeneration()));
+                  },
+                  (abandonedToken, failure) -> {
+                    if (task == abandonedToken) task = null;
+                    controller.handle(
+                        new CheckResultEvent.LocalScanFailed(abandonedToken.controllerGeneration()));
+                  });
+      if (task == null) controller.handle(new CheckResultEvent.LocalScanBusy(generation));
+    }
+
+    @Override
+    public void cancelLocalScan() {
+      if (task != null) task.cancel();
+      task = null;
+    }
   }
 }

@@ -3,7 +3,6 @@ package com.mo.economy_system.target.neoforge1211.protocol;
 import com.mo.economy_system.EconomySystem;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
-import com.mo.economy_system.common.network.SingleTerritoryDataResponseKind;
 import com.mo.economy_system.common.network.SingleTerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
@@ -16,18 +15,17 @@ import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
 import com.mo.economy_system.common.territory.TerritoryManagementResult;
 import com.mo.economy_system.common.territory.TerritoryModifyModeService;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
-import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryManager;
 import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
-import com.mo.economy_system.item.items.Item_ClaimWand;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
-import com.mo.economy_system.screen.territory_system.Screen_TerritoryBuff;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211SingleTerritoryClientState;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryDetailScreen;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryManageScreen;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211BuffManageScreen;
+import com.mo.economy_system.target.neoforge1211.territory.NeoForge1211TerritorySelectionRuntime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +55,8 @@ public final class NeoForge1211TerritoryManagementHandlers {
             return territory == null ? null : TerritoryNetworkSnapshots.summary(territory);
           },
           territoryId -> {
-            Item_ClaimWand.startResizing(player, territoryId);
-            return Item_ClaimWand.isResizing(player);
+            NeoForge1211TerritorySelectionRuntime.startResize(player, territoryId);
+            return NeoForge1211TerritorySelectionRuntime.hasResize(player);
           });
       if (result != TerritoryManagementResult.SUCCESS) feedback(player, result);
     });
@@ -116,22 +114,17 @@ public final class NeoForge1211TerritoryManagementHandlers {
       SingleTerritoryDataResponseMessage message, IPayloadContext context) {
     context.enqueueWork(() -> {
       Minecraft minecraft = Minecraft.getInstance();
+      NeoForge1211SingleTerritoryClientState.apply(message);
       if (minecraft.screen instanceof NeoForge1211TerritoryManageScreen screen) {
-        NeoForge1211SingleTerritoryClientState.apply(message);
         screen.applyResponse(message.requestId(), message);
         return;
       }
-      if (!(minecraft.screen instanceof Screen_TerritoryBuff screen)) return;
-      if (message.kind() != SingleTerritoryDataResponseKind.DATA) {
-        screen.applyTerritoryResponse(message.requestId(), null);
+      if (minecraft.screen instanceof NeoForge1211BuffManageScreen) {
         return;
       }
-      try {
-        screen.applyTerritoryResponse(
-            message.requestId(), TerritoryNetworkSnapshots.restoreOwned(message.territory().orElseThrow()));
-      } catch (RuntimeException failure) {
-        EconomySystem.LOGGER.error("Single territory restore failed request={}", message.requestId(), failure);
-        screen.applyTerritoryResponse(message.requestId(), null);
+      if (minecraft.screen instanceof NeoForge1211TerritoryDetailScreen screen) {
+        screen.applyResponse(message.requestId(), message);
+        return;
       }
     });
   }
@@ -189,20 +182,8 @@ public final class NeoForge1211TerritoryManagementHandlers {
       return territory == null ? null : TerritoryNetworkSnapshots.owned(territory);
     }
 
-    public TerritoryAdministrationService.RepositoryResult setPermission(
-        UUID territoryId, UUID owner, UUID target, String name, boolean allowed) {
-      return TerritoryManager.setTerritoryPermissionAuthoritatively(
-          territoryId, owner, target, name, allowed);
-    }
-
-    public TerritoryAdministrationService.RepositoryResult transfer(
-        UUID territoryId, UUID owner, UUID target, String name) {
-      return TerritoryManager.transferTerritoryAuthoritatively(territoryId, owner, target, name);
-    }
-
-    public TerritoryAdministrationService.RepositoryResult setRule(
-        UUID territoryId, UUID owner, RuleAction action, RuleLevel level) {
-      return TerritoryManager.setTerritoryRuleAuthoritatively(territoryId, owner, action, level);
+    public TerritoryAdministrationService.RepositoryResult apply(Owned expected, Owned replacement) {
+      return TerritoryManager.applyTerritoryAdministrationAuthoritatively(expected, replacement);
     }
   }
 
@@ -219,9 +200,10 @@ public final class NeoForge1211TerritoryManagementHandlers {
         String buffId,
         boolean unlocked,
         int level,
-        TerritoryBuffTransactionService.Action action) {
+        boolean newUnlocked,
+        int newLevel) {
       return TerritoryManager.mutateTerritoryBuffAuthoritatively(
-          territoryId, owner, buffId, unlocked, level, action);
+          territoryId, owner, buffId, unlocked, level, newUnlocked, newLevel);
     }
   }
 
@@ -272,18 +254,27 @@ public final class NeoForge1211TerritoryManagementHandlers {
     public boolean debitExperience(int levels) {
       int before = player.experienceLevel;
       if (levels < 0 || before < levels) return false;
+      RuntimeException mutationFailure = null;
       try {
         player.giveExperienceLevels(-levels);
         if (player.experienceLevel == before - levels) return true;
-        player.giveExperienceLevels(before - player.experienceLevel);
-        return false;
       } catch (RuntimeException failure) {
-        try {
-          player.giveExperienceLevels(before - player.experienceLevel);
-        } catch (RuntimeException ignored) {
-        }
-        return false;
+        mutationFailure = failure;
       }
+      try {
+        if (player.experienceLevel != before) {
+          player.giveExperienceLevels(before - player.experienceLevel);
+        }
+      } catch (RuntimeException rollbackFailure) {
+        if (mutationFailure != null) rollbackFailure.addSuppressed(mutationFailure);
+        throw new IllegalStateException("experience rollback failed", rollbackFailure);
+      }
+      if (player.experienceLevel != before) {
+        IllegalStateException unknown = new IllegalStateException("experience rollback not proven");
+        if (mutationFailure != null) unknown.addSuppressed(mutationFailure);
+        throw unknown;
+      }
+      return false;
     }
 
     public boolean refundExperience(int levels) {

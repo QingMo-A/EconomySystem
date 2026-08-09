@@ -57,12 +57,21 @@ public final class DeliveryBoxClaimService {
         insertion = context.inventory().insert(template, entry.item().count());
       } catch (RuntimeException failure) {
         reservation.release();
-        report(context, message.entryId(), "insert", DeliveryBoxClaimResult.INVENTORY_FAILED, failure);
-        return DeliveryBoxClaimResult.INVENTORY_FAILED;
+        // Insertion can have partially changed the inventory before throwing. Releasing the
+        // reservation is safe, but neither the entry nor the inventory may be compensated
+        // blindly.
+        report(context, message.entryId(), "insert-state-unknown", DeliveryBoxClaimResult.STATE_UNKNOWN, failure);
+        return DeliveryBoxClaimResult.STATE_UNKNOWN;
       }
-      if (insertion == null || !insertion.succeeded() || insertion.rollback() == null) {
+      if (insertion == null) {
         reservation.release();
-        return insertion != null && insertion.failureRestored()
+        report(context, message.entryId(), "insert-state-unknown", DeliveryBoxClaimResult.STATE_UNKNOWN,
+            new IllegalStateException("null inventory insertion result"));
+        return DeliveryBoxClaimResult.STATE_UNKNOWN;
+      }
+      if (!insertion.succeeded() || insertion.rollback() == null) {
+        reservation.release();
+        return insertion.failureRestored()
             ? DeliveryBoxClaimResult.INVENTORY_FAILED
             : DeliveryBoxClaimResult.ROLLBACK_FAILED;
       }
@@ -75,6 +84,12 @@ public final class DeliveryBoxClaimService {
       }
       if (committed == DeliveryBoxRepository.CommitResult.REMOVED) {
         return DeliveryBoxClaimResult.SUCCESS;
+      }
+      if (committed == null || committed == DeliveryBoxRepository.CommitResult.STATE_UNKNOWN) {
+        // The entry may already have been removed. Keeping the delivered inventory is the only
+        // non-destructive choice when repository state cannot be proven.
+        reservation.release();
+        return DeliveryBoxClaimResult.STATE_UNKNOWN;
       }
       boolean inventoryRestored;
       try {

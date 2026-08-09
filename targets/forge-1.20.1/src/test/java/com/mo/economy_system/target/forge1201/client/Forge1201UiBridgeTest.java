@@ -14,14 +14,22 @@ class Forge1201UiBridgeTest {
     assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.HOME));
     assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.DELIVERY_BOX));
     assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.TERRITORY));
-    assertNotNull(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.HOME).orElseThrow());
+    assertTrue(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.HOME).orElseThrow()
+        instanceof Forge1201HomeScreen);
   }
 
   @Test
-  void unportedPagesFailClosed() {
-    assertFalse(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.SHOP));
-    assertFalse(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.MARKET).isPresent());
-    assertFalse(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.ABOUT));
+  void sharedPagesUseNativeShells() {
+    assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.SHOP));
+    assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.MARKET));
+    assertTrue(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.MARKET).orElseThrow()
+        instanceof Forge1201MarketScreen);
+    assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.ABOUT));
+    assertTrue(Forge1201UiBridge.INSTANCE.supports(EconomyUiRoute.BALANCE_LOG));
+    assertTrue(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.ABOUT).orElseThrow()
+        instanceof Forge1201AboutScreen);
+    assertTrue(Forge1201UiBridge.INSTANCE.create(EconomyUiRoute.BALANCE_LOG).orElseThrow()
+        instanceof Forge1201BalanceLogScreen);
   }
 
   @Test

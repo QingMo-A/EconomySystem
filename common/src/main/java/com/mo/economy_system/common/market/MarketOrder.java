@@ -20,6 +20,11 @@ public record MarketOrder(
 ) {
     public static final long EXPIRATION_DURATION_MILLIS = 3L * 24L * 60L * 60L * 1000L;
 
+    /** Expiration is inclusive so an order is never visible after its persisted deadline. */
+    public static boolean isExpiredAt(long expirationTime, long nowMillis) {
+        return nowMillis >= expirationTime;
+    }
+
     public MarketOrder {
         type = Objects.requireNonNull(type, "type");
         tradeId = Objects.requireNonNull(tradeId, "tradeId");

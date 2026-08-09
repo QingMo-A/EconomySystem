@@ -18,7 +18,9 @@ public interface DeliveryBoxRepository {
 
   enum CommitResult {
     REMOVED,
+    /** Persistence failed and the entry was restored to the repository. */
     PERSIST_FAILED,
+    /** The repository cannot prove whether the entry was removed. */
     STATE_UNKNOWN
   }
 }

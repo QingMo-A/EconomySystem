@@ -15,6 +15,12 @@ class NeoForge1211UiBridgeTest {
     }
 
     @Test
+    void homeRouteUsesTheCommonHomeShell() {
+        assertTrue(NeoForge1211UiBridge.INSTANCE.create(EconomyUiRoute.HOME).orElseThrow()
+                instanceof NeoForge1211HomeScreen);
+    }
+
+    @Test
     void territoryPilotUsesCommonRendererAndControllerShell() {
         assertTrue(EconomyUiRenderer.class.isAssignableFrom(NeoForge1211UiRenderer.class));
         assertTrue(java.util.Arrays.stream(NeoForge1211TerritoryManageScreen.class.getDeclaredFields())

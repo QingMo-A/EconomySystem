@@ -10,5 +10,9 @@ public interface TerritoryManagePort {
 
     void submit(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId);
 
+    default void confirm(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId) {
+        submit(territoryId, action, targetPlayerId);
+    }
+
     void open(UUID territoryId, TerritoryManageAction action);
 }

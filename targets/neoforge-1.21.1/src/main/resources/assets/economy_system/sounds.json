@@ -1,0 +1,37 @@
+{
+  "note.c": {
+    "sounds": [
+      "economy_system:note_c"
+    ]
+  },
+  "note.dm": {
+    "sounds": [
+      "economy_system:note_dm"
+    ]
+  },
+  "note.em": {
+    "sounds": [
+      "economy_system:note_em"
+    ]
+  },
+  "note.f": {
+    "sounds": [
+      "economy_system:note_f"
+    ]
+  },
+  "note.g": {
+    "sounds": [
+      "economy_system:note_g"
+    ]
+  },
+  "note.am": {
+    "sounds": [
+      "economy_system:note_am"
+    ]
+  },
+  "note.bm": {
+    "sounds": [
+      "economy_system:note_bm"
+    ]
+  }
+}

@@ -1,8 +1,6 @@
 package com.mo.economy_system.platform.shop;
 
 import com.mo.economy_system.common.network.ShopItemSnapshot;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
@@ -20,8 +18,9 @@ public interface EconomyShopCatalogBridge {
                 .orElse(null);
     }
 
-    ItemStack createItemStack(ShopItemSnapshot item, RegistryAccess registryAccess);
-
     /** Returns whether demand/stock statistics were persisted successfully. */
     boolean recordPurchase(String shopItemId, int quantity);
+
+    /** Applies and persists one common dynamic-pricing cycle. */
+    boolean refreshPrices();
 }

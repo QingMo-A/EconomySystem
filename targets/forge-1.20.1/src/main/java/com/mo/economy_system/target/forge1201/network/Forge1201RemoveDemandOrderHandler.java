@@ -4,7 +4,7 @@ import com.mo.economy_system.common.market.*;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.*;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
-import com.mo.economy_system.utils.Util_Player;
+import com.mo.economy_system.target.forge1201.player.Forge1201PlayerLookup;
 import com.mojang.logging.LogUtils;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -31,7 +31,7 @@ final class Forge1201RemoveDemandOrderHandler {
       CancelDemandOrderOutcome outcome = CancelDemandOrderService.execute(
           message,
           new CancelDemandOrderService.Context(
-              player.getUUID(), Util_Player.isOP(player), new Account(accounts),
+              player.getUUID(), Forge1201PlayerLookup.isOperator(player), new Account(accounts),
               new Repository(market), Forge1201RemoveDemandOrderHandler::report));
       boolean success = outcome.result() == CancelDemandOrderResult.SUCCESS;
       IsolatedPostActions.runAll(

@@ -8,7 +8,6 @@ import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.protocol.EconomyMessageDirection;
 import com.mo.economy_system.protocol.EconomyProtocol;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.DecoderException;
 import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
@@ -20,8 +19,8 @@ class Forge1201TerritoryInviteProtocolTest {
         UUID.fromString("00112233-4455-6677-8899-aabbccddeeff"),
         UUID.fromString("ffeeddcc-bbaa-9988-7766-554433221100"));
     FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
-    TerritoryInviteWireCodec.encode(message, buffer);
-    assertEquals(message, TerritoryInviteWireCodec.decode(buffer));
+    TerritoryInviteWireCodec.encode(message, Forge1201WireBuffer.wrap(buffer));
+    assertEquals(message, TerritoryInviteWireCodec.decode(Forge1201WireBuffer.wrap(buffer)));
     assertEquals(20, EconomyProtocol.INVITE_PLAYER.discriminator());
     assertEquals(EconomyMessageDirection.CLIENT_TO_SERVER,
         EconomyProtocol.INVITE_PLAYER.direction());
@@ -31,10 +30,14 @@ class Forge1201TerritoryInviteProtocolTest {
   void malformedPayloadsAreRejected() {
     FriendlyByteBuf truncated = new FriendlyByteBuf(Unpooled.buffer());
     truncated.writeZero(31);
-    assertThrows(DecoderException.class, () -> TerritoryInviteWireCodec.decode(truncated));
+    assertThrows(RuntimeException.class,
+        () -> TerritoryInviteWireCodec.decode(Forge1201WireBuffer.wrap(truncated)));
     FriendlyByteBuf trailing = new FriendlyByteBuf(Unpooled.buffer());
-    TerritoryInviteWireCodec.encode(new InvitePlayerMessage(UUID.randomUUID(), UUID.randomUUID()), trailing);
+    TerritoryInviteWireCodec.encode(
+        new InvitePlayerMessage(UUID.randomUUID(), UUID.randomUUID()),
+        Forge1201WireBuffer.wrap(trailing));
     trailing.writeByte(1);
-    assertThrows(DecoderException.class, () -> TerritoryInviteWireCodec.decode(trailing));
+    assertThrows(RuntimeException.class,
+        () -> TerritoryInviteWireCodec.decode(Forge1201WireBuffer.wrap(trailing)));
   }
 }

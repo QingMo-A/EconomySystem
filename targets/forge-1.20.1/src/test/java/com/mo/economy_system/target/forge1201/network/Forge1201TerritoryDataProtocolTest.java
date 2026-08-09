@@ -36,17 +36,22 @@ class Forge1201TerritoryDataProtocolTest {
   @Test void teleportUuidCodecRoundTripsAndRejectsMalformedPayloads() {
     var id = java.util.UUID.fromString("01234567-89ab-cdef-0123-456789abcdef");
     FriendlyByteBuf encoded = new FriendlyByteBuf(Unpooled.buffer());
-    TerritoryTeleportWireCodec.encode(new TeleportToTerritoryMessage(id), encoded);
-    assertEquals(new TeleportToTerritoryMessage(id), TerritoryTeleportWireCodec.decode(encoded));
+    TerritoryTeleportWireCodec.encode(
+        new TeleportToTerritoryMessage(id), Forge1201WireBuffer.wrap(encoded));
+    assertEquals(new TeleportToTerritoryMessage(id),
+        TerritoryTeleportWireCodec.decode(Forge1201WireBuffer.wrap(encoded)));
 
     FriendlyByteBuf truncated = new FriendlyByteBuf(Unpooled.buffer());
     truncated.writeLong(1L);
-    assertThrows(RuntimeException.class, () -> TerritoryTeleportWireCodec.decode(truncated));
+    assertThrows(RuntimeException.class,
+        () -> TerritoryTeleportWireCodec.decode(Forge1201WireBuffer.wrap(truncated)));
 
     FriendlyByteBuf trailing = new FriendlyByteBuf(Unpooled.buffer());
-    TerritoryTeleportWireCodec.encode(new TeleportToTerritoryMessage(id), trailing);
+    TerritoryTeleportWireCodec.encode(
+        new TeleportToTerritoryMessage(id), Forge1201WireBuffer.wrap(trailing));
     trailing.writeByte(1);
-    assertThrows(RuntimeException.class, () -> TerritoryTeleportWireCodec.decode(trailing));
+    assertThrows(RuntimeException.class,
+        () -> TerritoryTeleportWireCodec.decode(Forge1201WireBuffer.wrap(trailing)));
   }
 
   @Test void truncatedNegativeCountAndTrailingDataAreRejected() {

@@ -122,8 +122,9 @@ public final class TerritoryManageController
             navigate(new UiNavigation.Back());
             return;
         }
-        if (clicked.action() == TerritoryManageAction.KICK
-                || clicked.action() == TerritoryManageAction.MODIFY_MODE) {
+        if (clicked.action() == TerritoryManageAction.KICK) {
+            port.confirm(territoryId, clicked.action(), clicked.targetPlayerId());
+        } else if (clicked.action() == TerritoryManageAction.MODIFY_MODE) {
             port.submit(territoryId, clicked.action(), clicked.targetPlayerId());
         } else {
             port.open(territoryId, clicked.action());

@@ -1,6 +1,5 @@
 package com.mo.economy_system.target.neoforge1211.item;
 
-import com.mo.economy_system.platform.item.EconomyItemStackBridge;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotError;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
@@ -36,25 +35,22 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
-public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge {
+public final class NeoForge1211ItemStackBridge {
     private static final Set<DataComponentType<?>> SUPPORTED_PATCH_COMPONENTS = Set.of(
             DataComponents.CUSTOM_NAME, DataComponents.LORE, DataComponents.ENCHANTMENTS,
             DataComponents.STORED_ENCHANTMENTS, DataComponents.DAMAGE, DataComponents.REPAIR_COST,
             DataComponents.UNBREAKABLE, DataComponents.DYED_COLOR, DataComponents.CUSTOM_MODEL_DATA,
             DataComponents.CUSTOM_DATA
     );
-    @Override
     public boolean hasCustomData(ItemStack stack) {
         return stack.has(DataComponents.CUSTOM_DATA);
     }
 
-    @Override
     public CompoundTag copyCustomData(ItemStack stack) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return data == null ? null : data.copyTag();
     }
 
-    @Override
     public void setCustomData(ItemStack stack, CompoundTag tag) {
         if (tag == null || tag.isEmpty()) {
             stack.remove(DataComponents.CUSTOM_DATA);
@@ -63,12 +59,10 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
         }
     }
 
-    @Override
     public boolean sameItemAndData(ItemStack first, ItemStack second) {
         return ItemStack.isSameItemSameComponents(first, second);
     }
 
-    @Override
     public ItemStackSnapshotResult<ItemStackSnapshot> captureSnapshot(ItemStack stack, HolderLookup.Provider registries) {
         if (stack == null || stack.isEmpty()) return failure(ItemStackSnapshotError.INVALID_SCHEMA, "cannot capture an empty stack");
         if (stack.getCount() <= 0 || stack.getCount() > stack.getMaxStackSize()) {
@@ -110,13 +104,12 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
                     damage, repairCost, unbreakable != null, unbreakable == null || unbreakable.showInTooltip(),
                     color == null ? OptionalInt.empty() : OptionalInt.of(color.rgb()), color == null || color.showInTooltip(),
                     model == null ? OptionalInt.empty() : OptionalInt.of(model.value()),
-                    customData == null ? new CompoundTag() : customData);
+                    NeoForge1211NbtAdapter.fromNative(customData == null ? new CompoundTag() : customData));
         } catch (RuntimeException exception) {
             return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, exception.getMessage());
         }
     }
 
-    @Override
     public ItemStackSnapshotResult<ItemStack> restoreSnapshot(ItemStackSnapshot snapshot, HolderLookup.Provider registries) {
         ItemStackSnapshotResult<ItemStackSnapshot> validation = ItemStackSnapshotValidator.validate(snapshot);
         if (!validation.isSuccess()) return copyFailure(validation);
@@ -161,7 +154,7 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
             if (snapshot.unbreakable()) stack.set(DataComponents.UNBREAKABLE, new Unbreakable(snapshot.unbreakableShown()));
             if (snapshot.dyedColor().isPresent()) stack.set(DataComponents.DYED_COLOR, new DyedItemColor(snapshot.dyedColor().getAsInt(), snapshot.dyedColorShown()));
             snapshot.customModelData().ifPresent(value -> stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(value)));
-            setCustomData(stack, snapshot.customData());
+            setCustomData(stack, NeoForge1211NbtAdapter.toNative(snapshot.customData()));
             return ItemStackSnapshotResult.success(stack);
         } catch (RuntimeException exception) {
             return failure(ItemStackSnapshotError.DATA_PARSE_FAILED, exception.getMessage());
@@ -215,7 +208,6 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
         return failure(result.error().orElseThrow(), result.detail());
     }
 
-    @Override
     public CompoundTag saveSimple(ItemStack stack) {
         CompoundTag tag = new CompoundTag();
         tag.putString("id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
@@ -227,7 +219,6 @@ public final class NeoForge1211ItemStackBridge implements EconomyItemStackBridge
         return tag;
     }
 
-    @Override
     public ItemStack loadSimple(CompoundTag tag) {
         Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(tag.getString("id")));
         ItemStack stack = new ItemStack(item, Math.max(1, tag.getInt("count")));

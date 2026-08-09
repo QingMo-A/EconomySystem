@@ -1,0 +1,215 @@
+package com.mo.economy_system.target.forge1201;
+
+import com.mo.economy_system.EconomyConstants;
+import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.settings.EconomySettings;
+import com.mo.economy_system.core.economy_system.EconomySavedData;
+import com.mo.economy_system.target.forge1201.item.Forge1201SupporterHat;
+import com.mo.economy_system.platform.EconomyServices;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import java.util.Map;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.UuidArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/** Forge command adapter for the baseline economy and settings commands. */
+@Mod.EventBusSubscriber(modid = EconomyConstants.MOD_ID)
+public final class Forge1201EconomyCommands {
+  private Forge1201EconomyCommands() {}
+
+  @SubscribeEvent
+  public static void register(RegisterCommandsEvent event) {
+    event.getDispatcher().register(
+        Commands.literal("economy_system")
+            .then(Commands.literal("shop")
+                .then(Commands.literal("addhand").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("basePrice", IntegerArgumentType.integer(1))
+                        .then(Commands.argument("description", StringArgumentType.greedyString())
+                            .executes(c -> addHand(
+                                c.getSource(),
+                                c.getSource().getPlayerOrException(),
+                                IntegerArgumentType.getInteger(c, "basePrice"),
+                                StringArgumentType.getString(c, "description"))))))));
+    event.getDispatcher().register(
+        Commands.literal("economy_system")
+            .then(Commands.literal("supporter_hat")
+                .then(Commands.literal("bind").requires(s -> s.hasPermission(2))
+                    .then(Commands.argument("supporter", EntityArgument.player())
+                        .executes(c -> bindSupporterHat(
+                            c.getSource(), c.getSource().getPlayerOrException(),
+                            EntityArgument.getPlayer(c, "supporter").getUUID(),
+                            EntityArgument.getPlayer(c, "supporter").getGameProfile().getName())))
+                    .then(Commands.argument("uuid", UuidArgument.uuid())
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                            .executes(c -> bindSupporterHat(
+                                c.getSource(), c.getSource().getPlayerOrException(),
+                                UuidArgument.getUuid(c, "uuid"),
+                                StringArgumentType.getString(c, "name"))))))));
+    var coin = Commands.literal("coin");
+    coin.then(Commands.literal("balance")
+        .executes(c -> balance(c.getSource().getPlayerOrException())));
+    coin.then(Commands.literal("add").requires(s -> s.hasPermission(2))
+        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+            .then(Commands.argument("target", EntityArgument.player())
+                .executes(c -> add(EntityArgument.getPlayer(c, "target"),
+                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+    coin.then(Commands.literal("min").requires(s -> s.hasPermission(2))
+        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+            .then(Commands.argument("target", EntityArgument.player())
+                .executes(c -> min(EntityArgument.getPlayer(c, "target"),
+                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+    coin.then(Commands.literal("set").requires(s -> s.hasPermission(2))
+        .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+            .then(Commands.argument("target", EntityArgument.player())
+                .executes(c -> set(EntityArgument.getPlayer(c, "target"),
+                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+    coin.then(Commands.literal("transfer")
+        .then(Commands.argument("target", EntityArgument.player())
+            .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+                .executes(c -> {
+                  ServerPlayer sender = c.getSource().getPlayerOrException();
+                  ServerPlayer target = EntityArgument.getPlayer(c, "target");
+                  return Forge1201TransferAdapter.execute(sender,
+                      new TransferMessage(target.getUUID(),
+                          IntegerArgumentType.getInteger(c, "amount")))
+                      == com.mo.economy_system.core.economy_system.BalanceTransferResult.SUCCESS
+                      ? 1 : 0;
+                }))));
+    event.getDispatcher().register(coin);
+
+    event.getDispatcher().register(
+        Commands.literal("economy_system")
+            .then(Commands.literal("settings").requires(s -> s.hasPermission(2))
+                .then(Commands.literal("list").executes(c -> listSettings(c.getSource())))
+                .then(Commands.literal("get")
+                    .then(Commands.argument("key", StringArgumentType.word())
+                        .executes(c -> getSetting(c.getSource(),
+                            StringArgumentType.getString(c, "key")))))
+                .then(Commands.literal("set")
+                    .then(Commands.argument("key", StringArgumentType.word())
+                        .then(Commands.argument("value", StringArgumentType.word())
+                            .executes(c -> setSetting(c.getSource(),
+                                StringArgumentType.getString(c, "key"),
+                                StringArgumentType.getString(c, "value"))))))
+                .then(Commands.literal("reload").executes(c -> {
+                  EconomySettings.reload();
+                  c.getSource().sendSuccess(() -> Component.literal("已重载 EconomySystem 设置"), false);
+                  return 1;
+                }))));
+  }
+
+  private static int addHand(
+      net.minecraft.commands.CommandSourceStack source,
+      ServerPlayer player,
+      int basePrice,
+      String description) {
+    ItemStack held = player.getMainHandItem();
+    if (held.isEmpty()) {
+      source.sendFailure(Component.literal("Please hold the item to add in your main hand."));
+      return 0;
+    }
+    try {
+      var added = Forge1201Platform.nativeShopCatalog().addItemFromStack(
+          held, basePrice, description, player.serverLevel().registryAccess());
+      source.sendSuccess(() -> Component.literal(
+          "Added " + held.getHoverName().getString() + " to the shop ("
+              + added.basePrice() + ")"), false);
+      return 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(Component.literal("Shop catalog could not be updated."));
+      return 0;
+    }
+  }
+
+  private static int bindSupporterHat(
+      net.minecraft.commands.CommandSourceStack source,
+      ServerPlayer executor,
+      java.util.UUID supporterUuid,
+      String supporterName) {
+    ItemStack stack = executor.getMainHandItem();
+    if (!(stack.getItem() instanceof Forge1201SupporterHat)) {
+      source.sendFailure(Component.translatable("message.supporter_hat.hold_hat"));
+      return 0;
+    }
+    try {
+      Forge1201SupporterHat.setSupporter(stack, supporterUuid, supporterName);
+    } catch (IllegalArgumentException failure) {
+      source.sendFailure(Component.translatable("message.supporter_hat.invalid_identity"));
+      return 0;
+    }
+    source.sendSuccess(() -> Component.translatable(
+        "message.supporter_hat.bound", supporterName, supporterUuid), false);
+    return 1;
+  }
+
+  private static int balance(ServerPlayer player) {
+    int value = EconomySavedData.getInstance(player.serverLevel()).getBalance(player.getUUID());
+    player.sendSystemMessage(Component.translatable("message.coin_command_balance", value));
+    return 1;
+  }
+
+  private static int add(ServerPlayer player, int amount, net.minecraft.commands.CommandSourceStack source) {
+    EconomySavedData.getInstance(player.serverLevel()).addBalance(
+        player.getUUID(), amount, "指令", "管理员增加余额");
+    source.sendSuccess(() -> Component.translatable("message.coin_command_add", amount), false);
+    return 1;
+  }
+
+  private static int min(ServerPlayer player, int amount, net.minecraft.commands.CommandSourceStack source) {
+    if (!EconomySavedData.getInstance(player.serverLevel()).minBalance(
+        player.getUUID(), amount, "指令", "管理员减少余额")) {
+      source.sendFailure(Component.translatable("message.coin_command_insufficient_balance"));
+      return 0;
+    }
+    source.sendSuccess(() -> Component.translatable("message.coin_command_min", amount), false);
+    return 1;
+  }
+
+  private static int set(ServerPlayer player, int amount, net.minecraft.commands.CommandSourceStack source) {
+    EconomySavedData.getInstance(player.serverLevel()).setBalance(
+        player.getUUID(), amount, "指令", "管理员设置余额");
+    source.sendSuccess(() -> Component.translatable("message.coin_command_set", amount), false);
+    return 1;
+  }
+
+  private static int listSettings(net.minecraft.commands.CommandSourceStack source) {
+    source.sendSuccess(() -> Component.literal("EconomySystem 设置项:"), false);
+    for (Map.Entry<String, String> entry : EconomySettings.all().entrySet()) {
+      String description = EconomySettings.description(entry.getKey());
+      source.sendSuccess(() -> Component.literal(entry.getKey() + " = " + entry.getValue()
+          + (description.isBlank() ? "" : " | " + description)), false);
+    }
+    return 1;
+  }
+
+  private static int getSetting(net.minecraft.commands.CommandSourceStack source, String key) {
+    String value = EconomySettings.get(key);
+    if (value == null) {
+      source.sendFailure(Component.literal("未知设置项: " + key));
+      return 0;
+    }
+    source.sendSuccess(() -> Component.literal(key + " = " + value), false);
+    return 1;
+  }
+
+  private static int setSetting(net.minecraft.commands.CommandSourceStack source, String key, String value) {
+    try {
+      if (!EconomySettings.set(key, value)) {
+        source.sendFailure(Component.literal("未知设置项: " + key));
+        return 0;
+      }
+      source.sendSuccess(() -> Component.literal("已设置 " + key + " = " + EconomySettings.get(key)), false);
+      return 1;
+    } catch (IllegalArgumentException failure) {
+      source.sendFailure(Component.literal("设置失败: " + failure.getMessage()));
+      return 0;
+    }
+  }
+}

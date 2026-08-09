@@ -58,6 +58,7 @@ import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryRemovalWireCodec;
 import com.mo.economy_system.network.TerritoryTeleportWireCodec;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
+import com.mo.economy_system.platform.network.WireBuffer;
 import com.mo.economy_system.protocol.EconomyMessageType;
 import io.netty.handler.codec.DecoderException;
 import java.util.ArrayList;
@@ -96,11 +97,11 @@ public final class NeoForge1211MessageCodecs {
         new NeoForge1211MessageCodec<>() {
           public void encode(
               ClientFileCheckRequestMessage message, RegistryFriendlyByteBuf buffer) {
-            ClientFileCheckWireCodec.encodeRequest(message, buffer);
+            ClientFileCheckWireCodec.encodeRequest(message, wire(buffer));
           }
 
           public ClientFileCheckRequestMessage decode(RegistryFriendlyByteBuf buffer) {
-            return ClientFileCheckWireCodec.decodeRequest(buffer);
+            return ClientFileCheckWireCodec.decodeRequest(wire(buffer));
           }
         });
     register(
@@ -109,11 +110,11 @@ public final class NeoForge1211MessageCodecs {
         new NeoForge1211MessageCodec<>() {
           public void encode(
               ClientFileCheckResultRequestMessage message, RegistryFriendlyByteBuf buffer) {
-            ClientFileCheckWireCodec.encodeResultRequest(message, buffer);
+            ClientFileCheckWireCodec.encodeResultRequest(message, wire(buffer));
           }
 
           public ClientFileCheckResultRequestMessage decode(RegistryFriendlyByteBuf buffer) {
-            return ClientFileCheckWireCodec.decodeResultRequest(buffer);
+            return ClientFileCheckWireCodec.decodeResultRequest(wire(buffer));
           }
         });
     register(
@@ -122,119 +123,119 @@ public final class NeoForge1211MessageCodecs {
         new NeoForge1211MessageCodec<>() {
           public void encode(
               ClientFileCheckResultResponseMessage message, RegistryFriendlyByteBuf buffer) {
-            ClientFileCheckWireCodec.encodeResultResponse(message, buffer);
+            ClientFileCheckWireCodec.encodeResultResponse(message, wire(buffer));
           }
 
           public ClientFileCheckResultResponseMessage decode(RegistryFriendlyByteBuf buffer) {
-            return ClientFileCheckWireCodec.decodeResultResponse(buffer);
+            return ClientFileCheckWireCodec.decodeResultResponse(wire(buffer));
           }
         });
     register(codecs, EconomyMessages.GET, new NeoForge1211MessageCodec<>() {
-      public void encode(CheckedFileTransferRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeRequest(m,b); }
-      public CheckedFileTransferRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeRequest(b); }
+      public void encode(CheckedFileTransferRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeRequest(m, wire(b)); }
+      public CheckedFileTransferRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeRequest(wire(b)); }
     });
     register(codecs, EconomyMessages.GET_RESULT_REQUEST, new NeoForge1211MessageCodec<>() {
-      public void encode(CheckedFileTransferControlRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlRequest(m,b); }
-      public CheckedFileTransferControlRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlRequest(b); }
+      public void encode(CheckedFileTransferControlRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlRequest(m, wire(b)); }
+      public CheckedFileTransferControlRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlRequest(wire(b)); }
     });
     register(codecs, EconomyMessages.GET_RESULT_RESPONSE, new NeoForge1211MessageCodec<>() {
-      public void encode(CheckedFileTransferControlResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlResponse(m,b); }
-      public CheckedFileTransferControlResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlResponse(b); }
+      public void encode(CheckedFileTransferControlResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeControlResponse(m, wire(b)); }
+      public CheckedFileTransferControlResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeControlResponse(wire(b)); }
     });
     register(codecs, EconomyMessages.CHUNK, new NeoForge1211MessageCodec<>() {
-      public void encode(CheckedFileTransferChunkRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkRequest(m,b); }
-      public CheckedFileTransferChunkRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkRequest(b); }
+      public void encode(CheckedFileTransferChunkRequestMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkRequest(m, wire(b)); }
+      public CheckedFileTransferChunkRequestMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkRequest(wire(b)); }
     });
     register(codecs, EconomyMessages.CHUNK_RESPONSE, new NeoForge1211MessageCodec<>() {
-      public void encode(CheckedFileTransferChunkResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkResponse(m,b); }
-      public CheckedFileTransferChunkResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkResponse(b); }
+      public void encode(CheckedFileTransferChunkResponseMessage m, RegistryFriendlyByteBuf b) { CheckedFileTransferWireCodec.encodeChunkResponse(m, wire(b)); }
+      public CheckedFileTransferChunkResponseMessage decode(RegistryFriendlyByteBuf b) { return CheckedFileTransferWireCodec.decodeChunkResponse(wire(b)); }
     });
     register(codecs, EconomyMessages.DELIVERY_BOX_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
       public void encode(DeliveryBoxDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
-        DeliveryBoxWireCodec.encodeRequest(message, buffer);
+        DeliveryBoxWireCodec.encodeRequest(message, wire(buffer));
       }
       public DeliveryBoxDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
-        return DeliveryBoxWireCodec.decodeRequest(buffer);
+        return DeliveryBoxWireCodec.decodeRequest(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.DELIVERY_BOX_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
       public void encode(DeliveryBoxDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
-        DeliveryBoxWireCodec.encodeResponse(message, buffer);
+        DeliveryBoxWireCodec.encodeResponse(message, wire(buffer));
       }
       public DeliveryBoxDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
-        return DeliveryBoxWireCodec.decodeResponse(buffer);
+        return DeliveryBoxWireCodec.decodeResponse(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.DELIVERY_BOX_CLAIM_ITEM, new NeoForge1211MessageCodec<>() {
       public void encode(DeliveryBoxClaimMessage message, RegistryFriendlyByteBuf buffer) {
-        DeliveryBoxWireCodec.encodeClaim(message, buffer);
+        DeliveryBoxWireCodec.encodeClaim(message, wire(buffer));
       }
       public DeliveryBoxClaimMessage decode(RegistryFriendlyByteBuf buffer) {
-        return DeliveryBoxWireCodec.decodeClaim(buffer);
+        return DeliveryBoxWireCodec.decodeClaim(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.MODIFY_MODE, new NeoForge1211MessageCodec<>() {
       public void encode(ModifyTerritoryModeMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeModifyMode(message, buffer);
+        TerritoryManagementWireCodec.encodeModifyMode(message, wire(buffer));
       }
       public ModifyTerritoryModeMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeModifyMode(buffer);
+        return TerritoryManagementWireCodec.decodeModifyMode(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.UNLOCK_TERRITORY_BUFF, new NeoForge1211MessageCodec<>() {
       public void encode(UnlockTerritoryBuffMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeUnlockBuff(message, buffer);
+        TerritoryManagementWireCodec.encodeUnlockBuff(message, wire(buffer));
       }
       public UnlockTerritoryBuffMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeUnlockBuff(buffer);
+        return TerritoryManagementWireCodec.decodeUnlockBuff(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.UPGRADE_TERRITORY_BUFF, new NeoForge1211MessageCodec<>() {
       public void encode(UpgradeTerritoryBuffMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeUpgradeBuff(message, buffer);
+        TerritoryManagementWireCodec.encodeUpgradeBuff(message, wire(buffer));
       }
       public UpgradeTerritoryBuffMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeUpgradeBuff(buffer);
+        return TerritoryManagementWireCodec.decodeUpgradeBuff(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.SINGLE_TERRITORY_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
       public void encode(SingleTerritoryDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeSingleRequest(message, buffer);
+        TerritoryManagementWireCodec.encodeSingleRequest(message, wire(buffer));
       }
       public SingleTerritoryDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeSingleRequest(buffer);
+        return TerritoryManagementWireCodec.decodeSingleRequest(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.SINGLE_TERRITORY_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
       public void encode(SingleTerritoryDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeSingleResponse(message, buffer);
+        TerritoryManagementWireCodec.encodeSingleResponse(message, wire(buffer));
       }
       public SingleTerritoryDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeSingleResponse(buffer);
+        return TerritoryManagementWireCodec.decodeSingleResponse(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.UPDATE_TERRITORY_PERMISSION, new NeoForge1211MessageCodec<>() {
       public void encode(UpdateTerritoryPermissionMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodePermission(message, buffer);
+        TerritoryManagementWireCodec.encodePermission(message, wire(buffer));
       }
       public UpdateTerritoryPermissionMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodePermission(buffer);
+        return TerritoryManagementWireCodec.decodePermission(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP, new NeoForge1211MessageCodec<>() {
       public void encode(TransferTerritoryOwnershipMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeTransfer(message, buffer);
+        TerritoryManagementWireCodec.encodeTransfer(message, wire(buffer));
       }
       public TransferTerritoryOwnershipMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeTransfer(buffer);
+        return TerritoryManagementWireCodec.decodeTransfer(wire(buffer));
       }
     });
     register(codecs, EconomyMessages.UPDATE_TERRITORY_RULE, new NeoForge1211MessageCodec<>() {
       public void encode(UpdateTerritoryRuleMessage message, RegistryFriendlyByteBuf buffer) {
-        TerritoryManagementWireCodec.encodeRule(message, buffer);
+        TerritoryManagementWireCodec.encodeRule(message, wire(buffer));
       }
       public UpdateTerritoryRuleMessage decode(RegistryFriendlyByteBuf buffer) {
-        return TerritoryManagementWireCodec.decodeRule(buffer);
+        return TerritoryManagementWireCodec.decodeRule(wire(buffer));
       }
     });
     register(
@@ -242,11 +243,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.INVITE_PLAYER,
         new NeoForge1211MessageCodec<>() {
           public void encode(InvitePlayerMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryInviteWireCodec.encode(message, buffer);
+            TerritoryInviteWireCodec.encode(message, wire(buffer));
           }
 
           public InvitePlayerMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryInviteWireCodec.decode(buffer);
+            return TerritoryInviteWireCodec.decode(wire(buffer));
           }
         });
     register(
@@ -254,11 +255,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.REMOVE_TERRITORY,
         new NeoForge1211MessageCodec<>() {
           public void encode(RemoveTerritoryMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryRemovalWireCodec.encode(message, buffer);
+            TerritoryRemovalWireCodec.encode(message, wire(buffer));
           }
 
           public RemoveTerritoryMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryRemovalWireCodec.decode(buffer);
+            return TerritoryRemovalWireCodec.decode(wire(buffer));
           }
         });
     register(
@@ -266,11 +267,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.REMOVE_PLAYER,
         new NeoForge1211MessageCodec<>() {
           public void encode(RemoveTerritoryMemberMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryMemberRemovalWireCodec.encode(message, buffer);
+            TerritoryMemberRemovalWireCodec.encode(message, wire(buffer));
           }
 
           public RemoveTerritoryMemberMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryMemberRemovalWireCodec.decode(buffer);
+            return TerritoryMemberRemovalWireCodec.decode(wire(buffer));
           }
         });
     register(
@@ -618,11 +619,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.TERRITORY_DATA_REQUEST,
         new NeoForge1211MessageCodec<>() {
           public void encode(TerritoryDataRequestMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryDataWireCodec.encodeRequest(message, buffer);
+            TerritoryDataWireCodec.encodeRequest(message, wire(buffer));
           }
 
           public TerritoryDataRequestMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryDataWireCodec.decodeRequest(buffer);
+            return TerritoryDataWireCodec.decodeRequest(wire(buffer));
           }
         });
     register(
@@ -630,11 +631,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.TERRITORY_DATA_RESPONSE,
         new NeoForge1211MessageCodec<>() {
           public void encode(TerritoryDataResponseMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryDataWireCodec.encodeResponse(message, buffer);
+            TerritoryDataWireCodec.encodeResponse(message, wire(buffer));
           }
 
           public TerritoryDataResponseMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryDataWireCodec.decodeResponse(buffer);
+            return TerritoryDataWireCodec.decodeResponse(wire(buffer));
           }
         });
     register(
@@ -642,11 +643,11 @@ public final class NeoForge1211MessageCodecs {
         EconomyMessages.TELEPORT_TO_TERRITORY,
         new NeoForge1211MessageCodec<>() {
           public void encode(TeleportToTerritoryMessage message, RegistryFriendlyByteBuf buffer) {
-            TerritoryTeleportWireCodec.encode(message, buffer);
+            TerritoryTeleportWireCodec.encode(message, wire(buffer));
           }
 
           public TeleportToTerritoryMessage decode(RegistryFriendlyByteBuf buffer) {
-            return TerritoryTeleportWireCodec.decode(buffer);
+            return TerritoryTeleportWireCodec.decode(wire(buffer));
           }
         });
     register(
@@ -755,6 +756,10 @@ public final class NeoForge1211MessageCodecs {
       return false;
     }
     return size == 0 || (long) offset + size <= total;
+  }
+
+  private static WireBuffer wire(RegistryFriendlyByteBuf buffer) {
+    return NeoForge1211WireBuffer.wrap(buffer);
   }
 
   private static <T extends EconomyNetworkMessage> void register(

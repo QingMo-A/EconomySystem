@@ -2,9 +2,6 @@ package com.mo.economy_system.target.forge1201.client;
 
 import com.mo.economy_system.common.client.ui.EconomyUiBridge;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
-import com.mo.economy_system.screen.Screen_Home;
-import com.mo.economy_system.screen.economy_system.deliver_box.Screen_DeliveryBox;
-import com.mo.economy_system.screen.territory_system.Screen_Territory;
 import java.util.Optional;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -17,10 +14,13 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
   @Override
   public Optional<Screen> create(EconomyUiRoute route) {
     return switch (route) {
-      case HOME -> Optional.of(new Screen_Home());
-      case DELIVERY_BOX -> Optional.of(new Screen_DeliveryBox());
-      case TERRITORY -> Optional.of(new Screen_Territory());
-      case SHOP, MARKET, ABOUT, BALANCE_LOG -> Optional.empty();
+      case HOME -> Optional.of(new Forge1201HomeScreen());
+      case DELIVERY_BOX -> Optional.of(new Forge1201DeliveryBoxScreen());
+      case TERRITORY -> Optional.of(new Forge1201TerritoryListScreen());
+      case SHOP -> Optional.of(new Forge1201ShopScreen());
+      case MARKET -> Optional.of(new Forge1201MarketScreen());
+      case ABOUT -> Optional.of(new Forge1201AboutScreen());
+      case BALANCE_LOG -> Optional.of(new Forge1201BalanceLogScreen());
     };
   }
 
@@ -28,6 +28,10 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
   public boolean supports(EconomyUiRoute route) {
     return route == EconomyUiRoute.HOME
         || route == EconomyUiRoute.DELIVERY_BOX
-        || route == EconomyUiRoute.TERRITORY;
+        || route == EconomyUiRoute.TERRITORY
+        || route == EconomyUiRoute.SHOP
+        || route == EconomyUiRoute.MARKET
+        || route == EconomyUiRoute.ABOUT
+        || route == EconomyUiRoute.BALANCE_LOG;
   }
 }

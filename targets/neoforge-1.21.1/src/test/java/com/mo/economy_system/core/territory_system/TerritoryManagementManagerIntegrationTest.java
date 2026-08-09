@@ -2,10 +2,16 @@ package com.mo.economy_system.core.territory_system;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
+import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
 import com.mo.economy_system.common.territory.TerritoryAdministrationService;
+import com.mo.economy_system.common.territory.TerritoryBackpointService;
 import com.mo.economy_system.common.territory.TerritoryBuffTransactionService;
+import com.mo.economy_system.common.territory.TerritoryManagementResult;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleAction;
 import com.mo.economy_system.common.territory.TerritorySnapshots.RuleLevel;
+import com.mo.economy_system.common.territory.TerritorySnapshots.Position;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,15 +58,13 @@ class TerritoryManagementManagerIntegrationTest {
   @Test
   void allManagementMutationsUpdateLiveObjectAndIndexes() throws Exception {
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryManager.setTerritoryPermissionAuthoritatively(
-            territory.getTerritoryID(), owner, target, "Target", true));
+        TerritoryManagementResult.SUCCESS,
+        permission(owner, target, true));
     assertTrue(territory.hasPermission(target));
 
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryManager.setTerritoryRuleAuthoritatively(
-            territory.getTerritoryID(), owner, RuleAction.OPEN_CONTAINER, RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.SUCCESS,
+        rule(owner, RuleAction.OPEN_CONTAINER, RuleLevel.OWNER_ONLY));
     assertEquals(
         TerritoryPermissionLevel.OWNER_ONLY,
         territory.getPermissionLevel(TerritoryPermissionAction.OPEN_CONTAINER));
@@ -73,13 +77,13 @@ class TerritoryManagementManagerIntegrationTest {
             "economy_system:speed",
             false,
             0,
-            TerritoryBuffTransactionService.Action.UNLOCK));
+            true,
+            0));
     assertTrue(territory.getBuff("economy_system:speed").isUnlocked());
 
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryManager.transferTerritoryAuthoritatively(
-            territory.getTerritoryID(), owner, target, "Target"));
+        TerritoryManagementResult.SUCCESS,
+        transfer(owner, target));
     assertEquals(target, territory.getOwnerUUID());
     assertFalse(territory.hasPermission(target));
     assertTrue(territory.hasPermission(owner));
@@ -95,15 +99,31 @@ class TerritoryManagementManagerIntegrationTest {
     var before = TerritoryNetworkSnapshots.owned(territory);
     saved.failNextDirty(() -> assertTrue(territory.hasPermission(target)));
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        TerritoryManager.setTerritoryPermissionAuthoritatively(
-            territory.getTerritoryID(), owner, target, "Target", true));
+        TerritoryManagementResult.PERSIST_FAILED,
+        permission(owner, target, true));
     assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
     assertFalse(territory.hasPermission(target));
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.SUCCESS,
-        TerritoryManager.setTerritoryPermissionAuthoritatively(
-            territory.getTerritoryID(), owner, target, "Target", true));
+        TerritoryManagementResult.SUCCESS,
+        permission(owner, target, true));
+  }
+
+  @Test
+  void backpointDirtyFailureRestoresSnapshotAndAllowsRetry() {
+    var before = TerritoryNetworkSnapshots.owned(territory);
+    Position oldPoint = before.backpoint().orElseThrow();
+    Position next = new Position(4, 70, 4);
+    saved.failNextDirty();
+    assertEquals(
+        TerritoryBackpointService.RepositoryResult.PERSIST_FAILED,
+        TerritoryManager.setTerritoryBackpointAuthoritatively(
+            territory.getTerritoryID(), owner, before.backpoint(), next));
+    assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
+    assertEquals(
+        TerritoryBackpointService.RepositoryResult.UPDATED,
+        TerritoryManager.setTerritoryBackpointAuthoritatively(
+            territory.getTerritoryID(), owner, java.util.Optional.of(oldPoint), next));
+    assertEquals(next, TerritoryNetworkSnapshots.owned(territory).backpoint().orElseThrow());
   }
 
   @Test
@@ -111,9 +131,8 @@ class TerritoryManagementManagerIntegrationTest {
     var before = TerritoryNetworkSnapshots.owned(territory);
     saved.failNextDirty();
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        TerritoryManager.setTerritoryRuleAuthoritatively(
-            territory.getTerritoryID(), owner, RuleAction.PLACE_BLOCK, RuleLevel.OWNER_ONLY));
+        TerritoryManagementResult.PERSIST_FAILED,
+        rule(owner, RuleAction.PLACE_BLOCK, RuleLevel.OWNER_ONLY));
     assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
 
     saved.failNextDirty();
@@ -125,7 +144,8 @@ class TerritoryManagementManagerIntegrationTest {
             "economy_system:speed",
             false,
             0,
-            TerritoryBuffTransactionService.Action.UNLOCK));
+            true,
+            0));
     assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
   }
 
@@ -155,9 +175,8 @@ class TerritoryManagementManagerIntegrationTest {
 
     saved.failNextDirty();
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.PERSIST_FAILED,
-        TerritoryManager.transferTerritoryAuthoritatively(
-            territory.getTerritoryID(), owner, target, "Target"));
+        TerritoryManagementResult.PERSIST_FAILED,
+        transfer(owner, target));
     assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
     assertEquals(beforeOrder, owners.get(owner));
     assertFalse(owners.containsKey(target));
@@ -168,9 +187,8 @@ class TerritoryManagementManagerIntegrationTest {
   void staleOwnerAndExpectedBuffStateFailBeforeMutation() {
     var before = TerritoryNetworkSnapshots.owned(territory);
     assertEquals(
-        TerritoryAdministrationService.RepositoryResult.OWNER_CHANGED,
-        TerritoryManager.setTerritoryRuleAuthoritatively(
-            territory.getTerritoryID(), UUID.randomUUID(), RuleAction.USE_ITEM, RuleLevel.EVERYONE));
+        TerritoryManagementResult.NOT_OWNER,
+        rule(UUID.randomUUID(), RuleAction.USE_ITEM, RuleLevel.EVERYONE));
     assertEquals(
         TerritoryBuffTransactionService.RepositoryResult.BUFF_CHANGED,
         TerritoryManager.mutateTerritoryBuffAuthoritatively(
@@ -179,8 +197,51 @@ class TerritoryManagementManagerIntegrationTest {
             "economy_system:speed",
             true,
             0,
-            TerritoryBuffTransactionService.Action.UPGRADE));
+            true,
+            1));
     assertEquals(before, TerritoryNetworkSnapshots.owned(territory));
+  }
+
+  private TerritoryManagementResult permission(UUID sender, UUID targetId, boolean allowed) {
+    return TerritoryAdministrationService.permission(
+        new UpdateTerritoryPermissionMessage(territory.getTerritoryID(), targetId, allowed),
+        sender,
+        administrationContext());
+  }
+
+  private TerritoryManagementResult transfer(UUID sender, UUID targetId) {
+    return TerritoryAdministrationService.transfer(
+        new TransferTerritoryOwnershipMessage(territory.getTerritoryID(), targetId),
+        sender,
+        administrationContext());
+  }
+
+  private TerritoryManagementResult rule(
+      UUID sender, RuleAction action, RuleLevel level) {
+    return TerritoryAdministrationService.rule(
+        new UpdateTerritoryRuleMessage(territory.getTerritoryID(), action, level),
+        sender,
+        administrationContext());
+  }
+
+  private TerritoryAdministrationService.Context administrationContext() {
+    return new TerritoryAdministrationService.Context(
+        new TerritoryAdministrationService.Repository() {
+          @Override
+          public com.mo.economy_system.common.territory.TerritorySnapshots.Owned find(UUID id) {
+            Territory current = TerritoryManager.getTerritoryByID(id);
+            return current == null ? null : TerritoryNetworkSnapshots.owned(current);
+          }
+
+          @Override
+          public TerritoryAdministrationService.RepositoryResult apply(
+              com.mo.economy_system.common.territory.TerritorySnapshots.Owned expected,
+              com.mo.economy_system.common.territory.TerritorySnapshots.Owned replacement) {
+            return TerritoryManager.applyTerritoryAdministrationAuthoritatively(expected, replacement);
+          }
+        },
+        id -> java.util.Optional.of("Target"),
+        TerritoryAdministrationService.FailureSink.noop());
   }
 
   private void install() throws Exception {

@@ -7,6 +7,7 @@ import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -27,7 +28,7 @@ final class Forge1201CreateDemandOrderHandler {
             MarketSavedData market = MarketSavedData.getInstance(player.serverLevel());
             CreateDemandOrderResult result = CreateDemandOrderService.execute(message,
                     new CreateDemandOrderService.Context(new Forge1201DemandItemResolver(
-                            EconomyServices.platform().itemStacks(), player.serverLevel().registryAccess()), new AccountAdapter(accounts, player),
+                            Forge1201Platform.nativeItemStacks(), player.serverLevel().registryAccess()), new AccountAdapter(accounts, player),
                             new RepositoryAdapter(market), player.getUUID(), player.getName().getString(),
                             UUID::randomUUID, System::currentTimeMillis, reporter(player)));
             player.sendSystemMessage(messageFor(result));

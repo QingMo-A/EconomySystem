@@ -3,7 +3,7 @@ package com.mo.economy_system.common.market;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
-import net.minecraft.nbt.CompoundTag;
+import com.mo.economy_system.platform.nbt.NbtData;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -240,7 +240,7 @@ class MarketLedgerTest {
             OptionalInt.empty(),
             true,
             OptionalInt.empty(),
-            new CompoundTag())
+            NbtData.emptyCompound())
         .orElseThrow();
   }
 

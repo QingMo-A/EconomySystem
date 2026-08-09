@@ -27,7 +27,7 @@ public final class CreateSalesOrderFeedback {
             case SNAPSHOT_REJECTED -> UNSUPPORTED_ITEM;
             case INSUFFICIENT_FUNDS -> INSUFFICIENT_FUNDS;
             case REPOSITORY_FULL -> MARKET_FULL;
-            case ROLLBACK_FAILED -> ROLLBACK_FAILED;
+            case ROLLBACK_FAILED, STATE_UNKNOWN -> ROLLBACK_FAILED;
             default -> FAILED;
         };
     }
@@ -35,7 +35,7 @@ public final class CreateSalesOrderFeedback {
     public static boolean internalFailure(CreateSalesOrderResult result) {
         return switch (result) {
             case INVENTORY_MUTATION_FAILED, TAX_MUTATION_FAILED, ORDER_PERSIST_FAILED, ROLLBACK_FAILED,
-                    INVALID_CONTEXT -> true;
+                    STATE_UNKNOWN, INVALID_CONTEXT -> true;
             default -> false;
         };
     }

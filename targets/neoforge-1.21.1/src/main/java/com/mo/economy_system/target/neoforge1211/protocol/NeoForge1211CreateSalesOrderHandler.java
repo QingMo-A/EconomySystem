@@ -10,6 +10,7 @@ import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 import com.mo.economy_system.platform.item.ItemStackSnapshotResult;
 import net.minecraft.network.chat.Component;
@@ -74,15 +75,15 @@ public final class NeoForge1211CreateSalesOrderHandler {
         public Object copySlot(int slot) { ItemStack stack = inventory.items.get(slot); return stack.isEmpty() ? null : stack.copy(); }
         public Object unitTemplate(Object value) { ItemStack stack = ((ItemStack) value).copy(); stack.setCount(1); return stack; }
         public ItemStackSnapshotResult<ItemStackSnapshot> capture(Object value) {
-            return EconomyServices.platform().itemStacks().captureSnapshot((ItemStack) value, player.registryAccess());
+            return NeoForge1211Platform.nativeItemStacks().captureSnapshot((ItemStack) value, player.registryAccess());
         }
         public long countMatching(Object value) { ItemStack template = (ItemStack) value; long count = 0;
-            for (ItemStack stack : inventory.items) if (!stack.isEmpty() && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) count += stack.getCount(); return count; }
+            for (ItemStack stack : inventory.items) if (!stack.isEmpty() && NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template)) count += stack.getCount(); return count; }
         public CreateSalesOrderService.RemovalResult removeMatching(Object value, int quantity) {
             ItemStack template = (ItemStack) value; List<ItemStack> before = inventory.items.stream().map(ItemStack::copy).toList();
             try {
                 int remaining = quantity;
-                for (ItemStack stack : inventory.items) if (remaining > 0 && !stack.isEmpty() && EconomyServices.platform().itemStacks().sameItemAndData(stack, template)) {
+                for (ItemStack stack : inventory.items) if (remaining > 0 && !stack.isEmpty() && NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template)) {
                     int removed = Math.min(remaining, stack.getCount()); stack.shrink(removed); remaining -= removed;
                 }
                 if (remaining != 0) return CreateSalesOrderService.RemovalResult.failure(restore(before));

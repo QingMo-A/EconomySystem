@@ -24,6 +24,10 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
     add("item.economy_system.hanhanyu_doll_hat", "__HanHanYu__");
     add("item.economy_system.player_351987654321_doll_hat", "351987654321");
+    add("tooltip.economy_system.supporter_hat.unbound", "Unbound supporter identity");
+    add("message.supporter_hat.hold_hat", "Hold a supporter hat in your main hand.");
+    add("message.supporter_hat.invalid_identity", "The supporter identity is invalid.");
+    add("message.supporter_hat.bound", "Supporter hat bound to %s (%s)");
 
     // Enchantment
     add("enchantment.economy_system.carefully", "Careful");
@@ -78,12 +82,61 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY, "Delivery Box");
     add(Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY, "Territory");
     add(Util_MessageKeys.HOME_ABOUT_BUTTON_KEY, "About");
+    add("screen.home.balance", "Balance");
+    add("screen.home.trade", "Trading activity");
+    add("screen.home.sell_orders", "Sell orders: %s");
+    add("screen.home.demand_orders", "Demand orders: %s");
+    add("screen.home.leaderboard", "Leaderboard");
+    add("screen.home.loading", "Loading account data...");
+    add("screen.home.sync_failed", "Account data could not be loaded");
+    add("screen.home.sync_timeout", "Account data request timed out");
+    add("screen.home.retry", "Retry");
+    add("screen.home.leaderboard.empty", "No account data available");
+    add("screen.home.version", "EconomySystem");
+    add("screen.invite.sync_failed", "Player list could not be loaded");
+    add("screen.invite.sync_timeout", "Player list request timed out");
+    add("screen.invite.retry", "Retry");
+    add("screen.territory.confirm.remove_title", "Remove territory");
+    add("screen.territory.confirm.member_title", "Remove authorized member");
+    add("screen.territory.confirm.remove_body", "Remove territory %s? This cannot be undone.");
+    add("screen.territory.confirm.member_body", "Remove %s from this territory?");
+    add("screen.territory.confirm.confirm", "Remove");
+    add("screen.territory.confirm.cancel", "Cancel");
 
     // Reward | 击杀奖励
     add(Util_MessageKeys.MOB_REWARD_MESSAGE_KEY, "Mob Reward: %s %s");
+    add("message.starter_kit.success", "Starter kit claimed: %s DreamingFish Coins");
+    add("message.starter_kit.already_claimed", "You have already claimed the starter kit");
+    add("message.starter_kit.balance_limit", "Your balance cannot receive the complete starter-kit reward");
+    add("message.starter_kit.persist_failed", "The starter kit could not be saved; no reward was kept");
+    add("message.starter_kit.state_unknown", "Starter-kit state could not be verified; contact an administrator");
+    add("message.update.available", "A new version is available: %s");
+    add("message.update.current", "EconomySystem is up to date");
+    add("message.update.unavailable", "Could not check for EconomySystem updates");
+    add("message.update.invalid_response", "The EconomySystem update response was invalid");
+    add("message.update.copy_link", "[Copy download link]");
+    add("message.update.copy_link_hover", "Copy the release link");
 
     // Screen_Shop | 商店
     add(Util_MessageKeys.SHOP_TITLE_KEY, "Shop");
+    add("screen.shop.search", "Search shop");
+    add("screen.shop.esc", "Press ESC to return");
+    add("screen.shop.loading", "Loading shop...");
+    add("screen.shop.empty", "No shop items found");
+    add("screen.shop.sync_failed", "Shop data could not be loaded");
+    add("screen.shop.sync_timeout", "Shop data request timed out");
+    add("screen.shop.retry", "Retry");
+    add("screen.shop.price", "Price: %s");
+    add("screen.shop.buy", "Buy");
+    add("screen.shop.purchase.title", "Confirm purchase");
+    add("screen.shop.purchase.quantity", "Quantity");
+    add("screen.shop.purchase.unit_price", "Unit price: %s");
+    add("screen.shop.purchase.total", "Total: %s");
+    add("screen.shop.purchase.confirm", "Buy");
+    add("screen.shop.purchase.back", "Back");
+    add("screen.shop.purchase.invalid_quantity", "Enter a positive quantity");
+    add("screen.shop.purchase.inventory_full", "Your inventory does not have enough space");
+    add("screen.shop.purchase.price_overflow", "Purchase total is too large");
     add(Util_MessageKeys.SHOP_HINT_TEXT_KEY, "Shop Hint");
     add(Util_MessageKeys.SHOP_ITEM_PRICE_KEY, "Shop Item Price: %s");
     add(Util_MessageKeys.SHOP_ITEM_ID_KEY, "Shop Item Id: %s");
@@ -121,6 +174,64 @@ public class EnUsLanguageProvider extends LanguageProvider {
 
     // Screen_Market | 市场
     add(Util_MessageKeys.MARKET_TITLE_KEY, "Market Title");
+    add("screen.market.search", "Search market");
+    add("screen.market.esc", "Press ESC to return");
+    add("screen.market.create_sales", "List item");
+    add("screen.market.create_demand", "Request item");
+    add("screen.market.sales", "Sales order");
+    add("screen.market.demand", "Demand order");
+    add("screen.market.price", "Price: %s");
+    add("screen.market.buy", "Buy");
+    add("screen.market.remove_sales", "Remove");
+    add("screen.market.deliver", "Deliver");
+    add("screen.market.confirm", "Confirm");
+    add("screen.market.remove_demand", "Cancel");
+    add("screen.market.done", "Done");
+    add("screen.market.filter.all", "All");
+    add("screen.market.filter.mine", "Mine");
+    add("screen.market.filter.sales", "Sales");
+    add("screen.market.filter.demand", "Demand");
+    add("screen.market.empty", "No market orders found");
+    add("screen.market.sync_failed", "Market data could not be loaded");
+    add("screen.market.sync_timeout", "Market data request timed out");
+    add("screen.market.retry", "Retry");
+    add("screen.market.create.sales_title", "List market item");
+    add("screen.market.create.demand_title", "Request market item");
+    add("screen.market.create.inventory", "Choose an inventory item");
+    add("screen.market.create.selected", "Listing settings");
+    add("screen.market.create.item_id", "Item ID");
+    add("screen.market.create.quantity", "Quantity");
+    add("screen.market.create.price", "Total price");
+    add("screen.market.create.all", "All");
+    add("screen.market.create.submit", "Publish order");
+    add("screen.market.create.back", "Back");
+    add("screen.market.create.no_item", "Choose an item to list");
+    add("screen.market.create.unknown_item", "Unknown item ID");
+    add("screen.market.create.invalid_quantity", "Quantity is not valid for this item");
+    add("screen.market.create.invalid_price", "Enter a positive total price");
+    add("screen.market.confirm.title", "Confirm market action");
+    add("screen.market.confirm.buy_title", "Confirm purchase");
+    add("screen.market.confirm.remove_sales_title", "Confirm order removal");
+    add("screen.market.confirm.remove_demand_title", "Confirm demand cancellation");
+    add("screen.market.confirm.deliver_title", "Confirm delivery");
+    add("screen.market.confirm.confirm_title", "Confirm collection");
+    add("screen.market.confirm.item", "Item: %s");
+    add("screen.market.confirm.price", "Total price: %s");
+    add("screen.market.confirm.sales_warning", "This action will transfer the listed item and balance.");
+    add("screen.market.confirm.demand_warning", "This action changes the demand order state.");
+    add("screen.market.confirm.confirm", "Confirm");
+    add("screen.market.confirm.cancel", "Cancel");
+
+    // Shared balance-log page
+    add("screen.balance_log.title", "Balance log");
+    add("screen.balance_log.esc", "Press ESC to return");
+    add("screen.balance_log.loading", "Loading balance history...");
+    add("screen.balance_log.empty", "No balance history");
+    add("screen.balance_log.sync_failed", "Balance history could not be loaded");
+    add("screen.balance_log.sync_timeout", "Balance history request timed out");
+    add("screen.balance_log.retry", "Retry");
+    add("screen.balance_log.previous", "Previous");
+    add("screen.balance_log.next", "Next");
     add(Util_MessageKeys.MARKET_HINT_TEXT_KEY, "Market Hint");
     add(Util_MessageKeys.MARKET_SELLER_NAME_KEY, "Market Seller Name: %s");
     add(Util_MessageKeys.MARKET_SELLER_UUID_KEY, "Market Seller Uuid: %s");
@@ -212,6 +323,13 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(
         Util_MessageKeys.DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY,
         "Delivery Box Item Name And Count: %s %s");
+    add("screen.delivery_box.search", "Search delivery box");
+    add("screen.delivery_box.esc", "Press ESC to return");
+    add("screen.delivery_box.loading", "Loading delivery box...");
+    add("screen.delivery_box.empty", "Delivery box is empty");
+    add("screen.delivery_box.sync_failed", "Delivery box could not be loaded");
+    add("screen.delivery_box.sync_timeout", "Delivery box request timed out");
+    add("screen.delivery_box.retry", "Retry");
 
     // RedPacket Command | 红包指令
     add(Util_MessageKeys.RED_PACKET_INSUFFICIENT_BALANCE, "Red Packet Insufficient Balance");
@@ -230,7 +348,17 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.RED_PACKET_CLAIM_BROADCAST, "Red Packet Claim Broadcast: %s %s %s");
 
     // Screen_Territory | 我的领地
-    add(Util_MessageKeys.TERRITORY_TITLE_KEY, "Territory Title");
+      add(Util_MessageKeys.TERRITORY_TITLE_KEY, "Territories");
+      add("screen.territory.list.search", "Search territories");
+      add("screen.territory.list.loading", "Loading territory data...");
+      add("screen.territory.list.empty", "No territories found");
+      add("screen.territory.list.esc", "Press ESC to return");
+      add("screen.territory.list.owned", "Owned");
+      add("screen.territory.list.authorized", "Authorized");
+      add("screen.territory.list.dimension.overworld", "Overworld");
+      add("screen.territory.list.dimension.nether", "Nether");
+      add("screen.territory.list.dimension.end", "The End");
+      add("screen.territory.list.sync_timeout", "Territory data request timed out");
     add(Util_MessageKeys.TERRITORY_HINT_TEXT_KEY, "Territory Hint");
     add(Util_MessageKeys.TERRITORY_NO_TERRITORIES_TEXT_KEY, "Territory No Territories");
     add(Util_MessageKeys.TERRITORY_TERRITORY_NAME_TEXT_KEY, "Territory Territory Name: %s");
@@ -393,6 +521,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.ABOUT_TEXT_SHOW_KEY, "About Text Show");
     add(Util_MessageKeys.ABOUT_COPY_URL, "About Copy Url");
     add(Util_MessageKeys.ABOUT_BACK_BUTTON_KEY, "About Back");
+    add("screen.about.esc", "Press ESC to return");
     add(Util_MessageKeys.REQUEST_CREATE_SUCCESS, "Demand order created");
     add(Util_MessageKeys.REQUEST_INVALID_ITEM_ID, "Invalid item ID");
     add(Util_MessageKeys.REQUEST_ITEM_NOT_FOUND, "Item not found");
@@ -513,6 +642,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("message.market.deliver_demand.persist_failed", "Market data could not be saved");
     add("message.market.deliver_demand.state_unknown", "Market state is uncertain; refresh before retrying");
     add("message.market.deliver_demand.rollback_failed", "Delivery rollback needs administrator attention");
+    add("message.market.expired.sales_return", "Your sales order for %s x%s expired; the items were returned to your delivery box");
+    add("message.market.expired.demand_refunded", "Your demand order for %s expired; %s coins were refunded");
+    add("message.market.expired.demand_delivered", "Your delivered demand item %s x%s expired; it was moved to your delivery box");
     add(Util_MessageKeys.MARKET_DELIVER_DEMAND_FAILED, "Could not deliver the demand order");
     add(
         Util_MessageKeys.MARKET_DELIVER_DEMAND_REQUESTER_NOTICE,

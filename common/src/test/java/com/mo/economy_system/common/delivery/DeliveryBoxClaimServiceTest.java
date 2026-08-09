@@ -45,6 +45,40 @@ class DeliveryBoxClaimServiceTest {
   }
 
   @Test
+  void thrownInsertionIsStateUnknownAndDoesNotRunACompensatingRollback() {
+    Fixture fixture = new Fixture();
+    AtomicBoolean partiallyInserted = new AtomicBoolean();
+    fixture.inventory.insert = (template, quantity) -> {
+      partiallyInserted.set(true);
+      throw new IllegalStateException("insert");
+    };
+
+    assertEquals(DeliveryBoxClaimResult.STATE_UNKNOWN, fixture.claim());
+    assertEquals(1, fixture.ledger.list(fixture.owner).size());
+    assertTrue(partiallyInserted.get());
+  }
+
+  @Test
+  void unknownRepositoryCommitKeepsDeliveredInventory() {
+    Fixture fixture = new Fixture();
+    AtomicBoolean inserted = new AtomicBoolean();
+    AtomicBoolean rolledBack = new AtomicBoolean();
+    fixture.inventory.insert = (template, quantity) -> {
+      inserted.set(true);
+      return InventoryInsertionResult.success(() -> {
+        rolledBack.set(true);
+        inserted.set(false);
+        return true;
+      });
+    };
+    fixture.repository = new UnknownCommitRepository(fixture.ledger, fixture.owner, fixture.entry);
+
+    assertEquals(DeliveryBoxClaimResult.STATE_UNKNOWN, fixture.claim());
+    assertTrue(inserted.get());
+    assertFalse(rolledBack.get());
+  }
+
+  @Test
   void persistenceFailureRollsBackInventoryAndKeepsEntry() {
     Fixture fixture = new Fixture();
     AtomicBoolean inserted = new AtomicBoolean();
@@ -101,9 +135,11 @@ class DeliveryBoxClaimServiceTest {
     final AtomicInteger reports = new AtomicInteger();
     boolean dirtyFails;
     boolean materializerFails;
+    DeliveryBoxRepository repository;
 
     Fixture() {
       ledger.add(owner, entry, () -> {});
+      repository = ledger;
     }
 
     DeliveryBoxClaimResult claim() {
@@ -111,7 +147,7 @@ class DeliveryBoxClaimServiceTest {
           new DeliveryBoxClaimMessage(entry.entryId(), 0),
           new DeliveryBoxClaimService.Context(
               owner,
-              ledger,
+              repository,
               value -> {
                 if (materializerFails) throw new IllegalStateException("restore");
                 return value.item();
@@ -121,6 +157,35 @@ class DeliveryBoxClaimServiceTest {
                 if (dirtyFails) throw new IllegalStateException("dirty");
               },
               (ownerId, entryId, stage, result, error) -> reports.incrementAndGet()));
+    }
+  }
+
+  private static final class UnknownCommitRepository implements DeliveryBoxRepository {
+    private final DeliveryBoxLedger ledger;
+    private final UUID owner;
+    private final DeliveryBoxEntrySnapshot entry;
+
+    private UnknownCommitRepository(
+        DeliveryBoxLedger ledger, UUID owner, DeliveryBoxEntrySnapshot entry) {
+      this.ledger = ledger;
+      this.owner = owner;
+      this.entry = entry;
+    }
+
+    @Override
+    public java.util.List<DeliveryBoxEntrySnapshot> list(UUID ownerId) {
+      return ledger.list(ownerId);
+    }
+
+    @Override
+    public Reservation reserve(UUID ownerId, UUID entryId) {
+      return new Reservation() {
+        public DeliveryBoxEntrySnapshot entry() { return entry; }
+        public CommitResult commit(DeliveryBoxLedger.DirtyMarker dirty) {
+          return CommitResult.STATE_UNKNOWN;
+        }
+        public void release() {}
+      };
     }
   }
 

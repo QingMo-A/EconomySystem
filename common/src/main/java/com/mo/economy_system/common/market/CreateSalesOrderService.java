@@ -55,24 +55,26 @@ public final class CreateSalesOrderService {
             CreateSalesOrderResult result = removal != null && !removal.failureRestored()
                     ? CreateSalesOrderResult.ROLLBACK_FAILED : CreateSalesOrderResult.INVENTORY_MUTATION_FAILED;
             Compensation compensation = removal != null && !removal.failureRestored()
-                    ? new Compensation(false, true, true, false, null, null) : Compensation.notRequired();
+                    ? new Compensation(false, true, true, true, false, null, null)
+                    : Compensation.notRequired();
             report(context, tradeId, "inventory-remove", result, null, compensation);
             return result;
         }
 
         BalanceMutationResult debitResult;
-        RuntimeException debitException = null;
         try {
-            debitResult = context.account().debitExact(tax);
+            debitResult = Objects.requireNonNull(context.account().debitExact(tax), "debit result");
         } catch (RuntimeException exception) {
-            debitResult = BalanceMutationResult.PERSIST_FAILED;
-            debitException = exception;
+            Compensation compensation = compensate(context, tax, false, false, removal.rollback());
+            report(context, tradeId, "tax-debit", CreateSalesOrderResult.STATE_UNKNOWN,
+                    exception, compensation);
+            return CreateSalesOrderResult.STATE_UNKNOWN;
         }
         if (debitResult != BalanceMutationResult.SUCCESS) {
-            Compensation compensation = compensate(context, tax, false, removal.rollback());
+            Compensation compensation = compensate(context, tax, false, true, removal.rollback());
             CreateSalesOrderResult result = compensation.complete()
                     ? CreateSalesOrderResult.TAX_MUTATION_FAILED : CreateSalesOrderResult.ROLLBACK_FAILED;
-            report(context, tradeId, "tax-debit", result, debitException, compensation);
+            report(context, tradeId, "tax-debit", result, null, compensation);
             return result;
         }
 
@@ -85,9 +87,12 @@ public final class CreateSalesOrderService {
             repositoryException = exception;
         }
         if (!added) {
-            Compensation compensation = compensate(context, tax, true, removal.rollback());
+            Compensation compensation = compensate(context, tax, true, true, removal.rollback());
             CreateSalesOrderResult result = compensation.complete()
-                    ? CreateSalesOrderResult.ORDER_PERSIST_FAILED : CreateSalesOrderResult.ROLLBACK_FAILED;
+                    ? CreateSalesOrderResult.ORDER_PERSIST_FAILED
+                    : compensation.taxStateKnown()
+                            ? CreateSalesOrderResult.ROLLBACK_FAILED
+                            : CreateSalesOrderResult.STATE_UNKNOWN;
             report(context, tradeId, "repository-add", result, repositoryException, compensation);
             return result;
         }
@@ -100,19 +105,28 @@ public final class CreateSalesOrderService {
         return tax > Integer.MAX_VALUE ? -1 : (int) tax;
     }
 
-    private static Compensation compensate(Context context, int tax, boolean taxDebited, Removal removal) {
+    private static Compensation compensate(Context context, int tax, boolean taxDebited,
+                                           boolean taxStateKnown, Removal removal) {
         boolean taxAttempted = taxDebited;
         boolean taxRestored = !taxDebited;
         RuntimeException taxError = null;
         if (taxDebited) {
-            try { taxRestored = context.account().creditExact(tax) == BalanceMutationResult.SUCCESS; }
-            catch (RuntimeException exception) { taxRestored = false; taxError = exception; }
+            try {
+                BalanceMutationResult result = Objects.requireNonNull(
+                        context.account().creditExact(tax), "tax refund result");
+                taxRestored = result == BalanceMutationResult.SUCCESS;
+            } catch (RuntimeException exception) {
+                taxStateKnown = false;
+                taxRestored = false;
+                taxError = exception;
+            }
         }
         boolean inventoryRestored;
         RuntimeException inventoryError = null;
         try { inventoryRestored = removal.rollback(); }
         catch (RuntimeException exception) { inventoryRestored = false; inventoryError = exception; }
-        return new Compensation(taxAttempted, taxRestored, true, inventoryRestored, taxError, inventoryError);
+        return new Compensation(taxAttempted, taxStateKnown, taxRestored, true,
+                inventoryRestored, taxError, inventoryError);
     }
 
     private static void report(Context context, UUID tradeId, String stage, CreateSalesOrderResult result,
@@ -151,9 +165,12 @@ public final class CreateSalesOrderService {
         void report(UUID tradeId, String stage, CreateSalesOrderResult result, RuntimeException cause, Compensation compensation);
         static FailureReporter noop() { return (tradeId, stage, result, cause, compensation) -> {}; }
     }
-    public record Compensation(boolean taxAttempted, boolean taxRestored, boolean inventoryAttempted,
-                               boolean inventoryRestored, RuntimeException taxError, RuntimeException inventoryError) {
-        public static Compensation notRequired() { return new Compensation(false, true, false, true, null, null); }
-        public boolean complete() { return taxRestored && inventoryRestored; }
+    public record Compensation(boolean taxAttempted, boolean taxStateKnown, boolean taxRestored,
+                               boolean inventoryAttempted, boolean inventoryRestored,
+                               RuntimeException taxError, RuntimeException inventoryError) {
+        public static Compensation notRequired() {
+            return new Compensation(false, true, true, false, true, null, null);
+        }
+        public boolean complete() { return taxStateKnown && taxRestored && inventoryRestored; }
     }
 }

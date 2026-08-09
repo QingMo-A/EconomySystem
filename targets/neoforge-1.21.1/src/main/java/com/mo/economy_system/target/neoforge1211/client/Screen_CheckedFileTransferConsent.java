@@ -3,111 +3,194 @@ package com.mo.economy_system.target.neoforge1211.client;
 import com.mo.economy_system.common.check.ClientFileCheckTaskCoordinator;
 import com.mo.economy_system.common.network.CheckedFileTransferRequestMessage;
 import com.mo.economy_system.common.transfer.CheckedFileSnapshotter;
-import com.mo.economy_system.common.transfer.CheckedFileTransferLayout;
 import com.mo.economy_system.common.transfer.CheckedFileTransferManifestCache;
 import com.mo.economy_system.common.transfer.CheckedFileTransferOutgoing;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.platform.network.EconomyNetworkMessage;
+import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.transfer.TransferConsentAction;
+import com.mo.economy_system.ui.transfer.TransferConsentController;
+import com.mo.economy_system.ui.transfer.TransferConsentEvent;
+import com.mo.economy_system.ui.transfer.TransferConsentLayout;
+import com.mo.economy_system.ui.transfer.TransferConsentPort;
+import com.mo.economy_system.ui.transfer.TransferConsentView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+/** NeoForge shell for the common checked-file transfer consent page. */
 final class Screen_CheckedFileTransferConsent extends Screen {
   private final CheckedFileTransferRequestMessage request;
   private final CheckedFileTransferManifestCache.Entry entry;
   private final ClientFileCheckTaskCoordinator.Session session;
+  private final TransferConsentController controller;
   private boolean finished;
 
-  Screen_CheckedFileTransferConsent(CheckedFileTransferRequestMessage request,
-                                    CheckedFileTransferManifestCache.Entry entry,
-                                    ClientFileCheckTaskCoordinator.Session session) {
+  Screen_CheckedFileTransferConsent(
+      CheckedFileTransferRequestMessage request,
+      CheckedFileTransferManifestCache.Entry entry,
+      ClientFileCheckTaskCoordinator.Session session) {
     super(Component.translatable("screen.transfer_consent.title"));
-    this.request = request; this.entry = entry; this.session = session;
+    this.request = request;
+    this.entry = entry;
+    this.session = session;
+    controller = new TransferConsentController(
+        request.requesterPlayerName(),
+        request.checkType().id(),
+        request.fileName(),
+        entry.size(),
+        entry.sha256(),
+        new Port());
   }
 
-  @Override protected void init() {
-    var actions = CheckedFileTransferLayout.twoActions(width, height);
-    if (actions.primary() == null) return;
-    addRenderableWidget(Button.builder(Component.translatable("button.transfer.allow"), b -> allow())
-        .bounds(actions.primary().x(), actions.primary().y(), actions.primary().width(), actions.primary().height()).build());
-    addRenderableWidget(Button.builder(Component.translatable("button.transfer.decline"), b -> decline())
-        .bounds(actions.secondary().x(), actions.secondary().y(), actions.secondary().width(), actions.secondary().height()).build());
-  }
-
-  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+  @Override
+  public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    TransferConsentLayout.Layout layout = TransferConsentLayout.calculate(width, height);
+    UiScale scale = layout.scale();
+    graphics.pose().pushPose();
+    graphics.pose().scale(scale.value(), scale.value(), 1.0f);
+    TransferConsentView.render(
+        new NeoForge1211UiRenderer(graphics, font),
+        controller.state(),
+        layout,
+        scale.toVirtualX(mouseX),
+        scale.toVirtualY(mouseY));
+    graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
-    graphics.drawCenteredString(font, title, width / 2,
-        Math.min(18, Math.max(0, height - font.lineHeight)), 0xffffff);
-    var actions = CheckedFileTransferLayout.twoActions(width, height);
-    int rows = CheckedFileTransferLayout.visibleRows(
-        width, height, 64, 38, 12, 6, actions.primary());
-    int maxCharacters = Math.max(4, (width - 8) / 6);
-    if (rows >= 1) graphics.drawString(font, Component.translatable(
-        "screen.transfer_consent.requester", request.requesterPlayerName()), 4, 38, 0xdddddd);
-    if (rows >= 2) graphics.drawString(font, Component.translatable(
-        "screen.transfer_consent.type", request.checkType().id()), 4, 50, 0xdddddd);
-    if (rows >= 3) graphics.drawString(font, Component.translatable(
-        "screen.transfer_consent.file",
-        CheckedFileTransferLayout.truncate(request.fileName(), maxCharacters)), 4, 62, 0xdddddd);
-    if (rows >= 4) graphics.drawString(font, Component.translatable(
-        "screen.transfer_consent.size", entry.size()), 4, 74, 0xdddddd);
-    if (rows >= 5) graphics.drawString(font, Component.translatable(
-        "screen.transfer_consent.hash",
-        CheckedFileTransferLayout.truncate(entry.sha256(), maxCharacters)), 4, 86, 0xdddddd);
-    if (rows >= 6) graphics.drawString(font,
-        Component.translatable("screen.transfer_consent.warning"), 4, 98, 0xccaa66);
   }
+
+  @Override
+  public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+    TransferConsentLayout.Layout layout = TransferConsentLayout.calculate(width, height);
+    int x = layout.scale().toVirtualX(mouseX);
+    int y = layout.scale().toVirtualY(mouseY);
+    if (layout.allow().contains(x, y)) {
+      controller.handle(new TransferConsentEvent.ActionClicked(TransferConsentAction.ALLOW));
+      return true;
+    }
+    if (layout.decline().contains(x, y)) {
+      controller.handle(new TransferConsentEvent.ActionClicked(TransferConsentAction.DECLINE));
+      return true;
+    }
+    return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  @Override
+  public void tick() {
+    if (finished) return;
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    var active = coordinator.outgoing().active();
+    if (!current()
+        || active == null
+        || !active.request().equals(request)
+        || active.state() != CheckedFileTransferOutgoing.State.CONSENT
+        || System.nanoTime() >= active.deadlineNanos()) {
+      controller.handle(new TransferConsentEvent.Expired());
+    }
+  }
+
+  @Override
+  public void onClose() {
+    controller.handle(new TransferConsentEvent.ActionClicked(TransferConsentAction.DECLINE));
+  }
+
+  @Override
+  public void removed() {
+    if (!finished) controller.handle(new TransferConsentEvent.ActionClicked(TransferConsentAction.DECLINE));
+  }
+
+  @Override
+  public boolean isPauseScreen() {
+    return false;
+  }
+
+  @Override
+  public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
   private void allow() {
-    if (finished || !current()) return;
+    if (finished) return;
+    if (!current()) {
+      finished = true;
+      Minecraft.getInstance().setScreen(null);
+      return;
+    }
     finished = true;
     Minecraft minecraft = Minecraft.getInstance();
-      var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
-      coordinator.outgoing().allow(request, session,
-          deadline -> CheckedFileSnapshotter.create(minecraft.gameDirectory.toPath(), request.checkType(),
-              request.fileName(), entry.size(), entry.sha256(),
-              coordinator.temporaryDirectory(minecraft.gameDirectory.toPath()),
-              deadline, coordinator.tempBudget()),
+    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
+    coordinator.outgoing().allow(
+        request,
+        session,
+        deadline ->
+            CheckedFileSnapshotter.create(
+                minecraft.gameDirectory.toPath(),
+                request.checkType(),
+                request.fileName(),
+                entry.size(),
+                entry.sha256(),
+                coordinator.temporaryDirectory(minecraft.gameDirectory.toPath()),
+                deadline,
+                coordinator.tempBudget()),
         (activeSession, token, outgoing) -> send(activeSession, outgoing));
     minecraft.setScreen(null);
   }
 
   private void decline() {
     if (finished) return;
+    if (!current()) {
+      finished = true;
+      Minecraft.getInstance().setScreen(null);
+      return;
+    }
     finished = true;
     NeoForge1211ClientFileCheckClientRuntime.transfers().outgoing().decline(
         request, session, (activeSession, token, outgoing) -> send(activeSession, outgoing));
     Minecraft.getInstance().setScreen(null);
   }
-  @Override public void tick() {
+
+  private void expire() {
     if (finished) return;
-    var coordinator = NeoForge1211ClientFileCheckClientRuntime.transfers();
-    var active = coordinator.outgoing().active();
-    if (!current() || active == null || !active.request().equals(request)
-        || active.state() != CheckedFileTransferOutgoing.State.CONSENT
-        || System.nanoTime() >= active.deadlineNanos()) {
-      finished = true;
-      coordinator.publishRequestExpired(request, session, System.nanoTime());
-      Minecraft.getInstance().setScreen(null);
-      CheckedFileTransferIncomingRuntime.pollNotification();
-    }
+    finished = true;
+    NeoForge1211ClientFileCheckClientRuntime.transfers()
+        .publishRequestExpired(request, session, System.nanoTime());
+    Minecraft.getInstance().setScreen(null);
+    CheckedFileTransferIncomingRuntime.pollNotification();
   }
 
   private boolean current() {
     var active = NeoForge1211ClientFileCheckClientRuntime.transfers().currentSession();
-    return active != null && active.generation() == session.generation()
+    return active != null
+        && active.generation() == session.generation()
         && active.connectionIdentity() == session.connectionIdentity()
         && active.localPlayerId().equals(session.localPlayerId());
   }
+
   private static void send(ClientFileCheckTaskCoordinator.Session session, Object message) {
     var active = NeoForge1211ClientFileCheckClientRuntime.transfers().currentSession();
-    if (active == null || active.generation() != session.generation()
+    if (active == null
+        || active.generation() != session.generation()
         || active.connectionIdentity() != session.connectionIdentity()
-        || !active.localPlayerId().equals(session.localPlayerId())) return;
+        || !active.localPlayerId().equals(session.localPlayerId())) {
+      return;
+    }
     EconomySystem_NetworkManager.sendToServer((EconomyNetworkMessage) message);
   }
-  @Override public void onClose() { decline(); }
-  @Override public void removed() { if (!finished) decline(); }
+
+  private final class Port implements TransferConsentPort {
+    @Override
+    public void allow() {
+      Screen_CheckedFileTransferConsent.this.allow();
+    }
+
+    @Override
+    public void decline() {
+      Screen_CheckedFileTransferConsent.this.decline();
+    }
+
+    @Override
+    public void expire() {
+      Screen_CheckedFileTransferConsent.this.expire();
+    }
+  }
 }

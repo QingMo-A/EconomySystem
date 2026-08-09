@@ -33,14 +33,32 @@ class DemandOrderDeliveryServiceTest {
   }
 
   @Test
-  void unknownTransitionInvalidates() {
+  void unknownTransitionLeavesPriorMutationsUntouched() {
     F f = new F();
     f.nullTransition = true;
     DemandOrderDeliveryOutcome o = f.run();
     assertEquals(DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN, o.result());
     assertEquals(MarketMutationState.UNKNOWN, o.mutationState());
-    assertEquals(0, f.balance);
-    assertEquals(20, f.items);
+    assertEquals(17, f.balance);
+    assertEquals(15, f.items);
+    assertEquals(0, f.debitCalls);
+    assertEquals(0, f.rollbackCalls);
+  }
+
+  @Test
+  void transitionMutationThenExceptionIsNotBlindlyCompensated() {
+    F f = new F();
+    f.transitionMutatesThenThrows = true;
+
+    DemandOrderDeliveryOutcome outcome = f.run();
+
+    assertEquals(DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN, outcome.result());
+    assertEquals(MarketMutationState.UNKNOWN, outcome.mutationState());
+    assertTrue(f.order.delivered());
+    assertEquals(17, f.balance);
+    assertEquals(15, f.items);
+    assertEquals(0, f.debitCalls);
+    assertEquals(0, f.rollbackCalls);
   }
 
   @Test void nullMessageAndMissingOrderFailWithoutMutation() {
@@ -92,11 +110,26 @@ class DemandOrderDeliveryServiceTest {
     f = new F(); f.removalFailure = true; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
   }
 
-  @Test void creditFailuresAlwaysAttemptInventoryRollback() {
-    F f = new F(); f.credit = null; assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, f.run().result()); assertEquals(1, f.rollbackCalls);
-    f = new F(); f.creditThrows = true; assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, f.run().result()); assertEquals(1, f.rollbackCalls);
-    f = new F(); f.credit = BalanceMutationResult.BALANCE_LIMIT; assertEquals(DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT, f.run().result());
+  @Test void knownCreditFailuresRollbackInventory() {
+    F f = new F(); f.credit = BalanceMutationResult.BALANCE_LIMIT; assertEquals(DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT, f.run().result()); assertEquals(1, f.rollbackCalls);
     f = new F(); f.credit = BalanceMutationResult.PERSIST_FAILED; f.rollbackSucceeds = false; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
+  }
+
+  @Test void unknownCreditStateDoesNotBlindlyRestoreInventory() {
+    F returnedNull = new F(); returnedNull.credit = null;
+    DemandOrderDeliveryOutcome nullOutcome = returnedNull.run();
+    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, nullOutcome.result());
+    assertEquals(MarketMutationState.UNKNOWN, nullOutcome.mutationState());
+    assertEquals(15, returnedNull.items); assertEquals(0, returnedNull.rollbackCalls);
+
+    F thrown = new F(); thrown.creditThrows = true;
+    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, thrown.run().result());
+    assertEquals(15, thrown.items); assertEquals(0, thrown.rollbackCalls);
+
+    F mutatedThenThrew = new F(); mutatedThenThrew.creditMutatesThenThrows = true;
+    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, mutatedThenThrew.run().result());
+    assertEquals(17, mutatedThenThrew.balance); assertEquals(15, mutatedThenThrew.items);
+    assertEquals(0, mutatedThenThrew.debitCalls); assertEquals(0, mutatedThenThrew.rollbackCalls);
   }
 
   @Test void creditFailureTelemetryDistinguishesActiveRollbackFromRemovalFailureRestore() {
@@ -118,11 +151,27 @@ class DemandOrderDeliveryServiceTest {
     assertFalse(failedFailure.paymentCreditSucceeded());
   }
 
-  @Test void compensationAlwaysAttemptsBothSidesAndReportsRequesterAndErrors() {
-    F f = new F(); f.status = DemandDeliveryTransitionStatus.PERSIST_FAILED; f.debitThrows = true; f.rollbackThrows = true;
-    DemandOrderDeliveryOutcome outcome = f.run(); assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, outcome.result());
-    assertEquals(1, f.debitCalls); assertEquals(1, f.rollbackCalls); DemandOrderDeliveryFailure report = f.reports.get(f.reports.size() - 1);
-    assertEquals(f.order.sellerId(), report.requesterId()); assertNotNull(report.paymentError()); assertNotNull(report.inventoryError());
+  @Test void failedOrUnknownPaymentReversalNeverRestoresInventory() {
+    F rejected = new F(); rejected.status = DemandDeliveryTransitionStatus.PERSIST_FAILED;
+    rejected.debit = BalanceMutationResult.PERSIST_FAILED;
+    DemandOrderDeliveryOutcome rejectedOutcome = rejected.run();
+    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, rejectedOutcome.result());
+    assertEquals(MarketMutationState.UNKNOWN, rejectedOutcome.mutationState());
+    assertEquals(17, rejected.balance); assertEquals(15, rejected.items);
+    assertEquals(1, rejected.debitCalls); assertEquals(0, rejected.rollbackCalls);
+    assertEquals(MarketMutationState.UNKNOWN,
+        rejected.reports.get(rejected.reports.size() - 1).mutationState());
+
+    F unknown = new F(); unknown.status = DemandDeliveryTransitionStatus.PERSIST_FAILED;
+    unknown.debitMutatesThenThrows = true; unknown.rollbackThrows = true;
+    DemandOrderDeliveryOutcome unknownOutcome = unknown.run();
+    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, unknownOutcome.result());
+    assertEquals(MarketMutationState.UNKNOWN, unknownOutcome.mutationState());
+    assertEquals(0, unknown.balance); assertEquals(15, unknown.items);
+    assertEquals(1, unknown.debitCalls); assertEquals(0, unknown.rollbackCalls);
+    DemandOrderDeliveryFailure report = unknown.reports.get(unknown.reports.size() - 1);
+    assertEquals(unknown.order.sellerId(), report.requesterId());
+    assertNotNull(report.paymentError()); assertNull(report.inventoryError());
   }
 
   @Test void reporterExceptionDoesNotChangeSuccessfulOrFailedOutcome() {
@@ -150,10 +199,12 @@ class DemandOrderDeliveryServiceTest {
             false);
     int items = 20, balance, removeCalls, rollbackCalls, creditCalls, debitCalls;
     DemandDeliveryTransitionStatus status = DemandDeliveryTransitionStatus.UPDATED;
-    BalanceMutationResult preview = BalanceMutationResult.SUCCESS, credit = BalanceMutationResult.SUCCESS;
+    BalanceMutationResult preview = BalanceMutationResult.SUCCESS;
+    BalanceMutationResult credit = BalanceMutationResult.SUCCESS, debit = BalanceMutationResult.SUCCESS;
     boolean nullTransition, restoreNull, restoreThrows, ownerMismatch, ownerThrows, previewThrows,
         countThrows, removeNull, removeThrows, removalFailure, failureRestored, creditThrows,
-        rollbackSucceeds = true, rollbackThrows, debitThrows, reporterThrows;
+        creditMutatesThenThrows, rollbackSucceeds = true, rollbackThrows, debitThrows,
+        debitMutatesThenThrows, transitionMutatesThenThrows, reporterThrows;
     List<DemandOrderDeliveryFailure> reports = new ArrayList<>();
 
     public Object restore(MarketOrder o) {
@@ -197,6 +248,10 @@ class DemandOrderDeliveryServiceTest {
 
     public BalanceMutationResult creditExact(int a) {
       creditCalls++;
+      if (creditMutatesThenThrows) {
+        balance += a;
+        throw new IllegalStateException("credit");
+      }
       if (creditThrows) throw new IllegalStateException("credit");
       if (credit != BalanceMutationResult.SUCCESS) return credit;
       balance += a;
@@ -205,7 +260,12 @@ class DemandOrderDeliveryServiceTest {
 
     public BalanceMutationResult debitExact(int a) {
       debitCalls++;
+      if (debitMutatesThenThrows) {
+        balance -= a;
+        throw new IllegalStateException("debit");
+      }
       if (debitThrows) throw new IllegalStateException("debit");
+      if (debit != BalanceMutationResult.SUCCESS) return debit;
       balance -= a;
       return BalanceMutationResult.SUCCESS;
     }
@@ -218,20 +278,10 @@ class DemandOrderDeliveryServiceTest {
       if (nullTransition) return null;
       if (status != DemandDeliveryTransitionStatus.UPDATED)
         return DemandDeliveryTransition.failure(status);
-      MarketOrder updated =
-          new MarketOrder(
-              order.type(),
-              order.tradeId(),
-              order.item(),
-              order.quantity(),
-              order.totalPrice(),
-              order.sellerName(),
-              order.sellerId(),
-              order.listingTime(),
-              order.expirationTime(),
-              true);
+      MarketOrder updated = copy(MarketOrderType.DEMAND, true, order.quantity(), order.totalPrice());
       DemandDeliveryTransition t = DemandDeliveryTransition.updated(order, updated);
       order = updated;
+      if (transitionMutatesThenThrows) throw new IllegalStateException("transition");
       return t;
     }
 

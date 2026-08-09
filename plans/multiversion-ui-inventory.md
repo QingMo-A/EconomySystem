@@ -1,54 +1,79 @@
 # Multiversion UI / Logic Inventory
 
-Baseline: NeoForge 1.21.1 root `src/main/java` implementation. Forge 1.20.1
-must consume the same common behavior and visual contracts and only translate
-Minecraft/loader APIs.
+Status: implementation inventory, 2026-08-08. NeoForge 1.21.1 remains the
+behavior and visual reference, but active production code no longer compiles
+the root `src/main/java` tree. Both targets compile `common/src/main/java` plus
+their own Minecraft/loader adapters.
 
-## Inventory Matrix
+## Active UI Matrix
 
-| Feature / screen | NeoForge 1.21.1 | Forge 1.20.1 | Common status | Logic / visual source | Target API dependency | Current drift | Destination | Stage |
-|---|---|---|---|---|---|---|---|---|
-| Home navigation | `src/.../screen/Screen_Home` | target-local `screen/Screen_Home` | route model exists | NeoForge visual baseline | Screen, GuiGraphics, key events | Forge has explicit unavailable routes | common route/menu + target shells | foundation complete |
-| Territory list | `screen/territory_system/Screen_Territory` | target-local `Screen_Territory` | data applier/request IDs exist | NeoForge list/paging baseline | Screen, EditBox, rendering | layout and state duplicated | common territory list controller/layout | inventory |
-| Territory manage | `screen/territory_system/Screen_ManageTerritory` | target-local `Screen_ManageTerritory` | `common/ui/territory` state/controller/layout/view complete | NeoForge cards/actions baseline | Screen, EditBox, player-head/item rendering | nested pages remain explicit fallback | `common/ui/territory` + two shells | pilot complete; nested family next |
-| Territory buffs | `Screen_TerritoryBuff` | no equivalent full page | messages/services common | NeoForge baseline | Screen, widgets, item rendering | Forge missing | common controller + target shells | later |
-| Territory player actions | `Screen_TerritoryPlayerAction` | partial target pages | messages common | NeoForge baseline | Screen, text input | Forge incomplete | common action state + target shells | later |
-| Territory confirmations/invites | confirm/invite screens | target-local equivalents | common transactions/messages | NeoForge flow baseline | Screen, widgets | layout drift | common navigation/state + target shells | later |
-| Shop | `screen/economy_system/shop/*` | no full equivalent | shop data/network common | NeoForge visual baseline | Screen, item rendering | Forge unavailable | common shop state/view + target shells | later |
-| Market/orders | `screen/economy_system/market/*` | no full equivalent | market protocols common | NeoForge visual baseline | Screen, item rendering, text input | Forge unavailable | common market controllers/views | later |
-| Delivery box | root delivery screen | target-local delivery screen | common snapshots/protocols | NeoForge baseline | Screen, item rendering | target implementation differs | common delivery state/layout | later |
-| Balance log | root balance-log screen | unavailable | common ledger/query exists | NeoForge baseline | Screen, chart/list rendering | Forge missing | common balance-log view | later |
-| About | root about screen | unavailable | route exists | NeoForge visual baseline | Screen, texture/clipboard APIs | Forge missing | common about model + target renderer | later |
-| File check / transfer | target-specific NeoForge screens | target-specific Forge screens | lifecycle/network common | target consent shell | disk/UI APIs | separate shell state | common controller/view state | later |
+| Feature family | Common source of truth | Forge 1.20.1 shell | NeoForge 1.21.1 shell | Target-only API boundary | Status |
+|---|---|---|---|---|---|
+| Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | migrated |
+| About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | migrated |
+| Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | migrated |
+| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | migrated |
+| Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | migrated |
+| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | migrated; fixed 9-entry wire page |
+| Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | migrated |
+| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | migrated |
+| Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | migrated |
+| Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | migrated |
+| Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | migrated |
+| Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | migrated |
+| Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | migrated |
+| Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | migrated; one-shot decision |
+| Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | migrated |
+| Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | migrated |
 
-## Shared Components
+Every active `*Screen.java` under the two target adapter packages is covered by
+an architecture gate requiring a common UI contract. The legacy
+`com/mo/economy_system/screen/**` trees remain reference material only and are
+excluded from both production and test source sets.
 
-| Component | Current location | Common destination | Decision |
-|---|---|---|---|
-| Card geometry/style | root `CardRenderer` | `common/ui/theme` and `common/ui/geometry` | move data semantics, keep draw calls target-local |
-| Button style | root `UiButtonStyle` | `common/ui/theme` | immutable token model; no GuiGraphics |
-| Button drawing | root `UiButtonRenderer` | `EconomyUiRenderer` | semantic renderer contract |
-| Animation | root `UiAnimation` | `common/ui/animation` | common timing/easing; target supplies frame clock |
-| Paging/scroll bounds | duplicated in screens | controller/layout | common state and layout tests |
-| Text input | Minecraft EditBox wrappers | controller state/validation | target owns widget lifecycle |
+## Shared UI Foundation
 
-## Pilot Acceptance
+| Concern | Source of truth | Target responsibility |
+|---|---|---|
+| Geometry and scaling | `ui/geometry`, 640x360 base canvas | apply physical scale |
+| Theme, cards and buttons | `ui/theme` | translate semantic style to draw calls |
+| State and navigation | common controller/state/event records | forward lifecycle/input events |
+| Paging, filtering and scrolling | common controllers/layouts | report viewport and wheel direction |
+| Semantic rendering | `EconomyUiRenderer` and common views | draw text, item, player head, texture and tooltip |
+| Text entry | common validation/state | own Minecraft `EditBox` lifecycle |
 
-The territory-management pilot is complete only when both targets use the same
-`TerritoryManageState`, controller, layout, theme tokens and action semantics;
-only the Screen shell and renderer differ. Shop, market, delivery, file-check,
-root-source detachment and future-version skeletons remain outside this pilot.
+Controller tests cover initial/loading/ready/empty/error, retry, timeout, stale
+and duplicate responses, action enablement, paging/scrolling and navigation.
+Layout tests cover the documented normal, narrow and short viewports. Recording
+renderer tests prove that both target backends receive the same semantic view.
 
-## Pilot result
+## Business Boundary
 
-The territory-management entry pilot is complete. Both target shells consume
-the same immutable member state, request-ID state machine, viewport-aware
-640x360 layout, theme tokens, semantic renderer contract, and stable action
-IDs. Common tests cover initial/loading/success/empty/error, timeout/retry,
-stale and duplicate responses, filtering, paging and wheel-scroll bounds,
-viewport bounds, hitbox containment, non-overlap, and recording-renderer parity.
+| Domain | Common authority | Target adapter retained |
+|---|---|---|
+| Accounts / transfer | ledger and transaction services | SavedData/NBT and player lookup |
+| Shop | purchase transaction, dynamic pricing policy and refresh schedule | JSON/config I/O and native ItemStack creation |
+| Market | order model, ledger, query and mutation transactions | SavedData/NBT and inventory/player adapters |
+| Delivery | ledger, query and claim transaction | SavedData/NBT and native inventory adapter |
+| Territory | snapshots, geometry, pricing, resize/removal/admin/buff transactions | SavedData, native territory model and spatial index |
+| File check / transfer | validation, authorization and lifecycle state machines | secure filesystem and loader network adapters |
+| Red packet | packet state, lucky/even allocation, claim/cancel/expiry transactions and compensation | SavedData/NBT, account ledger and chat/command translation |
+| Mob reward | reward catalog, random calculation, enchantment bonuses and exact credit policy | entity/enchantment registry lookup, RNG source, account ledger and death event |
+| TPA | request store, TTL, potion reservation transaction and fail-closed teleport outcomes | player/inventory/chunk/teleport/effect APIs and command translation |
+| Starter kit | exactly-once claim, marker/account compensation and outcome policy | persistent player marker, account ledger, clone/login events and command translation |
+| Update check | SemVer parsing/comparison, release JSON validation and result policy | HTTP executor, server-thread dispatch and clickable chat components |
 
-Nested buffs, access/rules, transfer, invite, and delete pages remain an
-explicit documented target fallback. They are the next territory-family input;
-shop, market, delivery, file-check UI, root-source detachment, and future target
-skeletons remain outside this checkpoint.
+Target-local classes named `Manager`, `SavedData` or `Store` are not by
+themselves evidence of duplicated policy. They are permitted only when they
+translate Minecraft persistence, registry, player, inventory, filesystem or
+index APIs into a common service port. Architecture gates pin the extracted
+resize, geometry, pricing, shop-pricing and UI contracts.
+
+The gameplay and lifecycle entries that were previously outside the Bridge/UI
+scope are now included in the parity boundary. `common/redpacket`,
+`common/reward`, `common/tpa`, `common/starter` and `common/update` own their
+version-independent state machines, policies and transaction outcomes. Forge
+and NeoForge retain only loader/API adapters and use the same common services.
+The old root `src/main/java` implementations remain excluded reference material;
+they are not compiled by either target and are not an alternative source of
+behavior.

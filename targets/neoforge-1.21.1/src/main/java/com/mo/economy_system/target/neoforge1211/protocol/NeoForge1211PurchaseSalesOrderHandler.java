@@ -7,6 +7,7 @@ import com.mo.economy_system.core.economy_system.*;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.network.MarketInvalidationBroadcaster;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import java.util.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,8 +80,7 @@ public final class NeoForge1211PurchaseSalesOrderHandler {
 
   private static Object displayName(ServerPlayer p, MarketOrder o) {
     try {
-      return EconomyServices.platform()
-          .itemStacks()
+      return NeoForge1211Platform.nativeItemStacks()
           .restoreSnapshot(o.item(), p.registryAccess())
           .orElseThrow()
           .getHoverName();
