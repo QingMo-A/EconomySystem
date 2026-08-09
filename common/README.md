@@ -320,7 +320,7 @@ the baseline viewport. Shop dynamic pricing and refresh scheduling now also
 live in common; target shop code is limited to configuration persistence and
 native ItemStack materialization.
 
-## Territory Manage parity (current bridge)
+## Territory Manage pixel parity (current bridge)
 
 This visual-parity pass is based on `045fe951` (the About shared-texture fix),
 with `b60fdb46` retained as the multiversion common-architecture candidate
@@ -328,20 +328,31 @@ baseline. Gameplay, service and network/wire modules remain frozen and
 user-tested; this pass changes only Territory Manage UI contracts, primitives,
 target rendering adapters, tests and shared icon placement.
 
-Territory Manage now follows the 1.21.1 reference geometry on both loaders:
+Territory Manage structural parity, behavior parity and pixel-level reference
+parity are accepted on both loaders. The page follows the 1.21.1 reference:
 the 640x360 virtual canvas, exact member/action/pagination rectangles,
-metrics-backed truncation, centered empty state, footer title card and ESC
-hint. Search and the normal-page Back button are intentionally absent; ESC is
-the return path. KICK is an explicit confirmation intent, COPY_ID reports its
-feedback after clipboard write, and MODIFY_MODE emits one request before
+metrics-backed truncation, centered empty state, scaled footer title card and
+ESC hint. Search and the normal-page Back button are intentionally absent; ESC
+is the return path. KICK is an explicit confirmation intent, COPY_ID reports
+its feedback after clipboard write, and MODIFY_MODE emits one request before
 closing the current screen.
+
+`UiChromePlan` is the single common source for card and button fill geometry,
+ARGB colors and draw order. Forge and NeoForge renderers only execute the
+resulting rectangle commands. Semantic icons map to the shared 64x64 source
+textures in common, and the footer uses the reference version-card accent,
+whole-content scaling and decoration geometry.
 
 The active UI icon authority is
 `common/src/main/resources/assets/economy_system/textures/gui/icons/`.
 Forge and NeoForge package the same resources from common; target-specific icon
 copies are not active. Legacy root screens remain read-only visual references.
 
+Other UI families have common architecture but their visual parity remains
+pending. This pass does not begin Home or alter Shop, Market, Delivery, About,
+Balance, nested Territory, File Check or Transfer layouts.
+
 Verification for this pass: Forge and NeoForge target test suites, and
-`buildAllTargets`, pass locally. The code commit is `restore territory manage
-visual parity`; this documentation update is kept in a separate
-`document territory manage parity` commit.
+`buildAllTargets`, pass locally. The pixel-parity code commit is `finish
+territory manage pixel parity`; this documentation update is kept in a
+separate `document territory manage pixel parity` commit.
