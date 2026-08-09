@@ -1,6 +1,7 @@
 package com.mo.economy_system.ui.territory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mo.economy_system.ui.core.ScreenState;
@@ -38,7 +39,25 @@ class TerritoryManageGoldenParityTest {
         assertEquals(24, layout.previousButton().height());
         assertEquals(8, layout.actionButtons().size());
         assertEquals(78, layout.actionButtons().get(0).rect().y());
-        assertTrue(layout.footer().width() <= 240);
+        assertEquals(329, layout.footer().y());
+        assertEquals(19, layout.footer().height());
+        assertEquals(348, layout.footer().bottom());
         assertEquals(9, layout.escHint().height());
+    }
+
+    @Test
+    void matchesLegacy1211ReferenceByScalingLongFooterWithoutEllipsis() {
+        String longName = "territory-".repeat(20);
+        TerritoryManageState state = new TerritoryManageState(new UUID(0, 100), longName,
+                new UUID(0, 101), "owner", List.of(), 0, 4, 0, "", ScreenState.EMPTY,
+                null, -1, Set.of(TerritoryManageAction.values()));
+        TerritoryManageLayout.Layout layout = TerritoryManageLayout.calculate(640, 360, state, FONT);
+
+        assertTrue(FONT.width(layout.footerText()) + TerritoryManageLayout.FOOTER_ICON_ADVANCE
+                > TerritoryManageLayout.FOOTER_MAX_CONTENT_WIDTH);
+        assertTrue(layout.footerContentScale() < 1.0f);
+        assertFalse(layout.footerText().contains("..."));
+        assertEquals("领地管理 · " + longName, layout.footerText());
+        assertEquals(348, layout.footer().bottom());
     }
 }

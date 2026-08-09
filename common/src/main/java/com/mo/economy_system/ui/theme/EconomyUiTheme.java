@@ -7,6 +7,7 @@ public final class EconomyUiTheme {
     public static final int PANEL_PADDING = 12;
     public static final int CARD_SPACING = 8;
     public static final int TERRITORY_ACCENT = 0xFF9B59B6;
+    public static final int VERSION_ACCENT = 0xFF4FC3F7;
     public static final int SHOP_ACCENT = 0xFFFF8C00;
     public static final int MARKET_ACCENT = 0xFF3D9BE9;
     public static final int DELIVERY_ACCENT = 0xFF43B5A0;
@@ -29,6 +30,9 @@ public final class EconomyUiTheme {
     public static final UiCardStyle TERRITORY_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
             TERRITORY_ACCENT, 3, 0xCC, 0xFF);
+    public static final UiCardStyle VERSION_CARD = new UiCardStyle(
+            CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
+            VERSION_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle TERRITORY_LOCKED_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
             DISABLED_ACCENT, 3, 0xCC, 0xFF);

@@ -20,8 +20,9 @@ public final class TerritoryManageLayout {
     public static final int KICK_BUTTON_WIDTH = 66;
     public static final int PAGE_BUTTON_WIDTH = 50;
     public static final int PAGE_BUTTON_HEIGHT = 24;
-    private static final int LEGACY_BACK_WIDTH = 72;
-    private static final int LEGACY_BACK_HEIGHT = 20;
+    public static final int FOOTER_MAX_CONTENT_WIDTH = 240;
+    public static final int FOOTER_ICON_SIZE = 10;
+    public static final int FOOTER_ICON_ADVANCE = 14;
 
     private TerritoryManageLayout() {
     }
@@ -113,27 +114,20 @@ public final class TerritoryManageLayout {
         UiRect pageRect = new UiRect(pageTextX, Math.max(0, height - 35), pageTextWidth,
                 Math.max(1, metrics.lineHeight()));
 
-        int titleWidth = Math.max(1, Math.min(240, Math.max(1, width - panel * 2)));
-        UiRect title = new UiRect(panel, 14, titleWidth, Math.max(1, metrics.lineHeight()));
         String footerText = "领地管理 · " + state.territoryName();
-        int footerContentWidth = metrics.width(footerText) + 14;
-        float footerScale = Math.min(1.0f, 240.0f / Math.max(1, footerContentWidth));
+        int footerContentWidth = metrics.width(footerText) + FOOTER_ICON_ADVANCE;
+        float footerScale = Math.min(1.0f,
+                (float) FOOTER_MAX_CONTENT_WIDTH / Math.max(1, footerContentWidth));
         int footerWidth = Math.max(1, (int) (footerContentWidth * footerScale) + 16);
         int footerHeight = Math.max(1, metrics.lineHeight() + 10);
         UiRect footer = new UiRect(panel,
-                Math.max(0, height - panel - metrics.lineHeight() - footerHeight), footerWidth,
-                footerHeight);
+                Math.max(0, height - panel - footerHeight), footerWidth, footerHeight);
         String esc = "按 ESC 返回";
         int escWidth = Math.max(1, metrics.width(esc));
         UiRect escHint = new UiRect(Math.max(0, width - panel - escWidth),
                 Math.max(0, height - panel - metrics.lineHeight()), escWidth,
                 Math.max(1, metrics.lineHeight()));
 
-        // Retained as a non-rendered compatibility geometry for callers compiled against the
-        // pilot API. Territory Manage no longer creates an EditBox or draws this rectangle.
-        UiRect legacySearch = new UiRect(panel, 14,
-                Math.max(120, Math.min(200, Math.max(120, width - panel * 2))),
-                Math.max(1, metrics.lineHeight() + 11));
         UiRect memberHeader = new UiRect(panel,
                 Math.max(0, LIST_START_Y - metrics.lineHeight() - 3), leftWidth,
                 Math.max(1, metrics.lineHeight()));
@@ -141,35 +135,20 @@ public final class TerritoryManageLayout {
         UiRect retry = new UiRect(panel + Math.max(0, (leftWidth - 96) / 2),
                 LIST_START_Y + Math.max(0, (listHeight - ACTION_BUTTON_HEIGHT) / 2),
                 Math.min(96, leftWidth), ACTION_BUTTON_HEIGHT);
-        // Back remains addressable for old shell integrations, but the common view deliberately
-        // does not render it. ESC is the only normal-page navigation affordance.
-        UiRect back = new UiRect(Math.max(0, width - panel - 72),
-                Math.max(0, height - panel - LEGACY_BACK_HEIGHT),
-                LEGACY_BACK_WIDTH, LEGACY_BACK_HEIGHT);
-        return new Layout(scale, metrics, title, legacySearch, memberHeader, memberPanel,
+        return new Layout(scale, metrics, memberHeader, memberPanel,
                 actionPanel, List.copyOf(cards), List.copyOf(actionButtons), previous, next,
-                pageRect, retry, back, footer, escHint, pageSize);
+                pageRect, retry, footer, footerText, footerScale, escHint, pageSize);
     }
 
-    public record Layout(UiScale scale, UiTextMetrics metrics, UiRect title, UiRect search,
+    public record Layout(UiScale scale, UiTextMetrics metrics,
                          UiRect memberHeader, UiRect memberPanel, UiRect actionPanel,
                          List<MemberCard> cards, List<ActionButton> actionButtons,
                          UiRect previousButton, UiRect nextButton, UiRect pageText,
-                         UiRect retryButton, UiRect backButton, UiRect footer, UiRect escHint,
-                         int pageSize) {
+                         UiRect retryButton, UiRect footer, String footerText,
+                         float footerContentScale, UiRect escHint, int pageSize) {
         public Layout {
             cards = List.copyOf(cards);
             actionButtons = List.copyOf(actionButtons);
-        }
-
-        /** Alias matching the older screens' footer naming. */
-        public UiRect footerTitle() {
-            return footer;
-        }
-
-        /** Alias used by target hit-testing code. */
-        public UiRect esc() {
-            return escHint;
         }
 
         public String truncatedTerritoryName(String territoryName) {

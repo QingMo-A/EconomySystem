@@ -36,6 +36,13 @@ class TerritoryManageViewParityTest {
         assertEquals(forge.operations, neoForge.operations);
         assertTrue(forge.operations.stream().anyMatch(value -> value.kind.equals("playerHead")));
         assertTrue(forge.operations.stream().anyMatch(value ->
+                value.kind.equals("scaledIconText")
+                        && value.text.startsWith("TERRITORY:领地管理 · spawn:")));
+        assertTrue(forge.operations.stream().anyMatch(value ->
+                value.kind.equals("card")
+                        && value.rect.equals(layout.actionPanel())
+                        && !value.hovered));
+        assertTrue(forge.operations.stream().anyMatch(value ->
                 value.kind.equals("translatedButton")
                         && value.text.equals("message.territory_management.resize_territory")
                         && value.buttonStyle.equals(EconomyUiTheme.TERRITORY_PRIMARY_BUTTON)));
@@ -117,6 +124,15 @@ class TerritoryManageViewParityTest {
         @Override
         public void icon(UiIcon icon, UiRect rect) {
             operations.add(new Operation("icon", rect, icon.name(), null, null, false, true));
+        }
+
+        @Override
+        public void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                   float scale, int iconSize, int iconAdvance, int textColor) {
+            operations.add(new Operation("scaledIconText",
+                    new UiRect(originX, originY, iconSize, iconSize),
+                    icon.name() + ":" + text + ":" + scale + ":" + iconAdvance,
+                    null, null, false, true));
         }
 
         @Override

@@ -4,6 +4,7 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
+import com.mo.economy_system.ui.renderer.UiChromePlan;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
@@ -65,16 +66,8 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
   }
 
   @Override public void card(UiRect rect, UiCardStyle style, boolean hovered) {
-    fill(rect, hovered ? style.backgroundHover() : style.background());
-    int border = hovered ? style.borderHover() : style.border();
-    graphics.fill(rect.x(), rect.y(), rect.right(), rect.y() + 1, border);
-    graphics.fill(rect.x(), rect.bottom() - 1, rect.right(), rect.bottom(), border);
-    graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
-    if (style.accentWidth() > 0) {
-      graphics.fill(rect.x(), rect.y(),
-          Math.min(rect.right(), rect.x() + style.accentWidth()), rect.bottom(),
-          withAlpha(style.accent(), hovered ? style.accentAlphaHover() : style.accentAlpha()));
-    }
+    UiChromePlan.cardChrome(rect, style, hovered)
+        .forEach(command -> fill(command.rect(), command.argb()));
   }
 
   @Override public void button(UiRect rect, UiButtonStyle style, String text,
@@ -89,32 +82,8 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
 
   private void drawButton(UiRect rect, UiButtonStyle style, Component text,
                           boolean hovered, boolean enabled) {
-    int background = enabled && hovered ? style.backgroundHover() : style.background();
-    fill(rect, background);
-    int border = style.borderColor(hovered, enabled);
-    if (style.stripeWidth() > 0) {
-      int stripeAlpha = enabled && hovered ? style.stripeAlphaHover() : style.stripeAlpha();
-      if (!enabled) stripeAlpha = Math.min(stripeAlpha, 0x60);
-      graphics.fill(rect.x(), rect.y(), Math.min(rect.right(), rect.x() + style.stripeWidth()),
-          rect.bottom(), withAlpha(style.accent(), stripeAlpha));
-      graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
-      graphics.fill(Math.min(rect.right(), rect.x() + style.stripeWidth()), rect.bottom() - 1,
-          rect.right(), rect.bottom(), border);
-    } else {
-      graphics.fill(rect.x(), rect.y(), rect.x() + 1, rect.bottom(), border);
-      graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
-      if (enabled) graphics.fill(rect.x() + 2, rect.y() + 1,
-          Math.max(rect.x() + 2, rect.right() - 2), rect.y() + 2, 0x60FFFFFF);
-    }
-    if (enabled && hovered && style.glowHeight() > 0) {
-      for (int i = 0; i < style.glowHeight(); i++) {
-        int alpha = style.glowAlphaStart() - i * style.glowAlphaStep();
-        if (alpha <= 0) break;
-        graphics.fill(Math.min(rect.right(), rect.x() + style.stripeWidth()), rect.y() + i,
-            rect.right(), rect.y() + i + 1,
-            withAlpha(style.accent(), alpha));
-      }
-    }
+    UiChromePlan.buttonChrome(rect, style, hovered, enabled)
+        .forEach(command -> fill(command.rect(), command.argb()));
     int textColor = enabled ? style.textColor() : 0x60808080;
     int textY = rect.y() + (rect.height() - font.lineHeight) / 2;
     if (style.alignment() == UiTextAlignment.CENTER) {
@@ -128,9 +97,21 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
   }
 
   @Override public void icon(UiIcon icon, UiRect rect) {
-    ResourceLocation texture = iconTexture(icon);
+    ResourceLocation texture = ResourceLocation.tryParse(icon.resourcePath());
     graphics.blit(texture, rect.x(), rect.y(), rect.width(), rect.height(),
-        0, 0, 16, 16, 16, 16);
+        0, 0, icon.sourceWidth(), icon.sourceHeight(),
+        icon.sourceWidth(), icon.sourceHeight());
+  }
+
+  @Override public void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                       float scale, int iconSize, int iconAdvance,
+                                       int textColor) {
+    graphics.pose().pushPose();
+    graphics.pose().translate(originX, originY, 0);
+    graphics.pose().scale(scale, scale, 1.0f);
+    icon(icon, new UiRect(0, -1, iconSize, iconSize));
+    graphics.drawString(font, Component.literal(text), iconAdvance, 0, textColor);
+    graphics.pose().popPose();
   }
 
   @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {
@@ -185,35 +166,6 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
     if (location == null) return itemId;
     var item = BuiltInRegistries.ITEM.get(location);
     return item == null || item == Items.AIR ? itemId : new ItemStack(item).getHoverName().getString();
-  }
-
-  private ResourceLocation iconTexture(UiIcon icon) {
-    String name = switch (icon) {
-      case TERRITORY -> "territory";
-      case HOME -> "home";
-      case SHOP -> "shop";
-      case MARKET -> "market";
-      case DELIVERY -> "delivery";
-      case ABOUT -> "about";
-      case TRADE -> "trade";
-      case LEADERBOARD -> "leaderboard";
-      case BALANCE -> "balance";
-      case MEMBER, AUTHORIZED -> "authorized";
-      case OWNER -> "owner";
-      case MANAGE, BUFF, RETRY -> "manage";
-      case ARROW_LEFT, BACK -> "arrow_left";
-      case ARROW_RIGHT -> "arrow_right";
-      case OVERWORLD -> "overworld";
-      case NETHER -> "nether";
-      case END -> "end";
-      case KEY -> "key";
-      case TELEPORT -> "teleport";
-    };
-    return ResourceLocation.tryParse("economy_system:textures/gui/icons/" + name + ".png");
-  }
-
-  private static int withAlpha(int rgb, int alpha) {
-    return ((alpha & 0xFF) << 24) | (rgb & 0x00FFFFFF);
   }
 
 }

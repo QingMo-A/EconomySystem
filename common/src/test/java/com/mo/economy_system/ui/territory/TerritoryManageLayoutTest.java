@@ -17,16 +17,14 @@ class TerritoryManageLayoutTest {
             var layout = TerritoryManageLayout.calculate(size[0], size[1], state);
             int width = layout.scale().virtualWidth();
             int height = layout.scale().virtualHeight();
-            for (UiRect rect : List.of(layout.title(), layout.search(), layout.memberHeader(),
-                    layout.memberPanel(), layout.actionPanel(), layout.previousButton(),
-                    layout.nextButton(), layout.pageText(), layout.retryButton(), layout.backButton())) {
+            for (UiRect rect : List.of(layout.memberHeader(), layout.memberPanel(),
+                    layout.actionPanel(), layout.previousButton(), layout.nextButton(),
+                    layout.pageText(), layout.retryButton(), layout.footer(), layout.escHint())) {
                 assertTrue(rect.x() >= 0 && rect.y() >= 0);
                 assertTrue(rect.right() <= width && rect.bottom() <= height);
             }
             assertFalse(layout.memberPanel().overlaps(layout.actionPanel()));
             assertFalse(layout.previousButton().overlaps(layout.nextButton()));
-            assertFalse(layout.backButton().overlaps(layout.actionPanel()));
-            assertTrue(layout.search().width() >= 120);
             for (var card : layout.cards()) {
                 assertTrue(layout.memberPanel().contains(card.card()));
                 assertTrue(card.card().right() <= width);

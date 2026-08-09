@@ -26,12 +26,11 @@ public final class TerritoryManageView {
         // FooterIdentity / title-card semantic, matching CardRenderer.drawVersionInfo from the
         // legacy 1.21.1 reference rather than a plain bottom-corner string.
         UiRect footer = layout.footer();
-        renderer.card(footer, EconomyUiTheme.TERRITORY_CARD, false);
-        renderer.icon(UiIcon.TERRITORY,
-                new UiRect(footer.x() + 6, footer.y() + 7, 14, 14));
-        String footerText = UiText.truncate(metrics,
-                "领地管理 · " + state.territoryName(), Math.max(1, footer.width() - 28));
-        renderer.text(footerText, footer.x() + 24, footer.y() + 8, EconomyUiTheme.TEXT_PRIMARY);
+        renderer.card(footer, EconomyUiTheme.VERSION_CARD, false);
+        renderer.scaledIconText(UiIcon.TERRITORY, layout.footerText(),
+                footer.x() + 8, footer.y() + 5, layout.footerContentScale(),
+                TerritoryManageLayout.FOOTER_ICON_SIZE,
+                TerritoryManageLayout.FOOTER_ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
         renderer.fill(new UiRect(footer.x() + 8, Math.max(footer.y(), footer.bottom() - 3),
                 Math.max(0, footer.width() - 16), 1), 0x30FFFFFF);
 
@@ -41,8 +40,7 @@ public final class TerritoryManageView {
         renderer.translatedText("screen.territory.members",
                 List.of(Integer.toString(state.filteredMembers().size())),
                 layout.memberHeader().x(), layout.memberHeader().y(), EconomyUiTheme.TEXT_SECONDARY);
-        renderer.card(layout.actionPanel(), EconomyUiTheme.TERRITORY_CARD,
-                layout.actionPanel().contains(mouseX, mouseY));
+        renderer.card(layout.actionPanel(), EconomyUiTheme.TERRITORY_CARD, false);
         UiRect panelHeader = new UiRect(layout.actionPanel().x() + 8,
                 layout.actionPanel().y() + 6,
                 Math.max(1, layout.actionPanel().width() - 16), metrics.lineHeight());

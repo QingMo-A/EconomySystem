@@ -28,6 +28,13 @@ public interface EconomyUiRenderer {
 
     void icon(UiIcon icon, UiRect rect);
 
+    /** Draws one icon/text group under a shared local transform. */
+    default void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                float scale, int iconSize, int iconAdvance, int textColor) {
+        icon(icon, new UiRect(originX, originY - 1, iconSize, iconSize));
+        text(text, originX + iconAdvance, originY, textColor);
+    }
+
     /** Draws a target-native item icon from a loader-neutral item identifier. */
     default void item(String itemId, UiRect rect) {
         icon(UiIcon.SHOP, rect);
