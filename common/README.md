@@ -319,3 +319,29 @@ Market pages use the fixed protocol limit of nine orders and expose all nine at
 the baseline viewport. Shop dynamic pricing and refresh scheduling now also
 live in common; target shop code is limited to configuration persistence and
 native ItemStack materialization.
+
+## Territory Manage parity (current bridge)
+
+This visual-parity pass is based on `045fe951` (the About shared-texture fix),
+with `b60fdb46` retained as the multiversion common-architecture candidate
+baseline. Gameplay, service and network/wire modules remain frozen and
+user-tested; this pass changes only Territory Manage UI contracts, primitives,
+target rendering adapters, tests and shared icon placement.
+
+Territory Manage now follows the 1.21.1 reference geometry on both loaders:
+the 640x360 virtual canvas, exact member/action/pagination rectangles,
+metrics-backed truncation, centered empty state, footer title card and ESC
+hint. Search and the normal-page Back button are intentionally absent; ESC is
+the return path. KICK is an explicit confirmation intent, COPY_ID reports its
+feedback after clipboard write, and MODIFY_MODE emits one request before
+closing the current screen.
+
+The active UI icon authority is
+`common/src/main/resources/assets/economy_system/textures/gui/icons/`.
+Forge and NeoForge package the same resources from common; target-specific icon
+copies are not active. Legacy root screens remain read-only visual references.
+
+Verification for this pass: Forge and NeoForge target test suites, and
+`buildAllTargets`, pass locally. The code commit is `restore territory manage
+visual parity`; this documentation update is kept in a separate
+`document territory manage parity` commit.
