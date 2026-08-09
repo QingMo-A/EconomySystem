@@ -7,6 +7,8 @@ import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiChromePlan;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.ArrayList;
@@ -80,18 +82,38 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     drawButton(rect, style, Component.translatable(key, arguments.toArray()), hovered, enabled);
   }
 
+  @Override public void translatedIconButton(UiRect rect, UiButtonStyle style,
+                                             UiIcon icon, String key, List<String> arguments,
+                                             boolean hovered, boolean enabled) {
+    drawButton(rect, style, Component.translatable(key, arguments.toArray()), icon, hovered, enabled);
+  }
+
   private void drawButton(UiRect rect, UiButtonStyle style, Component text,
+                          boolean hovered, boolean enabled) {
+    drawButton(rect, style, text, null, hovered, enabled);
+  }
+
+  private void drawButton(UiRect rect, UiButtonStyle style, Component text, UiIcon icon,
                           boolean hovered, boolean enabled) {
     UiChromePlan.buttonChrome(rect, style, hovered, enabled)
         .forEach(command -> fill(command.rect(), command.argb()));
     int textColor = enabled ? style.textColor() : 0x60808080;
     int textY = rect.y() + (rect.height() - font.lineHeight) / 2;
-    if (style.alignment() == UiTextAlignment.CENTER) {
+    int textX;
+    if (icon != null) {
+      textX = rect.x() + style.padding();
+      icon(icon, new UiRect(textX, textY - 1, 10, 10));
+      textX += 14;
+    } else if (style.alignment() == UiTextAlignment.CENTER) {
+      textX = rect.x() + (rect.width() - font.width(text)) / 2;
+    } else {
+      textX = style.alignment() == UiTextAlignment.RIGHT
+          ? rect.right() - font.width(text) - style.padding() : rect.x() + style.padding();
+    }
+    if (style.alignment() == UiTextAlignment.CENTER && icon == null) {
       graphics.drawString(font, text, rect.x() + (rect.width() - font.width(text)) / 2,
           textY, textColor, style.textShadow());
     } else {
-      int textX = style.alignment() == UiTextAlignment.RIGHT
-          ? rect.right() - font.width(text) - style.padding() : rect.x() + style.padding();
       graphics.drawString(font, text, textX, textY, textColor, style.textShadow());
     }
   }
@@ -112,6 +134,28 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     icon(icon, new UiRect(0, -1, iconSize, iconSize));
     graphics.drawString(font, Component.literal(text), iconAdvance, 0, textColor);
     graphics.pose().popPose();
+  }
+
+  @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX,
+                                             int originY, float scale, int iconSize,
+                                             int iconAdvance) {
+    graphics.pose().pushPose();
+    graphics.pose().translate(originX, originY, 0);
+    graphics.pose().scale(scale, scale, 1.0f);
+    icon(icon, new UiRect(0, -1, iconSize, iconSize));
+    int x = iconAdvance;
+    for (UiTextSpan span : spans) {
+      graphics.drawString(font, Component.literal(span.text()), x, 0, span.color());
+      x += font.width(span.text());
+    }
+    graphics.pose().popPose();
+  }
+
+  @Override public UiTextMetrics metrics() {
+    return new UiTextMetrics() {
+      @Override public int width(String text) { return font.width(text == null ? "" : text); }
+      @Override public int lineHeight() { return font.lineHeight; }
+    };
   }
 
   @Override public void item(String itemId, UiRect rect) {

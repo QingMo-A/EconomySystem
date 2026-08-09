@@ -1,6 +1,8 @@
 package com.mo.economy_system.ui.renderer;
 
 import com.mo.economy_system.ui.geometry.UiRect;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.List;
@@ -26,6 +28,17 @@ public interface EconomyUiRenderer {
     void translatedButton(UiRect rect, UiButtonStyle style, String key,
                           List<String> arguments, boolean hovered, boolean enabled);
 
+    /** Draws a translated left-aligned button with a real semantic icon. */
+    default void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                                      String key, List<String> arguments,
+                                      boolean hovered, boolean enabled) {
+        translatedButton(rect, style, key, arguments, hovered, enabled);
+        if (icon != null) {
+            int textY = rect.y() + Math.max(0, (rect.height() - 9) / 2);
+            icon(icon, new UiRect(rect.x() + style.padding(), textY - 1, 10, 10));
+        }
+    }
+
     void icon(UiIcon icon, UiRect rect);
 
     /** Draws one icon/text group under a shared local transform. */
@@ -33,6 +46,22 @@ public interface EconomyUiRenderer {
                                 float scale, int iconSize, int iconAdvance, int textColor) {
         icon(icon, new UiRect(originX, originY - 1, iconSize, iconSize));
         text(text, originX + iconAdvance, originY, textColor);
+    }
+
+    /** Draws a styled icon/text group under one shared local transform. */
+    default void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY,
+                                      float scale, int iconSize, int iconAdvance) {
+        icon(icon, new UiRect(originX, originY - 1, iconSize, iconSize));
+        int x = originX + iconAdvance;
+        for (UiTextSpan span : spans) {
+            text(span.text(), x, originY, span.color());
+            x += span.text().length() * 6;
+        }
+    }
+
+    /** Font metrics adapter supplied by a target renderer. */
+    default UiTextMetrics metrics() {
+        return UiTextMetrics.APPROXIMATE;
     }
 
     /** Draws a target-native item icon from a loader-neutral item identifier. */

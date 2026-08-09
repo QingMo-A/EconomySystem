@@ -32,7 +32,7 @@ public final class HomeController extends AbstractEconomyScreenController<HomeSt
     else if (event instanceof HomeEvent.MarketLoaded value) market(value);
     else if (event instanceof HomeEvent.DataFailed value) failed(value);
     else if (event instanceof HomeEvent.ActionClicked value) action(value.route());
-    else if (event instanceof HomeEvent.Scroll value) page(Integer.signum(value.steps()));
+    else if (event instanceof HomeEvent.Scroll value) scroll(Integer.signum(value.steps()));
     else if (event instanceof HomeEvent.ViewportChanged value) viewport(value.pageSize());
     else if (event instanceof HomeEvent.Tick value) tick(value.nowNanos());
   }
@@ -84,16 +84,18 @@ public final class HomeController extends AbstractEconomyScreenController<HomeSt
   }
 
   private void action(EconomyUiRoute route) {
-    if (route == null || state().screenState() == ScreenState.ERROR) return;
+    // Dashboard data failures must not lock the navigation shell. Cards may show retry/error,
+    // while every route remains reachable just as it is in the legacy Home screen.
+    if (route == null) return;
     if (route == EconomyUiRoute.HOME) return;
     navigate(new UiNavigation.Route(route));
   }
 
-  private void page(int delta) {
+  private void scroll(int delta) {
     if (delta == 0) return;
-    int page = Math.max(0, Math.min(state().totalPages() - 1,
-        state().leaderboardOffset() / state().leaderboardPageSize() + delta));
-    replace(copy(page * state().leaderboardPageSize(), state().leaderboardPageSize(),
+    int offset = Math.max(0, Math.min(state().maxOffset(),
+        state().leaderboardOffset() + delta));
+    replace(copy(offset, state().leaderboardPageSize(),
         state().screenState(), state().errorKey(), state().requestId(), state().balanceRevision(),
         state().marketRevision(), state().balance(), state().accounts(), state().sellOrders(),
         state().demandOrders()));
@@ -101,9 +103,9 @@ public final class HomeController extends AbstractEconomyScreenController<HomeSt
 
   private void viewport(int pageSize) {
     int size = Math.max(1, pageSize);
-    int page = Math.min(state().leaderboardOffset() / state().leaderboardPageSize(),
-        Math.max(0, (state().accounts().size() + size - 1) / size - 1));
-    replace(copy(page * size, size, state().screenState(), state().errorKey(), state().requestId(),
+    int offset = Math.min(state().leaderboardOffset(),
+        Math.max(0, state().accounts().size() - HomeLayout.LEADERBOARD_VISIBLE_ROWS));
+    replace(copy(offset, size, state().screenState(), state().errorKey(), state().requestId(),
         state().balanceRevision(), state().marketRevision(), state().balance(), state().accounts(),
         state().sellOrders(), state().demandOrders()));
   }

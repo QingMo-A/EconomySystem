@@ -32,17 +32,21 @@ public record HomeState(
     screenState = Objects.requireNonNull(screenState, "screenState");
   }
 
-  public int totalPages() {
-    return Math.max(1, (accounts.size() + leaderboardPageSize - 1) / leaderboardPageSize);
-  }
-
   public List<AccountBalance> visibleAccounts() {
     int start = Math.min(leaderboardOffset, accounts.size());
     return accounts.subList(start, Math.min(accounts.size(), start + leaderboardPageSize));
   }
 
   public int maxOffset() {
-    return Math.max(0, accounts.size() - leaderboardPageSize);
+    return Math.max(0, accounts.size() - HomeLayout.LEADERBOARD_VISIBLE_ROWS);
+  }
+
+  /** One-based rank in the full account list, or zero when the player is absent. */
+  public int playerRank() {
+    for (int index = 0; index < accounts.size(); index++) {
+      if (isSelf(accounts.get(index))) return index + 1;
+    }
+    return 0;
   }
 
   public boolean isSelf(AccountBalance account) {

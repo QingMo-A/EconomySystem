@@ -1,7 +1,7 @@
 package com.mo.economy_system.ui.home;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.mo.economy_system.common.client.ui.EconomyUiMenu;
 import com.mo.economy_system.common.network.AccountBalance;
@@ -21,12 +21,10 @@ class HomeLayoutTest {
       HomeLayout.Layout layout = HomeLayout.calculate(size[0], size[1], state);
       UiRect viewport = new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight());
       for (UiRect rect : List.of(layout.balanceCard(), layout.tradeCard(), layout.leaderboardCard(),
-          layout.previousButton(), layout.pageText(), layout.nextButton(), layout.footer(),
-          layout.retryButton())) {
+          layout.footer(), layout.retryButton())) {
         assertTrue(viewport.contains(rect), size[0] + "x" + size[1] + " " + rect);
       }
       assertFalse(layout.balanceCard().overlaps(layout.tradeCard()));
-      assertFalse(layout.previousButton().overlaps(layout.nextButton()));
       for (HomeLayout.NavButton button : layout.navButtons()) assertTrue(viewport.contains(button.rect()));
       for (HomeLayout.LeaderboardRow row : layout.rows()) assertTrue(layout.leaderboardCard().contains(row.rect()));
     }

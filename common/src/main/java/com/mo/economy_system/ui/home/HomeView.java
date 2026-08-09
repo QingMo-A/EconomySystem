@@ -7,66 +7,121 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.text.UiNumbers;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
-import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.List;
 
-/** Semantic home dashboard view shared by both Minecraft targets. */
+/** Semantic Home dashboard view shared by both Minecraft targets. */
 public final class HomeView {
+  private static final int TITLE_COLOR = 0xFFFFFFFF;
+  private static final int SEPARATOR_COLOR = 0xFF4A5568;
+  private static final int MUTED_WHITE = 0xB0FFFFFF;
+  private static final int BALANCE_UNIT_COLOR = 0xB0FFFFFF;
+  private static final int RANK_GOLD = 0xFFFFD700;
+  private static final int RANK_SILVER = 0xFFC0C0C0;
+  private static final int RANK_BRONZE = 0xFFCD7F32;
+  private static final int RANK_OTHER = 0xFF888888;
+
   private HomeView() {}
 
   public static void render(EconomyUiRenderer renderer, HomeState state,
                             HomeLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        0x400A0A14);
+        HomeLayout.BACKGROUND_COLOR);
+    drawNavigation(renderer, state, layout, mouseX, mouseY);
+    drawBalanceCard(renderer, state, layout, mouseX, mouseY);
+    drawTradeCard(renderer, state, layout, mouseX, mouseY);
+    drawLeaderboard(renderer, state, layout, mouseX, mouseY);
+    drawFooter(renderer, layout);
+  }
+
+  private static void drawNavigation(EconomyUiRenderer renderer, HomeState state,
+                                     HomeLayout.Layout layout, int mouseX, int mouseY) {
     for (HomeLayout.NavButton nav : layout.navButtons()) {
       EconomyUiMenu.Entry entry = state.entries().stream()
           .filter(value -> value.route() == nav.route()).findFirst().orElse(null);
       if (entry == null) continue;
-      renderer.translatedButton(nav.rect(), navStyle(nav.route()), entry.labelKey(), List.of(),
-          nav.rect().contains(mouseX, mouseY), state.screenState() != ScreenState.ERROR);
+      // Navigation remains usable while data cards are loading or in an error state.
+      renderer.translatedIconButton(nav.rect(), navStyle(nav.route()), navIcon(nav.route()),
+          entry.labelKey(), List.of(), nav.rect().contains(mouseX, mouseY), true);
+    }
+  }
+
+  private static void drawBalanceCard(EconomyUiRenderer renderer, HomeState state,
+                                      HomeLayout.Layout layout, int mouseX, int mouseY) {
+    UiRect card = layout.balanceCard();
+    boolean hovered = card.contains(mouseX, mouseY);
+    renderer.card(card, EconomyUiTheme.HOME_BALANCE_CARD, hovered);
+    int titleY = card.y() + 8;
+    renderer.icon(UiIcon.BALANCE, new UiRect(card.x() + 8, titleY - 1, 10, 10));
+    renderer.translatedText("screen.home.balance", List.of(), card.x() + 21, titleY, TITLE_COLOR);
+
+    String rankText = hovered ? "日志 >>" : (state.playerRank() > 0 ? "#" + state.playerRank() : "--");
+    int rankX = card.right() - 8 - layout.metrics().width(rankText);
+    renderer.text(rankText, rankX, titleY, hovered ? RANK_GOLD : 0xFFAAFFAA);
+
+    int separatorY = titleY + layout.metrics().lineHeight() + 3;
+    renderer.fill(new UiRect(card.x() + 3, separatorY, Math.max(0, card.width() - 4), 1),
+        SEPARATOR_COLOR);
+    int balanceY = separatorY + 6;
+    String balanceText = UiNumbers.formatInteger(state.balance());
+    renderer.textInRect(balanceText,
+        new UiRect(card.x() + 8, balanceY,
+            Math.max(1, card.width() - 16), layout.metrics().lineHeight()),
+        EconomyUiTheme.HOME_BALANCE_ACCENT, UiTextAlignment.CENTER);
+    renderer.textInRect("梦鱼币",
+        new UiRect(card.x() + 8, balanceY + layout.metrics().lineHeight() + 2,
+            Math.max(1, card.width() - 16), layout.metrics().lineHeight()),
+        BALANCE_UNIT_COLOR, UiTextAlignment.CENTER);
+  }
+
+  private static void drawTradeCard(EconomyUiRenderer renderer, HomeState state,
+                                    HomeLayout.Layout layout, int mouseX, int mouseY) {
+    UiRect card = layout.tradeCard();
+    boolean hovered = card.contains(mouseX, mouseY);
+    renderer.card(card, EconomyUiTheme.HOME_TRADE_CARD, hovered);
+    int titleY = card.y() + 8;
+    renderer.icon(UiIcon.TRADE, new UiRect(card.x() + 8, titleY - 1, 10, 10));
+    renderer.translatedText("screen.home.trade", List.of(), card.x() + 21, titleY, TITLE_COLOR);
+    if (hovered) {
+      String hint = "点击查看 >>";
+      renderer.text(hint, card.right() - 8 - layout.metrics().width(hint), titleY, 0xFF4FC3F7);
     }
 
-    renderer.card(layout.balanceCard(), EconomyUiTheme.HOME_CARD,
-        layout.balanceCard().contains(mouseX, mouseY));
-    renderer.icon(UiIcon.BALANCE, new UiRect(layout.balanceCard().x() + 10,
-        layout.balanceCard().y() + 10, 14, 14));
-    renderer.translatedTextInRect("screen.home.balance", List.of(),
-        new UiRect(layout.balanceCard().x() + 30, layout.balanceCard().y() + 8,
-            Math.max(1, layout.balanceCard().width() - 40), 16),
-        EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
-    renderer.textInRect(Integer.toString(state.balance()),
-        new UiRect(layout.balanceCard().x() + 10, layout.balanceCard().y() + 32,
-            Math.max(1, layout.balanceCard().width() - 20), 24),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+    int separatorY = titleY + layout.metrics().lineHeight() + 3;
+    renderer.fill(new UiRect(card.x() + 3, separatorY, Math.max(0, card.width() - 4), 1),
+        SEPARATOR_COLOR);
+    int statsY = separatorY + 6;
+    int colWidth = Math.max(1, (card.width() - 16) / 2);
+    int leftX = card.x() + 8;
+    int rightX = leftX + colWidth;
+    renderer.text("卖单", leftX, statsY, MUTED_WHITE);
+    String sell = UiNumbers.formatInteger(state.sellOrders());
+    renderer.text(sell, leftX + colWidth - layout.metrics().width(sell), statsY,
+        0xFFFFAA00);
+    renderer.text("求购", rightX, statsY, MUTED_WHITE);
+    String buy = UiNumbers.formatInteger(state.demandOrders());
+    renderer.text(buy, card.right() - 8 - layout.metrics().width(buy), statsY, 0xFF00FFFF);
+  }
 
-    renderer.card(layout.tradeCard(), EconomyUiTheme.HOME_CARD,
-        layout.tradeCard().contains(mouseX, mouseY));
-    renderer.translatedTextInRect("screen.home.trade", List.of(),
-        new UiRect(layout.tradeCard().x() + 10, layout.tradeCard().y() + 8,
-            Math.max(1, layout.tradeCard().width() - 20), 16),
-        EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
-    renderer.translatedTextInRect("screen.home.sell_orders", List.of(Integer.toString(state.sellOrders())),
-        new UiRect(layout.tradeCard().x() + 10, layout.tradeCard().y() + 31,
-            Math.max(1, layout.tradeCard().width() - 20), 14),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-    renderer.translatedTextInRect("screen.home.demand_orders", List.of(Integer.toString(state.demandOrders())),
-        new UiRect(layout.tradeCard().x() + 10, layout.tradeCard().y() + 48,
-            Math.max(1, layout.tradeCard().width() - 20), 14),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-
-    renderer.card(layout.leaderboardCard(), EconomyUiTheme.HOME_LEADERBOARD_CARD,
-        layout.leaderboardCard().contains(mouseX, mouseY));
-    renderer.icon(UiIcon.LEADERBOARD, new UiRect(layout.leaderboardCard().x() + 10,
-        layout.leaderboardCard().y() + 9, 12, 12));
+  private static void drawLeaderboard(EconomyUiRenderer renderer, HomeState state,
+                                      HomeLayout.Layout layout, int mouseX, int mouseY) {
+    UiRect card = layout.leaderboardCard();
+    // The leaderboard is a static reference card; rows do not change its hover chrome.
+    renderer.card(card, EconomyUiTheme.HOME_LEADERBOARD_CARD, false);
+    renderer.icon(UiIcon.LEADERBOARD, new UiRect(card.x() + 10, card.y() + 9, 10, 10));
     renderer.translatedTextInRect("screen.home.leaderboard", List.of(),
-        new UiRect(layout.leaderboardCard().x() + 28, layout.leaderboardCard().y() + 8,
-            Math.max(1, layout.leaderboardCard().width() - 40), 16),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+        new UiRect(card.x() + 24, card.y() + 10,
+            Math.max(1, card.width() - 34), layout.metrics().lineHeight()),
+        TITLE_COLOR, UiTextAlignment.LEFT);
+    renderer.fill(new UiRect(card.x() + 3, card.y() + 28,
+        Math.max(0, card.width() - 4), 1), SEPARATOR_COLOR);
+
     if (state.screenState() == ScreenState.LOADING) {
       renderer.translatedTextInRect("screen.home.loading", List.of(), layout.retryButton(),
-          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+          TITLE_COLOR, UiTextAlignment.CENTER);
     } else if (state.screenState() == ScreenState.ERROR) {
       renderer.translatedTextInRect(state.errorKey() == null ? "screen.home.sync_failed" : state.errorKey(),
           List.of(), layout.retryButton(), EconomyUiTheme.TEXT_ERROR, UiTextAlignment.CENTER);
@@ -78,36 +133,63 @@ public final class HomeView {
     } else {
       for (HomeLayout.LeaderboardRow row : layout.rows()) {
         boolean self = state.isSelf(row.account());
-        renderer.textInRect("#" + row.rank() + " " + row.account().playerName(), row.rect(),
-            self ? EconomyUiTheme.SHOP_ACCENT : EconomyUiTheme.TEXT_PRIMARY,
-            UiTextAlignment.LEFT);
-        renderer.textInRect(Integer.toString(row.account().balance()), row.rect(),
-            self ? EconomyUiTheme.SHOP_ACCENT : EconomyUiTheme.TEXT_SECONDARY,
-            UiTextAlignment.RIGHT);
+        int rankColor = self ? RANK_GOLD : rankColor(row.rank());
+        String rank = "#" + row.rank();
+        renderer.text(rank, row.rect().x(), row.rect().y(), rankColor);
+        int nameX = row.rect().x() + layout.metrics().width(rank) + 4;
+        renderer.text(row.account().playerName(), nameX, row.rect().y(),
+            self ? RANK_GOLD : TITLE_COLOR);
+        String balance = UiNumbers.formatInteger(row.account().balance());
+        renderer.text(balance, card.right() - 10 - layout.metrics().width(balance),
+            row.rect().y(), self ? RANK_GOLD : MUTED_WHITE);
       }
     }
-    if (state.totalPages() > 1) {
-      renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON, "<",
-          layout.previousButton().contains(mouseX, mouseY), state.leaderboardOffset() > 0);
-      renderer.textInRect((state.leaderboardOffset() / state.leaderboardPageSize() + 1)
-              + " / " + state.totalPages(), layout.pageText(), EconomyUiTheme.TEXT_PRIMARY,
-          UiTextAlignment.CENTER);
-      renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON, ">",
-          layout.nextButton().contains(mouseX, mouseY),
-          state.leaderboardOffset() + state.leaderboardPageSize() < state.accounts().size());
-    }
-    renderer.translatedTextInRect("screen.home.version", List.of(), layout.footer(),
-        EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
+  }
+
+  private static int rankColor(int rank) {
+    return switch (rank) {
+      case 1 -> RANK_GOLD;
+      case 2 -> RANK_SILVER;
+      case 3 -> RANK_BRONZE;
+      default -> RANK_OTHER;
+    };
+  }
+
+  private static void drawFooter(EconomyUiRenderer renderer, HomeLayout.Layout layout) {
+    String economy = "Economy";
+    String system = "System";
+    int contentWidth = 14 + layout.metrics().width(economy) + layout.metrics().width(system);
+    int cardWidth = Math.min(layout.leftPanelWidth(),
+        Math.max(1, Math.round(contentWidth * layout.footerScale()) + 16));
+    UiRect card = new UiRect(layout.footer().x(), layout.footer().y(), cardWidth,
+        layout.footer().height());
+    renderer.card(card, EconomyUiTheme.VERSION_CARD, false);
+    renderer.scaledIconStyledText(UiIcon.HOME,
+        List.of(new UiTextSpan(economy, 0xFF55FFFF), new UiTextSpan(system, 0xFFFF55FF)),
+        card.x() + 8, card.y() + 5, layout.footerScale(), 10, 14);
+    renderer.fill(new UiRect(card.x() + 8, card.bottom() - 3,
+        Math.max(0, card.width() - 16), 1), 0x30FFFFFF);
   }
 
   private static UiButtonStyle navStyle(EconomyUiRoute route) {
     return switch (route) {
-      case SHOP -> EconomyUiTheme.HOME_SHOP_BUTTON;
-      case MARKET -> EconomyUiTheme.HOME_MARKET_BUTTON;
-      case DELIVERY_BOX -> EconomyUiTheme.HOME_DELIVERY_BUTTON;
-      case TERRITORY -> EconomyUiTheme.HOME_TERRITORY_BUTTON;
-      case ABOUT, BALANCE_LOG -> EconomyUiTheme.HOME_ABOUT_BUTTON;
-      case HOME -> EconomyUiTheme.TERRITORY_BUTTON;
+      case SHOP -> EconomyUiTheme.HOME_NAV_SHOP_STYLE;
+      case MARKET -> EconomyUiTheme.HOME_NAV_MARKET_STYLE;
+      case DELIVERY_BOX -> EconomyUiTheme.HOME_NAV_DELIVERY_STYLE;
+      case TERRITORY -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
+      case ABOUT, BALANCE_LOG -> EconomyUiTheme.HOME_NAV_ABOUT_STYLE;
+      case HOME -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
+    };
+  }
+
+  private static UiIcon navIcon(EconomyUiRoute route) {
+    return switch (route) {
+      case SHOP -> UiIcon.SHOP;
+      case MARKET -> UiIcon.MARKET;
+      case DELIVERY_BOX -> UiIcon.DELIVERY;
+      case TERRITORY -> UiIcon.TERRITORY;
+      case ABOUT, BALANCE_LOG -> UiIcon.ABOUT;
+      case HOME -> UiIcon.HOME;
     };
   }
 }

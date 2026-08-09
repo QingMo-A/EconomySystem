@@ -52,7 +52,7 @@ class HomeControllerTest {
     controller.handle(new HomeEvent.MarketLoaded(2L, 2L, 0, 0));
     controller.handle(new HomeEvent.ViewportChanged(5));
     controller.handle(new HomeEvent.Scroll(1));
-    assertEquals(5, controller.state().leaderboardOffset());
+    assertEquals(1, controller.state().leaderboardOffset());
     controller.handle(new HomeEvent.ActionClicked(EconomyUiRoute.MARKET));
     assertEquals(EconomyUiRoute.MARKET,
         assertInstanceOf(UiNavigation.Route.class, controller.pollNavigation().orElseThrow()).route());

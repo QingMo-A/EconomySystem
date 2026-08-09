@@ -12,6 +12,7 @@ import com.mo.economy_system.ui.geometry.UiScale;
 import com.mo.economy_system.ui.home.HomeController;
 import com.mo.economy_system.ui.home.HomeEvent;
 import com.mo.economy_system.ui.home.HomeLayout;
+import com.mo.economy_system.ui.home.HomeOpenAnimation;
 import com.mo.economy_system.ui.home.HomePort;
 import com.mo.economy_system.ui.home.HomeView;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +28,7 @@ public final class Forge1201HomeScreen extends Screen {
   private final HomeController controller;
   private long appliedBalanceRevision;
   private long appliedMarketRequestId = -1;
+  private long animationStartedAtNanos = -1L;
 
   public Forge1201HomeScreen() {
     super(Component.translatable(EconomyUiRoute.HOME.titleKey()));
@@ -38,6 +40,7 @@ public final class Forge1201HomeScreen extends Screen {
   }
 
   @Override protected void init() {
+    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
     if (controller.state().screenState() == ScreenState.IDLE) {
       controller.handle(new HomeEvent.Initialize(System.nanoTime()));
     }
@@ -75,18 +78,23 @@ public final class Forge1201HomeScreen extends Screen {
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     syncViewport();
-    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state());
+    Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    float progress = HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
+    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
+        renderer.metrics(), progress);
     UiScale scale = layout.scale();
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    HomeView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+    HomeView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
   }
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state());
+    float progress = HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
+    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
+        com.mo.economy_system.ui.text.UiTextMetrics.APPROXIMATE, progress);
     int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     for (var nav : layout.navButtons()) if (nav.rect().contains(x, y)) {
       controller.handle(new HomeEvent.ActionClicked(nav.route())); return true;
@@ -97,12 +105,6 @@ public final class Forge1201HomeScreen extends Screen {
     if (layout.tradeCard().contains(x, y)) {
       controller.handle(new HomeEvent.ActionClicked(EconomyUiRoute.MARKET)); return true;
     }
-    if (layout.previousButton().contains(x, y)) {
-      controller.handle(new HomeEvent.Scroll(-1)); return true;
-    }
-    if (layout.nextButton().contains(x, y)) {
-      controller.handle(new HomeEvent.Scroll(1)); return true;
-    }
     if (controller.state().screenState() == ScreenState.ERROR && layout.retryButton().contains(x, y)) {
       controller.handle(new HomeEvent.Retry(System.nanoTime())); return true;
     }
@@ -110,7 +112,7 @@ public final class Forge1201HomeScreen extends Screen {
   }
 
   @Override public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-    if (delta != 0 && controller.state().totalPages() > 1) {
+    if (delta != 0 && controller.state().accounts().size() > HomeLayout.LEADERBOARD_VISIBLE_ROWS) {
       controller.handle(new HomeEvent.Scroll(delta < 0 ? 1 : -1)); return true;
     }
     return super.mouseScrolled(mouseX, mouseY, delta);

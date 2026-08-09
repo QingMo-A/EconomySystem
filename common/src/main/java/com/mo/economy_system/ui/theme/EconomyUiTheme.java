@@ -13,6 +13,15 @@ public final class EconomyUiTheme {
     public static final int DELIVERY_ACCENT = 0xFF43B5A0;
     public static final int ABOUT_ACCENT = 0xFFB779E8;
     public static final int LEADERBOARD_ACCENT = 0xFFE0B34C;
+    /** Home reference accents; kept separate from tokens consumed by other screens. */
+    public static final int HOME_NAV_SHOP_ACCENT = 0xFFFF8C00;
+    public static final int HOME_NAV_MARKET_ACCENT = 0xFF4FC3F7;
+    public static final int HOME_NAV_DELIVERY_ACCENT = 0xFF27AE60;
+    public static final int HOME_NAV_TERRITORY_ACCENT = 0xFF9B59B6;
+    public static final int HOME_NAV_ABOUT_ACCENT = 0xFF888888;
+    public static final int HOME_BALANCE_ACCENT = 0xFFFFD700;
+    public static final int HOME_TRADE_ACCENT = 0xFF4FC3F7;
+    public static final int HOME_LEADERBOARD_ACCENT = 0xFF1ABC9C;
     public static final int DISABLED_ACCENT = 0xFF6F7F8C;
     public static final int CARD_BACKGROUND = 0x801A1A2A;
     public static final int CARD_BACKGROUND_HOVER = 0x901A1A2A;
@@ -36,12 +45,17 @@ public final class EconomyUiTheme {
     public static final UiCardStyle TERRITORY_LOCKED_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
             DISABLED_ACCENT, 3, 0xCC, 0xFF);
-    public static final UiCardStyle HOME_CARD = new UiCardStyle(
+    public static final UiCardStyle HOME_BALANCE_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            MARKET_ACCENT, 3, 0xCC, 0xFF);
+            HOME_BALANCE_ACCENT, 3, 0xCC, 0xFF);
+    public static final UiCardStyle HOME_TRADE_CARD = new UiCardStyle(
+            CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
+            HOME_TRADE_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle HOME_LEADERBOARD_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            LEADERBOARD_ACCENT, 3, 0xCC, 0xFF);
+            HOME_LEADERBOARD_ACCENT, 3, 0xCC, 0xFF);
+    /** Compatibility alias retained for screens compiled against the initial common Home pass. */
+    public static final UiCardStyle HOME_CARD = HOME_TRADE_CARD;
     public static final UiCardStyle SHOP_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
             SHOP_ACCENT, 3, 0xCC, 0xFF);
@@ -56,11 +70,17 @@ public final class EconomyUiTheme {
     public static final UiButtonStyle TERRITORY_WARN_BUTTON = actionButton(0xFFE2A93B);
     public static final UiButtonStyle TERRITORY_NEUTRAL_BUTTON = actionButton(0xFF4A8ACF);
     public static final UiButtonStyle TERRITORY_DANGER_BUTTON = actionButton(0xFFE05D5D);
-    public static final UiButtonStyle HOME_SHOP_BUTTON = actionButton(SHOP_ACCENT);
-    public static final UiButtonStyle HOME_MARKET_BUTTON = actionButton(MARKET_ACCENT);
-    public static final UiButtonStyle HOME_DELIVERY_BUTTON = actionButton(DELIVERY_ACCENT);
-    public static final UiButtonStyle HOME_TERRITORY_BUTTON = TERRITORY_BUTTON;
-    public static final UiButtonStyle HOME_ABOUT_BUTTON = actionButton(ABOUT_ACCENT);
+    public static final UiButtonStyle HOME_NAV_SHOP_STYLE = homeNavButton(HOME_NAV_SHOP_ACCENT);
+    public static final UiButtonStyle HOME_NAV_MARKET_STYLE = homeNavButton(HOME_NAV_MARKET_ACCENT);
+    public static final UiButtonStyle HOME_NAV_DELIVERY_STYLE = homeNavButton(HOME_NAV_DELIVERY_ACCENT);
+    public static final UiButtonStyle HOME_NAV_TERRITORY_STYLE = homeNavButton(HOME_NAV_TERRITORY_ACCENT);
+    public static final UiButtonStyle HOME_NAV_ABOUT_STYLE = homeNavButton(HOME_NAV_ABOUT_ACCENT);
+    /** Compatibility names retained for target code outside this parity pass. */
+    public static final UiButtonStyle HOME_SHOP_BUTTON = HOME_NAV_SHOP_STYLE;
+    public static final UiButtonStyle HOME_MARKET_BUTTON = HOME_NAV_MARKET_STYLE;
+    public static final UiButtonStyle HOME_DELIVERY_BUTTON = HOME_NAV_DELIVERY_STYLE;
+    public static final UiButtonStyle HOME_TERRITORY_BUTTON = HOME_NAV_TERRITORY_STYLE;
+    public static final UiButtonStyle HOME_ABOUT_BUTTON = HOME_NAV_ABOUT_STYLE;
     public static final UiButtonStyle SHOP_BUTTON = actionButton(SHOP_ACCENT, 8);
     public static final UiButtonStyle MARKET_BUTTON = actionButton(MARKET_ACCENT, 8);
     public static final UiButtonStyle TERRITORY_BUFF_UNLOCK_BUTTON = actionButton(SHOP_ACCENT, 6);
@@ -89,6 +109,14 @@ public final class EconomyUiTheme {
                 0x55, 0x70, 4, 0xCC, 0xFF, 6, 36, 4,
                 0x25, 0x40, padding, false,
                 com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+    }
+
+    /** Home navigation style copied from the NeoForge 1.21.1 reference renderer. */
+    public static UiButtonStyle homeNavButton(int accent) {
+        return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x000000,
+                0x99, 0xAA, 4, 0xCC, 0xFF, 6, 36, 4,
+                0x20, 0x40, 10, true,
+                com.mo.economy_system.ui.renderer.UiTextAlignment.LEFT);
     }
 
     private EconomyUiTheme() {
