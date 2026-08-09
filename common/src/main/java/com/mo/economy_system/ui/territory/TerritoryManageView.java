@@ -4,35 +4,59 @@ import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.UiIcon;
+import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.text.UiText;
+import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import java.util.List;
 
-/** Common semantic view; target renderers perform the actual Minecraft drawing. */
+/** Common semantic Territory Manage view; targets only translate renderer operations. */
 public final class TerritoryManageView {
     private TerritoryManageView() {
     }
 
     public static void render(EconomyUiRenderer renderer, TerritoryManageState state,
                               TerritoryManageLayout.Layout layout, int mouseX, int mouseY) {
-        renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-                0xB0000000);
+        UiTextMetrics metrics = layout.metrics();
+        int width = layout.scale().virtualWidth();
+        int height = layout.scale().virtualHeight();
+        renderer.fill(new UiRect(0, 0, width, height), 0xB0000000);
+
+        // FooterIdentity / title-card semantic, matching CardRenderer.drawVersionInfo from the
+        // legacy 1.21.1 reference rather than a plain bottom-corner string.
+        UiRect footer = layout.footer();
+        renderer.card(footer, EconomyUiTheme.TERRITORY_CARD, false);
         renderer.icon(UiIcon.TERRITORY,
-                new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-        renderer.translatedText("screen.territory.manage", List.of(),
-                layout.title().x() + 16, layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
-        renderer.text(" / " + state.territoryName(), layout.title().x() + 112,
-                layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
-        renderer.translatedText("screen.territory.members", List.of(
-                        Integer.toString(state.filteredMembers().size())),
+                new UiRect(footer.x() + 6, footer.y() + 7, 14, 14));
+        String footerText = UiText.truncate(metrics,
+                "领地管理 · " + state.territoryName(), Math.max(1, footer.width() - 28));
+        renderer.text(footerText, footer.x() + 24, footer.y() + 8, EconomyUiTheme.TEXT_PRIMARY);
+        renderer.fill(new UiRect(footer.x() + 8, Math.max(footer.y(), footer.bottom() - 3),
+                Math.max(0, footer.width() - 16), 1), 0x30FFFFFF);
+
+        renderer.textInRect("按 ESC 返回", layout.escHint(), 0x90FFFFFF, UiTextAlignment.RIGHT);
+
+        // Member header and action panel.
+        renderer.translatedText("screen.territory.members",
+                List.of(Integer.toString(state.filteredMembers().size())),
                 layout.memberHeader().x(), layout.memberHeader().y(), EconomyUiTheme.TEXT_SECONDARY);
-        renderer.card(layout.actionPanel(), EconomyUiTheme.TERRITORY_CARD, false);
-        renderer.translatedText("screen.territory.actions", List.of(), layout.actionPanel().x() + 8,
-                layout.actionPanel().y() + 8, EconomyUiTheme.TEXT_PRIMARY);
+        renderer.card(layout.actionPanel(), EconomyUiTheme.TERRITORY_CARD,
+                layout.actionPanel().contains(mouseX, mouseY));
+        UiRect panelHeader = new UiRect(layout.actionPanel().x() + 8,
+                layout.actionPanel().y() + 6,
+                Math.max(1, layout.actionPanel().width() - 16), metrics.lineHeight());
+        renderer.textInRect("管理操作", panelHeader, EconomyUiTheme.TEXT_PRIMARY,
+                UiTextAlignment.LEFT);
+        UiRect panelSubtitle = new UiRect(panelHeader.x(), panelHeader.y() + metrics.lineHeight(),
+                panelHeader.width(), metrics.lineHeight());
+        renderer.textInRect(UiText.truncate(metrics, state.territoryName(), panelSubtitle.width()),
+                panelSubtitle, EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
 
         if (state.screenState() == ScreenState.LOADING) {
-            renderer.translatedText("screen.territory.loading", List.of(), layout.memberPanel().x() + 8,
-                    layout.memberPanel().y() + 8, EconomyUiTheme.TEXT_PRIMARY);
+            renderer.translatedText("screen.territory.loading", List.of(),
+                    layout.memberPanel().x() + 8, layout.memberPanel().y() + 8,
+                    EconomyUiTheme.TEXT_PRIMARY);
         } else if (state.screenState() == ScreenState.ERROR) {
             renderer.translatedText(state.errorKey() == null ? "screen.territory.sync_failed" : state.errorKey(),
                     List.of(), layout.memberPanel().x() + 8, layout.memberPanel().y() + 8,
@@ -41,23 +65,32 @@ public final class TerritoryManageView {
                     "screen.territory.retry", List.of(),
                     layout.retryButton().contains(mouseX, mouseY), state.can(TerritoryManageAction.RETRY));
         } else if (state.screenState() == ScreenState.EMPTY) {
-            renderer.translatedText("screen.territory.manage_empty", List.of(), layout.memberPanel().x() + 8,
-                    layout.memberPanel().y() + 8, EconomyUiTheme.TEXT_MUTED);
+            renderer.textInRect("暂无成员", layout.memberPanel(), 0x80FFFFFF,
+                    UiTextAlignment.CENTER);
         }
 
-        for (TerritoryManageLayout.MemberCard card : layout.cards()) {
-            renderer.card(card.card(), EconomyUiTheme.TERRITORY_CARD,
-                    card.card().contains(mouseX, mouseY));
-            renderer.playerHead(card.member().playerId(), card.member().playerName(),
-                    new UiRect(card.card().x() + 8, card.card().y() + 8, 32, 32));
-            renderer.text(card.member().playerName(), card.card().x() + 44,
-                    card.card().y() + 8, EconomyUiTheme.TEXT_PRIMARY);
-            renderer.text(card.member().playerId().toString(), card.card().x() + 44,
-                    card.card().y() + 25, EconomyUiTheme.TEXT_SECONDARY);
+        for (TerritoryManageLayout.MemberCard memberCard : layout.cards()) {
+            boolean hovered = memberCard.card().contains(mouseX, mouseY);
+            renderer.card(memberCard.card(), EconomyUiTheme.TERRITORY_CARD, hovered);
+            renderer.playerHead(memberCard.member().playerId(), memberCard.member().playerName(),
+                    new UiRect(memberCard.card().x() + 8, memberCard.card().y() + 8,
+                            TerritoryManageLayout.PLAYER_ICON_SIZE,
+                            TerritoryManageLayout.PLAYER_ICON_SIZE));
+
+            UiRect nameRect = memberCard.nameRect(metrics);
+            renderer.textInRect(UiText.truncate(metrics, memberCard.member().playerName(), nameRect.width()),
+                    nameRect, EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+
+            UiRect uuidRect = memberCard.uuidRect(metrics);
+            int uuidWidth = Math.max(1, memberCard.kickButton().x() - uuidRect.x() - 4);
+            renderer.textInRect(UiText.truncate(metrics,
+                            memberCard.member().playerId().toString(), uuidWidth),
+                    new UiRect(uuidRect.x(), uuidRect.y(), uuidWidth, uuidRect.height()),
+                    EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
             if (state.can(TerritoryManageAction.KICK)) {
-                renderer.translatedButton(card.kickButton(), EconomyUiTheme.TERRITORY_DANGER_BUTTON,
+                renderer.translatedButton(memberCard.kickButton(), EconomyUiTheme.TERRITORY_DANGER_BUTTON,
                         "message.territory_management.kick_player", List.of(),
-                        card.kickButton().contains(mouseX, mouseY), true);
+                        memberCard.kickButton().contains(mouseX, mouseY), true);
             }
         }
 
@@ -66,14 +99,19 @@ public final class TerritoryManageView {
                     action.rect().contains(mouseX, mouseY), state.can(action.action()));
         }
 
-        renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON,
-                "<", layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
-        renderer.text((state.page() + 1) + " / " + state.totalPages(), layout.pageText().x(),
-                layout.pageText().y() + 6, EconomyUiTheme.TEXT_PRIMARY);
-        renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON,
-                ">", layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
-        renderer.translatedButton(layout.backButton(), EconomyUiTheme.TERRITORY_BUTTON, "gui.back", List.of(),
-                layout.backButton().contains(mouseX, mouseY), state.can(TerritoryManageAction.BACK));
+        if (state.totalPages() > 1) {
+            String pageText = (state.page() + 1) + " / " + state.totalPages();
+            renderer.button(layout.previousButton(), pageStyle(state.page() > 0), "<",
+                    layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+            renderer.textInRect(pageText, layout.pageText(), EconomyUiTheme.TEXT_PRIMARY,
+                    UiTextAlignment.CENTER);
+            renderer.button(layout.nextButton(), pageStyle(state.page() + 1 < state.totalPages()), ">",
+                    layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+        }
+    }
+
+    private static UiButtonStyle pageStyle(boolean enabled) {
+        return enabled ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED;
     }
 
     private static String key(TerritoryManageAction action) {

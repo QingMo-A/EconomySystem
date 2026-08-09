@@ -28,66 +28,64 @@ public final class EconomyUiTheme {
 
     public static final UiCardStyle TERRITORY_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            TERRITORY_ACCENT, 3, PANEL_PADDING);
+            TERRITORY_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle TERRITORY_LOCKED_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            DISABLED_ACCENT, 3, PANEL_PADDING);
+            DISABLED_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle HOME_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            MARKET_ACCENT, 3, PANEL_PADDING);
+            MARKET_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle HOME_LEADERBOARD_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            LEADERBOARD_ACCENT, 3, PANEL_PADDING);
+            LEADERBOARD_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle SHOP_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            SHOP_ACCENT, 3, PANEL_PADDING);
+            SHOP_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle MARKET_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            MARKET_ACCENT, 3, PANEL_PADDING);
+            MARKET_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle DELIVERY_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
-            DELIVERY_ACCENT, 3, PANEL_PADDING);
-    public static final UiButtonStyle TERRITORY_BUTTON = new UiButtonStyle(
-            TERRITORY_ACCENT, 0xFFFFFFFF, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
+            DELIVERY_ACCENT, 3, 0xCC, 0xFF);
+    public static final UiButtonStyle TERRITORY_BUTTON = actionButton(TERRITORY_ACCENT);
     public static final UiButtonStyle TERRITORY_PRIMARY_BUTTON = TERRITORY_BUTTON;
-    public static final UiButtonStyle TERRITORY_WARN_BUTTON = new UiButtonStyle(
-            0xFFE2A93B, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle TERRITORY_NEUTRAL_BUTTON = new UiButtonStyle(
-            0xFF4A8ACF, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle TERRITORY_DANGER_BUTTON = new UiButtonStyle(
-            0xFFE05D5D, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle HOME_SHOP_BUTTON = new UiButtonStyle(
-            SHOP_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle HOME_MARKET_BUTTON = new UiButtonStyle(
-            MARKET_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle HOME_DELIVERY_BUTTON = new UiButtonStyle(
-            DELIVERY_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
+    public static final UiButtonStyle TERRITORY_WARN_BUTTON = actionButton(0xFFE2A93B);
+    public static final UiButtonStyle TERRITORY_NEUTRAL_BUTTON = actionButton(0xFF4A8ACF);
+    public static final UiButtonStyle TERRITORY_DANGER_BUTTON = actionButton(0xFFE05D5D);
+    public static final UiButtonStyle HOME_SHOP_BUTTON = actionButton(SHOP_ACCENT);
+    public static final UiButtonStyle HOME_MARKET_BUTTON = actionButton(MARKET_ACCENT);
+    public static final UiButtonStyle HOME_DELIVERY_BUTTON = actionButton(DELIVERY_ACCENT);
     public static final UiButtonStyle HOME_TERRITORY_BUTTON = TERRITORY_BUTTON;
-    public static final UiButtonStyle HOME_ABOUT_BUTTON = new UiButtonStyle(
-            ABOUT_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 10);
-    public static final UiButtonStyle SHOP_BUTTON = new UiButtonStyle(
-            SHOP_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 8);
-    public static final UiButtonStyle MARKET_BUTTON = new UiButtonStyle(
-            MARKET_ACCENT, TEXT_PRIMARY, 0x20FFFFFF, 0x35FFFFFF,
-            0x40FFFFFF, 0x60FFFFFF, 4, 8);
-    public static final UiButtonStyle TERRITORY_BUFF_UNLOCK_BUTTON = new UiButtonStyle(
-            SHOP_ACCENT, TEXT_PRIMARY, 0x55FFFFFF, 0x70FFFFFF,
-            0x25FFFFFF, 0x40FFFFFF, 3, 6);
-    public static final UiButtonStyle TERRITORY_BUFF_UPGRADE_BUTTON = new UiButtonStyle(
-            TERRITORY_ACCENT, TEXT_PRIMARY, 0x55FFFFFF, 0x70FFFFFF,
-            0x25FFFFFF, 0x40FFFFFF, 3, 6);
+    public static final UiButtonStyle HOME_ABOUT_BUTTON = actionButton(ABOUT_ACCENT);
+    public static final UiButtonStyle SHOP_BUTTON = actionButton(SHOP_ACCENT, 8);
+    public static final UiButtonStyle MARKET_BUTTON = actionButton(MARKET_ACCENT, 8);
+    public static final UiButtonStyle TERRITORY_BUFF_UNLOCK_BUTTON = actionButton(SHOP_ACCENT, 6);
+    public static final UiButtonStyle TERRITORY_BUFF_UPGRADE_BUTTON = actionButton(TERRITORY_ACCENT, 6);
     public static final UiButtonStyle DISABLED_BUTTON = new UiButtonStyle(
-            DISABLED_ACCENT, TEXT_LOCKED, 0x30FFFFFF, 0x30FFFFFF,
-            0x20FFFFFF, 0x20FFFFFF, 3, 6);
+            DISABLED_ACCENT & 0x00FFFFFF, TEXT_LOCKED, 0xFFFFFF, 0x30, 0x30,
+            3, 0, 0, 0, 0, 0, 0x20, 0x20, 6, false,
+            com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+
+    /** Standalone primitive used by pagination; it intentionally has no action stripe/glow. */
+    public static final UiButtonStyle PAGE_BUTTON = new UiButtonStyle(
+            0x4A8ACF, TEXT_PRIMARY, 0x3A7ABF, 0xB0, 0xD0,
+            0, 0, 0, 0, 0, 0, 0x4A, 0x6A, 2, false,
+            com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+    public static final UiButtonStyle PAGE_BUTTON_DISABLED = new UiButtonStyle(
+            0x3A3A4A, 0x60808080, 0x2A2A3A, 0x60, 0x60,
+            0, 0, 0, 0, 0, 0, 0x3A, 0x3A, 2, false,
+            com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+
+    private static UiButtonStyle actionButton(int accent) {
+        return actionButton(accent, 8);
+    }
+
+    private static UiButtonStyle actionButton(int accent, int padding) {
+        return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x000000,
+                0x55, 0x70, 4, 0xCC, 0xFF, 6, 36, 4,
+                0x25, 0x40, padding, false,
+                com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+    }
 
     private EconomyUiTheme() {
     }

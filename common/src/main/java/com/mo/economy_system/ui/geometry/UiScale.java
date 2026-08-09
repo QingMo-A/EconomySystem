@@ -13,15 +13,18 @@ public record UiScale(float value, int virtualWidth, int virtualHeight) {
             throw new IllegalArgumentException("UI dimensions must be positive");
         }
         float value = Math.min((float) physicalWidth / baseWidth, (float) physicalHeight / baseHeight);
-        return new UiScale(value, Math.max(1, Math.round(physicalWidth / value)),
-                Math.max(1, Math.round(physicalHeight / value)));
+        // Keep the same truncation semantics as the 1.21.1 reference screen.  Rounding here
+        // changes the virtual canvas by one pixel at fractional scales and makes hitboxes drift
+        // from the rendered controls.
+        return new UiScale(value, Math.max(1, (int) (physicalWidth / value)),
+                Math.max(1, (int) (physicalHeight / value)));
     }
 
     public int toVirtualX(double physicalX) {
-        return Math.round((float) (physicalX / value));
+        return Math.max(0, (int) (physicalX / value));
     }
 
     public int toVirtualY(double physicalY) {
-        return Math.round((float) (physicalY / value));
+        return Math.max(0, (int) (physicalY / value));
     }
 }

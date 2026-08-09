@@ -10,9 +10,8 @@ public interface TerritoryManagePort {
 
     void submit(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId);
 
-    default void confirm(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId) {
-        submit(territoryId, action, targetPlayerId);
-    }
+    /** Explicit confirmation intent; implementations must not fail open into submit(). */
+    void confirm(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId);
 
     void open(UUID territoryId, TerritoryManageAction action);
 }

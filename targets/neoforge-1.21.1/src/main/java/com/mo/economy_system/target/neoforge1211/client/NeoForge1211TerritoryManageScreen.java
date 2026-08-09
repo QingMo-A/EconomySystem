@@ -22,7 +22,6 @@ import com.mo.economy_system.ui.territory.confirm.TerritoryConfirmationKind;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -33,7 +32,6 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
   private final Screen parent;
   private final Port port = new Port();
   private final TerritoryManageController controller;
-  private EditBox search;
   private long appliedResponse = -1;
 
   public NeoForge1211TerritoryManageScreen(Owned initial, Screen parent) {
@@ -46,18 +44,6 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
   }
 
   @Override protected void init() {
-    String value = search == null ? "" : search.getValue();
-    var layout = commonLayout();
-    var searchRect = layout.search();
-    float scale = layout.scale().value();
-    search = new EditBox(font, Math.round(searchRect.x() * scale), Math.round(searchRect.y() * scale),
-        Math.max(1, Math.round(searchRect.width() * scale)),
-        Math.max(1, Math.round(searchRect.height() * scale)),
-        Component.translatable("screen.territory.search"));
-    search.setMaxLength(50);
-    search.setValue(value);
-    search.setResponder(text -> controller.handle(new TerritoryManageEvent.FilterChanged(text)));
-    addRenderableWidget(search);
     if (controller.state().screenState() == ScreenState.IDLE) {
       controller.handle(new TerritoryManageEvent.Initialize(System.nanoTime()));
     }
@@ -120,8 +106,6 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
       controller.handle(new TerritoryManageEvent.Retry(System.nanoTime()));
     } else if (layout.previousButton().contains(x, y)) controller.handle(new TerritoryManageEvent.PreviousPage());
     else if (layout.nextButton().contains(x, y)) controller.handle(new TerritoryManageEvent.NextPage());
-    else if (layout.backButton().contains(x, y)) controller.handle(
-        new TerritoryManageEvent.ActionClicked(TerritoryManageAction.BACK, null));
     else return super.mouseClicked(mouseX, mouseY, button);
     return true;
   }
@@ -144,10 +128,12 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
   private TerritoryManageLayout.Layout commonLayout() {
-    var layout = TerritoryManageLayout.calculate(width, height, controller.state());
+    var layout = TerritoryManageLayout.calculate(width, height, controller.state(),
+        new NeoForge1211UiTextMetrics(font));
     if (layout.pageSize() != controller.state().pageSize()) {
       controller.handle(new TerritoryManageEvent.ViewportChanged(layout.pageSize()));
-      layout = TerritoryManageLayout.calculate(width, height, controller.state());
+      layout = TerritoryManageLayout.calculate(width, height, controller.state(),
+          new NeoForge1211UiTextMetrics(font));
     }
     return layout;
   }
@@ -175,6 +161,10 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
       if (minecraft == null) return;
       if (action == TerritoryManageAction.COPY_ID) {
         minecraft.keyboardHandler.setClipboard(territoryId.toString());
+        if (minecraft.player != null) {
+          minecraft.player.displayClientMessage(
+              Component.translatable("message.territory_management.copy_success"), false);
+        }
       } else if (action == TerritoryManageAction.INVITE) {
         minecraft.setScreen(new NeoForge1211TerritoryInviteScreen(initial,
             NeoForge1211TerritoryManageScreen.this));

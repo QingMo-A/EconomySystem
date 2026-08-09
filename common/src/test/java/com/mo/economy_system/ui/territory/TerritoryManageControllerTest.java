@@ -125,6 +125,11 @@ class TerritoryManageControllerTest {
         }
 
         @Override
+        public void confirm(UUID territoryId, TerritoryManageAction action, UUID targetPlayerId) {
+            target = targetPlayerId;
+        }
+
+        @Override
         public void open(UUID territoryId, TerritoryManageAction action) {
             opened = action;
         }

@@ -2,89 +2,192 @@ package com.mo.economy_system.ui.territory;
 
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.text.UiText;
+import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Pure layout calculation shared by both target renderers. */
+/** Pure Territory Manage geometry shared by Forge and NeoForge renderers. */
 public final class TerritoryManageLayout {
     public static final int PLAYER_CARD_HEIGHT = 48;
+    public static final int PLAYER_ICON_SIZE = 32;
     public static final int ACTION_BUTTON_HEIGHT = 22;
     public static final int ACTION_BUTTON_SPACING = 6;
     public static final int PAGE_HINT_HEIGHT = 45;
-    private static final int ACTION_PANEL_WIDTH = 180;
-    private static final int LIST_START_Y = 55;
-    private static final int SEARCH_WIDTH = 200;
+    public static final int ACTION_PANEL_WIDTH = 180;
+    public static final int LIST_START_Y = 55;
+    public static final int KICK_BUTTON_WIDTH = 66;
+    public static final int PAGE_BUTTON_WIDTH = 50;
+    public static final int PAGE_BUTTON_HEIGHT = 24;
+    private static final int LEGACY_BACK_WIDTH = 72;
+    private static final int LEGACY_BACK_HEIGHT = 20;
 
     private TerritoryManageLayout() {
     }
 
-    public static Layout calculate(int physicalWidth, int physicalHeight, TerritoryManageState state) {
+    public static Layout calculate(int physicalWidth, int physicalHeight,
+                                   TerritoryManageState state) {
+        return calculate(physicalWidth, physicalHeight, state, UiTextMetrics.APPROXIMATE);
+    }
+
+    public static Layout calculate(int physicalWidth, int physicalHeight,
+                                   TerritoryManageState state, UiTextMetrics metrics) {
+        if (metrics == null) {
+            throw new IllegalArgumentException("metrics cannot be null");
+        }
         UiScale scale = UiScale.fit(physicalWidth, physicalHeight,
                 EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
         int width = scale.virtualWidth();
         int height = scale.virtualHeight();
         int panel = EconomyUiTheme.PANEL_PADDING;
-        int rightWidth = Math.max(140, Math.min(ACTION_PANEL_WIDTH,
-                width - panel * 3 - 240));
-        int listWidth = Math.max(0, width - panel * 3 - rightWidth);
-        int listHeight = Math.max(0, height - LIST_START_Y - PAGE_HINT_HEIGHT);
-        int rowCount = Math.max(0, (listHeight + EconomyUiTheme.CARD_SPACING)
-                / (PLAYER_CARD_HEIGHT + EconomyUiTheme.CARD_SPACING));
-        int pageSize = Math.max(1, rowCount);
-        List<MemberCard> cards = new ArrayList<>();
-        List<MemberRow> visible = state.visibleMembers();
-        int cardWidth = Math.max(0, listWidth);
-        for (int i = 0; i < visible.size() && i < pageSize; i++) {
-            int y = LIST_START_Y + i * (PLAYER_CARD_HEIGHT + EconomyUiTheme.CARD_SPACING);
-            cards.add(new MemberCard(visible.get(i),
-                    new UiRect(panel, y, cardWidth, PLAYER_CARD_HEIGHT),
-                    new UiRect(Math.max(panel, panel + cardWidth - 72), y + 14, 66, 20)));
+
+        // This is intentionally the same min-left-width/right-panel calculation as the legacy
+        // 1.21.1 screen.  Do not replace it with an approximate proportional split.
+        int minLeftWidth = 240;
+        int rightWidth = ACTION_PANEL_WIDTH;
+        int leftWidth = width - panel * 3 - rightWidth;
+        if (leftWidth < minLeftWidth) {
+            rightWidth = Math.max(140, width - panel * 3 - minLeftWidth);
         }
-        int actionX = panel + listWidth + panel;
+        rightWidth = Math.max(140, rightWidth);
+        leftWidth = Math.max(0, width - panel * 3 - rightWidth);
+
+        int listHeight = Math.max(0, height - LIST_START_Y - PAGE_HINT_HEIGHT);
+        int rowCount = Math.max(1, (listHeight + EconomyUiTheme.CARD_SPACING)
+                / (PLAYER_CARD_HEIGHT + EconomyUiTheme.CARD_SPACING));
+        int pageSize = rowCount;
+        List<MemberRow> filtered = state.filteredMembers();
+        int start = Math.min(state.page() * pageSize, filtered.size());
+        int end = Math.min(filtered.size(), start + pageSize);
+        List<MemberCard> cards = new ArrayList<>();
+        int cardWidth = leftWidth;
+        // A viewport narrower than the reference card cannot expose a useful kick hitbox. Keep
+        // the panel valid and let the empty/scroll state communicate that no card is drawable.
+        if (cardWidth >= KICK_BUTTON_WIDTH + 16) {
+            for (int i = start; i < end; i++) {
+                int row = i - start;
+                int cardY = LIST_START_Y + row * (PLAYER_CARD_HEIGHT + EconomyUiTheme.CARD_SPACING);
+                UiRect card = new UiRect(panel, cardY, cardWidth, PLAYER_CARD_HEIGHT);
+                UiRect kick = new UiRect(card.right() - KICK_BUTTON_WIDTH - 8,
+                        cardY + (PLAYER_CARD_HEIGHT - ACTION_BUTTON_HEIGHT) / 2,
+                        KICK_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
+                cards.add(new MemberCard(filtered.get(i), card, kick));
+            }
+        }
+
+        int actionX = panel + leftWidth + panel;
         int actionY = LIST_START_Y;
-        TerritoryManageAction[] actions = {TerritoryManageAction.COPY_ID,
-                TerritoryManageAction.MODIFY_MODE, TerritoryManageAction.INVITE,
-                TerritoryManageAction.BUFFS, TerritoryManageAction.ACCESS,
-                TerritoryManageAction.PERMISSIONS, TerritoryManageAction.TRANSFER,
-                TerritoryManageAction.DELETE};
-        List<ActionButton> actionButtons = new ArrayList<>();
-        int actionHeight = Math.max(120, 34 + actions.length * ACTION_BUTTON_HEIGHT
-                + (actions.length - 1) * ACTION_BUTTON_SPACING);
+        TerritoryManageAction[] actions = {
+                TerritoryManageAction.COPY_ID,
+                TerritoryManageAction.MODIFY_MODE,
+                TerritoryManageAction.INVITE,
+                TerritoryManageAction.BUFFS,
+                TerritoryManageAction.ACCESS,
+                TerritoryManageAction.PERMISSIONS,
+                TerritoryManageAction.TRANSFER,
+                TerritoryManageAction.DELETE
+        };
+        int headerHeight = metrics.lineHeight() + 14;
+        int contentHeight = actions.length * ACTION_BUTTON_HEIGHT
+                + (actions.length - 1) * ACTION_BUTTON_SPACING;
+        int actionHeight = Math.max(120, headerHeight + contentHeight + 8);
         UiRect actionPanel = new UiRect(actionX, actionY, rightWidth, actionHeight);
-        int actionButtonY = actionY + 34;
+        List<ActionButton> actionButtons = new ArrayList<>();
+        int actionButtonY = actionY + headerHeight;
         for (TerritoryManageAction action : actions) {
             actionButtons.add(new ActionButton(action,
-                    new UiRect(actionX + 6, actionButtonY, Math.max(0, rightWidth - 12), ACTION_BUTTON_HEIGHT)));
+                    new UiRect(actionX + 6, actionButtonY,
+                            Math.max(0, rightWidth - 12), ACTION_BUTTON_HEIGHT)));
             actionButtonY += ACTION_BUTTON_HEIGHT + ACTION_BUTTON_SPACING;
         }
-        UiRect previous = new UiRect(panel, Math.max(LIST_START_Y, height - PAGE_HINT_HEIGHT + 8), 72, 20);
-        UiRect next = new UiRect(Math.max(panel, panel + listWidth - 72), previous.y(), 72, 20);
-        UiRect back = new UiRect(Math.max(panel, width - panel - 72), height - panel - 20, 72, 20);
-        UiRect retry = new UiRect(panel + Math.max(0, (listWidth - 96) / 2),
-                LIST_START_Y + Math.max(0, (listHeight - 22) / 2), Math.min(96, listWidth), 22);
-        UiRect search = new UiRect(panel, panel, Math.min(SEARCH_WIDTH, listWidth), 20);
-        UiRect memberHeader = new UiRect(panel, LIST_START_Y - 14, listWidth, 12);
-        UiRect pageText = new UiRect(panel + Math.max(0, (listWidth - 64) / 2), previous.y(),
-                Math.min(64, listWidth), previous.height());
-        return new Layout(scale,
-                new UiRect(panel, height - panel - 12, Math.max(0, width - panel * 2 - 84), 12),
-                search, memberHeader, new UiRect(panel, LIST_START_Y, listWidth, listHeight), actionPanel,
-                List.copyOf(cards), List.copyOf(actionButtons), previous, next, pageText, retry, back, pageSize);
+
+        String pageText = (state.page() + 1) + " / " + state.totalPages();
+        int pageTextWidth = Math.max(1, metrics.width(pageText));
+        int pageTextX = Math.max(0, width / 2 - pageTextWidth / 2);
+        int pageY = Math.max(0, height - 40);
+        UiRect previous = new UiRect(Math.max(0, pageTextX - PAGE_BUTTON_WIDTH - 12),
+                pageY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+        UiRect next = new UiRect(Math.min(Math.max(0, width - PAGE_BUTTON_WIDTH),
+                pageTextX + pageTextWidth + 12), pageY, PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+        UiRect pageRect = new UiRect(pageTextX, Math.max(0, height - 35), pageTextWidth,
+                Math.max(1, metrics.lineHeight()));
+
+        int titleWidth = Math.max(1, Math.min(240, Math.max(1, width - panel * 2)));
+        UiRect title = new UiRect(panel, 14, titleWidth, Math.max(1, metrics.lineHeight()));
+        String footerText = "领地管理 · " + state.territoryName();
+        int footerContentWidth = metrics.width(footerText) + 14;
+        float footerScale = Math.min(1.0f, 240.0f / Math.max(1, footerContentWidth));
+        int footerWidth = Math.max(1, (int) (footerContentWidth * footerScale) + 16);
+        int footerHeight = Math.max(1, metrics.lineHeight() + 10);
+        UiRect footer = new UiRect(panel,
+                Math.max(0, height - panel - metrics.lineHeight() - footerHeight), footerWidth,
+                footerHeight);
+        String esc = "按 ESC 返回";
+        int escWidth = Math.max(1, metrics.width(esc));
+        UiRect escHint = new UiRect(Math.max(0, width - panel - escWidth),
+                Math.max(0, height - panel - metrics.lineHeight()), escWidth,
+                Math.max(1, metrics.lineHeight()));
+
+        // Retained as a non-rendered compatibility geometry for callers compiled against the
+        // pilot API. Territory Manage no longer creates an EditBox or draws this rectangle.
+        UiRect legacySearch = new UiRect(panel, 14,
+                Math.max(120, Math.min(200, Math.max(120, width - panel * 2))),
+                Math.max(1, metrics.lineHeight() + 11));
+        UiRect memberHeader = new UiRect(panel,
+                Math.max(0, LIST_START_Y - metrics.lineHeight() - 3), leftWidth,
+                Math.max(1, metrics.lineHeight()));
+        UiRect memberPanel = new UiRect(panel, LIST_START_Y, leftWidth, listHeight);
+        UiRect retry = new UiRect(panel + Math.max(0, (leftWidth - 96) / 2),
+                LIST_START_Y + Math.max(0, (listHeight - ACTION_BUTTON_HEIGHT) / 2),
+                Math.min(96, leftWidth), ACTION_BUTTON_HEIGHT);
+        // Back remains addressable for old shell integrations, but the common view deliberately
+        // does not render it. ESC is the only normal-page navigation affordance.
+        UiRect back = new UiRect(Math.max(0, width - panel - 72),
+                Math.max(0, height - panel - LEGACY_BACK_HEIGHT),
+                LEGACY_BACK_WIDTH, LEGACY_BACK_HEIGHT);
+        return new Layout(scale, metrics, title, legacySearch, memberHeader, memberPanel,
+                actionPanel, List.copyOf(cards), List.copyOf(actionButtons), previous, next,
+                pageRect, retry, back, footer, escHint, pageSize);
     }
 
-    public record Layout(UiScale scale, UiRect title, UiRect search, UiRect memberHeader,
-                         UiRect memberPanel, UiRect actionPanel,
+    public record Layout(UiScale scale, UiTextMetrics metrics, UiRect title, UiRect search,
+                         UiRect memberHeader, UiRect memberPanel, UiRect actionPanel,
                          List<MemberCard> cards, List<ActionButton> actionButtons,
                          UiRect previousButton, UiRect nextButton, UiRect pageText,
-                         UiRect retryButton, UiRect backButton, int pageSize) {
+                         UiRect retryButton, UiRect backButton, UiRect footer, UiRect escHint,
+                         int pageSize) {
         public Layout {
             cards = List.copyOf(cards);
             actionButtons = List.copyOf(actionButtons);
         }
+
+        /** Alias matching the older screens' footer naming. */
+        public UiRect footerTitle() {
+            return footer;
+        }
+
+        /** Alias used by target hit-testing code. */
+        public UiRect esc() {
+            return escHint;
+        }
+
+        public String truncatedTerritoryName(String territoryName) {
+            return UiText.truncate(metrics, territoryName, Math.max(1, actionPanel.width() - 16));
+        }
     }
 
     public record MemberCard(MemberRow member, UiRect card, UiRect kickButton) {
+        public UiRect nameRect(UiTextMetrics metrics) {
+            return new UiRect(card.x() + 48, card.y() + 7,
+                    Math.max(0, kickButton.x() - (card.x() + 48) - 4), metrics.lineHeight());
+        }
+
+        public UiRect uuidRect(UiTextMetrics metrics) {
+            return new UiRect(card.x() + 48,
+                    card.y() + 7 + metrics.lineHeight() + 2,
+                    Math.max(0, kickButton.x() - (card.x() + 48) - 4), metrics.lineHeight());
+        }
     }
 
     public record ActionButton(TerritoryManageAction action, UiRect rect) {

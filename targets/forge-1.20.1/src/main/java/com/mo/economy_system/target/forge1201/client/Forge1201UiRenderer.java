@@ -70,9 +70,10 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     graphics.fill(rect.x(), rect.y(), rect.right(), rect.y() + 1, border);
     graphics.fill(rect.x(), rect.bottom() - 1, rect.right(), rect.bottom(), border);
     graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
-    if (style.stripeWidth() > 0) {
+    if (style.accentWidth() > 0) {
       graphics.fill(rect.x(), rect.y(),
-          Math.min(rect.right(), rect.x() + style.stripeWidth()), rect.bottom(), style.accent());
+          Math.min(rect.right(), rect.x() + style.accentWidth()), rect.bottom(),
+          withAlpha(style.accent(), hovered ? style.accentAlphaHover() : style.accentAlpha()));
     }
   }
 
@@ -90,23 +91,48 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
                           boolean hovered, boolean enabled) {
     int background = enabled && hovered ? style.backgroundHover() : style.background();
     fill(rect, background);
-    int border = hovered ? style.borderHover() : style.border();
-    graphics.fill(rect.x(), rect.y(), rect.right(), rect.y() + 1, border);
-    graphics.fill(rect.x(), rect.bottom() - 1, rect.right(), rect.bottom(), border);
+    int border = style.borderColor(hovered, enabled);
     if (style.stripeWidth() > 0) {
-      graphics.fill(rect.x(), rect.y(), rect.x() + style.stripeWidth(), rect.bottom(), style.accent());
+      int stripeAlpha = enabled && hovered ? style.stripeAlphaHover() : style.stripeAlpha();
+      if (!enabled) stripeAlpha = Math.min(stripeAlpha, 0x60);
+      graphics.fill(rect.x(), rect.y(), Math.min(rect.right(), rect.x() + style.stripeWidth()),
+          rect.bottom(), withAlpha(style.accent(), stripeAlpha));
+      graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
+      graphics.fill(Math.min(rect.right(), rect.x() + style.stripeWidth()), rect.bottom() - 1,
+          rect.right(), rect.bottom(), border);
+    } else {
+      // Pagination is a standalone primitive: full border plus a one-pixel top highlight,
+      // without the striped action-button treatment.
+      graphics.fill(rect.x(), rect.y(), rect.x() + 1, rect.bottom(), border);
+      graphics.fill(rect.right() - 1, rect.y(), rect.right(), rect.bottom(), border);
+      if (enabled) graphics.fill(rect.x() + 2, rect.y() + 1,
+          Math.max(rect.x() + 2, rect.right() - 2), rect.y() + 2, 0x60FFFFFF);
     }
-    graphics.drawCenteredString(font, text, rect.x() + rect.width() / 2,
-        rect.y() + (rect.height() - font.lineHeight) / 2, enabled ? style.text() : 0x60808080);
+    if (enabled && hovered && style.glowHeight() > 0) {
+      for (int i = 0; i < style.glowHeight(); i++) {
+        int alpha = style.glowAlphaStart() - i * style.glowAlphaStep();
+        if (alpha <= 0) break;
+        graphics.fill(Math.min(rect.right(), rect.x() + style.stripeWidth()), rect.y() + i,
+            rect.right(), rect.y() + i + 1,
+            withAlpha(style.accent(), alpha));
+      }
+    }
+    int textColor = enabled ? style.textColor() : 0x60808080;
+    int textY = rect.y() + (rect.height() - font.lineHeight) / 2;
+    if (style.alignment() == UiTextAlignment.CENTER) {
+      graphics.drawString(font, text, rect.x() + (rect.width() - font.width(text)) / 2,
+          textY, textColor, style.textShadow());
+    } else {
+      int textX = style.alignment() == UiTextAlignment.RIGHT
+          ? rect.right() - font.width(text) - style.padding() : rect.x() + style.padding();
+      graphics.drawString(font, text, textX, textY, textColor, style.textShadow());
+    }
   }
 
   @Override public void icon(UiIcon icon, UiRect rect) {
-    if (icon == UiIcon.BUFF) {
-      renderItem(Items.GLASS_BOTTLE.getDefaultInstance(), rect);
-      return;
-    }
-    graphics.drawString(font, Component.literal(icon.name().substring(0, 1)),
-        rect.x(), rect.y(), 0xB0FFFFFF);
+    ResourceLocation texture = iconTexture(icon);
+    graphics.blit(texture, rect.x(), rect.y(), rect.width(), rect.height(),
+        0, 0, 16, 16, 16, 16);
   }
 
   @Override public void item(String itemId, UiRect rect) {
@@ -166,4 +192,34 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     var item = BuiltInRegistries.ITEM.get(location);
     return item == null || item == Items.AIR ? itemId : new ItemStack(item).getHoverName().getString();
   }
+
+  private ResourceLocation iconTexture(UiIcon icon) {
+    String name = switch (icon) {
+      case TERRITORY -> "territory";
+      case HOME -> "home";
+      case SHOP -> "shop";
+      case MARKET -> "market";
+      case DELIVERY -> "delivery";
+      case ABOUT -> "about";
+      case TRADE -> "trade";
+      case LEADERBOARD -> "leaderboard";
+      case BALANCE -> "balance";
+      case MEMBER, AUTHORIZED -> "authorized";
+      case OWNER -> "owner";
+      case MANAGE, BUFF, RETRY -> "manage";
+      case ARROW_LEFT, BACK -> "arrow_left";
+      case ARROW_RIGHT -> "arrow_right";
+      case OVERWORLD -> "overworld";
+      case NETHER -> "nether";
+      case END -> "end";
+      case KEY -> "key";
+      case TELEPORT -> "teleport";
+    };
+    return ResourceLocation.tryParse("economy_system:textures/gui/icons/" + name + ".png");
+  }
+
+  private static int withAlpha(int rgb, int alpha) {
+    return ((alpha & 0xFF) << 24) | (rgb & 0x00FFFFFF);
+  }
+
 }
