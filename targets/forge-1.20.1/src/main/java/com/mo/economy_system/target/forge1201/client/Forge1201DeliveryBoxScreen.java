@@ -75,11 +75,14 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, DeliveryLayout.BACKGROUND_COLOR);
     DeliveryLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    syncSearchWidget(layout);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    DeliveryView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+    DeliveryView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
@@ -132,6 +135,14 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
       layout = DeliveryLayout.calculate(width, height, controller.state());
     }
     return layout;
+  }
+  private void syncSearchWidget(DeliveryLayout.Layout layout) {
+    if (search == null) return;
+    UiScale scale = layout.scale();
+    search.setX(Math.round(layout.search().x() * scale.value()));
+    search.setY(Math.round(layout.search().y() * scale.value()));
+    search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value())));
+    search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value())));
   }
 
   private final class Port implements DeliveryPort {

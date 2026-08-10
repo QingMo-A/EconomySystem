@@ -14,14 +14,15 @@ public final class DeliveryView {
 
   public static void render(EconomyUiRenderer renderer, DeliveryState state,
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
+    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), DeliveryLayout.BACKGROUND_COLOR);
     renderer.card(layout.searchBackground(), EconomyUiTheme.DELIVERY_CARD,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.delivery_box.search", List.of(), layout.search(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
-    renderer.icon(UiIcon.DELIVERY, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedText("screen.delivery_box.title", List.of(), layout.title().x() + 16,
-        layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
+    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.scaledIconText(UiIcon.DELIVERY, "Delivery Box", layout.title().x() + 8,
+        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE,
+        EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.delivery_box.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
 
@@ -41,27 +42,28 @@ public final class DeliveryView {
 
     for (DeliveryLayout.Card card : layout.cards()) {
       var entry = card.row().entry();
-      renderer.card(card.card(), EconomyUiTheme.DELIVERY_CARD, card.card().contains(mouseX, mouseY));
+      renderer.card(card.card(), EconomyUiTheme.SHOP_CARD, card.card().contains(mouseX, mouseY));
       renderer.item(entry.item().itemId(), card.itemIcon());
-      renderer.textInRect(entry.item().itemId(),
-          new UiRect(card.card().x() + 46, card.card().y() + 8,
-              card.card().width() - 118, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+      String itemName = entry.item().itemId() + (entry.item().count() > 1 ? " x" + entry.item().count() : "");
+      renderer.textInRect(itemName,
+          new UiRect(card.card().x() + 48, card.card().y() + 8,
+              card.card().width() - 48 - 8 - 60 - 6, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
       renderer.translatedTextInRect("screen.delivery_box.item.source", List.of(entry.source()),
-          new UiRect(card.card().x() + 46, card.card().y() + 25,
-              card.card().width() - 54, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
-      renderer.translatedTextInRect("screen.delivery_box.item.name_and_count",
-          List.of(entry.item().itemId(), Integer.toString(entry.item().count())),
-          new UiRect(card.card().x() + 8, card.card().y() + 51, 90, 14),
-          EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
+          new UiRect(card.card().x() + 48, card.card().y() + 25,
+              card.card().width() - 48 - 8, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
       renderer.translatedButton(card.claimButton(), EconomyUiTheme.HOME_DELIVERY_BUTTON,
           "button.delivery_box.claim", List.of(), card.claimButton().contains(mouseX, mouseY),
           state.can(DeliveryAction.CLAIM));
     }
-    renderer.button(layout.previousButton(), EconomyUiTheme.HOME_DELIVERY_BUTTON, "<",
-        layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
-    renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    renderer.button(layout.nextButton(), EconomyUiTheme.HOME_DELIVERY_BUTTON, ">",
-        layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+    if (state.totalPages() > 1) {
+      boolean previousEnabled = state.page() > 0;
+      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
+          layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
+          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+      boolean nextEnabled = state.page() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
+          layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+    }
   }
 }
