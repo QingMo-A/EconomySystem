@@ -43,10 +43,8 @@ class TerritoryRemovalLanguageResourcesTest {
     Map<String, JsonObject> files = new LinkedHashMap<>();
     for (String path :
         List.of(
-            "src/generated/resources/assets/economy_system/lang/en_us.json",
-            "src/generated/resources/assets/economy_system/lang/zh_cn.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
+            "common/src/main/resources/assets/economy_system/lang/en_us.json",
+            "common/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
       String content = Files.readString(root.resolve(path));
       assertNoDuplicateKeys(path, content);
       JsonObject json = JsonParser.parseString(content).getAsJsonObject();
@@ -69,20 +67,20 @@ class TerritoryRemovalLanguageResourcesTest {
         placeholders(
             generatedEnglish.get("message.territory.remove.resize_cancelled").getAsString()));
     JsonObject generatedChinese =
-        files.get("src/generated/resources/assets/economy_system/lang/zh_cn.json");
+        files.get("common/src/main/resources/assets/economy_system/lang/zh_cn.json");
     assertNotEquals(
         generatedEnglish.get("screen.territory_remove.warning"),
         generatedChinese.get("screen.territory_remove.warning"));
     for (String key : KEYS) {
       assertEquals(
-          files.get("src/generated/resources/assets/economy_system/lang/en_us.json").get(key),
+          files.get("common/src/main/resources/assets/economy_system/lang/en_us.json").get(key),
           files
-              .get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json")
+              .get("common/src/main/resources/assets/economy_system/lang/en_us.json")
               .get(key));
       assertEquals(
-          files.get("src/generated/resources/assets/economy_system/lang/zh_cn.json").get(key),
+          files.get("common/src/main/resources/assets/economy_system/lang/zh_cn.json").get(key),
           files
-              .get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json")
+              .get("common/src/main/resources/assets/economy_system/lang/zh_cn.json")
               .get(key));
     }
   }

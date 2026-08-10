@@ -5,7 +5,6 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
-import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
@@ -19,12 +18,11 @@ public final class DeliveryView {
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
     renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.DELIVERY_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
-    renderer.translatedTextInRect("screen.delivery_box.search", List.of(), layout.search(),
-        EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
-    renderer.scaledIconTranslatedText(UiIcon.DELIVERY, "screen.delivery_box.title", List.of(),
+    renderer.scaledIconTranslatedText(com.mo.economy_system.ui.renderer.UiIcon.DELIVERY, "screen.delivery_box.title", List.of(),
         layout.title().x() + 8,
-        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE,
+        layout.title().y() + 5, layout.versionInfoScale(), EconomyUiRenderer.ICON_SIZE,
+        EconomyUiRenderer.ICON_ADVANCE,
         EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.delivery_box.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
@@ -66,17 +64,13 @@ public final class DeliveryView {
     }
     if (state.totalPages() > 1) {
       boolean previousEnabled = state.page() > 0;
-      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, "",
+      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, "<",
           layout.previousButton().contains(mouseX, mouseY), previousEnabled);
-      renderer.icon(UiIcon.ARROW_LEFT, new com.mo.economy_system.ui.geometry.UiRect(
-          layout.previousButton().x() + 19, layout.previousButton().y() + 6, 12, 12));
       renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
       boolean nextEnabled = state.page() + 1 < state.totalPages();
-      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, "",
+      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, ">",
           layout.nextButton().contains(mouseX, mouseY), nextEnabled);
-      renderer.icon(UiIcon.ARROW_RIGHT, new com.mo.economy_system.ui.geometry.UiRect(
-          layout.nextButton().x() + 19, layout.nextButton().y() + 6, 12, 12));
     }
     tooltipAt(layout, mouseX, mouseY).ifPresent(tooltip -> renderer.tooltip(tooltip, mouseX, mouseY));
   }

@@ -45,13 +45,18 @@ class MarketLegacyReferenceParityTest {
 
   @Test
   void cardUsesNativeItemNameAndActionSpecificVisualSemantics() {
-    MarketState state = ready(1);
+    MarketState state = readyPaged(1, MarketController.NETWORK_PAGE_SIZE + 1);
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")));
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
-        && op.value().equals("ARROW_LEFT") && op.rect().width() == 12));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
+        && op.value().startsWith("<:")), "legacy market pagination uses a textual previous label");
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
+        && op.value().startsWith(">:")), "legacy market pagination uses a textual next label");
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("icon")
+        && (op.value().equals("ARROW_LEFT") || op.value().equals("ARROW_RIGHT"))),
+        "Market pagination does not use the Shop arrow textures");
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("inputFrame")),
         "search uses dedicated four-edge frame, not market card chrome");
   }
@@ -86,10 +91,14 @@ class MarketLegacyReferenceParityTest {
       @Override public int lineHeight() { return 9; }
     };
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, ready(0), metrics, 1.0f);
-    assertEquals(50, layout.filterTabs().get(0).rect().width());
-    assertEquals(62, layout.filterTabs().get(1).rect().width());
-    assertEquals(56, layout.filterTabs().get(2).rect().width());
-    assertEquals(68, layout.filterTabs().get(3).rect().width());
+    assertEquals(new UiRect(12, 339, 30, 12), layout.filterTabs().get(0).textRect());
+    assertEquals(new UiRect(12, 337, 31, 17), layout.filterTabs().get(0).hitRect());
+    assertEquals(new UiRect(62, 339, 42, 12), layout.filterTabs().get(1).textRect());
+    assertEquals(new UiRect(62, 337, 43, 17), layout.filterTabs().get(1).hitRect());
+    assertEquals(new UiRect(124, 339, 36, 12), layout.filterTabs().get(2).textRect());
+    assertEquals(new UiRect(124, 337, 37, 17), layout.filterTabs().get(2).hitRect());
+    assertEquals(new UiRect(180, 339, 48, 12), layout.filterTabs().get(3).textRect());
+    assertEquals(new UiRect(180, 337, 49, 17), layout.filterTabs().get(3).hitRect());
   }
 
   @Test
@@ -134,6 +143,27 @@ class MarketLegacyReferenceParityTest {
   }
 
   @Test
+  void marketPaginationIsHiddenOnOnePageAndHitboxesStayInactive() {
+    MarketState state = ready(1);
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("button")
+        && (op.value().startsWith("<:") || op.value().startsWith(">:"))));
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("textInRect")
+        && op.rect().equals(layout.pageText())));
+  }
+
+  @Test
+  void marketUsesLegacyCompactPriceThresholds() {
+    assertEquals("0", com.mo.economy_system.ui.text.UiNumbers.formatLegacyMarketNumber(0));
+    assertEquals("9999", com.mo.economy_system.ui.text.UiNumbers.formatLegacyMarketNumber(9999));
+    assertEquals("10.0k", com.mo.economy_system.ui.text.UiNumbers.formatLegacyMarketNumber(10000));
+    assertEquals("12.3k", com.mo.economy_system.ui.text.UiNumbers.formatLegacyMarketNumber(12345));
+    assertEquals("100.0k", com.mo.economy_system.ui.text.UiNumbers.formatLegacyMarketNumber(100000));
+  }
+
+  @Test
   void iconAndOrderInfoHoverExposeLegacyMetadataTooltipTriggers() {
     MarketState state = ready(1);
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
@@ -147,6 +177,12 @@ class MarketLegacyReferenceParityTest {
   private static MarketState ready(int count) {
     return new MarketState(MarketTestFixtures.orders(count).stream().map(MarketRow::new).toList(),
         0, MarketController.NETWORK_PAGE_SIZE, count, count, 0, MarketOrderFilter.ALL, "",
+        ScreenState.READY, null, -1, 1, Set.of(MarketAction.values()));
+  }
+
+  private static MarketState readyPaged(int count, int totalMatched) {
+    return new MarketState(MarketTestFixtures.orders(count).stream().map(MarketRow::new).toList(),
+        0, MarketController.NETWORK_PAGE_SIZE, totalMatched, totalMatched, 0, MarketOrderFilter.ALL, "",
         ScreenState.READY, null, -1, 1, Set.of(MarketAction.values()));
   }
 }

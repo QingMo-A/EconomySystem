@@ -3,6 +3,7 @@ package com.mo.economy_system.ui.delivery;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
 import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiVersionInfoLayout;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,14 +58,15 @@ public final class DeliveryLayout {
         search.width() + 8, search.height() + 4);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), Math.max(GRID_START_Y, height / 2 - 12),
         Math.min(180, Math.max(1, width - panel * 2)), 24);
-    int titleHeight = lineHeight + 10;
-    UiRect title = new UiRect(panel, Math.max(panel, height - panel - titleHeight), 140, titleHeight);
+    UiVersionInfoLayout.Result versionInfo = UiVersionInfoLayout.calculate(metrics,
+        "screen.delivery_box.title", List.of(), panel, height - panel, 140);
+    UiRect title = versionInfo.card();
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight, 90, lineHeight);
-    return new Layout(scale, title, esc, search, searchBackground, List.copyOf(cards), previous,
-        page, next, message, pageSize, columns, rows, metrics);
+    return new Layout(scale, title, versionInfo.contentScale(), esc, search, searchBackground,
+        List.copyOf(cards), previous, page, next, message, pageSize, columns, rows, metrics);
   }
 
-  public record Layout(UiScale scale, UiRect title, UiRect esc, UiRect search,
+  public record Layout(UiScale scale, UiRect title, float versionInfoScale, UiRect esc, UiRect search,
                        UiRect searchBackground, List<Card> cards, UiRect previousButton,
                        UiRect pageText, UiRect nextButton, UiRect message,
                        int pageSize, int columns, int rows, UiTextMetrics metrics) {

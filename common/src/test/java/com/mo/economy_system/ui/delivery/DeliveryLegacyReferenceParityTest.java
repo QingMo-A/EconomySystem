@@ -74,15 +74,17 @@ class DeliveryLegacyReferenceParityTest {
   }
 
   @Test
-  void legacyPagingUsesNativeArrowsAndOrangePageStyle() {
+  void legacyPagingUsesTextualAnglesAndOrangePageStyle() {
     DeliveryState state = ready(7, 6, 1);
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     DeliveryView.render(renderer, state, layout, 0, 0);
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
-        && op.value().equals("ARROW_LEFT") && op.rect().equals(new UiRect(262, 326, 12, 12))));
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
-        && op.value().equals("ARROW_RIGHT") && op.rect().equals(new UiRect(366, 326, 12, 12))));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
+        && op.value().startsWith("<:")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
+        && op.value().startsWith(">:")));
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("icon")
+        && (op.value().equals("ARROW_LEFT") || op.value().equals("ARROW_RIGHT"))));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
         && op.value().contains("accent=" + (EconomyUiTheme.SHOP_ACCENT & 0x00FFFFFF))));
   }
@@ -112,6 +114,18 @@ class DeliveryLegacyReferenceParityTest {
     assertEquals(1, tooltip.lines().size());
     assertTrue(tooltip.lines().get(0).getClass().getSimpleName().equals("NativeItem"),
         "legacy delivery icon hover delegates to the native ItemStack tooltip");
+  }
+
+  @Test
+  void deliveryPaginationIsHiddenOnOnePage() {
+    DeliveryState state = ready(1, 6, 0);
+    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    DeliveryView.render(renderer, state, layout, 0, 0);
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("button")
+        && (op.value().startsWith("<:") || op.value().startsWith(">:"))));
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("textInRect")
+        && op.rect().equals(layout.pageText())));
   }
 
   private static DeliveryState ready(int count, int pageSize, int page) {

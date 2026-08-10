@@ -56,6 +56,22 @@ class ShopLegacyReferenceParityTest {
     assertFalse(renderer.operations().stream().anyMatch(op -> op.kind().equals("fill")
             && op.rect().equals(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()))),
         "fullscreen background belongs to the physical target shell, not the scaled common view");
+    assertFalse(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
+            && op.value().startsWith("screen.shop.search")),
+        "native EditBox owns the hint; common view only draws its frame");
+  }
+
+  @Test
+  void shopPaginationIsHiddenOnOnePage() {
+    ShopState state = new ShopState(ShopTestFixtures.items(1).stream().map(ShopRow::new).toList(),
+        0, 15, "", ScreenState.READY, null, -1, Set.of(ShopAction.values()));
+    ShopLayout.Layout layout = ShopLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    ShopView.render(renderer, state, layout, 0, 0);
+    assertFalse(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
+        && (op.value().startsWith("<:") || op.value().startsWith(">:"))));
+    assertFalse(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
+        && op.rect().equals(layout.pageText())));
   }
 
   @Test
@@ -75,6 +91,12 @@ class ShopLegacyReferenceParityTest {
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
             && op.value().startsWith("\uFFE5")),
         "legacy catalog price is prefixed with the native Yen symbol");
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
+        && op.value().equals("ARROW_LEFT") && op.rect().width() == 12 && op.rect().height() == 12));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
+        && op.value().equals("ARROW_RIGHT") && op.rect().width() == 12 && op.rect().height() == 12));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
+        && op.rect().equals(layout.pageText())));
   }
 
   @Test

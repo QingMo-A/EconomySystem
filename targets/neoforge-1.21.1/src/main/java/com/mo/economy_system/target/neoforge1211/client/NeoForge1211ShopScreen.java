@@ -53,7 +53,9 @@ public final class NeoForge1211ShopScreen extends Screen {
         Math.max(1, Math.round(layout.search().width() * scale.value())),
         Math.max(1, Math.round(layout.search().height() * scale.value())),
         Component.translatable("screen.shop.search"));
-    search.setMaxLength(64);
+    search.setMaxLength(com.mo.economy_system.ui.text.UiSearchPolicy.SEARCH_MAX_LENGTH);
+    search.setHint(Component.translatable("text.shop.search_hint"));
+    search.setFocused(false);
     search.setValue(value);
     search.setResponder(text -> controller.handle(new ShopEvent.FilterChanged(text)));
     addRenderableWidget(search);
@@ -102,8 +104,8 @@ public final class NeoForge1211ShopScreen extends Screen {
     if (controller.state().screenState() == ScreenState.ERROR && layout.message().contains(x, y)) {
       controller.handle(new ShopEvent.Retry(System.nanoTime())); return true;
     }
-    if (layout.previousButton().contains(x, y)) { controller.handle(new ShopEvent.PreviousPage()); return true; }
-    if (layout.nextButton().contains(x, y)) { controller.handle(new ShopEvent.NextPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.previousButton().contains(x, y)) { controller.handle(new ShopEvent.PreviousPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.nextButton().contains(x, y)) { controller.handle(new ShopEvent.NextPage()); return true; }
     if (layout.esc().contains(x, y)) { controller.handle(new ShopEvent.ActionClicked(ShopAction.BACK, null)); return true; }
     return super.mouseClicked(mouseX, mouseY, button);
   }

@@ -47,10 +47,8 @@ class TerritoryMemberRemovalLanguageResourcesTest {
     Map<String, JsonObject> files = new LinkedHashMap<>();
     for (String path :
         List.of(
-            "src/generated/resources/assets/economy_system/lang/en_us.json",
-            "src/generated/resources/assets/economy_system/lang/zh_cn.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
+            "common/src/main/resources/assets/economy_system/lang/en_us.json",
+            "common/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
       String content = Files.readString(root.resolve(path));
       assertNoDuplicateKeys(path, content);
       JsonObject json = JsonParser.parseString(content).getAsJsonObject();
@@ -60,13 +58,13 @@ class TerritoryMemberRemovalLanguageResourcesTest {
       files.put(path, json);
     }
     JsonObject generatedEnglish =
-        files.get("src/generated/resources/assets/economy_system/lang/en_us.json");
+        files.get("common/src/main/resources/assets/economy_system/lang/en_us.json");
     JsonObject generatedChinese =
-        files.get("src/generated/resources/assets/economy_system/lang/zh_cn.json");
+        files.get("common/src/main/resources/assets/economy_system/lang/zh_cn.json");
     JsonObject forgeEnglish =
-        files.get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json");
+        files.get("common/src/main/resources/assets/economy_system/lang/en_us.json");
     JsonObject forgeChinese =
-        files.get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json");
+        files.get("common/src/main/resources/assets/economy_system/lang/zh_cn.json");
     for (String key : KEYS) {
       assertEquals(generatedEnglish.get(key), forgeEnglish.get(key), key);
       assertEquals(generatedChinese.get(key), forgeChinese.get(key), key);

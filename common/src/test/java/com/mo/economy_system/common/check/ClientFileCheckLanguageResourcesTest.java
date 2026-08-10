@@ -51,17 +51,17 @@ class ClientFileCheckLanguageResourcesTest {
   void generatedAndForgeLanguagesHaveStrictParity() throws Exception {
     Path root = repositoryRoot();
     JsonObject generatedEn =
-        read(root.resolve("src/generated/resources/assets/economy_system/lang/en_us.json"));
+        read(root.resolve("common/src/main/resources/assets/economy_system/lang/en_us.json"));
     JsonObject generatedZh =
-        read(root.resolve("src/generated/resources/assets/economy_system/lang/zh_cn.json"));
+        read(root.resolve("common/src/main/resources/assets/economy_system/lang/zh_cn.json"));
     JsonObject forgeEn =
         read(
             root.resolve(
-                "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json"));
+                "common/src/main/resources/assets/economy_system/lang/en_us.json"));
     JsonObject forgeZh =
         read(
             root.resolve(
-                "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json"));
+                "common/src/main/resources/assets/economy_system/lang/zh_cn.json"));
     assertTrue(generatedEn.keySet().containsAll(REQUIRED));
     assertTrue(generatedZh.keySet().containsAll(REQUIRED));
     assertTrue(forgeEn.keySet().containsAll(REQUIRED));

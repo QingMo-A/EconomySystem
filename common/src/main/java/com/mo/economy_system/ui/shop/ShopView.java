@@ -20,12 +20,10 @@ public final class ShopView {
                             int mouseX, int mouseY) {
     renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.SHOP_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
-    renderer.translatedTextInRect("screen.shop.search", List.of(), layout.search(), EconomyUiTheme.TEXT_MUTED,
-        UiTextAlignment.LEFT);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.SHOP, "screen.shop.title", List.of(),
         layout.title().x() + 8, layout.title().y() + 5,
-        1.0f, EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE,
+        layout.versionInfoScale(), EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE,
         EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.shop.esc", List.of(), layout.esc(), EconomyUiTheme.TEXT_MUTED,
         UiTextAlignment.RIGHT);
@@ -54,18 +52,20 @@ public final class ShopView {
       renderer.textInRect(formattedPrice, new UiRect(card.card().x() + 6, card.card().y() + 6,
           card.card().width() - 12, lineHeight), EconomyUiTheme.BALANCE_ACCENT, UiTextAlignment.RIGHT);
     }
-    boolean previousEnabled = state.page() > 0;
-    renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED,
-        "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
-    renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
-        layout.previousButton().y() + 6, 12, 12));
-    renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    boolean nextEnabled = state.page() + 1 < state.totalPages();
-    renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED,
-        "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
-    renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
-        layout.nextButton().y() + 6, 12, 12));
+    if (state.totalPages() > 1) {
+      boolean previousEnabled = state.page() > 0;
+      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED,
+          "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
+          layout.previousButton().y() + 6, 12, 12));
+      renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
+          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+      boolean nextEnabled = state.page() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED,
+          "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+      renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
+          layout.nextButton().y() + 6, 12, 12));
+    }
     tooltipAt(state, layout, mouseX, mouseY).ifPresent(tooltip -> renderer.tooltip(tooltip, mouseX, mouseY));
   }
 

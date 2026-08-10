@@ -17,6 +17,14 @@ public final class UiNumbers {
         return String.format(Locale.ROOT, "%,d", value);
     }
 
+    /** Legacy market compact formatter (implemented in the strict UI closure). */
+    public static String formatLegacyMarketNumber(int value) {
+        if (value >= 10_000) {
+            return String.format(Locale.ROOT, "%.1fk", value / 1_000.0d);
+        }
+        return Integer.toString(value);
+    }
+
     /** Formats balance-log timestamps exactly as the legacy table. */
     public static String formatTimestamp(long epochMillis) {
         return BALANCE_LOG_TIME.format(Instant.ofEpochMilli(epochMillis));

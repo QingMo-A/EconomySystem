@@ -48,12 +48,8 @@ class TpaLanguageResourcesTest {
     Path root = repositoryRoot();
     List<String> paths =
         List.of(
-            "src/generated/resources/assets/economy_system/lang/en_us.json",
-            "src/generated/resources/assets/economy_system/lang/zh_cn.json",
-            "targets/neoforge-1.21.1/src/generated/resources/assets/economy_system/lang/en_us.json",
-            "targets/neoforge-1.21.1/src/generated/resources/assets/economy_system/lang/zh_cn.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json",
-            "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json");
+            "common/src/main/resources/assets/economy_system/lang/en_us.json",
+            "common/src/main/resources/assets/economy_system/lang/zh_cn.json");
     List<JsonObject> resources = paths.stream().map(path -> read(root.resolve(path))).toList();
     for (String key : KEYS) {
       for (int index = 0; index < resources.size(); index++) {

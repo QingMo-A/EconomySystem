@@ -73,9 +73,11 @@ public final class MarketLayout {
     List<FilterTab> filterTabs = new ArrayList<>();
     int filterX = panel;
     for (com.mo.economy_system.common.network.MarketOrderFilter value : com.mo.economy_system.common.network.MarketOrderFilter.values()) {
-      int tabWidth = Math.max(1, metrics.translatedWidth(filterKey(value), List.of()) + 20);
-      filterTabs.add(new FilterTab(value, new UiRect(filterX, filterY, tabWidth, lineHeight + 3)));
-      filterX += tabWidth;
+      int textWidth = Math.max(1, metrics.translatedWidth(filterKey(value), List.of()));
+      UiRect textRect = new UiRect(filterX, filterY, textWidth, lineHeight + 3);
+      UiRect hitRect = new UiRect(filterX, filterY - 2, textWidth + 1, lineHeight + 8);
+      filterTabs.add(new FilterTab(value, textRect, hitRect));
+      filterX += textWidth + 20;
     }
     UiRect filter = new UiRect(panel, filterY, Math.max(1, filterX - panel), lineHeight + 3);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), GRID_START_Y + contentOffset + 50, Math.min(180, Math.max(1, width - panel * 2)), 24);
@@ -100,7 +102,8 @@ public final class MarketLayout {
                        UiTextMetrics metrics, float animationProgress) {
     public Layout { cards = List.copyOf(cards); }
   }
-  public record FilterTab(com.mo.economy_system.common.network.MarketOrderFilter filter, UiRect rect) {}
+  public record FilterTab(com.mo.economy_system.common.network.MarketOrderFilter filter,
+                          UiRect textRect, UiRect hitRect) {}
   public record Card(MarketRow row, UiRect card, UiRect itemIcon, UiRect actionButton,
                      UiRect adminActionButton) {}
 }

@@ -3,6 +3,7 @@ package com.mo.economy_system.ui.shop;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
 import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiVersionInfoLayout;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,15 +68,17 @@ public final class ShopLayout {
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), GRID_START_Y + contentOffset + 50,
         Math.min(180, Math.max(1, width - panel * 2)), 24);
     int lineHeight = Math.max(1, metrics.lineHeight());
-    UiRect title = new UiRect(panel, height - panel - lineHeight - 10 + contentOffset,
-        120, lineHeight + 10);
+    UiVersionInfoLayout.Result versionInfo = UiVersionInfoLayout.calculate(metrics,
+        "screen.shop.title", List.of(), panel, height - panel + contentOffset, 120);
+    UiRect title = versionInfo.card();
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight + contentOffset,
         90, lineHeight);
-    return new Layout(scale, title, esc, search, searchBackground, List.copyOf(cards), previous, page, next,
-        message, pageSize, columns, rows, metrics, Math.max(0f, Math.min(1f, animationProgress)));
+    return new Layout(scale, title, versionInfo.contentScale(), esc, search, searchBackground,
+        List.copyOf(cards), previous, page, next, message, pageSize, columns, rows, metrics,
+        Math.max(0f, Math.min(1f, animationProgress)));
   }
 
-  public record Layout(UiScale scale, UiRect title, UiRect esc, UiRect search, UiRect searchBackground,
+  public record Layout(UiScale scale, UiRect title, float versionInfoScale, UiRect esc, UiRect search, UiRect searchBackground,
                        List<Card> cards, UiRect previousButton, UiRect pageText, UiRect nextButton,
                        UiRect message, int pageSize, int columns, int rows, UiTextMetrics metrics,
                        float animationProgress) {

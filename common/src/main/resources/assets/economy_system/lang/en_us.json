@@ -819,5 +819,7 @@
   "message.territory.runtime.denied.break_block": "You do not have permission to break blocks in this territory.",
   "message.territory.runtime.denied.use_item": "You do not have permission to use items in this territory.",
   "message.territory.runtime.denied.interact_block": "You do not have permission to interact with blocks in this territory.",
-  "message.territory.runtime.denied.open_container": "You do not have permission to open containers in this territory."
+  "message.territory.runtime.denied.open_container": "You do not have permission to open containers in this territory.",
+  "message.territory.sync_timeout": "Territory data request timed out",
+  "screen.check_result.unknown": "Unknown"
 }

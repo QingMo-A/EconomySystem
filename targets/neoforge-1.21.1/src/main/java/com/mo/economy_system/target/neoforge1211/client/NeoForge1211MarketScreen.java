@@ -48,7 +48,7 @@ public final class NeoForge1211MarketScreen extends Screen {
     if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
     String value = search == null ? "" : search.getValue(); MarketLayout.Layout layout = commonLayout(metrics()); UiScale scale = layout.scale();
     search = new EditBox(font, Math.round(layout.search().x() * scale.value()), Math.round(layout.search().y() * scale.value()), Math.max(1, Math.round(layout.search().width() * scale.value())), Math.max(1, Math.round(layout.search().height() * scale.value())), Component.translatable("screen.market.search"));
-    search.setMaxLength(64); search.setValue(value); search.setResponder(text -> controller.handle(new MarketEvent.QueryChanged(text))); addRenderableWidget(search);
+    search.setMaxLength(com.mo.economy_system.ui.text.UiSearchPolicy.SEARCH_MAX_LENGTH); search.setHint(Component.translatable("screen.market.search_hint")); search.setFocused(false); search.setValue(value); search.setResponder(text -> controller.handle(new MarketEvent.QueryChanged(text))); addRenderableWidget(search);
     if (controller.state().screenState() == ScreenState.IDLE) controller.handle(new MarketEvent.Initialize(System.nanoTime()));
   }
   @Override public void tick() {
@@ -65,13 +65,13 @@ public final class NeoForge1211MarketScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) { NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font); renderer.fillPhysicalBackground(width, height, MarketLayout.BACKGROUND_COLOR); MarketLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale(); syncSearchWidget(layout); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f); MarketView.render(renderer, controller.state(), layout, controller.viewerId(), scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick); }
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
     MarketLayout.Layout layout = commonLayout(metrics()); int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
-    for (MarketLayout.FilterTab tab : layout.filterTabs()) if (tab.rect().contains(x, y)) { controller.handle(new MarketEvent.FilterChanged(tab.filter())); return true; }
+    for (MarketLayout.FilterTab tab : layout.filterTabs()) if (tab.hitRect().contains(x, y)) { controller.handle(new MarketEvent.FilterChanged(tab.filter())); return true; }
     for (MarketLayout.Card card : layout.cards()) { var order = card.row().order(); boolean own = controller.viewerId() != null && controller.viewerId().equals(order.ownerId()); if (!own && order.type() == com.mo.economy_system.common.market.MarketOrderType.SALES && card.adminActionButton().contains(x, y) && controller.state().can(MarketAction.ADMIN_REMOVE_SALES)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.ADMIN_REMOVE_SALES, order.tradeId())); return true; } if (card.actionButton().contains(x, y)) { MarketAction action = MarketView.actionFor(order, controller.viewerId()); if (action != null) controller.handle(new MarketEvent.ActionClicked(action, order.tradeId())); return true; } }
     if (layout.createSales().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_SALES, null)); return true; }
     if (layout.createDemand().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_DEMAND, null)); return true; }
     if (controller.state().screenState() == ScreenState.ERROR && layout.message().contains(x, y)) { controller.handle(new MarketEvent.Retry(System.nanoTime())); return true; }
-    if (layout.previousButton().contains(x, y)) { controller.handle(new MarketEvent.PreviousPage()); return true; }
-    if (layout.nextButton().contains(x, y)) { controller.handle(new MarketEvent.NextPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.previousButton().contains(x, y)) { controller.handle(new MarketEvent.PreviousPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.nextButton().contains(x, y)) { controller.handle(new MarketEvent.NextPage()); return true; }
     if (layout.esc().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.BACK, null)); return true; }
     return super.mouseClicked(mouseX, mouseY, button);
   }

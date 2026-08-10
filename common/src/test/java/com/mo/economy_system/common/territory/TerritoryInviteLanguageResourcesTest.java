@@ -32,10 +32,8 @@ class TerritoryInviteLanguageResourcesTest {
     Path root = findRoot();
     Map<String, JsonObject> files = new LinkedHashMap<>();
     for (String path : List.of(
-        "src/generated/resources/assets/economy_system/lang/en_us.json",
-        "src/generated/resources/assets/economy_system/lang/zh_cn.json",
-        "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json",
-        "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
+        "common/src/main/resources/assets/economy_system/lang/en_us.json",
+        "common/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
       String content = Files.readString(root.resolve(path));
       assertNoDuplicateKeys(path, content);
       JsonObject json = JsonParser.parseString(content).getAsJsonObject();
@@ -56,8 +54,8 @@ class TerritoryInviteLanguageResourcesTest {
     assertEquals(2, placeholders(baseline.get("message.invite.accepted_by").getAsString()));
     assertEquals(2, placeholders(baseline.get("message.invite.declined_by").getAsString()));
 
-    JsonObject forgeEnglish = files.get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json");
-    JsonObject forgeChinese = files.get("targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json");
+    JsonObject forgeEnglish = files.get("common/src/main/resources/assets/economy_system/lang/en_us.json");
+    JsonObject forgeChinese = files.get("common/src/main/resources/assets/economy_system/lang/zh_cn.json");
     assertTrue(KEYS.stream().anyMatch(key -> !forgeEnglish.get(key).equals(forgeChinese.get(key))));
     assertEquals("我的领地", forgeChinese.get("screen.territory.title").getAsString());
     assertEquals("已传送至 %s", forgeChinese.get("message.teleport.success").getAsString());

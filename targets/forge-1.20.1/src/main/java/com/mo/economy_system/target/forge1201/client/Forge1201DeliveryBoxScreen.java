@@ -49,7 +49,9 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
         Math.max(1, Math.round(layout.search().width() * scale.value())),
         Math.max(1, Math.round(layout.search().height() * scale.value())),
         Component.translatable("screen.delivery_box.search"));
-    search.setMaxLength(64);
+    search.setMaxLength(com.mo.economy_system.ui.text.UiSearchPolicy.SEARCH_MAX_LENGTH);
+    search.setHint(Component.translatable("text.delivery_box.hint"));
+    search.setFocused(false);
     search.setValue(value);
     search.setResponder(text -> controller.handle(new DeliveryEvent.FilterChanged(text)));
     addRenderableWidget(search);
@@ -103,8 +105,8 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
       controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.RETRY, null, System.nanoTime()));
       return true;
     }
-    if (layout.previousButton().contains(x, y)) { controller.handle(new DeliveryEvent.PreviousPage()); return true; }
-    if (layout.nextButton().contains(x, y)) { controller.handle(new DeliveryEvent.NextPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.previousButton().contains(x, y)) { controller.handle(new DeliveryEvent.PreviousPage()); return true; }
+    if (controller.state().totalPages() > 1 && layout.nextButton().contains(x, y)) { controller.handle(new DeliveryEvent.NextPage()); return true; }
     if (layout.esc().contains(x, y)) {
       controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.BACK, null, System.nanoTime()));
       return true;

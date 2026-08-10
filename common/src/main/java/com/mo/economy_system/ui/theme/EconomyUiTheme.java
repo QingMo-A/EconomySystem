@@ -96,16 +96,16 @@ public final class EconomyUiTheme {
     public static final UiButtonStyle HOME_TERRITORY_BUTTON = HOME_NAV_TERRITORY_STYLE;
     public static final UiButtonStyle HOME_ABOUT_BUTTON = HOME_NAV_ABOUT_STYLE;
     public static final UiButtonStyle SHOP_BUTTON = actionButton(SHOP_ACCENT, 8);
-    public static final UiButtonStyle MARKET_BUTTON = actionButton(MARKET_ACCENT, 8);
+    public static final UiButtonStyle MARKET_BUTTON = compactActionButton(MARKET_ACCENT, 8);
     public static final UiButtonStyle MARKET_TOP_SALES_BUTTON = topButton(DELIVERY_ACCENT);
     public static final UiButtonStyle MARKET_TOP_DEMAND_BUTTON = topButton(SHOP_ACCENT);
-    public static final UiButtonStyle MARKET_ACTION_BUY = actionButton(MARKET_ACCENT, 6);
-    public static final UiButtonStyle MARKET_ACTION_REMOVE = actionButton(0xFFE05D5D, 6);
-    public static final UiButtonStyle MARKET_ACTION_DELIVER = actionButton(SHOP_ACCENT, 6);
-    public static final UiButtonStyle MARKET_ACTION_CONFIRM = actionButton(DELIVERY_ACCENT, 6);
-    public static final UiButtonStyle MARKET_ACTION_CANCEL = actionButton(0xFFE05D5D, 6);
+    public static final UiButtonStyle MARKET_ACTION_BUY = compactActionButton(MARKET_ACCENT, 6);
+    public static final UiButtonStyle MARKET_ACTION_REMOVE = compactActionButton(0xFFE05D5D, 6);
+    public static final UiButtonStyle MARKET_ACTION_DELIVER = compactActionButton(SHOP_ACCENT, 6);
+    public static final UiButtonStyle MARKET_ACTION_CONFIRM = compactActionButton(DELIVERY_ACCENT, 6);
+    public static final UiButtonStyle MARKET_ACTION_CANCEL = compactActionButton(0xFFE05D5D, 6);
     public static final UiButtonStyle MARKET_ACTION_DISABLED = disabledActionButton();
-    public static final UiButtonStyle DELIVERY_CLAIM_BUTTON = actionButton(DELIVERY_ACCENT, 6);
+    public static final UiButtonStyle DELIVERY_CLAIM_BUTTON = compactActionButton(DELIVERY_ACCENT, 6);
     public static final UiButtonStyle BALANCE_BUTTON = actionButton(BALANCE_ACCENT, 6);
     public static final UiButtonStyle TERRITORY_BUFF_UNLOCK_BUTTON = actionButton(SHOP_ACCENT, 6);
     public static final UiButtonStyle TERRITORY_BUFF_UPGRADE_BUTTON = actionButton(TERRITORY_ACCENT, 6);
@@ -127,6 +127,9 @@ public final class EconomyUiTheme {
     /** Legacy Shop page controls use the market-blue accent and real arrow textures. */
     public static final UiButtonStyle SHOP_PAGE_BUTTON = pageButton(0x4FC3F7);
     public static final UiButtonStyle SHOP_PAGE_BUTTON_DISABLED = disabledPageButton();
+    /** Legacy Market page controls use textual angle labels and market-blue chrome. */
+    public static final UiButtonStyle MARKET_PAGE_BUTTON = pageButton(MARKET_ACCENT);
+    public static final UiButtonStyle MARKET_PAGE_BUTTON_DISABLED = disabledPageButton();
     /** Legacy Delivery page controls use the shop-orange accent. */
     public static final UiButtonStyle DELIVERY_PAGE_BUTTON = pageButton(SHOP_ACCENT);
     public static final UiButtonStyle DELIVERY_PAGE_BUTTON_DISABLED = disabledPageButton();
@@ -156,9 +159,17 @@ public final class EconomyUiTheme {
                 com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
     }
 
+    /** Compact market/delivery actions use the three-pixel stripe and four glow rows. */
+    private static UiButtonStyle compactActionButton(int accent, int padding) {
+        return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x000000,
+                0x55, 0x70, 3, 0xCC, 0xFF, 4, 36, 4,
+                0x25, 0x40, padding, false,
+                com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+    }
+
     private static UiButtonStyle topButton(int accent) {
         return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x000000,
-                0x55, 0x70, 4, 0xCC, 0xFF, 7, 0xCC, 0xFF,
+                0x55, 0x70, 4, 0xCC, 0xFF, 7, 36, 4,
                 0x25, 0x40, 10, false,
                 com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
     }
@@ -171,7 +182,7 @@ public final class EconomyUiTheme {
 
     private static UiButtonStyle pageButton(int accent) {
         return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x000000,
-                0x55, 0x70, 3, 0xCC, 0xFF, 4, 0xCC, 0xFF,
+                0x55, 0x70, 3, 0xCC, 0xFF, 4, 36, 4,
                 0x25, 0x40, 6, false,
                 com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
     }

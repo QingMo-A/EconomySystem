@@ -28,10 +28,8 @@ class FinalBridgeLanguageResourcesTest {
     Path root = repositoryRoot();
     Map<String, JsonObject> resources = new LinkedHashMap<>();
     for (String path : List.of(
-        "src/generated/resources/assets/economy_system/lang/en_us.json",
-        "src/generated/resources/assets/economy_system/lang/zh_cn.json",
-        "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/en_us.json",
-        "targets/forge-1.20.1/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
+        "common/src/main/resources/assets/economy_system/lang/en_us.json",
+        "common/src/main/resources/assets/economy_system/lang/zh_cn.json")) {
       String content = Files.readString(root.resolve(path), StandardCharsets.UTF_8);
       assertNoDuplicateKeys(path, content);
       JsonObject json = JsonParser.parseString(content).getAsJsonObject();

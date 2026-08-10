@@ -6,7 +6,6 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
-import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.text.UiNumbers;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
@@ -29,8 +28,6 @@ public final class MarketView {
     renderer.inputFrame(new UiRect(layout.search().x() - 4, layout.search().y() - 2,
             layout.search().width() + 8, layout.search().height() + 4),
         EconomyUiTheme.MARKET_SEARCH_FRAME, layout.search().contains(mouseX, mouseY));
-    renderer.translatedTextInRect("screen.market.search", List.of(), layout.search(),
-        EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderer.translatedButton(layout.createSales(), EconomyUiTheme.MARKET_TOP_SALES_BUTTON,
         "screen.market.create_sales", List.of(), layout.createSales().contains(mouseX, mouseY),
         state.can(MarketAction.CREATE_SALES));
@@ -39,11 +36,11 @@ public final class MarketView {
         state.can(MarketAction.CREATE_DEMAND));
     for (MarketLayout.FilterTab tab : layout.filterTabs()) {
       boolean selected = tab.filter() == state.filter();
-      renderer.translatedTextInRect(filterKey(tab.filter()), List.of(), tab.rect(),
+      renderer.translatedTextInRect(filterKey(tab.filter()), List.of(), tab.textRect(),
           selected ? EconomyUiTheme.TEXT_PRIMARY : EconomyUiTheme.TEXT_MUTED,
           UiTextAlignment.LEFT);
       if (selected) {
-        renderer.fill(new UiRect(tab.rect().x(), tab.rect().bottom() - 1,
+        renderer.fill(new UiRect(tab.textRect().x(), tab.textRect().bottom() - 1,
             Math.max(1, layout.metrics().translatedWidth(filterKey(tab.filter()), List.of())), 1),
             EconomyUiTheme.MARKET_ACCENT);
       }
@@ -78,7 +75,7 @@ public final class MarketView {
           new UiRect(left, card.card().y() + 6, 104, 14),
           own ? EconomyUiTheme.DELIVERY_ACCENT : EconomyUiTheme.TEXT_SECONDARY,
           UiTextAlignment.LEFT);
-      renderer.textInRect("\uFFE5" + UiNumbers.formatInteger(order.totalPrice()),
+      renderer.textInRect("\uFFE5" + UiNumbers.formatLegacyMarketNumber(order.totalPrice()),
           new UiRect(left + 104, card.card().y() + 6,
               Math.max(1, right - left - 104), 14), EconomyUiTheme.MARKET_ACCENT,
           UiTextAlignment.RIGHT);
@@ -104,18 +101,18 @@ public final class MarketView {
           List.of(), card.actionButton().contains(mouseX, mouseY),
           action != null && state.can(action));
     }
-    renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.SHOP_PAGE_BUTTON
-        : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED, "",
-        layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
-    renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
-        layout.previousButton().y() + 6, 12, 12));
-    renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages()
-        ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED, "",
-        layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
-    renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
-        layout.nextButton().y() + 6, 12, 12));
+    if (state.totalPages() > 1) {
+      boolean previousEnabled = state.page() > 0;
+      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.MARKET_PAGE_BUTTON
+          : EconomyUiTheme.MARKET_PAGE_BUTTON_DISABLED, "<",
+          layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
+          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+      boolean nextEnabled = state.page() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.MARKET_PAGE_BUTTON
+          : EconomyUiTheme.MARKET_PAGE_BUTTON_DISABLED, ">",
+          layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+    }
     tooltipAt(state, layout, mouseX, mouseY)
         .ifPresent(tooltip -> renderer.tooltip(tooltip, mouseX, mouseY));
   }
