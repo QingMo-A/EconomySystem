@@ -14,9 +14,9 @@ their own Minecraft/loader adapters.
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | FORENSIC_REFERENCE_VERIFIED (original `5d89f765` + final hardening `e8fddeef`; `BalanceLogLegacyReferenceParityTest` 2 tests; row/time/colors/description/search/pagination/format and physical background exact) |
 | Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + final hardening `e8fddeef`; `ShopLegacyReferenceParityTest` 6 + `ShopViewParityTest` 2; card-only hit target, native tooltip/search, page baseline, Yen/UiNumbers and colored price delta) |
 | Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + final hardening `e8fddeef`; `ShopPurchaseLegacyReferenceParityTest` 1; purchase quantity/price/button/hover/click geometry exact) |
-| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + final hardening `e8fddeef`; `MarketLegacyReferenceParityTest` 8 + `MarketViewParityTest` 2; composite owner/item/count, native tooltip metadata and native-name search exact) |
-| Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + final hardening `e8fddeef`; `MarketCreateLegacyReferenceParityTest` 1 + `MarketConfirmLegacyReferenceParityTest` 1; resolved native names, composite labels and Yen/UiNumbers exact) |
-| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + final hardening `e8fddeef`; `DeliveryLegacyReferenceParityTest` 5; composite native item/count/source, claim/retry style, native-only tooltip and native-name search exact) |
+| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + baseline/gate `b4300829`; `MarketLegacyReferenceParityTest` 9 + `MarketViewParityTest` 2; composite owner/item/count, native tooltip metadata, native-name search and page label y=virtualHeight-35 exact) |
+| Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + strict gate `b4300829`; `MarketCreateLegacyReferenceParityTest` 1 + `MarketConfirmLegacyReferenceParityTest` 1; resolved native names, composite labels and Yen/UiNumbers exact) |
+| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + hardening `e8fddeef` + baseline/gate `b4300829`; `DeliveryLegacyReferenceParityTest` 6; composite native item/count/source, claim/retry style, native-only tooltip, native-name search and page label y=virtualHeight-35 exact) |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryListLegacyReferenceParityTest` 2; localized title/search/page/12px arrows and once-only physical background) |
 | Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6976818` + final hardening `e8fddeef` strict/multi-viewport only; inherited `TerritoryManageGoldenParityTest` + `TerritoryManageViewParityTest`; production frozen) |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryDetailLegacyReferenceParityTest` 2; Access/Rules semantics, chrome/tooltips and once-only physical background) |
@@ -63,7 +63,7 @@ renderer tests prove that both target backends receive the same semantic view.
 | Starter kit | exactly-once claim, marker/account compensation and outcome policy | persistent player marker, account ledger, clone/login events and command translation |
 | Update check | SemVer parsing/comparison, release JSON validation and result policy | HTTP executor, server-thread dispatch and clickable chat components |
 
-Global audit (2026-08-10, final hardening `e8fddeef`): both target
+Global audit (2026-08-10, final hardening `e8fddeef` + follow-up `b4300829`): both target
 active-screen inventories contain 19 Screen classes and pass the common
 semantic View/Controller/Layout architecture gate. Shared GUI textures and
 language resources are packaged from `common` only; Forge and NeoForge JARs
@@ -84,8 +84,11 @@ create/confirm and owner/item composites, Delivery source/count/claim/retry
 styling, ShopPurchase geometry, About/Balance resource and hover/format/page
 semantics, and native tooltip trigger/order/color rules. The table-driven
 `LegacyMultiViewportParityTest` covers nine exact viewports, including narrow,
-short and fractional scaling. Full gates passed with Forge 877 tests and
-NeoForge 942 tests (0 failures, 0 errors, 1 skip each) and
+short and fractional scaling; it now asserts Market/Delivery page-label and
+button baselines independently. The strict gate proves exactly one physical
+fullscreen fill before each target shell's pushPose/scale (nested Forge file
+shells checked separately). Full gates passed with Forge 879 tests and
+NeoForge 944 tests (0 failures, 0 errors, 1 skip each) and
 `buildAllTargets --rerun-tasks`.
 
 Target-local classes named `Manager`, `SavedData` or `Store` are not by
