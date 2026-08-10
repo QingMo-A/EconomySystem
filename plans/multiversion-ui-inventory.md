@@ -72,8 +72,9 @@ semantic View/Controller/Layout architecture gate. Shared GUI textures and
 language resources are packaged from `common` only; Forge and NeoForge JARs
 contain no opposite-loader classes or target source paths. Target
 visual-authority scans contain no page layout/theme constants, and semantic
-icon fallback scans are clean (pagination arrows are intentional text
-controls). Production target layout hitboxes use real target font metrics
+icon fallback scans are clean: Shop intentionally uses 12x12 arrow textures,
+while Market and Delivery intentionally use textual angle controls because
+that is what the NeoForge 1.21.1 reference renders. Production target layout hitboxes use real target font metrics
 where text width affects geometry; the remaining approximate metric helper is
 confined to loader-neutral defaults/tests. Renderer contracts are mandatory
 with explicit Forge/NeoForge/recording implementations, including fail-closed
@@ -115,3 +116,29 @@ and NeoForge retain only loader/API adapters and use the same common services.
 The old root `src/main/java` implementations remain excluded reference material;
 they are not compiled by either target and are not an alternative source of
 behavior.
+
+## Final status
+
+```text
+MULTIVERSION_COMMON_UI_PARITY_PHASE = CLOSED
+```
+
+Reference: `f334e640ca1e24157511b7e06f1f76efba90152b`
+
+Final production closure: `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0`
+
+Final parity documentation: `c13ed1e2a821674c640193db4ea499feef15657d`
+
+Final phase-closing docs checkpoint: see git history.
+
+UI parity baseline is now frozen.
+
+Future UI changes are normal feature/redesign work, not legacy parity work.
+Do not reopen forensic parity solely for cosmetic speculation.
+
+Reopen only when:
+
+1. an in-game reproducible regression exists;
+2. an existing exact reference test fails;
+3. direct legacy source proves a concrete mismatch;
+4. a new Minecraft target exposes an adapter/parity defect.

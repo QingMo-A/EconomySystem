@@ -794,7 +794,9 @@ Target-specific resource 只有在版本 API/资源格式确实不同且有说�
 rg -n "substring\(0,\s*1\)|icon\.name\(\)|\"<\"|\">\"" common/src/main/java/com/mo/economy_system/ui targets/forge-1.20.1/src/main/java targets/neoforge-1.21.1/src/main/java
 ```
 
-人工区分合法文字箭头与假 icon fallback。
+Semantic icon fallback scans are clean: Shop intentionally uses 12x12 arrow
+textures, while Market and Delivery intentionally use textual angle controls
+because that is what the NeoForge 1.21.1 reference renders.
 
 禁止语义图标退化为首字母。
 
@@ -1000,7 +1002,7 @@ deviation in the separate ledger below.
 ### Strict global audit evidence
 
 - Active Forge/NeoForge `Screen` sources all delegate rendering and input geometry to common `View`/`Layout` contracts; no active target render/click path references `UiTextMetrics.APPROXIMATE` or an approximate convenience overload, and no target owns direct drawing or theme-color policy.
-- Common UI source contains no text-derived semantic icon fallback (`substring(0, 1)`, `icon.name()`); mandatory icon/item-name renderer operations remain loader-neutral and are implemented by both target renderers.
+- Semantic icon fallback scans are clean: Shop intentionally uses 12x12 arrow textures, while Market and Delivery intentionally use textual angle controls because that is what the NeoForge 1.21.1 reference renders. Common UI source contains no text-derived semantic icon fallback (`substring(0, 1)`, `icon.name()`); mandatory icon/item-name renderer operations remain loader-neutral and are implemented by both target renderers.
 - Shared GUI icons and language files are common-only; target source duplicates are absent. Both final JARs contain the same 823-key `en_us.json` (SHA-256 `243358a0c36613d0017f81d3a1a624183b96c4b97ad861304f87d86023618b95`) and `zh_cn.json` (`e74b3f4a9bb7fa432f0181aedc3a775e662c9373c7180a55d24afb13b75329af`), plus the required arrow textures; opposite-loader entry counts are zero.
 - Final XML totals are Forge 900 tests / 0 failures / 0 errors / 1 skip and NeoForge 965 tests / 0 failures / 0 errors / 1 skip. `buildAllTargets --no-daemon --rerun-tasks` passed. No blocked followups remain.
 
@@ -1184,3 +1186,39 @@ local SHA == remote SHA
 - UI redesign beyond legacy parity。
 
 下一步应由后续总体 audit 决定，而不是本计划自动扩张。
+
+---
+
+# 21. Multiversion Common UI Parity Phase Closure
+
+```text
+MULTIVERSION_COMMON_UI_PARITY_PHASE = CLOSED
+```
+
+Reference: `f334e640ca1e24157511b7e06f1f76efba90152b`
+
+Final production closure: `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0`
+
+Final parity documentation: `c13ed1e2a821674c640193db4ea499feef15657d`
+
+Final phase-closing docs checkpoint: see git history.
+
+UI parity baseline is now frozen.
+
+Future UI changes are normal feature/redesign work, not legacy parity work.
+Do not reopen forensic parity solely for cosmetic speculation.
+
+Reopen only when:
+
+1. an in-game reproducible regression exists;
+2. an existing exact reference test fails;
+3. direct legacy source proves a concrete mismatch;
+4. a new Minecraft target exposes an adapter/parity defect.
+
+## Next phase boundary
+
+Next development work must be tracked in a new plan.
+
+Recommended next phase:
+multiversion feature development / new gameplay or economy features
+using common-first implementation and thin target adapters.
