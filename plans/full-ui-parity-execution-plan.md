@@ -985,7 +985,7 @@ deviation in the separate ledger below.
 
 | Family | Status | Legacy source | New exact tests | Code SHA | Docs SHA | Forge | NeoForge | Build | Deviation |
 |---|---|---|---|---|---|---:|---:|---|---|
-| Shop | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/shop/Screen_Shop.java`, `Screen_BuyItem.java`, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
+| Shop | VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/shop/Screen_Shop.java`, `Screen_BuyItem.java`, `CardRenderer.java` at forensic reference | `ShopLegacyReferenceParityTest` (3 exact tests) | `c697c0af` | pending | 824 | 889 | passed | fixed rows/grid centering, card hit target, native item names, price/tooltip, search frame, metrics paging, page styles and 12x12 texture arrows |
 | Market | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/market/Screen_Market.java`, create/confirm screens, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | admin capability to be verified |
 | Delivery | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/deliver_box/Screen_DeliveryBox.java`, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
 | About + Balance | PENDING | `src/main/java/com/mo/economy_system/screen/Screen_About.java`, `Screen_BalanceLog.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
