@@ -170,6 +170,8 @@ class TerritoryManageViewParityTest {
             operations.add(new Operation("tooltip", new UiRect(mouseX, mouseY, 0, 0),
                     tooltip.toString(), null, null, false, true));
         }
+        @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
+        @Override public void translatedTextWithSuffix(String key, List<String> arguments, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
     }
 
     private record Operation(String kind, UiRect rect, String text, UiCardStyle cardStyle,

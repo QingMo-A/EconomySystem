@@ -118,6 +118,8 @@ class TerritoryDetailViewParityTest {
     @Override public void tooltip(TooltipModel tooltip, int mouseX, int mouseY) {
       add("tooltip", new UiRect(mouseX, mouseY, 0, 0), tooltip.toString(), true);
     }
+    @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
+    @Override public void translatedTextWithSuffix(String key, List<String> arguments, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
     private void add(String kind, UiRect rect, String value, boolean enabled) {
       operations.add(new Operation(kind, rect, value, enabled));
     }

@@ -35,6 +35,42 @@ class BalanceLogLegacyReferenceParityTest {
         "table rows use the legacy alternating fill instead of card chrome");
   }
 
+  @Test
+  void legacyRowsUseExactColumnsNumberFormatDescriptionWidthAndDeltaColors() {
+    BalanceLogEntry positive = new BalanceLogEntry(1_700_000_000_000L,
+        BalanceLogRequestMessage.ALL_CATEGORIES, "positive reason", 25, 100, 125);
+    BalanceLogEntry negative = new BalanceLogEntry(1_700_000_001_000L,
+        "market", "negative reason", -7, 125, 118);
+    BalanceLogState state = new BalanceLogState(
+        List.of(new BalanceLogRow(positive), new BalanceLogRow(negative)),
+        BalanceLogRequestMessage.ALL_CATEGORIES, 0, 50, 2, 0, 8, ScreenState.READY, null, 1,
+        Set.of(BalanceLogAction.BACK));
+    BalanceLogLayout.Layout layout = BalanceLogLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    BalanceLogView.render(renderer, state, layout, 0, 0);
+    int firstX = layout.rows().get(0).rect().x();
+    int secondX = layout.rows().get(1).rect().x();
+    // Legacy source uses category x+82; this assertion failed before the production correction.
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("text")
+        && op.rect().equals(new UiRect(firstX + 82, layout.rows().get(0).rect().y() + 4, 0, 0))));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("text")
+        && op.rect().equals(new UiRect(firstX + 132, layout.rows().get(0).rect().y() + 4, 0, 0))
+        && op.value().equals("+25")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("text")
+        && op.rect().equals(new UiRect(secondX + 132, layout.rows().get(1).rect().y() + 4, 0, 0))
+        && op.value().equals("-7")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
+        && op.rect().equals(new UiRect(firstX + 320, layout.rows().get(0).rect().y() + 2,
+            Math.max(80, layout.rows().get(0).rect().width() - 330), 18))));
+    assertTrue(renderer.paints().stream().anyMatch(p -> p.kind().equals("text")
+        && p.rect().x() == firstX + 132 && p.argb() == EconomyUiTheme.TEXT_SUCCESS));
+    assertTrue(renderer.paints().stream().anyMatch(p -> p.kind().equals("text")
+        && p.rect().x() == secondX + 132 && p.argb() == EconomyUiTheme.TEXT_ERROR));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
+        && op.value().startsWith("1 / 1  \u5171 2 \u6761")),
+        "legacy pagination includes the localized total-count suffix");
+  }
+
   private static BalanceLogState ready() {
     BalanceLogEntry entry = new BalanceLogEntry(1_700_000_000_000L,
         BalanceLogRequestMessage.ALL_CATEGORIES, "legacy reason", 25, 100, 125);

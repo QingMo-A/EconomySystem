@@ -17,7 +17,6 @@ public final class DeliveryView {
 
   public static void render(EconomyUiRenderer renderer, DeliveryState state,
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), DeliveryLayout.BACKGROUND_COLOR);
     renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.DELIVERY_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.delivery_box.search", List.of(), layout.search(),
@@ -36,7 +35,7 @@ public final class DeliveryView {
     } else if (state.screenState() == ScreenState.ERROR) {
       renderer.translatedTextInRect(state.errorKey() == null ? "screen.delivery_box.sync_failed" : state.errorKey(),
           List.of(), layout.message(), EconomyUiTheme.TEXT_ERROR, UiTextAlignment.CENTER);
-      renderer.translatedButton(layout.message(), EconomyUiTheme.HOME_DELIVERY_BUTTON,
+      renderer.translatedButton(layout.message(), EconomyUiTheme.DELIVERY_CLAIM_BUTTON,
           "screen.delivery_box.retry", List.of(), layout.message().contains(mouseX, mouseY),
           state.can(DeliveryAction.RETRY));
     } else if (state.screenState() == ScreenState.EMPTY) {
@@ -50,17 +49,17 @@ public final class DeliveryView {
       // the claim action itself remains delivery-green.
       renderer.card(card.card(), EconomyUiTheme.SHOP_CARD, card.card().contains(mouseX, mouseY));
       renderer.item(entry.item().itemId(), card.itemIcon());
-      renderer.itemDisplayName(entry.item().itemId(),
-          new UiRect(card.card().x() + 48, card.card().y() + 8, 54, 14),
+      int infoX = card.card().x() + 48;
+      int maxTextWidth = Math.max(1, card.card().width() - 48 - 8
+          - card.claimButton().width() - 6);
+      int lineHeight = Math.max(1, layout.metrics().lineHeight());
+      renderer.itemDisplayNameWithSuffix(entry.item().itemId(),
+          entry.item().count() > 1 ? " x" + entry.item().count() : "",
+          new UiRect(infoX, card.card().y() + 8, maxTextWidth, lineHeight),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-      if (entry.item().count() > 1) {
-        renderer.textInRect(" x" + entry.item().count(),
-            new UiRect(card.card().x() + 102, card.card().y() + 8, 24, 14),
-            EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-      }
       renderer.translatedTextInRect("screen.delivery_box.item.source", List.of(entry.source()),
-          new UiRect(card.card().x() + 48, card.card().y() + 25,
-              card.card().width() - 48 - 8, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
+          new UiRect(infoX, card.card().y() + 8 + lineHeight + 2,
+              maxTextWidth, lineHeight), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
       renderer.translatedButton(card.claimButton(), EconomyUiTheme.DELIVERY_CLAIM_BUTTON,
           "button.delivery_box.claim", List.of(), card.claimButton().contains(mouseX, mouseY),
           state.can(DeliveryAction.CLAIM));
@@ -86,10 +85,7 @@ public final class DeliveryView {
     for (DeliveryLayout.Card card : layout.cards()) {
       if (card.itemIcon().contains(mouseX, mouseY)) {
         var item = card.row().entry().item();
-        return Optional.of(new TooltipModel(List.of(
-            new TooltipLine.Item("screen.delivery_box.item.name_and_count", item.itemId(),
-                List.of(Integer.toString(item.count()))),
-            new TooltipLine.Translated("screen.delivery_box.item.source", List.of(card.row().entry().source())))));
+        return Optional.of(new TooltipModel(List.of(new TooltipLine.NativeItem(item.itemId()))));
       }
     }
     return Optional.empty();

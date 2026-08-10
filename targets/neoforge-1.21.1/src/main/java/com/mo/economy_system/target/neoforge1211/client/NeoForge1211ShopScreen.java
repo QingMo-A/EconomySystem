@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
 import com.mo.economy_system.common.client.ClientShopState;
+import com.mo.economy_system.common.network.ShopItemSnapshot;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.common.network.ShopBuyItemMessage;
 import com.mo.economy_system.common.network.ShopDataRequestMessage;
@@ -21,14 +22,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 /** NeoForge shell for the common shop page. */
 public final class NeoForge1211ShopScreen extends Screen {
   private static final AtomicLong IDS = new AtomicLong(1);
   private final Screen parent;
   private final Port port = new Port();
-  private final ShopController controller = new ShopController(port);
+  private final ShopController controller = new ShopController(port, NeoForge1211ShopScreen::nativeDisplayName);
   private EditBox search;
   private long appliedRevision = -1;
   private long animationStartedAtNanos = -1L;
@@ -134,6 +138,11 @@ public final class NeoForge1211ShopScreen extends Screen {
   private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new NeoForge1211UiTextMetrics(font); }
   private float animationProgress() { return ShopOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
   private void syncSearchWidget(ShopLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
+  private static String nativeDisplayName(ShopItemSnapshot snapshot) {
+    ResourceLocation location = ResourceLocation.tryParse(snapshot.itemId());
+    var item = location == null ? null : BuiltInRegistries.ITEM.get(location);
+    return item == null ? "" : new ItemStack(item).getHoverName().getString();
+  }
 
   private final class Port implements ShopPort {
     private long requestId = -1;

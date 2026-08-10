@@ -14,7 +14,6 @@ public final class MarketCreateView {
 
   public static void render(EconomyUiRenderer renderer, MarketCreateState state,
                             MarketCreateLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), MarketCreateLayout.BACKGROUND_COLOR);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconText(UiIcon.MARKET, "Market", layout.title().x() + 8, layout.title().y() + 5,
         1.0f, EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
@@ -35,8 +34,10 @@ public final class MarketCreateView {
       MarketInventoryItem selected = state.selectedItem();
       if (selected != null) {
         renderer.item(selected.itemId(), new UiRect(layout.formPanel().x() + 12, layout.formPanel().y() + 36, 32, 32));
-        renderer.textInRect(selected.itemId(), new UiRect(layout.formPanel().x() + 52, layout.formPanel().y() + 38,
-            Math.max(1, layout.formPanel().width() - 64), 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+        renderer.itemDisplayName(selected.itemId(),
+            new UiRect(layout.formPanel().x() + 52, layout.formPanel().y() + 38,
+                Math.max(1, layout.formPanel().width() - 64), 14),
+            EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
         renderer.textInRect("Owned: " + state.availableQuantity(), new UiRect(layout.formPanel().x() + 52, layout.formPanel().y() + 54,
             Math.max(1, layout.formPanel().width() - 64), 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
       }

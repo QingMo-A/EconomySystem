@@ -64,6 +64,8 @@ public final class NeoForge1211BalanceLogScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     BalanceLogLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    new NeoForge1211UiRenderer(graphics, font).fillPhysicalBackground(width, height,
+        BalanceLogLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     BalanceLogView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout,

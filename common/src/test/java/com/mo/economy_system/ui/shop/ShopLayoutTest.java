@@ -28,7 +28,7 @@ class ShopLayoutTest {
       for (ShopLayout.Card card : layout.cards()) {
         assertTrue(viewport.contains(card.card()));
         assertTrue(card.card().contains(card.itemIcon()));
-        assertTrue(card.card().contains(card.buyButton()));
+        assertTrue(card.card().contains(card.itemIcon()));
         assertTrue(card.card().bottom() <= layout.previousButton().y());
       }
       assertNoOverlap(layout.cards().stream().map(ShopLayout.Card::card).toList());

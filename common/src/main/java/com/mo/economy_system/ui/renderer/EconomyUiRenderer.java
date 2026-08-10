@@ -67,6 +67,14 @@ public interface EconomyUiRenderer {
         textInRect(itemId, rect, color, alignment);
     }
 
+    /** Draws a native item hover name and suffix as one clipped line (for example " x64"). */
+    void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color,
+                                   UiTextAlignment alignment);
+
+    /** Draws a translated label and suffix as one clipped line (for example seller + name). */
+    void translatedTextWithSuffix(String key, List<String> arguments, String suffix,
+                                  UiRect rect, int color, UiTextAlignment alignment);
+
     /** Draws a styled icon/text group under one shared local transform. */
     void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY,
                               float scale, int iconSize, int iconAdvance);

@@ -13,7 +13,6 @@ public final class AboutView {
 
   public static void render(EconomyUiRenderer renderer, AboutState state,
                             AboutLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), AboutLayout.BACKGROUND_COLOR);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.ABOUT, "screen.about.title", List.of(), layout.title().x() + 8,
         layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,

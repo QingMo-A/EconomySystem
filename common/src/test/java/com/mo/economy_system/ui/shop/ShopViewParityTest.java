@@ -23,12 +23,12 @@ class ShopViewParityTest {
 
     assertEquals(forge.operations(), neoForge.operations());
     assertEquals(3, forge.operations().stream().filter(operation -> operation.kind().equals("item")).count());
-    assertEquals(3, forge.operations().stream()
+    // The card itself is the sole buy hitbox; legacy parity forbids an extra visible buy button.
+    assertEquals(0, forge.operations().stream()
         .filter(operation -> operation.kind().equals("translatedButton"))
         .filter(operation -> operation.value().startsWith("screen.shop.buy")).count());
     assertTrue(forge.operations().stream().anyMatch(operation ->
-        operation.kind().equals("textInRect")
-            && operation.value().startsWith("￥")));
+        operation.kind().equals("textInRect") && operation.value().startsWith("\uFFE5")));
   }
 
   @Test

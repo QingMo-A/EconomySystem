@@ -2,6 +2,7 @@ package com.mo.economy_system.target.neoforge1211.client;
 
 import com.mo.economy_system.common.client.ClientDeliveryBoxState;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
+import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
 import com.mo.economy_system.common.network.DeliveryBoxDataRequestMessage;
 import com.mo.economy_system.platform.EconomyServices;
@@ -19,14 +20,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 /** NeoForge Screen shell for the loader-neutral delivery-box page. */
 public final class NeoForge1211DeliveryBoxScreen extends Screen {
   private static final AtomicLong IDS = new AtomicLong(1);
   private final Screen parent;
   private final Port port = new Port();
-  private final DeliveryController controller = new DeliveryController(port);
+  private final DeliveryController controller = new DeliveryController(port, NeoForge1211DeliveryBoxScreen::nativeDisplayName);
   private EditBox search;
   private long appliedRevision = -1;
 
@@ -144,6 +148,11 @@ public final class NeoForge1211DeliveryBoxScreen extends Screen {
     search.setY(Math.round(layout.search().y() * scale.value()));
     search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value())));
     search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value())));
+  }
+  private static String nativeDisplayName(DeliveryBoxEntrySnapshot entry) {
+    ResourceLocation location = ResourceLocation.tryParse(entry.item().itemId());
+    var item = location == null ? null : BuiltInRegistries.ITEM.get(location);
+    return item == null ? "" : new ItemStack(item).getHoverName().getString();
   }
   private com.mo.economy_system.ui.text.UiTextMetrics metrics() {
     return new NeoForge1211UiTextMetrics(font);

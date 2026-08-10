@@ -25,7 +25,9 @@ public final class ShopPurchaseLayout {
     UiRect card = new UiRect(x, y, cardWidth, cardHeight);
     UiRect item = new UiRect(x + cardWidth / 2 - 8, y + 34, 16, 16);
     UiRect quantityLabel = new UiRect(x + 28, y + 96, 74, 18);
-    UiRect quantity = new UiRect(x + 110, y + 98, Math.max(INPUT_MIN_WIDTH, Math.min(INPUT_WIDTH, cardWidth - 134)), INPUT_HEIGHT);
+    // Legacy positions the quantity field after the native translated label (typically 36px)
+    // plus the 8px inline gap; at the reference Chinese/English fonts this is x + 112.
+    UiRect quantity = new UiRect(x + 112, y + 98, Math.max(INPUT_MIN_WIDTH, Math.min(INPUT_WIDTH, cardWidth - 136)), INPUT_HEIGHT);
     UiRect confirm = new UiRect(x + (cardWidth - BUTTON_WIDTH) / 2, y + cardHeight - 36, BUTTON_WIDTH, BUTTON_HEIGHT);
     UiRect back = new UiRect(x + cardWidth - 74, y + cardHeight - 36, 62, 24);
     UiRect message = new UiRect(x + 12, y + 78, cardWidth - 24, 16);

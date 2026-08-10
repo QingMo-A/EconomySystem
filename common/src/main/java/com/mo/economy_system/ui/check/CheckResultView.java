@@ -17,9 +17,6 @@ public final class CheckResultView {
       CheckResultLayout.Layout layout,
       int mouseX,
       int mouseY) {
-    renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        CheckResultLayout.BACKGROUND_COLOR);
     renderer.translatedTextInRect(
         "screen.check_result.title", List.of(), layout.title(), EconomyUiTheme.TEXT_PRIMARY,
         UiTextAlignment.CENTER);

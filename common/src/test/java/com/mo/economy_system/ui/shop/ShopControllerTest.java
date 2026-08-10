@@ -69,6 +69,18 @@ class ShopControllerTest {
     assertEquals(ScreenState.EMPTY, controller.state().screenState());
   }
 
+  @Test
+  void searchMatchesNativeItemDisplayNameWithoutChangingWireSnapshot() {
+    var snapshot = new com.mo.economy_system.common.network.ShopItemSnapshot(
+        "diamond-entry", "minecraft:diamond", 10, 10, 10, "opaque description", 1.0,
+        "", "", 0, 1, 1);
+    ShopState state = new ShopState(List.of(new ShopRow(snapshot, "Diamond Sword")), 0, 15,
+        "Diamond Sword", com.mo.economy_system.ui.core.ScreenState.READY, null, -1,
+        java.util.Set.of(ShopAction.values()));
+    assertEquals(1, state.filteredRows().size(),
+        "legacy Shop filtering includes the target-resolved native hover name");
+  }
+
   private static final class FakePort implements ShopPort {
     private long nextId;
     private final List<Long> requests = new ArrayList<>();

@@ -14,7 +14,6 @@ public final class TerritoryInviteView {
 
   public static void render(EconomyUiRenderer renderer, TerritoryInviteState state,
       TerritoryInviteLayout.Layout layout, int mouseX, int mouseY, long tick) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), TerritoryInviteLayout.BACKGROUND_COLOR);
     renderer.card(layout.rows(), EconomyUiTheme.TERRITORY_CARD, false);
     UiRect searchFrame = new UiRect(layout.search().x() - 4, layout.search().y() - 2,
         layout.search().width() + 8, layout.search().height() + 4);

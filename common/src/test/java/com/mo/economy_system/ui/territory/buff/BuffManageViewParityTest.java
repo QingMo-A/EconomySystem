@@ -160,6 +160,8 @@ class BuffManageViewParityTest {
       operations.add(new Operation("tooltip", new UiRect(mouseX, mouseY, 0, 0), tooltip,
           null, null, null, true));
     }
+    @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
+    @Override public void translatedTextWithSuffix(String key, List<String> arguments, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}
   }
 
   private record Operation(String kind, UiRect rect, Object value, String key,

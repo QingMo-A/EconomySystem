@@ -92,6 +92,77 @@ class StrictUiForensicAuditTest {
     assertTrue(renderer.contains("void translatedIconButton"));
     assertTrue(renderer.contains("void icon"));
     assertTrue(renderer.contains("void itemDisplayName") || renderer.contains("itemDisplayName("));
+    assertTrue(renderer.contains("itemDisplayNameWithSuffix"),
+        "native item+suffix truncation must remain a mandatory semantic operation");
+    assertTrue(renderer.contains("translatedTextWithSuffix"),
+        "localized label+owner truncation must remain a mandatory semantic operation");
+    for (String target : List.of("targets/forge-1.20.1", "targets/neoforge-1.21.1")) {
+      String rendererSource = read(root.resolve(target).resolve("src/main/java/com/mo/economy_system/target")
+          .resolve(target.startsWith("targets/forge") ? "forge1201/client/"
+              : "neoforge1211/client/")
+          .resolve(target.startsWith("targets/forge") ? "Forge1201UiRenderer.java"
+              : "NeoForge1211UiRenderer.java"));
+      assertTrue(rendererSource.contains("itemDisplayNameWithSuffix"), target);
+      assertTrue(rendererSource.contains("translatedTextWithSuffix"), target);
+      assertTrue(rendererSource.contains("NativeItem"), target);
+    }
+  }
+
+  @Test
+  void forensicPagesOwnPhysicalFullscreenBackgroundExactlyOnce() throws Exception {
+    Path root = repositoryRoot();
+    Pattern virtualFullscreen = Pattern.compile(
+        "renderer\\.fill\\s*\\(\\s*new UiRect\\s*\\(\\s*0\\s*,\\s*0\\s*,\\s*layout\\.scale\\(\\)\\.virtualWidth\\(\\)");
+    List<String[]> pages = List.of(
+        new String[]{"about/AboutView.java", "AboutScreen.java"},
+        new String[]{"balance/BalanceLogView.java", "BalanceLogScreen.java"},
+        new String[]{"delivery/DeliveryView.java", "DeliveryBoxScreen.java"},
+        new String[]{"market/MarketView.java", "MarketScreen.java"},
+        new String[]{"market/MarketCreateView.java", "MarketCreateScreen.java"},
+        new String[]{"market/MarketConfirmView.java", "MarketConfirmScreen.java"},
+        new String[]{"shop/ShopView.java", "ShopScreen.java"},
+        new String[]{"shop/ShopPurchaseView.java", "ShopPurchaseScreen.java"},
+        new String[]{"territory/list/TerritoryListView.java", "TerritoryListScreen.java"},
+        new String[]{"territory/detail/TerritoryDetailView.java", "TerritoryDetailScreen.java"},
+        new String[]{"territory/invite/TerritoryInviteView.java", "TerritoryInviteScreen.java"},
+        new String[]{"territory/buff/BuffManageView.java", "BuffManageScreen.java"},
+        new String[]{"territory/confirm/TerritoryConfirmationView.java", "TerritoryConfirmationScreen.java"});
+    for (String[] page : pages) {
+      Path common = root.resolve("common/src/main/java/com/mo/economy_system/ui").resolve(page[0]);
+      assertFalse(virtualFullscreen.matcher(read(common)).find(),
+          "common view must not paint a scaled fullscreen background: " + page[0]);
+      for (String target : List.of("forge-1.20.1", "neoforge-1.21.1")) {
+        String prefix = target.startsWith("forge") ? "Forge1201" : "NeoForge1211";
+        Path shell = root.resolve("targets").resolve(target)
+            .resolve("src/main/java/com/mo/economy_system/target")
+            .resolve(target.startsWith("forge") ? "forge1201/client" : "neoforge1211/client")
+            .resolve(prefix + page[1]);
+        String shellSource = read(shell);
+        assertTrue(shellSource.contains("fillPhysicalBackground"),
+            "target shell must own one physical fullscreen background: " + shell);
+      }
+    }
+    // File-check/transfer pages are also forensic screens.  Their target shells already own the
+    // physical fill; the common consent/result views must remain purely semantic.
+    List<String[]> filePages = List.of(
+        new String[]{"check/CheckConsentView.java", "network/Forge1201ClientFileCheckScreens.java", "client/Screen_ClientFileCheckConsent.java"},
+        new String[]{"check/CheckResultView.java", "network/Forge1201ClientFileCheckScreens.java", "client/Screen_ClientFileCheckResult.java"},
+        new String[]{"transfer/TransferConsentView.java", "network/Forge1201CheckedFileTransferConsentScreen.java", "client/Screen_CheckedFileTransferConsent.java"},
+        new String[]{"transfer/TransferResultView.java", "network/Forge1201CheckedFileTransferResultScreen.java", "client/Screen_CheckedFileTransferResult.java"});
+    for (String[] page : filePages) {
+      Path common = root.resolve("common/src/main/java/com/mo/economy_system/ui").resolve(page[0]);
+      assertFalse(virtualFullscreen.matcher(read(common)).find(),
+          "common file workflow view must not paint a scaled fullscreen background: " + page[0]);
+      for (String target : List.of("forge-1.20.1", "neoforge-1.21.1")) {
+        String sourceRelative = target.startsWith("forge") ? page[1] : page[2];
+        Path shell = root.resolve("targets").resolve(target)
+            .resolve("src/main/java/com/mo/economy_system/target")
+            .resolve(target.startsWith("forge") ? "forge1201" : "neoforge1211")
+            .resolve(sourceRelative);
+        assertTrue(read(shell).contains("fillPhysicalBackground"),
+            "file workflow target shell must own physical fullscreen background: " + shell);
+      }
+    }
   }
 
   private static List<Path> activeScreenFiles(Path sourceRoot) throws IOException {

@@ -40,4 +40,17 @@ public record MarketState(
     if (tradeId == null) return null;
     return rows.stream().filter(row -> row.order().tradeId().equals(tradeId)).findFirst().orElse(null);
   }
+
+  /**
+   * Applies the legacy client-side search predicate to already materialized rows.  The wire
+   * snapshot remains unchanged: a target may resolve a loader-native display name into
+   * {@link MarketRow#displayName()} before the common controller receives the page.
+   */
+  public List<MarketRow> filteredRows() {
+    String needle = query.trim().toLowerCase(java.util.Locale.ROOT);
+    if (needle.isEmpty()) return rows;
+    return rows.stream().filter(row -> row.order().item().itemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
+        || row.order().ownerName().toLowerCase(java.util.Locale.ROOT).contains(needle)
+        || row.displayName().toLowerCase(java.util.Locale.ROOT).contains(needle)).toList();
+  }
 }

@@ -34,6 +34,10 @@ public final class EconomyUiTheme {
     public static final int TEXT_ERROR = 0xFFFF7777;
     public static final int TEXT_SUCCESS = 0xFF9BE7A7;
     public static final int TEXT_LOCKED = 0xFFB0BBC6;
+    /** Legacy shop tooltip price delta tones (ChatFormatting.RED/GREEN/GRAY). */
+    public static final int TOOLTIP_PRICE_UP = 0xFFFF5555;
+    public static final int TOOLTIP_PRICE_DOWN = 0xFF55FF55;
+    public static final int TOOLTIP_PRICE_SAME = 0xFFAAAAAA;
     public static final int HOVER_ANIMATION_MILLIS = 120;
     public static final int PAGE_ANIMATION_MILLIS = 180;
 

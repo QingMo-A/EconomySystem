@@ -8,6 +8,7 @@ import java.util.List;
 
 /** Pure virtual-coordinate layout for the balance-log page. */
 public final class BalanceLogLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private static final int TAB_HEIGHT = 22;
   private static final int ROW_HEIGHT = 24;
 

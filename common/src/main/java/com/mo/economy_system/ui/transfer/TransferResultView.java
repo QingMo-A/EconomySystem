@@ -16,9 +16,6 @@ public final class TransferResultView {
       TransferResultLayout.Layout layout,
       int mouseX,
       int mouseY) {
-    renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        TransferResultLayout.BACKGROUND_COLOR);
     renderer.translatedTextInRect(
         state.terminal() ? "screen.transfer_terminal.title" : "screen.transfer_result.title",
         List.of(),

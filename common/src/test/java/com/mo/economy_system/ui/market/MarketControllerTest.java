@@ -110,6 +110,27 @@ class MarketControllerTest {
     assertEquals(EconomyUiRoute.HOME, route.route());
   }
 
+  @Test
+  void searchMatchesTargetResolvedNativeItemDisplayNameWithoutChangingWireQuery() {
+    FakePort port = new FakePort();
+    MarketController controller = new MarketController(MarketTestFixtures.VIEWER, false,
+        itemId -> itemId.equals("minecraft:stone") ? "Polished Stone" : "", port);
+    controller.handle(new MarketEvent.Initialize(0));
+    var row = MarketTestFixtures.sales(0);
+    controller.handle(new MarketEvent.DataLoaded(0, 1, 0, 1, 1, 0, List.of(row)));
+    assertEquals("Polished Stone", controller.state().rows().get(0).displayName());
+    MarketRow resolved = controller.state().rows().get(0);
+
+    controller.handle(new MarketEvent.QueryChanged("polished"));
+    // The request still carries the user query verbatim; matching the native name is a
+    // loader-neutral common predicate over the decoded snapshot.
+    assertEquals(new Request(1, 0, MarketOrderFilter.ALL, "polished"), port.requests.get(1));
+    MarketState filtered = new MarketState(List.of(resolved), 0,
+        controller.state().pageSize(), 1, 1, 0, MarketOrderFilter.ALL, "polished",
+        ScreenState.READY, null, -1, 1, controller.state().actions());
+    assertEquals(1, filtered.filteredRows().size());
+  }
+
   private static final class FakePort implements MarketPort {
     private long nextId;
     private final List<Request> requests = new ArrayList<>();

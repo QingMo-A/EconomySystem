@@ -18,11 +18,14 @@ import java.util.UUID;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
 
 /** Forge 1.20.1 translation of common semantic UI drawing operations. */
 public final class Forge1201UiRenderer implements EconomyUiRenderer {
@@ -170,6 +173,20 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     graphics.drawString(font, Component.literal(clipped), x, y, color);
   }
 
+  @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect,
+                                                   int color, UiTextAlignment alignment) {
+    ResourceLocation location = ResourceLocation.tryParse(itemId);
+    var item = location == null ? Items.AIR : BuiltInRegistries.ITEM.get(location);
+    String name = item == null || item == Items.AIR ? itemId : new ItemStack(item).getHoverName().getString();
+    drawTextInRect(Component.literal(name + (suffix == null ? "" : suffix)), rect, color, alignment);
+  }
+
+  @Override public void translatedTextWithSuffix(String key, List<String> arguments, String suffix,
+                                                  UiRect rect, int color, UiTextAlignment alignment) {
+    String label = Component.translatable(key, arguments == null ? new Object[0] : arguments.toArray()).getString();
+    drawTextInRect(Component.literal(label + (suffix == null ? "" : suffix)), rect, color, alignment);
+  }
+
   @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX,
                                              int originY, float scale, int iconSize,
                                              int iconAdvance) {
@@ -226,6 +243,13 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     for (TooltipLine line : tooltip.lines()) {
       if (line instanceof TooltipLine.Literal literal) {
         lines.add(Component.literal(literal.text()));
+      } else if (line instanceof TooltipLine.ColoredLiteral colored) {
+        lines.add(Component.literal(colored.text()).withStyle(style -> style.withColor(colored.color())));
+      } else if (line instanceof TooltipLine.NativeItem nativeItem) {
+        lines.addAll(nativeTooltip(nativeItem.itemId()));
+      } else if (line instanceof TooltipLine.ColoredTranslated colored) {
+        lines.add(Component.translatable(colored.key(), colored.arguments().toArray())
+            .withStyle(style -> style.withColor(colored.color())));
       } else if (line instanceof TooltipLine.Translated translated) {
         lines.add(Component.translatable(translated.key(), translated.arguments().toArray()));
       } else if (line instanceof TooltipLine.Item item) {
@@ -251,6 +275,17 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     if (location == null) return itemId;
     var item = BuiltInRegistries.ITEM.get(location);
     return item == null || item == Items.AIR ? itemId : new ItemStack(item).getHoverName().getString();
+  }
+
+  private List<Component> nativeTooltip(String itemId) {
+    ResourceLocation location = ResourceLocation.tryParse(itemId);
+    var item = location == null ? Items.AIR : BuiltInRegistries.ITEM.get(location);
+    if (item == null || item == Items.AIR) return List.of(Component.literal(itemId));
+    ItemStack stack = new ItemStack(item);
+    Minecraft minecraft = Minecraft.getInstance();
+    if (minecraft.player == null || minecraft.level == null) return List.of(stack.getHoverName());
+    TooltipFlag flag = minecraft.options.advancedItemTooltips ? TooltipFlag.ADVANCED : TooltipFlag.NORMAL;
+    return stack.getTooltipLines(minecraft.player, flag);
   }
 
 }

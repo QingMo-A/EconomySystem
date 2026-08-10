@@ -17,8 +17,6 @@ public final class TerritoryListView {
 
   public static void render(EconomyUiRenderer renderer, TerritoryListState state,
                             TerritoryListLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        TerritoryListLayout.BACKGROUND_COLOR);
     renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.TERRITORY_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.territory.list.search", List.of(), layout.search(),

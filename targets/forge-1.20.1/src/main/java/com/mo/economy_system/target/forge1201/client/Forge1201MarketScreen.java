@@ -13,7 +13,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 /** Forge shell for the common market list. */
 public final class Forge1201MarketScreen extends Screen {
@@ -24,7 +27,7 @@ public final class Forge1201MarketScreen extends Screen {
   private long appliedRequest = -1;
   private long animationStartedAtNanos = -1L;
   public Forge1201MarketScreen() { this(null); }
-  public Forge1201MarketScreen(Screen parent) { super(Component.translatable(EconomyUiRoute.MARKET.titleKey())); this.parent = parent; Minecraft current = Minecraft.getInstance(); UUID viewer = current == null || current.player == null ? null : current.player.getUUID(); boolean moderator = current != null && current.player != null && current.player.hasPermissions(2); controller = new MarketController(viewer, moderator, port); }
+  public Forge1201MarketScreen(Screen parent) { super(Component.translatable(EconomyUiRoute.MARKET.titleKey())); this.parent = parent; Minecraft current = Minecraft.getInstance(); UUID viewer = current == null || current.player == null ? null : current.player.getUUID(); boolean moderator = current != null && current.player != null && current.player.hasPermissions(2); controller = new MarketController(viewer, moderator, Forge1201MarketScreen::nativeDisplayName, port); }
   @Override protected void init() { if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime(); String value = search == null ? "" : search.getValue(); MarketLayout.Layout layout = commonLayout(metrics()); UiScale scale = layout.scale(); search = new EditBox(font, Math.round(layout.search().x() * scale.value()), Math.round(layout.search().y() * scale.value()), Math.max(1, Math.round(layout.search().width() * scale.value())), Math.max(1, Math.round(layout.search().height() * scale.value())), Component.translatable("screen.market.search")); search.setMaxLength(64); search.setValue(value); search.setResponder(text -> controller.handle(new MarketEvent.QueryChanged(text))); addRenderableWidget(search); if (controller.state().screenState() == ScreenState.IDLE) controller.handle(new MarketEvent.Initialize(System.nanoTime())); }
   @Override public void tick() { super.tick(); controller.handle(new MarketEvent.Tick(System.nanoTime())); ClientMarketState.Snapshot snapshot = ClientMarketState.snapshot(); if (snapshot.latestPageRequestId() == port.requestId && !snapshot.loading() && snapshot.latestPageRequestId() != appliedRequest) { appliedRequest = snapshot.latestPageRequestId(); if (!snapshot.error().isEmpty()) controller.handle(new MarketEvent.DataFailed(port.requestId, "screen.market.sync_failed")); else controller.handle(new MarketEvent.DataLoaded(port.requestId, snapshot.marketRevision(), snapshot.offset(), snapshot.totalMatched(), snapshot.totalSales(), snapshot.totalDemand(), snapshot.orders())); } controller.pollNavigation().ifPresent(this::navigate); }
   private void navigate(UiNavigation navigation) { if (minecraft == null) return; if (navigation instanceof UiNavigation.Route route && route.route() == EconomyUiRoute.HOME) minecraft.setScreen(new Forge1201HomeScreen()); else if (navigation instanceof UiNavigation.Back) onClose(); }
@@ -37,6 +40,7 @@ public final class Forge1201MarketScreen extends Screen {
   private MarketLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics textMetrics) { MarketLayout.Layout layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new MarketEvent.ViewportChanged(layout.pageSize())); layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); } return layout; }
   private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new Forge1201UiTextMetrics(font); }
   private float animationProgress() { return MarketOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
+  private static String nativeDisplayName(String itemId) { ResourceLocation location = ResourceLocation.tryParse(itemId); var item = location == null ? null : BuiltInRegistries.ITEM.get(location); return item == null ? "" : new ItemStack(item).getHoverName().getString(); }
   private void syncSearchWidget(MarketLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
   private final class Port implements MarketPort {
     private long requestId = -1;

@@ -15,7 +15,6 @@ public final class BalanceLogView {
 
   public static void render(EconomyUiRenderer renderer, BalanceLogState state,
                             BalanceLogLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
     renderer.card(layout.panel(), EconomyUiTheme.BALANCE_CARD, false);
     renderer.translatedText("screen.balance_log.title", List.of(), layout.title().x(),
         layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
@@ -44,7 +43,8 @@ public final class BalanceLogView {
       renderer.fill(row.rect(), i % 2 == 0 ? 0x301A2633 : 0x201A2633);
       renderer.text(UiNumbers.formatTimestamp(entry.timeMillis()), row.rect().x() + 6,
           row.rect().y() + 4, EconomyUiTheme.TEXT_SECONDARY);
-      renderer.text(entry.category(), row.rect().x() + 84, row.rect().y() + 4,
+      // Legacy Screen_BalanceLog places the category at x+82 (time starts at x+6).
+      renderer.text(entry.category(), row.rect().x() + 82, row.rect().y() + 4,
           EconomyUiTheme.SHOP_ACCENT);
       String delta = (entry.delta() >= 0 ? "+" : "") + entry.delta();
       renderer.text(delta, row.rect().x() + 132, row.rect().y() + 4,
@@ -59,7 +59,8 @@ public final class BalanceLogView {
             ? EconomyUiTheme.BALANCE_BUTTON : EconomyUiTheme.BALANCE_BUTTON_DISABLED,
         "screen.balance_log.previous", List.of(), layout.previousButton().contains(mouseX, mouseY),
         state.hasPreviousPage());
-    renderer.textInRect((state.page() + 1) + " / " + state.totalPages() + "  " + state.total(),
+    renderer.textInRect((state.page() + 1) + " / " + state.totalPages() + "  \u5171 "
+        + state.total() + " \u6761",
         layout.pageText(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
     renderer.translatedButton(layout.nextButton(), state.hasNextPage()
             ? EconomyUiTheme.BALANCE_BUTTON : EconomyUiTheme.BALANCE_BUTTON_DISABLED,

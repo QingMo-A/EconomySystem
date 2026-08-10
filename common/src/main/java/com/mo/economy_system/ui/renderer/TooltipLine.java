@@ -5,9 +5,17 @@ import java.util.Objects;
 
 /** Loader-neutral tooltip line; item names are resolved by the target renderer. */
 public sealed interface TooltipLine
-    permits TooltipLine.Literal, TooltipLine.Translated, TooltipLine.Item {
+    permits TooltipLine.Literal, TooltipLine.ColoredLiteral, TooltipLine.Translated,
+        TooltipLine.ColoredTranslated, TooltipLine.NativeItem, TooltipLine.Item {
   record Literal(String text) implements TooltipLine {
     public Literal {
+      Objects.requireNonNull(text, "text");
+    }
+  }
+
+  /** A literal metadata line with a target-resolved ARGB color. */
+  record ColoredLiteral(String text, int color) implements TooltipLine {
+    public ColoredLiteral {
       Objects.requireNonNull(text, "text");
     }
   }
@@ -16,6 +24,21 @@ public sealed interface TooltipLine
     public Translated {
       if (key == null || key.isBlank()) throw new IllegalArgumentException("tooltip key");
       arguments = List.copyOf(Objects.requireNonNull(arguments, "arguments"));
+    }
+  }
+
+  /** A translated line with an explicit target-resolved ARGB color. */
+  record ColoredTranslated(String key, List<String> arguments, int color) implements TooltipLine {
+    public ColoredTranslated {
+      if (key == null || key.isBlank()) throw new IllegalArgumentException("tooltip key");
+      arguments = List.copyOf(Objects.requireNonNull(arguments, "arguments"));
+    }
+  }
+
+  /** Requests the full native ItemStack tooltip, including advanced lines when enabled. */
+  record NativeItem(String itemId) implements TooltipLine {
+    public NativeItem {
+      if (itemId == null || itemId.isBlank()) throw new IllegalArgumentException("itemId");
     }
   }
 

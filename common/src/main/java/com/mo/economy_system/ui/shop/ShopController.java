@@ -5,17 +5,26 @@ import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /** Shared request, filtering, paging, timeout and action state machine. */
 public final class ShopController extends AbstractEconomyScreenController<ShopState, ShopEvent> {
   public static final long TIMEOUT_NANOS = 10_000_000_000L;
   private final ShopPort port;
+  private final Function<com.mo.economy_system.common.network.ShopItemSnapshot, String> displayNameResolver;
   private long startedAt;
   private boolean requestInFlight;
 
   public ShopController(ShopPort port) {
+    this(port, ignored -> "");
+  }
+
+  /** Target-supplied native hover-name resolver; wire snapshots remain unchanged. */
+  public ShopController(ShopPort port,
+                        Function<com.mo.economy_system.common.network.ShopItemSnapshot, String> displayNameResolver) {
     super(new ShopState(List.of(), 0, 1, "", ScreenState.IDLE, null, -1, Set.of(ShopAction.BACK)));
     this.port = java.util.Objects.requireNonNull(port, "port");
+    this.displayNameResolver = java.util.Objects.requireNonNull(displayNameResolver, "displayNameResolver");
   }
 
   @Override public void handle(ShopEvent event) {
@@ -45,7 +54,8 @@ public final class ShopController extends AbstractEconomyScreenController<ShopSt
   private void loaded(ShopEvent.DataLoaded event) {
     if (!requestInFlight || event.requestId() != state().requestId()
         || state().screenState() != ScreenState.LOADING) return;
-    List<ShopRow> rows = event.items().stream().map(ShopRow::new).toList();
+    List<ShopRow> rows = event.items().stream()
+        .map(item -> new ShopRow(item, displayNameResolver.apply(item))).toList();
     requestInFlight = false;
     replaceState(new ShopState(rows, 0, state().pageSize(), state().filter(),
         rows.isEmpty() ? ScreenState.EMPTY : ScreenState.READY, null, -1,
@@ -103,7 +113,8 @@ public final class ShopController extends AbstractEconomyScreenController<ShopSt
       var item = row.item();
       return needle.isEmpty() || item.shopItemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
           || item.itemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
-          || item.description().toLowerCase(java.util.Locale.ROOT).contains(needle);
+          || item.description().toLowerCase(java.util.Locale.ROOT).contains(needle)
+          || row.displayName().toLowerCase(java.util.Locale.ROOT).contains(needle);
     }).count();
     return Math.max(1, (count + pageSize - 1) / pageSize);
   }

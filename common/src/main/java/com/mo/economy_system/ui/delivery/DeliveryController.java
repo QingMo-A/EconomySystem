@@ -6,18 +6,26 @@ import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /** Shared delivery-box request, filtering, paging, timeout and claim logic. */
 public final class DeliveryController extends AbstractEconomyScreenController<DeliveryState, DeliveryEvent> {
   public static final long TIMEOUT_NANOS = 10_000_000_000L;
   private final DeliveryPort port;
+  private final Function<com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot, String> displayNameResolver;
   private long startedAt;
   private boolean requestInFlight;
 
   public DeliveryController(DeliveryPort port) {
+    this(port, ignored -> "");
+  }
+
+  public DeliveryController(DeliveryPort port,
+                             Function<com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot, String> displayNameResolver) {
     super(new DeliveryState(List.of(), 0, 1, "", ScreenState.IDLE, null, -1,
         Set.of(DeliveryAction.BACK)));
     this.port = java.util.Objects.requireNonNull(port, "port");
+    this.displayNameResolver = java.util.Objects.requireNonNull(displayNameResolver, "displayNameResolver");
   }
 
   @Override public void handle(DeliveryEvent event) {
@@ -47,7 +55,8 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
   private void loaded(DeliveryEvent.DataLoaded event) {
     if (!requestInFlight || event.requestId() != state().requestId()
         || state().screenState() != ScreenState.LOADING) return;
-    List<DeliveryRow> rows = event.entries().stream().map(DeliveryRow::new).toList();
+    List<DeliveryRow> rows = event.entries().stream()
+        .map(entry -> new DeliveryRow(entry, displayNameResolver.apply(entry))).toList();
     requestInFlight = false;
     replaceState(new DeliveryState(rows, 0, state().pageSize(), state().filter(),
         rows.isEmpty() ? ScreenState.EMPTY : ScreenState.READY, null, event.requestId(),
@@ -115,7 +124,8 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
       var entry = row.entry();
       return needle.isEmpty() || entry.entryId().toString().contains(needle)
           || entry.source().toLowerCase(java.util.Locale.ROOT).contains(needle)
-          || entry.item().itemId().toLowerCase(java.util.Locale.ROOT).contains(needle);
+          || entry.item().itemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
+          || row.displayName().toLowerCase(java.util.Locale.ROOT).contains(needle);
     }).count();
     return Math.max(1, (count + pageSize - 1) / pageSize);
   }

@@ -16,9 +16,6 @@ public final class CheckConsentView {
       CheckConsentLayout.Layout layout,
       int mouseX,
       int mouseY) {
-    renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        CheckConsentLayout.BACKGROUND_COLOR);
     renderer.translatedTextInRect(
         "screen.check_consent.title",
         List.of(),

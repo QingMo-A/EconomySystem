@@ -31,7 +31,8 @@ public record ShopState(
       var item = row.item();
       return item.shopItemId().toLowerCase(Locale.ROOT).contains(needle)
           || item.itemId().toLowerCase(Locale.ROOT).contains(needle)
-          || item.description().toLowerCase(Locale.ROOT).contains(needle);
+          || item.description().toLowerCase(Locale.ROOT).contains(needle)
+          || row.displayName().toLowerCase(Locale.ROOT).contains(needle);
     }).toList();
   }
 

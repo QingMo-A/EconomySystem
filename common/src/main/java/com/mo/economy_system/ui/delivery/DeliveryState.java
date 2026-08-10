@@ -31,7 +31,8 @@ public record DeliveryState(
       var entry = row.entry();
       return entry.entryId().toString().contains(needle)
           || entry.source().toLowerCase(Locale.ROOT).contains(needle)
-          || entry.item().itemId().toLowerCase(Locale.ROOT).contains(needle);
+          || entry.item().itemId().toLowerCase(Locale.ROOT).contains(needle)
+          || row.displayName().toLowerCase(Locale.ROOT).contains(needle);
     }).toList();
   }
 

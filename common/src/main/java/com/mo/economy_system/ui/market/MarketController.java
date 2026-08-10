@@ -12,19 +12,21 @@ import java.util.List;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 /** Shared market request, paging, filtering, timeout and action state machine. */
 public final class MarketController extends AbstractEconomyScreenController<MarketState, MarketEvent> {
   public static final long TIMEOUT_NANOS = 10_000_000_000L;
   public static final int NETWORK_PAGE_SIZE = EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE;
   private final MarketPort port;
+  private final Function<String, String> displayNameResolver;
   private final UUID viewerId;
   private final boolean viewerCanModerate;
   private long startedAt;
   private boolean requestInFlight;
 
   public MarketController(UUID viewerId, MarketPort port) {
-    this(viewerId, false, port);
+    this(viewerId, false, ignored -> "", port);
   }
 
   /**
@@ -33,10 +35,21 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
    * the authoritative server operation and re-checks the actor permission.
    */
   public MarketController(UUID viewerId, boolean viewerCanModerate, MarketPort port) {
+    this(viewerId, viewerCanModerate, ignored -> "", port);
+  }
+
+  /**
+   * Creates a controller with a target-provided, loader-neutral item-name resolver.  It only
+   * enriches rows after the server snapshot is decoded; no network field or server authorization
+   * semantics change.
+   */
+  public MarketController(UUID viewerId, boolean viewerCanModerate,
+                          Function<String, String> displayNameResolver, MarketPort port) {
     super(new MarketState(List.of(), 0, NETWORK_PAGE_SIZE, 0, 0, 0, MarketOrderFilter.ALL, "", ScreenState.IDLE,
         null, -1, -1, navigationActions(viewerCanModerate)));
     this.viewerId = viewerId;
     this.viewerCanModerate = viewerCanModerate;
+    this.displayNameResolver = java.util.Objects.requireNonNull(displayNameResolver, "displayNameResolver");
     this.port = java.util.Objects.requireNonNull(port, "port");
   }
 
@@ -76,7 +89,8 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
   private void loaded(MarketEvent.DataLoaded event) {
     if (!requestInFlight || event.requestId() != state().requestId()
         || state().screenState() != ScreenState.LOADING || event.revision() < state().revision()) return;
-    List<MarketRow> rows = event.orders().stream().map(MarketRow::new).toList();
+    List<MarketRow> rows = event.orders().stream()
+        .map(order -> new MarketRow(order, resolveDisplayName(order.item().itemId()))).toList();
     requestInFlight = false;
     Set<MarketAction> actions = EnumSet.of(MarketAction.BUY, MarketAction.REMOVE_SALES,
         MarketAction.DELIVER_DEMAND, MarketAction.CONFIRM_DEMAND, MarketAction.REMOVE_DEMAND,
@@ -86,6 +100,15 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
         event.totalMatched(), event.totalSales(), event.totalDemand(), state().filter(), state().query(),
         rows.isEmpty() && event.totalMatched() == 0 ? ScreenState.EMPTY : ScreenState.READY,
         null, -1, event.revision(), actions));
+  }
+
+  private String resolveDisplayName(String itemId) {
+    try {
+      return java.util.Objects.requireNonNullElse(displayNameResolver.apply(itemId), "");
+    } catch (RuntimeException ignored) {
+      // A missing/invalid client loader must never break the server-backed market page.
+      return "";
+    }
   }
 
   private void failed(MarketEvent.DataFailed event) {

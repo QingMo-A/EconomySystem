@@ -56,6 +56,16 @@ class DeliveryControllerTest {
     assertEquals(EconomyUiRoute.HOME, route.route());
   }
 
+  @Test
+  void deliveryFilterIncludesTargetResolvedNativeDisplayName() {
+    UUID id = UUID.randomUUID();
+    DeliveryBoxEntrySnapshot entry = DeliveryBoxTestFixtures.entry(id, 1);
+    DeliveryState state = new DeliveryState(
+        List.of(new DeliveryRow(entry, "Diamond Sword")), 0, 6, "Diamond Sword",
+        ScreenState.READY, null, 1, java.util.Set.of(DeliveryAction.CLAIM));
+    assertEquals(1, state.filteredRows().size());
+  }
+
   private static final class FakePort implements DeliveryPort {
     private long next;
     private long lastRequest = -1;

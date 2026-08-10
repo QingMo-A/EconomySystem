@@ -21,7 +21,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 
 /** NeoForge shell for the common market list. */
 public final class NeoForge1211MarketScreen extends Screen {
@@ -39,7 +42,7 @@ public final class NeoForge1211MarketScreen extends Screen {
     Minecraft current = Minecraft.getInstance();
     UUID viewer = current == null || current.player == null ? null : current.player.getUUID();
     boolean moderator = current != null && current.player != null && current.player.hasPermissions(2);
-    controller = new MarketController(viewer, moderator, port);
+    controller = new MarketController(viewer, moderator, NeoForge1211MarketScreen::nativeDisplayName, port);
   }
   @Override protected void init() {
     if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
@@ -80,6 +83,7 @@ public final class NeoForge1211MarketScreen extends Screen {
   private MarketLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics textMetrics) { MarketLayout.Layout layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new MarketEvent.ViewportChanged(layout.pageSize())); layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); } return layout; }
   private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new NeoForge1211UiTextMetrics(font); }
   private float animationProgress() { return MarketOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
+  private static String nativeDisplayName(String itemId) { ResourceLocation location = ResourceLocation.tryParse(itemId); var item = location == null ? null : BuiltInRegistries.ITEM.get(location); return item == null ? "" : new ItemStack(item).getHoverName().getString(); }
   private void syncSearchWidget(MarketLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
   private final class Port implements MarketPort {
     private long requestId = -1;

@@ -19,8 +19,6 @@ public final class BuffManageView {
 
     public static void render(EconomyUiRenderer renderer, BuffManageState state,
                               BuffManageLayout.Layout layout, int mouseX, int mouseY) {
-        renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-                BuffManageLayout.BACKGROUND_COLOR);
         renderSearchFrame(renderer, layout.search());
 
         if (state.screenState() == ScreenState.LOADING) {

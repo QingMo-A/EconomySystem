@@ -18,7 +18,6 @@ public final class ShopView {
 
   public static void render(EconomyUiRenderer renderer, ShopState state, ShopLayout.Layout layout,
                             int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
     renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.SHOP_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.shop.search", List.of(), layout.search(), EconomyUiTheme.TEXT_MUTED,
@@ -47,16 +46,13 @@ public final class ShopView {
     for (ShopLayout.Card card : layout.cards()) {
       var item = card.row().item();
       renderer.card(card.card(), EconomyUiTheme.SHOP_CARD, card.card().contains(mouseX, mouseY));
+      int lineHeight = Math.max(1, layout.metrics().lineHeight());
       renderer.itemDisplayName(item.itemId(), new UiRect(card.card().x() + 6, card.card().y() + 6,
-          card.card().width() - 12, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+          card.card().width() - 12, lineHeight), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
       renderer.item(item.itemId(), card.itemIcon());
-      String formattedPrice = "￥" + UiNumbers.formatInteger(item.currentPrice());
+      String formattedPrice = "\uffe5" + UiNumbers.formatInteger(item.currentPrice());
       renderer.textInRect(formattedPrice, new UiRect(card.card().x() + 6, card.card().y() + 6,
-          card.card().width() - 12, 14), EconomyUiTheme.BALANCE_ACCENT, UiTextAlignment.RIGHT);
-      // Keep the common action contract explicit; target shells use the full card hitbox and
-      // render this one-pixel semantic marker without introducing a second visual button.
-      renderer.translatedButton(card.buyButton(), EconomyUiTheme.SHOP_BUTTON, "screen.shop.buy", List.of(),
-          card.card().contains(mouseX, mouseY), state.can(ShopAction.BUY));
+          card.card().width() - 12, lineHeight), EconomyUiTheme.BALANCE_ACCENT, UiTextAlignment.RIGHT);
     }
     boolean previousEnabled = state.page() > 0;
     renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.SHOP_PAGE_BUTTON : EconomyUiTheme.SHOP_PAGE_BUTTON_DISABLED,
@@ -81,10 +77,12 @@ public final class ShopView {
       var item = card.row().item();
       int change = item.currentPrice() - item.lastPrice();
       String changeText = change > 0 ? "+" + change : Integer.toString(change);
+      int changeColor = change > 0 ? EconomyUiTheme.TOOLTIP_PRICE_UP
+          : change < 0 ? EconomyUiTheme.TOOLTIP_PRICE_DOWN : EconomyUiTheme.TOOLTIP_PRICE_SAME;
       return Optional.of(new TooltipModel(List.of(
-          new TooltipLine.Item("screen.shop.item.id", item.itemId(), List.of()),
+          new TooltipLine.NativeItem(item.itemId()),
           new TooltipLine.Literal("-=-=-=-=-=-"),
-          new TooltipLine.Translated("screen.shop.item.change_price", List.of(changeText)),
+          new TooltipLine.ColoredTranslated("screen.shop.item.change_price", List.of(changeText), changeColor),
           new TooltipLine.Translated("screen.shop.item.basic_price", List.of(UiNumbers.formatInteger(item.basePrice()))),
           new TooltipLine.Translated("screen.shop.item.current_price", List.of(UiNumbers.formatInteger(item.currentPrice()))),
           new TooltipLine.Translated("screen.shop.item.fluctuation_factor", List.of(Double.toString(item.fluctuationFactor()))),

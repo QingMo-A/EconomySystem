@@ -39,7 +39,7 @@ class DeliveryLegacyReferenceParityTest {
         && op.value().contains("right=-18611")), "orange search frame is required");
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("scaledIconTranslatedText")
         && op.value().contains("screen.delivery_box.title")), "title stays localized");
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayName")),
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")),
         "item label must use the native item display name");
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedButton")
         && op.value().startsWith("button.delivery_box.claim")
@@ -48,6 +48,28 @@ class DeliveryLegacyReferenceParityTest {
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
         && op.value().contains("accent=" + EconomyUiTheme.SHOP_ACCENT)),
         "legacy delivery cards use the shop-orange card accent");
+  }
+
+  @Test
+  void deliveryNameAndCountShareOneTruncatedNativeLineAndRetryUsesDeliveryStyle() {
+    DeliveryState state = ready(1, 6, 0);
+    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    DeliveryView.render(renderer, state, layout, 0, 0);
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")
+        && op.value().contains(" x2")), "legacy name and count are truncated as one line");
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
+        && op.value().startsWith("screen.delivery_box.item.source") && op.rect().width() == 78),
+        "legacy source text excludes the claim button and is truncated to the remaining width");
+
+    DeliveryState error = new DeliveryState(state.rows(), 0, 6, "", ScreenState.ERROR,
+        "screen.delivery_box.sync_failed", 1, Set.of(DeliveryAction.RETRY));
+    renderer = new RecordingEconomyUiRenderer();
+    DeliveryView.render(renderer, error, layout, layout.message().x(), layout.message().y());
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedButton")
+        && op.value().startsWith("screen.delivery_box.retry")
+        && op.value().contains(EconomyUiTheme.DELIVERY_CLAIM_BUTTON.toString())),
+        "retry stays in the delivery action style family, not the Home navigation style");
   }
 
   @Test
@@ -69,9 +91,9 @@ class DeliveryLegacyReferenceParityTest {
     DeliveryState state = ready(1, 6, 0);
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
     var tooltip = DeliveryView.tooltipAt(layout, 20, 74).orElseThrow();
-    assertEquals(2, tooltip.lines().size());
-    assertTrue(tooltip.lines().get(0).toString().contains("name_and_count"));
-    assertTrue(tooltip.lines().get(1).toString().contains("source"));
+    assertEquals(1, tooltip.lines().size());
+    assertTrue(tooltip.lines().get(0).getClass().getSimpleName().equals("NativeItem"),
+        "legacy delivery icon hover delegates to the native ItemStack tooltip");
   }
 
   private static DeliveryState ready(int count, int pageSize, int page) {

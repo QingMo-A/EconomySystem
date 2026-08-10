@@ -17,8 +17,6 @@ public final class TerritoryDetailView {
 
   public static void render(EconomyUiRenderer renderer, TerritoryDetailState state,
                             TerritoryDetailLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        TerritoryDetailLayout.BACKGROUND_COLOR);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.TERRITORY, titleKey(state.view()), List.of(),
         layout.title().x() + 8, layout.title().y() + 5, 1.0f,

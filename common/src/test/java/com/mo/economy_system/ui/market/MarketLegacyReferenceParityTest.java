@@ -1,7 +1,7 @@
 package com.mo.economy_system.ui.market;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mo.economy_system.common.network.MarketOrderFilter;
@@ -19,7 +19,6 @@ class MarketLegacyReferenceParityTest {
   @Test
   void marketKeepsNineEntryPageWithoutViewportCrash() {
     MarketState state = ready(9);
-    MarketLayout.Layout narrow = null;
     assertDoesNotThrow(() -> MarketLayout.calculate(100, 100, state),
         "legacy keeps page size 9 and renders what fits; it does not crash the screen");
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
@@ -50,7 +49,7 @@ class MarketLegacyReferenceParityTest {
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayName")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("icon")
         && op.value().equals("ARROW_LEFT") && op.rect().width() == 12));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("inputFrame")),
@@ -91,6 +90,41 @@ class MarketLegacyReferenceParityTest {
     assertEquals(62, layout.filterTabs().get(1).rect().width());
     assertEquals(56, layout.filterTabs().get(2).rect().width());
     assertEquals(68, layout.filterTabs().get(3).rect().width());
+  }
+
+  @Test
+  void cardNativeNameCountAndOwnerAreEachTruncatedAsOneLegacyLine() {
+    MarketState state = ready(1);
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")
+        && op.value().contains(" x1")), "legacy uses native hover name + count as one clipped line");
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextWithSuffix")
+        && op.value().contains("owner-0")),
+        "legacy truncates translated Seller/Requester + ': ' + name as one line");
+  }
+
+  @Test
+  void cardPriceUsesYenAndFormattedNumberSemantic() {
+    MarketState state = ready(1);
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("textInRect")
+        && op.value().contains("\uFFE5" + "20")),
+        "legacy price text is Yen-prefixed and formatted");
+  }
+
+  @Test
+  void iconAndOrderInfoHoverExposeLegacyMetadataTooltipTriggers() {
+    MarketState state = ready(1);
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER,
+        layout.cards().get(0).itemIcon().x(), layout.cards().get(0).itemIcon().y());
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("tooltip")),
+        "legacy market icon hover renders native item + order metadata tooltip");
   }
 
   private static MarketState ready(int count) {

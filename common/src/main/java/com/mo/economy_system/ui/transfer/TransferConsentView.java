@@ -16,9 +16,6 @@ public final class TransferConsentView {
       TransferConsentLayout.Layout layout,
       int mouseX,
       int mouseY) {
-    renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        TransferConsentLayout.BACKGROUND_COLOR);
     renderer.translatedTextInRect(
         "screen.transfer_consent.title",
         List.of(),

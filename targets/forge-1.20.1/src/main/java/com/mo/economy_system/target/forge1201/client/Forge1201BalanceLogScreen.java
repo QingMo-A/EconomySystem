@@ -64,6 +64,8 @@ public final class Forge1201BalanceLogScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     BalanceLogLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    new Forge1201UiRenderer(graphics, font).fillPhysicalBackground(width, height,
+        BalanceLogLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     BalanceLogView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
