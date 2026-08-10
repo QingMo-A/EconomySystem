@@ -63,10 +63,12 @@ public final class MarketLayout {
     int pageTextWidth = Math.max(1, metrics.width(pageTextValue));
     int pageTextX = width / 2 - pageTextWidth / 2;
     UiRect previous = new UiRect(pageTextX - 50 - 12, controlsY, 50, 24);
-    UiRect page = new UiRect(pageTextX, controlsY, pageTextWidth, 24);
+    // Legacy Screen_Market draws the label five pixels above its 24px footer buttons;
+    // keep the native line height so target font metrics determine the text hit rect.
+    int lineHeight = Math.max(1, metrics.lineHeight());
+    UiRect page = new UiRect(pageTextX, height - 35 + contentOffset, pageTextWidth, lineHeight);
     UiRect next = new UiRect(pageTextX + pageTextWidth + 12, controlsY, 50, 24);
     UiRect search = new UiRect(panel, 20 - searchOffset, Math.min(200, Math.max(1, width - panel * 2)), 20);
-    int lineHeight = Math.max(1, metrics.lineHeight());
     int filterY = height - panel - lineHeight + contentOffset;
     List<FilterTab> filterTabs = new ArrayList<>();
     int filterX = panel;

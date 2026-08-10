@@ -93,6 +93,23 @@ class MarketLegacyReferenceParityTest {
   }
 
   @Test
+  void pageLabelUsesLegacyBaselineWhileButtonsStayAtFooter() {
+    UiTextMetrics metrics = new UiTextMetrics() {
+      @Override public int width(String text) { return 6; }
+      @Override public int lineHeight() { return 11; }
+    };
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, ready(9), metrics, 1.0f);
+    assertEquals(325, layout.pageText().y(),
+        "legacy Screen_Market draws page text at virtualHeight - 35");
+    assertEquals(11, layout.pageText().height(),
+        "page label uses the target font line height");
+    assertEquals(320, layout.previousButton().y(),
+        "legacy page buttons remain at virtualHeight - 40");
+    assertEquals(320, layout.nextButton().y(),
+        "legacy page buttons remain at virtualHeight - 40");
+  }
+
+  @Test
   void cardNativeNameCountAndOwnerAreEachTruncatedAsOneLegacyLine() {
     MarketState state = ready(1);
     MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state);

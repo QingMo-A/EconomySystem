@@ -114,6 +114,7 @@ class StrictUiForensicAuditTest {
     Pattern virtualFullscreen = Pattern.compile(
         "renderer\\.fill\\s*\\(\\s*new UiRect\\s*\\(\\s*0\\s*,\\s*0\\s*,\\s*layout\\.scale\\(\\)\\.virtualWidth\\(\\)");
     List<String[]> pages = List.of(
+        new String[]{"home/HomeView.java", "HomeScreen.java"},
         new String[]{"about/AboutView.java", "AboutScreen.java"},
         new String[]{"balance/BalanceLogView.java", "BalanceLogScreen.java"},
         new String[]{"delivery/DeliveryView.java", "DeliveryBoxScreen.java"},
@@ -137,9 +138,7 @@ class StrictUiForensicAuditTest {
             .resolve("src/main/java/com/mo/economy_system/target")
             .resolve(target.startsWith("forge") ? "forge1201/client" : "neoforge1211/client")
             .resolve(prefix + page[1]);
-        String shellSource = read(shell);
-        assertTrue(shellSource.contains("fillPhysicalBackground"),
-            "target shell must own one physical fullscreen background: " + shell);
+        assertPhysicalFillExactlyOnceBeforeScale(read(shell), shell.toString());
       }
     }
     // File-check/transfer pages are also forensic screens.  Their target shells already own the
@@ -159,10 +158,37 @@ class StrictUiForensicAuditTest {
             .resolve("src/main/java/com/mo/economy_system/target")
             .resolve(target.startsWith("forge") ? "forge1201" : "neoforge1211")
             .resolve(sourceRelative);
-        assertTrue(read(shell).contains("fillPhysicalBackground"),
-            "file workflow target shell must own physical fullscreen background: " + shell);
+        String shellSource = read(shell);
+        if (target.startsWith("forge") && page[1].contains("Forge1201ClientFileCheckScreens")) {
+          String nestedClass = page[2].contains("Consent")
+              ? "Screen_ClientFileCheckConsent" : "Screen_ClientFileCheckResult";
+          shellSource = nestedClassSource(shellSource, nestedClass);
+        }
+        assertPhysicalFillExactlyOnceBeforeScale(shellSource, shell.toString());
       }
     }
+  }
+
+  private static void assertPhysicalFillExactlyOnceBeforeScale(String source, String label) {
+    int fillCount = countMatches(source, "\\bfillPhysicalBackground\\s*\\(");
+    assertTrue(fillCount == 1,
+        label + " must call fillPhysicalBackground exactly once per screen render (found "
+            + fillCount + ")");
+    int fill = source.indexOf("fillPhysicalBackground");
+    int push = source.indexOf("pushPose");
+    var scaleMatcher = Pattern.compile("graphics\\.pose\\(\\)\\.scale\\s*\\(").matcher(source);
+    int scale = scaleMatcher.find() ? scaleMatcher.start() : -1;
+    assertTrue(push >= 0 && scale >= 0,
+        label + " must establish the virtual pose after the physical background");
+    assertTrue(fill < push && fill < scale,
+        label + " physical background must be painted before pushPose/scale");
+  }
+
+  private static String nestedClassSource(String source, String className) {
+    int start = source.indexOf("class " + className);
+    assertTrue(start >= 0, "combined file shell is missing nested " + className);
+    int next = source.indexOf("class Screen_", start + ("class " + className).length());
+    return source.substring(start, next >= 0 ? next : source.length());
   }
 
   private static List<Path> activeScreenFiles(Path sourceRoot) throws IOException {

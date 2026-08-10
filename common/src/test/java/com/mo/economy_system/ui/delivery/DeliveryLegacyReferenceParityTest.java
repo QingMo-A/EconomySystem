@@ -7,6 +7,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxTestFixtures;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.testsupport.RecordingEconomyUiRenderer;
+import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
 import java.util.Set;
@@ -84,6 +85,23 @@ class DeliveryLegacyReferenceParityTest {
         && op.value().equals("ARROW_RIGHT") && op.rect().equals(new UiRect(366, 326, 12, 12))));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
         && op.value().contains("accent=" + (EconomyUiTheme.SHOP_ACCENT & 0x00FFFFFF))));
+  }
+
+  @Test
+  void pageLabelUsesLegacyBaselineWhileButtonsStayAtFooter() {
+    UiTextMetrics metrics = new UiTextMetrics() {
+      @Override public int width(String text) { return 6; }
+      @Override public int lineHeight() { return 11; }
+    };
+    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, ready(7, 6, 1), metrics);
+    assertEquals(325, layout.pageText().y(),
+        "legacy Screen_DeliveryBox draws page text at virtualHeight - 35");
+    assertEquals(11, layout.pageText().height(),
+        "page label uses the target font line height");
+    assertEquals(320, layout.previousButton().y(),
+        "legacy page buttons remain at virtualHeight - 40");
+    assertEquals(320, layout.nextButton().y(),
+        "legacy page buttons remain at virtualHeight - 40");
   }
 
   @Test

@@ -102,6 +102,7 @@ class LegacyMultiViewportParityTest {
       assertEquals(12, market.search().x());
       assertEquals(20, market.search().y());
       assertEquals(Math.max(55, virtualHeight - 40), market.previousButton().y());
+      assertEquals(virtualHeight - 35, market.pageText().y());
 
       var createSales = MarketCreateLayout.calculate(width, height, createState(MarketCreateMode.SALES));
       assertScale(createSales.scale(), virtualWidth, virtualHeight);
@@ -120,6 +121,7 @@ class LegacyMultiViewportParityTest {
       assertEquals(12, delivery.search().x());
       assertEquals(20, delivery.search().y());
       assertEquals(Math.max(55, virtualHeight - 40), delivery.previousButton().y());
+      assertEquals(virtualHeight - 35, delivery.pageText().y());
 
       var about = AboutLayout.calculate(width, height, com.mo.economy_system.ui.text.UiTextMetrics.APPROXIMATE, 1.0f);
       assertScale(about.scale(), virtualWidth, virtualHeight);

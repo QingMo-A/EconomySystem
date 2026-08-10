@@ -47,14 +47,16 @@ public final class DeliveryLayout {
     int pageTextWidth = Math.max(1, metrics.width(pageTextValue));
     int pageTextX = width / 2 - pageTextWidth / 2;
     UiRect previous = new UiRect(Math.max(panel, pageTextX - 50 - 12), controlsY, 50, 24);
-    UiRect page = new UiRect(Math.max(panel, pageTextX), controlsY, pageTextWidth, 24);
+    int lineHeight = Math.max(1, metrics.lineHeight());
+    // Legacy Screen_DeliveryBox draws the page label at virtualHeight - 35,
+    // while the adjacent arrow buttons remain anchored at virtualHeight - 40.
+    UiRect page = new UiRect(Math.max(panel, pageTextX), height - 35, pageTextWidth, lineHeight);
     UiRect next = new UiRect(Math.min(Math.max(panel, width - panel - 50), page.x() + page.width() + 12), controlsY, 50, 24);
     UiRect search = new UiRect(panel, 20, Math.min(200, Math.max(1, width - panel * 2)), 20);
     UiRect searchBackground = new UiRect(search.x() - 4, search.y() - 2,
         search.width() + 8, search.height() + 4);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), Math.max(GRID_START_Y, height / 2 - 12),
         Math.min(180, Math.max(1, width - panel * 2)), 24);
-    int lineHeight = Math.max(1, metrics.lineHeight());
     int titleHeight = lineHeight + 10;
     UiRect title = new UiRect(panel, Math.max(panel, height - panel - titleHeight), 140, titleHeight);
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight, 90, lineHeight);
