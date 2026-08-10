@@ -15,29 +15,35 @@ public final class TransferConsentLayout {
         physicalWidth, physicalHeight, EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth();
     int height = scale.virtualHeight();
-    int pad = EconomyUiTheme.PANEL_PADDING;
-    int cardWidth = Math.min(500, Math.max(260, width - pad * 2));
-    int cardHeight = Math.min(260, Math.max(210, height - pad * 2));
-    int x = Math.max(pad, (width - cardWidth) / 2);
-    int y = Math.max(pad, (height - cardHeight) / 2);
-    UiRect card = new UiRect(x, y, cardWidth, cardHeight);
-    int contentX = x + 18;
-    int contentWidth = cardWidth - 36;
+    // Legacy transfer consent was a plain native screen.  Retain a full-viewport
+    // interaction container for callers while keeping card chrome out of the view.
+    UiRect card = new UiRect(0, 0, width, height);
+    int contentX = 12;
+    int contentWidth = Math.max(1, width - 24);
     List<UiRect> details = List.of(
-        new UiRect(contentX, y + 48, contentWidth, 16),
-        new UiRect(contentX, y + 67, contentWidth, 16),
-        new UiRect(contentX, y + 86, contentWidth, 16),
-        new UiRect(contentX, y + 105, contentWidth, 16),
-        new UiRect(contentX, y + 124, contentWidth, 16));
-    UiRect warning = new UiRect(contentX, y + 150, contentWidth, 28);
-    int buttonY = card.bottom() - 34;
-    int buttonWidth = Math.max(76, Math.min(138, (cardWidth - 46) / 2));
-    UiRect allow = new UiRect(x + (cardWidth - buttonWidth * 2 - 10) / 2, buttonY, buttonWidth, 22);
-    UiRect decline = new UiRect(allow.right() + 10, buttonY, buttonWidth, 22);
+        new UiRect(contentX, 42, contentWidth, 12),
+        new UiRect(contentX, 54, contentWidth, 12),
+        new UiRect(contentX, 66, contentWidth, 12),
+        new UiRect(contentX, 78, contentWidth, 12),
+        new UiRect(contentX, 90, contentWidth, 12));
+    UiRect warning = new UiRect(contentX, 102, contentWidth, 14);
+    UiRect allow;
+    UiRect decline;
+    if (width >= 220 && height >= 30) {
+      int buttonY = height - 25;
+      allow = new UiRect(width / 2 - 105, buttonY, 100, 20);
+      decline = new UiRect(width / 2 + 5, buttonY, 100, 20);
+    } else if (width >= 110 && height >= 55) {
+      allow = new UiRect(width / 2 - 50, height - 50, 100, 20);
+      decline = new UiRect(width / 2 - 50, height - 25, 100, 20);
+    } else {
+      allow = new UiRect(0, 0, 1, 1);
+      decline = new UiRect(0, 0, 1, 1);
+    }
     return new Layout(
         scale,
         card,
-        new UiRect(contentX, y + 16, contentWidth, 18),
+        new UiRect(0, 18, width, 14),
         details,
         warning,
         allow,

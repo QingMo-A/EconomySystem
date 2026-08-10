@@ -3,11 +3,9 @@ package com.mo.economy_system.ui.check;
 import com.mo.economy_system.common.check.ClientFileCheckResultController;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
-import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
-import java.util.Locale;
 
 /** Semantic drawing for both loader implementations of checked-file results. */
 public final class CheckResultView {
@@ -22,43 +20,35 @@ public final class CheckResultView {
     renderer.fill(
         new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
         CheckResultLayout.BACKGROUND_COLOR);
-    renderer.icon(UiIcon.MANAGE, new UiRect(layout.title().x(), layout.title().y() + 2, 14, 14));
-    renderer.translatedText(
-        "screen.check_result.title", List.of(), layout.title().x() + 18, layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
-    renderer.card(layout.searchCard(), EconomyUiTheme.DELIVERY_CARD, layout.searchCard().contains(mouseX, mouseY));
+    renderer.translatedTextInRect(
+        "screen.check_result.title", List.of(), layout.title(), EconomyUiTheme.TEXT_PRIMARY,
+        UiTextAlignment.CENTER);
+    renderer.inputFrame(layout.searchCard(), EconomyUiTheme.MARKET_SEARCH_FRAME,
+        layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect(
         "screen.check_result.search", List.of(), layout.search(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
-    renderer.card(layout.status(), EconomyUiTheme.TERRITORY_CARD, false);
     renderer.translatedText(
-        "screen.check_result.target", List.of(state.targetName()), layout.status().x() + 10, layout.status().y() + 8,
+        "screen.check_result.target", List.of(state.targetName()), layout.status().x(), layout.status().y(),
         EconomyUiTheme.TEXT_SECONDARY);
     renderer.translatedText(
-        "screen.check_result.type", List.of(state.checkTypeId()), layout.status().x() + 10, layout.status().y() + 22,
+        "screen.check_result.type", List.of(state.checkTypeId()), layout.status().x(), layout.status().y() + 10,
         EconomyUiTheme.TEXT_SECONDARY);
-    renderer.translatedText(
-        "screen.check_result.status_" + state.remoteStatus().name().toLowerCase(Locale.ROOT),
-        List.of(), layout.status().x() + 10, layout.status().y() + 36, EconomyUiTheme.TEXT_MUTED);
-    renderer.translatedText(
-        "screen.check_result.counts",
-        List.of(
-            Integer.toString(state.remoteFileCount()),
-            Integer.toString(state.remoteSkippedCount()),
-            Long.toString(state.rows().stream().filter(CheckResultRow::skipped).count())),
-        layout.status().x() + 10, layout.status().y() + 50, EconomyUiTheme.TEXT_MUTED);
+    int statusX = Math.max(240, layout.scale().virtualWidth() / 2);
+    renderer.textInRect(
+        state.remoteStatus().name() + "  files=" + state.remoteFileCount()
+            + " skipped=" + state.remoteSkippedCount(),
+        new UiRect(statusX, 66, Math.max(1, layout.scale().virtualWidth() - statusX - 8), 14),
+        EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderStatus(renderer, state, layout.status());
-    renderer.card(layout.rows(), EconomyUiTheme.DELIVERY_CARD, false);
-    int y = layout.rows().y() + 3;
+    int y = layout.rows().y();
     for (CheckResultRow row : state.visibleRows()) {
-      UiRect line = new UiRect(layout.rows().x() + 6, y, layout.rows().width() - 12, 17);
-      renderer.textInRect(row.fileName(), new UiRect(line.x(), line.y(), Math.max(28, line.width() / 2), line.height()),
-          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-      renderer.translatedTextInRect(
-          row.reasonKey(),
-          List.of(),
-          new UiRect(line.x() + line.width() / 2, line.y(), line.width() - line.width() / 2, line.height()),
+      UiRect line = new UiRect(layout.rows().x(), y, layout.rows().width(), 12);
+      // The old page painted one plain, truncated line per row.  Keep the reason
+      // key in the semantic string so target renderers can localize it if desired.
+      renderer.textInRect(row.fileName() + "  " + row.reasonKey(), line,
           row.skipped() ? EconomyUiTheme.TEXT_MUTED : EconomyUiTheme.TEXT_SECONDARY,
-          UiTextAlignment.RIGHT);
-      y += 20;
+          UiTextAlignment.LEFT);
+      y += 12;
     }
     renderer.translatedButton(
         layout.retry(),

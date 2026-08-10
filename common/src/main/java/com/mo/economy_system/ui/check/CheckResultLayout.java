@@ -14,16 +14,20 @@ public final class CheckResultLayout {
         physicalWidth, physicalHeight, EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth();
     int height = scale.virtualHeight();
-    int pad = EconomyUiTheme.PANEL_PADDING;
-    UiRect title = new UiRect(pad, pad, width - pad * 2, 18);
-    UiRect search = new UiRect(pad + 8, 44, Math.min(240, width - pad * 2 - 16), 20);
-    UiRect searchCard = new UiRect(search.x() - 4, search.y() - 3, search.width() + 8, search.height() + 6);
-    UiRect status = new UiRect(pad, 76, width - pad * 2, 82);
-    int buttonY = Math.max(170, height - pad - 22);
-    UiRect retry = new UiRect(Math.max(pad, width - pad - 152), buttonY, 70, 22);
-    UiRect back = new UiRect(Math.max(pad, width - pad - 76), buttonY, 64, 22);
-    UiRect rows = new UiRect(pad, 166, width - pad * 2, Math.max(1, buttonY - 174));
-    int visibleRows = Math.max(1, rows.height() / 20);
+    // Match the old native screen: centered title, native search field at y=62,
+    // metadata/status at the top-left, and a twelve-pixel plain row list.
+    UiRect title = new UiRect(0, 18, width, 14);
+    int searchWidth = Math.max(1, Math.min(220, width - 24));
+    UiRect search = new UiRect(12, 62, searchWidth, 18);
+    UiRect searchCard = new UiRect(Math.max(0, search.x() - 4), Math.max(0, search.y() - 3),
+        search.width() + 8, search.height() + 6);
+    UiRect status = new UiRect(12, 38, Math.max(1, width - 24), 42);
+    UiRect rows = new UiRect(12, 92, Math.max(1, width - 24), Math.max(1, height - 92));
+    // Keep controller actions available to the target shells without introducing
+    // modern visible buttons absent from the reference screen.
+    UiRect retry = new UiRect(0, 0, 1, 1);
+    UiRect back = new UiRect(0, 0, 1, 1);
+    int visibleRows = Math.max(1, (height - 100) / 12);
     return new Layout(scale, title, search, searchCard, status, rows, retry, back, visibleRows);
   }
 

@@ -2,7 +2,6 @@ package com.mo.economy_system.ui.transfer;
 
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
-import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
@@ -20,14 +19,12 @@ public final class TransferResultView {
     renderer.fill(
         new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
         TransferResultLayout.BACKGROUND_COLOR);
-    renderer.card(layout.card(), EconomyUiTheme.DELIVERY_CARD, layout.card().contains(mouseX, mouseY));
-    renderer.icon(UiIcon.DELIVERY, new UiRect(layout.title().x(), layout.title().y() + 2, 14, 14));
     renderer.translatedTextInRect(
         state.terminal() ? "screen.transfer_terminal.title" : "screen.transfer_result.title",
         List.of(),
-        new UiRect(layout.title().x() + 18, layout.title().y(), layout.title().width() - 18, layout.title().height()),
+        layout.title(),
         EconomyUiTheme.TEXT_PRIMARY,
-        UiTextAlignment.LEFT);
+        UiTextAlignment.CENTER);
     if (state.terminal()) renderTerminal(renderer, state, layout);
     else renderArtifact(renderer, state, layout);
   }

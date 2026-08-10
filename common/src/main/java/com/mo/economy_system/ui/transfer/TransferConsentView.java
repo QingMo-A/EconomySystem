@@ -2,7 +2,6 @@ package com.mo.economy_system.ui.transfer;
 
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
-import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
@@ -20,14 +19,12 @@ public final class TransferConsentView {
     renderer.fill(
         new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
         TransferConsentLayout.BACKGROUND_COLOR);
-    renderer.card(layout.card(), EconomyUiTheme.DELIVERY_CARD, layout.card().contains(mouseX, mouseY));
-    renderer.icon(UiIcon.DELIVERY, new UiRect(layout.title().x(), layout.title().y() + 2, 14, 14));
     renderer.translatedTextInRect(
         "screen.transfer_consent.title",
         List.of(),
-        new UiRect(layout.title().x() + 18, layout.title().y(), layout.title().width() - 18, layout.title().height()),
+        layout.title(),
         EconomyUiTheme.TEXT_PRIMARY,
-        UiTextAlignment.LEFT);
+        UiTextAlignment.CENTER);
     List<UiRect> rows = layout.details();
     renderer.translatedTextInRect(
         "screen.transfer_consent.requester", List.of(state.requesterName()), rows.get(0),
