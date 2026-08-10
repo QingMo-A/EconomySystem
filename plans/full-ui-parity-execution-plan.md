@@ -988,7 +988,7 @@ Started: `2026-08-09 America/Caracas`
 | 1 | About + Balance | ACCEPTED | `21f37d1a` | `<docs>` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
 | 2 | Shop family | ACCEPTED | `82dbf067` | `<docs>` | 821 | 886 | passed | Catalog/purchase card geometry, arrows, dynamic price delta, common animation |
 | 3 | Market family | ACCEPTED | `6ab64e31` | `<docs>` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
-| 4 | Delivery | PENDING |  |  |  |  |  |  |
+| 4 | Delivery | ACCEPTED | `2b5ede4a` | `<docs>` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
 | 5 | Remaining Territory | PENDING |  |  |  |  |  |  |
 | 6 | File Check + Transfer | PENDING |  |  |  |  |  |  |
 | 7 | Global audit | PENDING |  |  |  |  |  |  |
