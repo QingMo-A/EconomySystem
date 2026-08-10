@@ -38,7 +38,7 @@ public final class MarketConfirmView {
   private static String titleKey(MarketAction action) {
     return switch (action) {
       case BUY -> "screen.market.confirm.buy_title";
-      case REMOVE_SALES -> "screen.market.confirm.remove_sales_title";
+      case REMOVE_SALES, ADMIN_REMOVE_SALES -> "screen.market.confirm.remove_sales_title";
       case REMOVE_DEMAND -> "screen.market.confirm.remove_demand_title";
       case DELIVER_DEMAND -> "screen.market.confirm.deliver_title";
       case CONFIRM_DEMAND -> "screen.market.confirm.confirm_title";

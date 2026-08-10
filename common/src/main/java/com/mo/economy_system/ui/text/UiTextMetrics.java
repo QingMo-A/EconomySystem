@@ -29,5 +29,17 @@ public interface UiTextMetrics {
         public int lineHeight() {
             return 9;
         }
+
+        @Override
+        public int translatedWidth(String key, List<String> arguments) {
+            String value = switch (key == null ? "" : key) {
+                case "screen.market.filter.all" -> "全部";
+                case "screen.market.filter.mine" -> "我的";
+                case "screen.market.filter.sales" -> "卖单";
+                case "screen.market.filter.demand" -> "求单";
+                default -> key == null ? "" : key;
+            };
+            return width(value);
+        }
     };
 }

@@ -38,7 +38,8 @@ public final class NeoForge1211MarketScreen extends Screen {
     this.parent = parent;
     Minecraft current = Minecraft.getInstance();
     UUID viewer = current == null || current.player == null ? null : current.player.getUUID();
-    controller = new MarketController(viewer, port);
+    boolean moderator = current != null && current.player != null && current.player.hasPermissions(2);
+    controller = new MarketController(viewer, moderator, port);
   }
   @Override protected void init() {
     if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
@@ -62,7 +63,7 @@ public final class NeoForge1211MarketScreen extends Screen {
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
     MarketLayout.Layout layout = commonLayout(metrics()); int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     for (MarketLayout.FilterTab tab : layout.filterTabs()) if (tab.rect().contains(x, y)) { controller.handle(new MarketEvent.FilterChanged(tab.filter())); return true; }
-    for (MarketLayout.Card card : layout.cards()) if (card.actionButton().contains(x, y)) { MarketAction action = MarketView.actionFor(card.row().order(), controller.viewerId()); if (action != null) controller.handle(new MarketEvent.ActionClicked(action, card.row().order().tradeId())); return true; }
+    for (MarketLayout.Card card : layout.cards()) { var order = card.row().order(); boolean own = controller.viewerId() != null && controller.viewerId().equals(order.ownerId()); if (!own && order.type() == com.mo.economy_system.common.market.MarketOrderType.SALES && card.adminActionButton().contains(x, y) && controller.state().can(MarketAction.ADMIN_REMOVE_SALES)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.ADMIN_REMOVE_SALES, order.tradeId())); return true; } if (card.actionButton().contains(x, y)) { MarketAction action = MarketView.actionFor(order, controller.viewerId()); if (action != null) controller.handle(new MarketEvent.ActionClicked(action, order.tradeId())); return true; } }
     if (layout.createSales().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_SALES, null)); return true; }
     if (layout.createDemand().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_DEMAND, null)); return true; }
     if (controller.state().screenState() == ScreenState.ERROR && layout.message().contains(x, y)) { controller.handle(new MarketEvent.Retry(System.nanoTime())); return true; }
@@ -84,7 +85,7 @@ public final class NeoForge1211MarketScreen extends Screen {
     private long requestId = -1;
     @Override public long nextRequestId() { return ClientMarketState.nextPageRequestId(); }
     @Override public void requestPage(long id, int offset, MarketOrderFilter filter, String query) { requestId = id; EconomyServices.platform().network().sendToServer(new MarketDataRequestMessage(id, MarketDataRequestPurpose.PAGE, offset, MarketController.NETWORK_PAGE_SIZE, filter, query)); }
-    @Override public void submit(MarketAction action, MarketRow row) { UUID id = row.order().tradeId(); switch (action) { case BUY -> EconomyServices.platform().network().sendToServer(new PurchaseSalesOrderMessage(id)); case REMOVE_SALES -> EconomyServices.platform().network().sendToServer(new RemoveSalesOrderMessage(id)); case DELIVER_DEMAND -> EconomyServices.platform().network().sendToServer(new DeliverDemandOrderMessage(id)); case CONFIRM_DEMAND -> EconomyServices.platform().network().sendToServer(new ConfirmDemandOrderMessage(id)); case REMOVE_DEMAND -> EconomyServices.platform().network().sendToServer(new RemoveDemandOrderMessage(id)); default -> {} } }
+    @Override public void submit(MarketAction action, MarketRow row) { UUID id = row.order().tradeId(); switch (action) { case BUY -> EconomyServices.platform().network().sendToServer(new PurchaseSalesOrderMessage(id)); case REMOVE_SALES, ADMIN_REMOVE_SALES -> EconomyServices.platform().network().sendToServer(new RemoveSalesOrderMessage(id)); case DELIVER_DEMAND -> EconomyServices.platform().network().sendToServer(new DeliverDemandOrderMessage(id)); case CONFIRM_DEMAND -> EconomyServices.platform().network().sendToServer(new ConfirmDemandOrderMessage(id)); case REMOVE_DEMAND -> EconomyServices.platform().network().sendToServer(new RemoveDemandOrderMessage(id)); default -> {} } }
     @Override public void confirm(MarketAction action, MarketRow row) { if (minecraft != null) minecraft.setScreen(new NeoForge1211MarketConfirmScreen(action, row, NeoForge1211MarketScreen.this)); }
     @Override public void create(MarketAction action) {
       if (minecraft == null) return;

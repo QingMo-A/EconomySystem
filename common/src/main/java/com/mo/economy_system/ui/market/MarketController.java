@@ -9,6 +9,7 @@ import com.mo.economy_system.ui.core.AbstractEconomyScreenController;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import java.util.List;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,18 +19,33 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
   public static final int NETWORK_PAGE_SIZE = EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE;
   private final MarketPort port;
   private final UUID viewerId;
+  private final boolean viewerCanModerate;
   private long startedAt;
   private boolean requestInFlight;
 
   public MarketController(UUID viewerId, MarketPort port) {
+    this(viewerId, false, port);
+  }
+
+  /**
+   * Creates a market controller with the target-provided operator capability.  The capability is
+   * intentionally client-side presentation state only; the existing remove-sales message remains
+   * the authoritative server operation and re-checks the actor permission.
+   */
+  public MarketController(UUID viewerId, boolean viewerCanModerate, MarketPort port) {
     super(new MarketState(List.of(), 0, NETWORK_PAGE_SIZE, 0, 0, 0, MarketOrderFilter.ALL, "", ScreenState.IDLE,
-        null, -1, -1, Set.of(MarketAction.BACK, MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND)));
+        null, -1, -1, navigationActions(viewerCanModerate)));
     this.viewerId = viewerId;
+    this.viewerCanModerate = viewerCanModerate;
     this.port = java.util.Objects.requireNonNull(port, "port");
   }
 
   public UUID viewerId() {
     return viewerId;
+  }
+
+  public boolean viewerCanModerate() {
+    return viewerCanModerate;
   }
 
   @Override public void handle(MarketEvent event) {
@@ -53,8 +69,7 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
     long id = port.nextRequestId();
     if (id < 0) throw new IllegalStateException("market request id must be non-negative");
     startedAt = nowNanos; requestInFlight = true;
-    replaceState(copy(nextPage, ScreenState.LOADING, null, id, state().rows(), Set.of(
-        MarketAction.BACK, MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND)));
+    replaceState(copy(nextPage, ScreenState.LOADING, null, id, state().rows(), navigationActions(viewerCanModerate)));
     port.requestPage(id, nextPage * NETWORK_PAGE_SIZE, state().filter(), state().query());
   }
 
@@ -63,9 +78,10 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
         || state().screenState() != ScreenState.LOADING || event.revision() < state().revision()) return;
     List<MarketRow> rows = event.orders().stream().map(MarketRow::new).toList();
     requestInFlight = false;
-    Set<MarketAction> actions = Set.of(MarketAction.BUY, MarketAction.REMOVE_SALES,
+    Set<MarketAction> actions = EnumSet.of(MarketAction.BUY, MarketAction.REMOVE_SALES,
         MarketAction.DELIVER_DEMAND, MarketAction.CONFIRM_DEMAND, MarketAction.REMOVE_DEMAND,
         MarketAction.BACK, MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND);
+    if (viewerCanModerate) actions.add(MarketAction.ADMIN_REMOVE_SALES);
     replaceState(new MarketState(rows, Math.max(0, event.offset() / NETWORK_PAGE_SIZE), state().pageSize(),
         event.totalMatched(), event.totalSales(), event.totalDemand(), state().filter(), state().query(),
         rows.isEmpty() && event.totalMatched() == 0 ? ScreenState.EMPTY : ScreenState.READY,
@@ -81,16 +97,14 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
 
   private void filter(MarketOrderFilter value) {
     replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, value, state().query(),
-        ScreenState.IDLE, null, -1, state().revision(), Set.of(MarketAction.BACK,
-            MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND)));
+        ScreenState.IDLE, null, -1, state().revision(), navigationActions(viewerCanModerate)));
     request(0, System.nanoTime());
   }
 
   private void query(String value) {
     String next = value == null ? "" : value.trim();
     replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, state().filter(), next,
-        ScreenState.IDLE, null, -1, state().revision(), Set.of(MarketAction.BACK,
-            MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND)));
+        ScreenState.IDLE, null, -1, state().revision(), navigationActions(viewerCanModerate)));
     request(0, System.nanoTime());
   }
 
@@ -116,6 +130,7 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
     return switch (action) {
       case BUY -> order.type() == MarketOrderType.SALES && !own;
       case REMOVE_SALES -> order.type() == MarketOrderType.SALES && own;
+      case ADMIN_REMOVE_SALES -> viewerCanModerate && order.type() == MarketOrderType.SALES && !own;
       case DELIVER_DEMAND -> order.type() == MarketOrderType.DEMAND && !order.delivered() && !own;
       case CONFIRM_DEMAND -> order.type() == MarketOrderType.DEMAND && own && order.delivered();
       case REMOVE_DEMAND -> order.type() == MarketOrderType.DEMAND && own && !order.delivered();
@@ -135,5 +150,12 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
                            List<MarketRow> rows, Set<MarketAction> actions) {
     return new MarketState(rows, Math.max(0, page), state().pageSize(), state().totalMatched(), state().totalSales(),
         state().totalDemand(), state().filter(), state().query(), screenState, error, requestId, state().revision(), actions);
+  }
+
+  private static Set<MarketAction> navigationActions(boolean viewerCanModerate) {
+    EnumSet<MarketAction> actions = EnumSet.of(MarketAction.BACK, MarketAction.CREATE_SALES,
+        MarketAction.CREATE_DEMAND);
+    if (viewerCanModerate) actions.add(MarketAction.ADMIN_REMOVE_SALES);
+    return Set.copyOf(actions);
   }
 }

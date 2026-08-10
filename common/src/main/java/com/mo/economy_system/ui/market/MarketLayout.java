@@ -13,7 +13,15 @@ public final class MarketLayout {
   public static final int BACKGROUND_COLOR = 0xB0000000;
   public static final int CARD_WIDTH = 200;
   public static final int CARD_HEIGHT = 80;
-  private static final int GRID_START_Y = 55;
+  public static final int CARD_SPACING = 8;
+  public static final int CARD_PADDING = 8;
+  public static final int GRID_START_Y = 55;
+  public static final int ACTION_BUTTON_WIDTH = 62;
+  public static final int ACTION_BUTTON_HEIGHT = 18;
+  public static final int ADMIN_BUTTON_WIDTH = 72;
+  public static final int ACTION_BUTTON_GAP = 6;
+  public static final int ICON_SIZE = 32;
+  public static final int ICON_OFFSET_Y = 26;
   private MarketLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, MarketState state) {
@@ -25,7 +33,7 @@ public final class MarketLayout {
     if (metrics == null) metrics = UiTextMetrics.APPROXIMATE;
     UiScale scale = UiScale.fit(physicalWidth, physicalHeight, EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth(), height = scale.virtualHeight(), panel = EconomyUiTheme.PANEL_PADDING;
-    int spacing = EconomyUiTheme.CARD_SPACING;
+    int spacing = CARD_SPACING;
     float progress = Math.max(0f, Math.min(1f, animationProgress));
     int contentOffset = MarketOpenAnimation.contentOffset(progress);
     int topButtonOffset = MarketOpenAnimation.topButtonOffset(progress);
@@ -35,9 +43,6 @@ public final class MarketLayout {
     int availableHeight = Math.max(CARD_HEIGHT, controlsY - GRID_START_Y);
     int rowCapacity = Math.max(1, (availableHeight + spacing) / (CARD_HEIGHT + spacing));
     int pageSize = EconomyNetworkLimits.MAX_MARKET_PAGE_SIZE;
-    if (columnCapacity * rowCapacity < pageSize) {
-      throw new IllegalStateException("virtual market viewport cannot expose a complete network page");
-    }
     int columns = Math.min(pageSize, columnCapacity);
     int rows = (pageSize + columns - 1) / columns;
     List<Card> cards = new ArrayList<>();
@@ -46,34 +51,46 @@ public final class MarketLayout {
       int col = i % columns, row = i / columns;
       int x = panel + col * (CARD_WIDTH + spacing), y = GRID_START_Y + row * (CARD_HEIGHT + spacing) + contentOffset;
       UiRect card = new UiRect(x, y, CARD_WIDTH, CARD_HEIGHT);
-      UiRect icon = new UiRect(x + (CARD_WIDTH - 32) / 2, y + 26, 32, 32);
-      UiRect action = new UiRect(x + CARD_WIDTH - 8 - 62, y + CARD_HEIGHT - 8 - 18, 62, 18);
-      cards.add(new Card(visible.get(i), card, icon, action));
+      UiRect icon = new UiRect(x + (CARD_WIDTH - ICON_SIZE) / 2, y + ICON_OFFSET_Y, ICON_SIZE, ICON_SIZE);
+      UiRect action = new UiRect(x + CARD_WIDTH - CARD_PADDING - ACTION_BUTTON_WIDTH,
+          y + CARD_HEIGHT - CARD_PADDING - ACTION_BUTTON_HEIGHT,
+          ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
+      UiRect admin = new UiRect(action.x() - ACTION_BUTTON_GAP - ADMIN_BUTTON_WIDTH, action.y(),
+          ADMIN_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
+      cards.add(new Card(visible.get(i), card, icon, action, admin));
     }
-    UiRect previous = new UiRect(Math.max(panel, width / 2 - 110), controlsY, 50, 24);
-    UiRect page = new UiRect(Math.max(panel, width / 2 - 28), controlsY, 56, 24);
-    UiRect next = new UiRect(Math.min(Math.max(panel, width - panel - 50), width / 2 + 62), controlsY, 50, 24);
+    String pageTextValue = (state.page() + 1) + " / " + state.totalPages();
+    int pageTextWidth = Math.max(1, metrics.width(pageTextValue));
+    int pageTextX = width / 2 - pageTextWidth / 2;
+    UiRect previous = new UiRect(pageTextX - 50 - 12, controlsY, 50, 24);
+    UiRect page = new UiRect(pageTextX, controlsY, pageTextWidth, 24);
+    UiRect next = new UiRect(pageTextX + pageTextWidth + 12, controlsY, 50, 24);
     UiRect search = new UiRect(panel, 20 - searchOffset, Math.min(200, Math.max(1, width - panel * 2)), 20);
     int lineHeight = Math.max(1, metrics.lineHeight());
     int filterY = height - panel - lineHeight + contentOffset;
     List<FilterTab> filterTabs = new ArrayList<>();
     int filterX = panel;
     for (com.mo.economy_system.common.network.MarketOrderFilter value : com.mo.economy_system.common.network.MarketOrderFilter.values()) {
-      int tabWidth = Math.max(38, metrics.width(filterLabel(value)) + 20);
+      int tabWidth = Math.max(1, metrics.translatedWidth(filterKey(value), List.of()) + 20);
       filterTabs.add(new FilterTab(value, new UiRect(filterX, filterY, tabWidth, lineHeight + 3)));
       filterX += tabWidth;
     }
     UiRect filter = new UiRect(panel, filterY, Math.max(1, filterX - panel), lineHeight + 3);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), GRID_START_Y + contentOffset + 50, Math.min(180, Math.max(1, width - panel * 2)), 24);
-    UiRect title = new UiRect(panel, filterY, Math.max(1, metrics.width("Market")), lineHeight);
+    UiRect title = new UiRect(panel, filterY, 120, lineHeight + 10);
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight + contentOffset, 90, lineHeight);
     int topButtonY = 18 - topButtonOffset;
-    UiRect createSales = new UiRect(Math.max(panel, width - panel - 84 - 10 - 84), topButtonY, 84, 24);
-    UiRect createDemand = new UiRect(Math.max(panel, width - panel - 84), topButtonY, 84, 24);
+    UiRect createSales = new UiRect(Math.max(panel, width - panel - 84), topButtonY, 84, 24);
+    UiRect createDemand = new UiRect(Math.max(panel, width - panel - 84 - 10 - 84), topButtonY, 84, 24);
     return new Layout(scale, title, esc, search, filter, filterTabs, createSales, createDemand, List.copyOf(cards), previous, page, next, message, pageSize, columns, rows, metrics, progress);
   }
-  private static String filterLabel(com.mo.economy_system.common.network.MarketOrderFilter value) {
-    return switch (value) { case ALL -> "All"; case MINE -> "Mine"; case SALES -> "Sales"; case DEMAND -> "Demand"; };
+  private static String filterKey(com.mo.economy_system.common.network.MarketOrderFilter value) {
+    return switch (value) {
+      case ALL -> "screen.market.filter.all";
+      case MINE -> "screen.market.filter.mine";
+      case SALES -> "screen.market.filter.sales";
+      case DEMAND -> "screen.market.filter.demand";
+    };
   }
   public record Layout(UiScale scale, UiRect title, UiRect esc, UiRect search, UiRect filter,
                        List<FilterTab> filterTabs, UiRect createSales, UiRect createDemand, List<Card> cards, UiRect previousButton,
@@ -82,5 +99,6 @@ public final class MarketLayout {
     public Layout { cards = List.copyOf(cards); }
   }
   public record FilterTab(com.mo.economy_system.common.network.MarketOrderFilter filter, UiRect rect) {}
-  public record Card(MarketRow row, UiRect card, UiRect itemIcon, UiRect actionButton) {}
+  public record Card(MarketRow row, UiRect card, UiRect itemIcon, UiRect actionButton,
+                     UiRect adminActionButton) {}
 }
