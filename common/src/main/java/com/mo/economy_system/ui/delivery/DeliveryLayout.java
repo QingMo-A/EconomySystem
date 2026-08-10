@@ -2,6 +2,7 @@ package com.mo.economy_system.ui.delivery;
 
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,12 @@ public final class DeliveryLayout {
   private DeliveryLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, DeliveryState state) {
+    return calculate(physicalWidth, physicalHeight, state, UiTextMetrics.APPROXIMATE);
+  }
+
+  public static Layout calculate(int physicalWidth, int physicalHeight, DeliveryState state,
+                                 UiTextMetrics metrics) {
+    if (metrics == null) metrics = UiTextMetrics.APPROXIMATE;
     UiScale scale = UiScale.fit(physicalWidth, physicalHeight,
         EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth(), height = scale.virtualHeight();
@@ -35,25 +42,30 @@ public final class DeliveryLayout {
       UiRect claim = new UiRect(x + CARD_WIDTH - 8 - 60, y + CARD_HEIGHT - 8 - 18, 60, 18);
       cards.add(new Card(visible.get(i), card, item, claim));
     }
-    int controlsY = Math.max(GRID_START_Y, height - panel - 40);
-    UiRect previous = new UiRect(Math.max(panel, width / 2 - 110), controlsY, 50, 24);
-    UiRect page = new UiRect(Math.max(panel, width / 2 - 28), controlsY, 56, 24);
-    UiRect next = new UiRect(Math.min(Math.max(panel, width - panel - 50), width / 2 + 62), controlsY, 50, 24);
+    int controlsY = Math.max(GRID_START_Y, height - FOOTER_HEIGHT);
+    String pageTextValue = (state.page() + 1) + " / " + state.totalPages();
+    int pageTextWidth = Math.max(1, metrics.width(pageTextValue));
+    int pageTextX = width / 2 - pageTextWidth / 2;
+    UiRect previous = new UiRect(Math.max(panel, pageTextX - 50 - 12), controlsY, 50, 24);
+    UiRect page = new UiRect(Math.max(panel, pageTextX), controlsY, pageTextWidth, 24);
+    UiRect next = new UiRect(Math.min(Math.max(panel, width - panel - 50), page.x() + page.width() + 12), controlsY, 50, 24);
     UiRect search = new UiRect(panel, 20, Math.min(200, Math.max(1, width - panel * 2)), 20);
     UiRect searchBackground = new UiRect(search.x() - 4, search.y() - 2,
         search.width() + 8, search.height() + 4);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), Math.max(GRID_START_Y, height / 2 - 12),
         Math.min(180, Math.max(1, width - panel * 2)), 24);
-    UiRect title = new UiRect(panel, Math.max(panel, height - panel - 40), 140, 19);
-    UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - 14, 90, 14);
+    int lineHeight = Math.max(1, metrics.lineHeight());
+    int titleHeight = lineHeight + 10;
+    UiRect title = new UiRect(panel, Math.max(panel, height - panel - titleHeight), 140, titleHeight);
+    UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight, 90, lineHeight);
     return new Layout(scale, title, esc, search, searchBackground, List.copyOf(cards), previous,
-        page, next, message, pageSize, columns, rows);
+        page, next, message, pageSize, columns, rows, metrics);
   }
 
   public record Layout(UiScale scale, UiRect title, UiRect esc, UiRect search,
                        UiRect searchBackground, List<Card> cards, UiRect previousButton,
                        UiRect pageText, UiRect nextButton, UiRect message,
-                       int pageSize, int columns, int rows) {
+                       int pageSize, int columns, int rows, UiTextMetrics metrics) {
     public Layout { cards = List.copyOf(cards); }
   }
 

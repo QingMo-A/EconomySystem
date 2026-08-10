@@ -130,10 +130,10 @@ public final class NeoForge1211DeliveryBoxScreen extends Screen {
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
   private DeliveryLayout.Layout commonLayout() {
-    DeliveryLayout.Layout layout = DeliveryLayout.calculate(width, height, controller.state());
+    DeliveryLayout.Layout layout = DeliveryLayout.calculate(width, height, controller.state(), metrics());
     if (layout.pageSize() != controller.state().pageSize()) {
       controller.handle(new DeliveryEvent.ViewportChanged(layout.pageSize()));
-      layout = DeliveryLayout.calculate(width, height, controller.state());
+      layout = DeliveryLayout.calculate(width, height, controller.state(), metrics());
     }
     return layout;
   }
@@ -144,6 +144,9 @@ public final class NeoForge1211DeliveryBoxScreen extends Screen {
     search.setY(Math.round(layout.search().y() * scale.value()));
     search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value())));
     search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value())));
+  }
+  private com.mo.economy_system.ui.text.UiTextMetrics metrics() {
+    return new NeoForge1211UiTextMetrics(font);
   }
 
   private final class Port implements DeliveryPort {

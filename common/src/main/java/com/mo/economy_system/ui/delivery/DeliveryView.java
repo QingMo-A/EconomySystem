@@ -3,10 +3,13 @@ package com.mo.economy_system.ui.delivery;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
+import com.mo.economy_system.ui.renderer.TooltipLine;
+import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
+import java.util.Optional;
 
 /** Semantic delivery-box renderer shared by Forge and NeoForge. */
 public final class DeliveryView {
@@ -15,12 +18,13 @@ public final class DeliveryView {
   public static void render(EconomyUiRenderer renderer, DeliveryState state,
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), DeliveryLayout.BACKGROUND_COLOR);
-    renderer.card(layout.searchBackground(), EconomyUiTheme.DELIVERY_CARD,
+    renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.DELIVERY_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.delivery_box.search", List.of(), layout.search(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
-    renderer.scaledIconText(UiIcon.DELIVERY, "Delivery Box", layout.title().x() + 8,
+    renderer.scaledIconTranslatedText(UiIcon.DELIVERY, "screen.delivery_box.title", List.of(),
+        layout.title().x() + 8,
         layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE,
         EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.delivery_box.esc", List.of(), layout.esc(),
@@ -42,28 +46,52 @@ public final class DeliveryView {
 
     for (DeliveryLayout.Card card : layout.cards()) {
       var entry = card.row().entry();
+      // The legacy delivery renderer intentionally reuses the shop-orange card accent;
+      // the claim action itself remains delivery-green.
       renderer.card(card.card(), EconomyUiTheme.SHOP_CARD, card.card().contains(mouseX, mouseY));
       renderer.item(entry.item().itemId(), card.itemIcon());
-      String itemName = entry.item().itemId() + (entry.item().count() > 1 ? " x" + entry.item().count() : "");
-      renderer.textInRect(itemName,
-          new UiRect(card.card().x() + 48, card.card().y() + 8,
-              card.card().width() - 48 - 8 - 60 - 6, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+      renderer.itemDisplayName(entry.item().itemId(),
+          new UiRect(card.card().x() + 48, card.card().y() + 8, 54, 14),
+          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+      if (entry.item().count() > 1) {
+        renderer.textInRect(" x" + entry.item().count(),
+            new UiRect(card.card().x() + 102, card.card().y() + 8, 24, 14),
+            EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+      }
       renderer.translatedTextInRect("screen.delivery_box.item.source", List.of(entry.source()),
           new UiRect(card.card().x() + 48, card.card().y() + 25,
               card.card().width() - 48 - 8, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
-      renderer.translatedButton(card.claimButton(), EconomyUiTheme.HOME_DELIVERY_BUTTON,
+      renderer.translatedButton(card.claimButton(), EconomyUiTheme.DELIVERY_CLAIM_BUTTON,
           "button.delivery_box.claim", List.of(), card.claimButton().contains(mouseX, mouseY),
           state.can(DeliveryAction.CLAIM));
     }
     if (state.totalPages() > 1) {
       boolean previousEnabled = state.page() > 0;
-      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
+      renderer.button(layout.previousButton(), previousEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, "",
           layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.icon(UiIcon.ARROW_LEFT, new com.mo.economy_system.ui.geometry.UiRect(
+          layout.previousButton().x() + 19, layout.previousButton().y() + 6, 12, 12));
       renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
       boolean nextEnabled = state.page() + 1 < state.totalPages();
-      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
+      renderer.button(layout.nextButton(), nextEnabled ? EconomyUiTheme.DELIVERY_PAGE_BUTTON : EconomyUiTheme.DELIVERY_PAGE_BUTTON_DISABLED, "",
           layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+      renderer.icon(UiIcon.ARROW_RIGHT, new com.mo.economy_system.ui.geometry.UiRect(
+          layout.nextButton().x() + 19, layout.nextButton().y() + 6, 12, 12));
     }
+    tooltipAt(layout, mouseX, mouseY).ifPresent(tooltip -> renderer.tooltip(tooltip, mouseX, mouseY));
+  }
+
+  public static Optional<TooltipModel> tooltipAt(DeliveryLayout.Layout layout, int mouseX, int mouseY) {
+    for (DeliveryLayout.Card card : layout.cards()) {
+      if (card.itemIcon().contains(mouseX, mouseY)) {
+        var item = card.row().entry().item();
+        return Optional.of(new TooltipModel(List.of(
+            new TooltipLine.Item("screen.delivery_box.item.name_and_count", item.itemId(),
+                List.of(Integer.toString(item.count()))),
+            new TooltipLine.Translated("screen.delivery_box.item.source", List.of(card.row().entry().source())))));
+      }
+    }
+    return Optional.empty();
   }
 }
