@@ -987,7 +987,7 @@ Started: `2026-08-09 America/Caracas`
 | 0 | Home | ACCEPTED | `ec4730d` | `a2cb32c` | 821 | 886 | passed | pixel parity template |
 | 1 | About + Balance | ACCEPTED | `21f37d1a` | `<docs>` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
 | 2 | Shop family | ACCEPTED | `82dbf067` | `<docs>` | 821 | 886 | passed | Catalog/purchase card geometry, arrows, dynamic price delta, common animation |
-| 3 | Market family | PENDING |  |  |  |  |  |  |
+| 3 | Market family | ACCEPTED | `6ab64e31` | `<docs>` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
 | 4 | Delivery | PENDING |  |  |  |  |  |  |
 | 5 | Remaining Territory | PENDING |  |  |  |  |  |  |
 | 6 | File Check + Transfer | PENDING |  |  |  |  |  |  |
