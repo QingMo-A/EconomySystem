@@ -142,6 +142,34 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     graphics.pose().popPose();
   }
 
+  @Override public void scaledIconTranslatedText(UiIcon icon, String key, List<String> arguments,
+                                                  int originX, int originY, float scale,
+                                                  int iconSize, int iconAdvance, int textColor) {
+    graphics.pose().pushPose();
+    graphics.pose().translate(originX, originY, 0);
+    graphics.pose().scale(scale, scale, 1.0f);
+    icon(icon, new UiRect(0, -1, iconSize, iconSize));
+    graphics.drawString(font, Component.translatable(key, (arguments == null ? List.<String>of() : arguments).toArray()),
+        iconAdvance, 0, textColor);
+    graphics.pose().popPose();
+  }
+
+  @Override public void itemDisplayName(String itemId, UiRect rect, int color, UiTextAlignment alignment) {
+    ResourceLocation location = ResourceLocation.tryParse(itemId);
+    var item = location == null ? Items.AIR : BuiltInRegistries.ITEM.get(location);
+    Component name = item == null || item == Items.AIR ? Component.literal(itemId)
+        : item.getDescription();
+    String clipped = font.plainSubstrByWidth(name.getString(), rect.width());
+    int textWidth = font.width(clipped);
+    int x = switch (alignment) {
+      case LEFT -> rect.x();
+      case CENTER -> rect.x() + Math.max(0, (rect.width() - textWidth) / 2);
+      case RIGHT -> rect.right() - textWidth;
+    };
+    int y = rect.y() + Math.max(0, (rect.height() - font.lineHeight) / 2);
+    graphics.drawString(font, Component.literal(clipped), x, y, color);
+  }
+
   @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX,
                                              int originY, float scale, int iconSize,
                                              int iconAdvance) {
@@ -161,6 +189,9 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     return new UiTextMetrics() {
       @Override public int width(String text) { return font.width(text == null ? "" : text); }
       @Override public int lineHeight() { return font.lineHeight; }
+      @Override public int translatedWidth(String key, List<String> arguments) {
+        return font.width(Component.translatable(key, (arguments == null ? List.<String>of() : arguments).toArray()));
+      }
     };
   }
 

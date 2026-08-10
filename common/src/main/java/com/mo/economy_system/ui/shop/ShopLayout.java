@@ -12,8 +12,15 @@ public final class ShopLayout {
   public static final int BACKGROUND_COLOR = 0xB0000000;
   public static final int CARD_WIDTH = 100;
   public static final int CARD_HEIGHT = 80;
-  private static final int GRID_START_Y = 55;
-  private static final int FOOTER_HEIGHT = 28;
+  public static final int CARD_SPACING = 8;
+  public static final int PANEL_PADDING = 12;
+  public static final int GRID_START_Y = 55;
+  public static final int ROWS = 3;
+  public static final int ICON_SIZE = 32;
+  public static final int SEARCH_WIDTH = 200;
+  public static final int SEARCH_HEIGHT = 20;
+  public static final int PAGE_BUTTON_WIDTH = 50;
+  public static final int PAGE_BUTTON_HEIGHT = 24;
   private ShopLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, ShopState state) {
@@ -25,36 +32,42 @@ public final class ShopLayout {
     if (metrics == null) metrics = UiTextMetrics.APPROXIMATE;
     UiScale scale = UiScale.fit(physicalWidth, physicalHeight, EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth(), height = scale.virtualHeight();
-    int panel = EconomyUiTheme.PANEL_PADDING, spacing = EconomyUiTheme.CARD_SPACING;
+    int panel = PANEL_PADDING, spacing = CARD_SPACING;
     int contentOffset = ShopOpenAnimation.contentOffset(animationProgress);
     int searchOffset = ShopOpenAnimation.searchOffset(animationProgress);
-    int columns = Math.max(1, (width - panel * 2 + spacing) / (CARD_WIDTH + spacing));
-    int availableHeight = Math.max(CARD_HEIGHT, height - GRID_START_Y - FOOTER_HEIGHT - panel);
-    int rows = Math.max(1, (availableHeight + spacing) / (CARD_HEIGHT + spacing));
-    int pageSize = Math.max(1, columns * rows);
+    int contentWidth = Math.max(1, width - panel * 2);
+    int columns = Math.max(1, (contentWidth + spacing) / (CARD_WIDTH + spacing));
+    int rows = ROWS;
+    int pageSize = columns * rows;
+    int totalGridWidth = columns * CARD_WIDTH + (columns - 1) * spacing;
+    int gridStartX = panel + Math.max(0, (contentWidth - totalGridWidth) / 2);
     List<Card> cards = new ArrayList<>();
     List<ShopRow> visible = state.visibleRows();
     for (int i = 0; i < visible.size() && i < pageSize; i++) {
       int col = i % columns, row = i / columns;
-      int x = panel + col * (CARD_WIDTH + spacing), y = GRID_START_Y + row * (CARD_HEIGHT + spacing) + contentOffset;
+      int x = gridStartX + col * (CARD_WIDTH + spacing), y = GRID_START_Y + row * (CARD_HEIGHT + spacing) + contentOffset;
       UiRect card = new UiRect(x, y, CARD_WIDTH, CARD_HEIGHT);
-      // The legacy catalog opens purchase from the whole card; retain a tiny semantic action
-      // rect for existing adapters while the target hit-test uses the full card.
-      UiRect buy = new UiRect(x, y, 1, 1);
-      UiRect item = new UiRect(x + CARD_WIDTH / 2 - 16, y + 22, 32, 32);
+      // The card itself is the legacy purchase hit target; no invisible 1x1 button exists.
+      UiRect buy = card;
+      UiRect item = new UiRect(x + (CARD_WIDTH - ICON_SIZE) / 2, y + 26, ICON_SIZE, ICON_SIZE);
       cards.add(new Card(visible.get(i), card, item, buy));
     }
-    int controlsY = Math.max(GRID_START_Y, height - panel - 28) + contentOffset;
-    UiRect previous = new UiRect(Math.max(panel, width / 2 - 110), controlsY, 50, 24);
-    UiRect page = new UiRect(Math.max(panel, width / 2 - 28), controlsY, 56, 24);
-    UiRect next = new UiRect(Math.min(Math.max(panel, width - panel - 50), width / 2 + 62), controlsY, 50, 24);
-    UiRect search = new UiRect(panel, 20 - searchOffset, Math.min(200, Math.max(1, width - panel * 2)), 20);
+    String pageTextValue = (state.page() + 1) + " / " + state.totalPages();
+    int pageTextWidth = Math.max(1, metrics.width(pageTextValue));
+    int pageTextX = width / 2 - pageTextWidth / 2;
+    int controlsY = height - 40 + contentOffset;
+    UiRect previous = new UiRect(pageTextX - PAGE_BUTTON_WIDTH - 12, controlsY,
+        PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+    UiRect page = new UiRect(pageTextX, controlsY, pageTextWidth, PAGE_BUTTON_HEIGHT);
+    UiRect next = new UiRect(pageTextX + pageTextWidth + 12, controlsY,
+        PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT);
+    UiRect search = new UiRect(panel, 20 - searchOffset, Math.min(SEARCH_WIDTH, Math.max(1, width - panel * 2)), SEARCH_HEIGHT);
     UiRect searchBackground = new UiRect(search.x() - 4, search.y() - 2, search.width() + 8, search.height() + 4);
     UiRect message = new UiRect(Math.max(panel, (width - 180) / 2), GRID_START_Y + contentOffset + 50,
         Math.min(180, Math.max(1, width - panel * 2)), 24);
     int lineHeight = Math.max(1, metrics.lineHeight());
     UiRect title = new UiRect(panel, height - panel - lineHeight - 10 + contentOffset,
-        Math.max(1, Math.min(120, 16 + metrics.width("Shop") + 14)), lineHeight + 10);
+        120, lineHeight + 10);
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight + contentOffset,
         90, lineHeight);
     return new Layout(scale, title, esc, search, searchBackground, List.copyOf(cards), previous, page, next,

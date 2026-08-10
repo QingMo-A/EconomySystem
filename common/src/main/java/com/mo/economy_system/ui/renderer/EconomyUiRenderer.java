@@ -3,6 +3,7 @@ package com.mo.economy_system.ui.renderer;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.text.UiTextSpan;
+import com.mo.economy_system.ui.theme.UiInputFrameStyle;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.List;
@@ -27,6 +28,11 @@ public interface EconomyUiRenderer {
 
     void card(UiRect rect, UiCardStyle style, boolean hovered);
 
+    /** Draws only the four-edge chrome around a target-owned native text field. */
+    default void inputFrame(UiRect rect, UiInputFrameStyle style, boolean focused) {
+        UiInputFramePlan.frame(rect, style, focused).commands().forEach(command -> fill(command.rect(), command.argb()));
+    }
+
     void button(UiRect rect, UiButtonStyle style, String text, boolean hovered, boolean enabled);
 
     void translatedButton(UiRect rect, UiButtonStyle style, String key,
@@ -48,6 +54,18 @@ public interface EconomyUiRenderer {
     /** Draws one icon/text group under a shared local transform. */
     void scaledIconText(UiIcon icon, String text, int originX, int originY,
                         float scale, int iconSize, int iconAdvance, int textColor);
+
+    /** Draws an icon plus a localized title using one shared local transform. */
+    default void scaledIconTranslatedText(UiIcon icon, String key, List<String> arguments,
+                                           int originX, int originY, float scale, int iconSize,
+                                           int iconAdvance, int textColor) {
+        scaledIconText(icon, key, originX, originY, scale, iconSize, iconAdvance, textColor);
+    }
+
+    /** Draws the native localized item hover name in a semantic text rectangle. */
+    default void itemDisplayName(String itemId, UiRect rect, int color, UiTextAlignment alignment) {
+        textInRect(itemId, rect, color, alignment);
+    }
 
     /** Draws a styled icon/text group under one shared local transform. */
     void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY,

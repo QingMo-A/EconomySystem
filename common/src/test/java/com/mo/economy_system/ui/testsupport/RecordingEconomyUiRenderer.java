@@ -9,6 +9,7 @@ import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
+import com.mo.economy_system.ui.theme.UiInputFrameStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,6 +47,10 @@ public final class RecordingEconomyUiRenderer implements EconomyUiRenderer {
     add("card", rect, style + ":" + hovered, true);
   }
 
+  @Override public void inputFrame(UiRect rect, UiInputFrameStyle style, boolean focused) {
+    add("inputFrame", rect, style + ":" + focused, true);
+  }
+
   @Override public void button(UiRect rect, UiButtonStyle style, String text,
                                boolean hovered, boolean enabled) {
     add("button", rect, text + ":" + style + ":" + hovered, enabled);
@@ -76,6 +81,17 @@ public final class RecordingEconomyUiRenderer implements EconomyUiRenderer {
                                        int textColor) {
     add("scaledIconText", new UiRect(originX, originY, iconSize, iconSize),
         icon + ":" + text + ":" + scale + ":" + iconAdvance, true);
+  }
+
+  @Override public void scaledIconTranslatedText(UiIcon icon, String key, List<String> arguments,
+                                                 int originX, int originY, float scale, int iconSize,
+                                                 int iconAdvance, int textColor) {
+    add("scaledIconTranslatedText", new UiRect(originX, originY, iconSize, iconSize),
+        icon + ":" + key + arguments + ":" + scale + ":" + iconAdvance, true);
+  }
+
+  @Override public void itemDisplayName(String itemId, UiRect rect, int color, UiTextAlignment alignment) {
+    add("itemDisplayName", rect, itemId + ":" + alignment, true);
   }
 
   @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans,

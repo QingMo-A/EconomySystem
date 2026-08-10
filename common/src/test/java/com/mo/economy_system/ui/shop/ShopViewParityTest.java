@@ -27,8 +27,8 @@ class ShopViewParityTest {
         .filter(operation -> operation.kind().equals("translatedButton"))
         .filter(operation -> operation.value().startsWith("screen.shop.buy")).count());
     assertTrue(forge.operations().stream().anyMatch(operation ->
-        operation.kind().equals("translatedTextInRect")
-            && operation.value().startsWith("screen.shop.price")));
+        operation.kind().equals("textInRect")
+            && operation.value().startsWith("￥")));
   }
 
   @Test

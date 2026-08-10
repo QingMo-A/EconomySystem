@@ -1,5 +1,7 @@
 package com.mo.economy_system.ui.text;
 
+import java.util.List;
+
 /**
  * Loader-neutral text measurements used by common UI layout code.
  *
@@ -10,6 +12,11 @@ public interface UiTextMetrics {
     int width(String text);
 
     int lineHeight();
+
+    /** Measures a localized string using the target's native font and translation resolver. */
+    default int translatedWidth(String key, List<String> arguments) {
+        return width(key == null ? "" : key);
+    }
 
     /** A deterministic approximation for pure common tests and tooling. */
     UiTextMetrics APPROXIMATE = new UiTextMetrics() {
