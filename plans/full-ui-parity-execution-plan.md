@@ -1,6 +1,6 @@
 # EconomySystem 全 UI Parity 自治执行计划
 
-> 状态：待 Codex 执行（Autonomous Execution Plan）  
+> 状态：Codex 执行中（Forensic Reconciliation Pass）
 > 仓库：`QingMo-A/EconomySystem`  
 > 分支：`bridge`  
 > 执行锚点：本计划创建前的已验收 UI 基线 `a2cb32c42ad7438ea9dd71b29e1818ac06f1415d`（`document home pixel parity`）  
@@ -972,6 +972,33 @@ if ($local -ne $remote) {
 
 # 17. Execution Ledger
 
+### Forensic Reconciliation Pass
+
+The original Phase 1–7 entries below are historical first-pass checkpoints.
+Their `ACCEPTED` labels mean `FIRST_PASS_ACCEPTED` only; they are not final
+reference-parity evidence. This pass reopens every active family against the
+legacy source at `f334e640ca1e24157511b7e06f1f76efba90152b` and records exact
+legacy tests, production corrections, target test counts, and any explicit
+deviation in the separate ledger below.
+
+### Forensic Verification Ledger
+
+| Family | Status | Legacy source | New exact tests | Code SHA | Docs SHA | Forge | NeoForge | Build | Deviation |
+|---|---|---|---|---|---|---:|---:|---|---|
+| Shop | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/shop/Screen_Shop.java`, `Screen_BuyItem.java`, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
+| Market | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/market/Screen_Market.java`, create/confirm screens, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | admin capability to be verified |
+| Delivery | PENDING | `src/main/java/com/mo/economy_system/screen/economy_system/deliver_box/Screen_DeliveryBox.java`, `CardRenderer.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
+| About + Balance | PENDING | `src/main/java/com/mo/economy_system/screen/Screen_About.java`, `Screen_BalanceLog.java` at forensic reference | pending | pending | pending | pending | pending | pending | none recorded |
+| Remaining Territory | PENDING | list/detail/access/rules/buff/invite/confirmation screens at forensic reference | pending | pending | pending | pending | pending | pending | Territory Manage frozen |
+| File Check + Transfer | PENDING | file-check and checked-transfer screens at forensic reference | pending | pending | pending | pending | pending | pending | safety deviations recorded explicitly |
+| Strict global audit | PENDING | all active screens and shared UI primitives | pending | pending | pending | pending | pending | pending | pending |
+
+### First-pass status mapping
+
+All historical Phase 1–7 rows below are `FIRST_PASS_ACCEPTED` until their
+corresponding forensic row above reaches `VERIFIED` or
+`BLOCKED_WITH_FOLLOWUP`.
+
 Codex 在开始时填写：
 
 ```text
@@ -985,13 +1012,13 @@ Started: `2026-08-09 America/Caracas`
 |---|---|---|---|---|---:|---:|---|---|
 | 0 | Territory Manage | ACCEPTED | `6976818` | `cb7228f` | inherited | inherited | passed | pixel parity template |
 | 0 | Home | ACCEPTED | `ec4730d` | `a2cb32c` | 821 | 886 | passed | pixel parity template |
-| 1 | About + Balance | ACCEPTED | `21f37d1a` | `921a1193` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
-| 2 | Shop family | ACCEPTED | `82dbf067` | `fec80f38` | 821 | 886 | passed | Catalog/purchase card geometry, arrows, dynamic price delta, common animation |
-| 3 | Market family | ACCEPTED | `6ab64e31` | `4ffaef18` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
-| 4 | Delivery | ACCEPTED | `2b5ede4a` | `9199d91e` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
-| 5 | Remaining Territory | ACCEPTED | `65094073` | `7090ee7b` | 821 | 886 | passed | List/detail/access/rules, buffs, invite and confirmation legacy geometry, title/version cards, pagination and physical backgrounds |
-| 6 | File Check + Transfer | ACCEPTED | `f260728d` | `e481a46e` | 821 | 886 | passed | Consent/result shared chrome, physical backgrounds, explicit safety semantics and target-only lifecycle APIs preserved |
-| 7 | Global audit | ACCEPTED | `49387b1` | `ddadf482` | 821 | 886 | passed | Active-screen/common-contract, target visual authority, shared resource, fake-icon, metrics, renderer and Forge/NeoForge JAR isolation audits passed |
+| 1 | About + Balance | FIRST_PASS_ACCEPTED | `21f37d1a` | `921a1193` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 2 | Shop family | FIRST_PASS_ACCEPTED | `82dbf067` | `fec80f38` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 3 | Market family | FIRST_PASS_ACCEPTED | `6ab64e31` | `4ffaef18` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 4 | Delivery | FIRST_PASS_ACCEPTED | `2b5ede4a` | `9199d91e` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 5 | Remaining Territory | FIRST_PASS_ACCEPTED | `65094073` | `7090ee7b` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 6 | File Check + Transfer | FIRST_PASS_ACCEPTED | `f260728d` | `e481a46e` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
+| 7 | Global audit | FIRST_PASS_ACCEPTED | `49387b1` | `ddadf482` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
 
 允许状态：
 
