@@ -8,7 +8,7 @@ Delivery protocols `31..33` use `DeliveryBoxWireCodec` and immutable `DeliveryBo
 
 Territory management protocols `36..43` use common UUID-only or stable-ID messages. Protocol `40` carries one bounded `Owned` snapshot, protocols `41/42` resolve player names on the server, and protocol `43` uses stable rule/action IDs. Both targets share the services and codecs; NeoForge uses the canonical manager while Forge adapts strict raw NBT and its own client/session entry points. The eleven superseded target Packet classes for these protocols are deleted.
 
-Latest verification on 2026-08-09 executed 816 Forge tests and 881 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed after recompiling both targets. The cross-loader, gameplay-parity and removed-Packet audits remain covered by the target test suites.
+Latest verification on 2026-08-09 executed 821 Forge tests and 886 NeoForge tests with no failures or errors. Each target skipped the same Windows symlink-permission test. `buildAllTargets --rerun-tasks` passed after recompiling both targets. The cross-loader, gameplay-parity and removed-Packet audits remain covered by the target test suites.
 
 ## Protocol 21 spatial boundary hardening
 
@@ -377,6 +377,14 @@ The footer reuses `VERSION_CARD`, the HOME icon, aqua `Economy` and
 light-purple `System` spans, whole-content scaling and the reference decoration
 line.
 
+The Home footer card is produced by `HomeLayout` itself using the legacy
+`icon + text` scale formula, integer truncation and trailing 16px card padding;
+target renderers no longer clamp the whole card to the left panel. Physical
+background fills happen in each target renderer before the virtual pose, while
+the common view renders only UI content. The shared `EconomyUiRenderer` contract
+is fail-closed for translated icon buttons, transformed icon/text groups and
+font metrics: both active targets provide explicit native implementations.
+
 Opening animation is common and deterministic: 500ms ease-out cubic, -50px
 left-panel and +50px right-panel offsets. Layout and hitboxes are calculated
 from the same animated rectangles. Loading, error, timeout and retry states are
@@ -384,13 +392,13 @@ retained, but a data error never disables Home navigation.
 
 Territory Manage: pixel parity accepted.
 
-Home: structural parity accepted; behavior parity accepted; visual/reference
-parity accepted. Home request/revision safety and loading/error/timeout recovery
-are retained.
+Home: structural parity accepted; behavior parity accepted; pixel parity
+accepted. Home request/revision safety and loading/error/timeout recovery are
+retained.
 
 Other UI: visual parity pending.
 
 Verification for the Home pass: Forge and NeoForge target test suites and
-`buildAllTargets` pass locally. The code commit is `restore home visual parity`;
+`buildAllTargets` pass locally. The code commit is `finish home pixel parity`;
 this migration note is intentionally kept in the separate
-`document home visual parity` commit.
+`document home pixel parity` commit.
