@@ -66,10 +66,12 @@ final class Screen_CheckedFileTransferResult extends Screen {
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     TransferResultLayout.Layout layout = TransferResultLayout.calculate(width, height, controller.state());
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TransferResultLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     TransferResultView.render(
-        new NeoForge1211UiRenderer(graphics, font),
+        renderer,
         controller.state(),
         layout,
         scale.toVirtualX(mouseX),

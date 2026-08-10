@@ -7,6 +7,7 @@ import java.util.List;
 
 /** Shared virtual-coordinate layout for checked-file transfer consent. */
 public final class TransferConsentLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private TransferConsentLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight) {

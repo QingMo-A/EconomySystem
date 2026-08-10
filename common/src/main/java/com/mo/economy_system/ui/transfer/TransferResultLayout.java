@@ -7,6 +7,7 @@ import java.util.List;
 
 /** Shared virtual-coordinate layout for artifact decisions and terminal transfer messages. */
 public final class TransferResultLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private TransferResultLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, TransferResultState state) {

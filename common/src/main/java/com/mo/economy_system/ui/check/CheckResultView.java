@@ -20,7 +20,8 @@ public final class CheckResultView {
       int mouseX,
       int mouseY) {
     renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
+        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
+        CheckResultLayout.BACKGROUND_COLOR);
     renderer.icon(UiIcon.MANAGE, new UiRect(layout.title().x(), layout.title().y() + 2, 14, 14));
     renderer.translatedText(
         "screen.check_result.title", List.of(), layout.title().x() + 18, layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);

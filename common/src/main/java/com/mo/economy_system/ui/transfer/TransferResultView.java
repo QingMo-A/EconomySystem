@@ -18,7 +18,8 @@ public final class TransferResultView {
       int mouseX,
       int mouseY) {
     renderer.fill(
-        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
+        new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
+        TransferResultLayout.BACKGROUND_COLOR);
     renderer.card(layout.card(), EconomyUiTheme.DELIVERY_CARD, layout.card().contains(mouseX, mouseY));
     renderer.icon(UiIcon.DELIVERY, new UiRect(layout.title().x(), layout.title().y() + 2, 14, 14));
     renderer.translatedTextInRect(

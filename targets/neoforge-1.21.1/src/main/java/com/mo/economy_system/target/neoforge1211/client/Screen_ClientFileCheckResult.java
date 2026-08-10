@@ -65,10 +65,12 @@ public final class Screen_ClientFileCheckResult extends Screen {
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     CheckResultLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, CheckResultLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     CheckResultView.render(
-        new NeoForge1211UiRenderer(graphics, font),
+        renderer,
         controller.state(),
         layout,
         scale.toVirtualX(mouseX),

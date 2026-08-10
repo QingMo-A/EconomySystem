@@ -219,10 +219,12 @@ public final class Forge1201ClientFileCheckScreens {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
       CheckConsentLayout.Layout layout = CheckConsentLayout.calculate(width, height);
       UiScale scale = layout.scale();
+      Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+      renderer.fillPhysicalBackground(width, height, CheckConsentLayout.BACKGROUND_COLOR);
       graphics.pose().pushPose();
       graphics.pose().scale(scale.value(), scale.value(), 1.0f);
       CheckConsentView.render(
-          new Forge1201UiRenderer(graphics, font),
+          renderer,
           controller.state(),
           layout,
           scale.toVirtualX(mouseX),
@@ -309,10 +311,12 @@ public final class Forge1201ClientFileCheckScreens {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
       CheckResultLayout.Layout layout = commonLayout();
       UiScale scale = layout.scale();
+      Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+      renderer.fillPhysicalBackground(width, height, CheckResultLayout.BACKGROUND_COLOR);
       graphics.pose().pushPose();
       graphics.pose().scale(scale.value(), scale.value(), 1.0f);
       CheckResultView.render(
-          new Forge1201UiRenderer(graphics, font),
+          renderer,
           controller.state(),
           layout,
           scale.toVirtualX(mouseX),

@@ -6,6 +6,7 @@ import com.mo.economy_system.ui.theme.EconomyUiTheme;
 
 /** Virtual-coordinate layout shared by Forge and NeoForge consent shells. */
 public final class CheckConsentLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private CheckConsentLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight) {

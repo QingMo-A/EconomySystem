@@ -6,6 +6,7 @@ import com.mo.economy_system.ui.theme.EconomyUiTheme;
 
 /** Stable virtual layout and row capacity for checked-file result pages. */
 public final class CheckResultLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private CheckResultLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, CheckResultState state) {

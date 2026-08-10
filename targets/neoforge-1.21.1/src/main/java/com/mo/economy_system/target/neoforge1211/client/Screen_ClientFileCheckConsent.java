@@ -110,10 +110,12 @@ public final class Screen_ClientFileCheckConsent extends Screen {
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     CheckConsentLayout.Layout layout = CheckConsentLayout.calculate(width, height);
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, CheckConsentLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     CheckConsentView.render(
-        new NeoForge1211UiRenderer(graphics, font),
+        renderer,
         controller.state(),
         layout,
         scale.toVirtualX(mouseX),

@@ -48,10 +48,12 @@ final class Screen_CheckedFileTransferConsent extends Screen {
   public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     TransferConsentLayout.Layout layout = TransferConsentLayout.calculate(width, height);
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TransferConsentLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     TransferConsentView.render(
-        new NeoForge1211UiRenderer(graphics, font),
+        renderer,
         controller.state(),
         layout,
         scale.toVirtualX(mouseX),
