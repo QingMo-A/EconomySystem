@@ -28,8 +28,6 @@ public final class HomeView {
 
   public static void render(EconomyUiRenderer renderer, HomeState state,
                             HomeLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        HomeLayout.BACKGROUND_COLOR);
     drawNavigation(renderer, state, layout, mouseX, mouseY);
     drawBalanceCard(renderer, state, layout, mouseX, mouseY);
     drawTradeCard(renderer, state, layout, mouseX, mouseY);
@@ -55,7 +53,8 @@ public final class HomeView {
     boolean hovered = card.contains(mouseX, mouseY);
     renderer.card(card, EconomyUiTheme.HOME_BALANCE_CARD, hovered);
     int titleY = card.y() + 8;
-    renderer.icon(UiIcon.BALANCE, new UiRect(card.x() + 8, titleY - 1, 10, 10));
+    renderer.icon(UiIcon.BALANCE, new UiRect(card.x() + 8, titleY - 1,
+        EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_SIZE));
     renderer.translatedText("screen.home.balance", List.of(), card.x() + 21, titleY, TITLE_COLOR);
 
     String rankText = hovered ? "日志 >>" : (state.playerRank() > 0 ? "#" + state.playerRank() : "--");
@@ -83,7 +82,8 @@ public final class HomeView {
     boolean hovered = card.contains(mouseX, mouseY);
     renderer.card(card, EconomyUiTheme.HOME_TRADE_CARD, hovered);
     int titleY = card.y() + 8;
-    renderer.icon(UiIcon.TRADE, new UiRect(card.x() + 8, titleY - 1, 10, 10));
+    renderer.icon(UiIcon.TRADE, new UiRect(card.x() + 8, titleY - 1,
+        EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_SIZE));
     renderer.translatedText("screen.home.trade", List.of(), card.x() + 21, titleY, TITLE_COLOR);
     if (hovered) {
       String hint = "点击查看 >>";
@@ -111,7 +111,8 @@ public final class HomeView {
     UiRect card = layout.leaderboardCard();
     // The leaderboard is a static reference card; rows do not change its hover chrome.
     renderer.card(card, EconomyUiTheme.HOME_LEADERBOARD_CARD, false);
-    renderer.icon(UiIcon.LEADERBOARD, new UiRect(card.x() + 10, card.y() + 9, 10, 10));
+    renderer.icon(UiIcon.LEADERBOARD, new UiRect(card.x() + 10, card.y() + 9,
+        EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_SIZE));
     renderer.translatedTextInRect("screen.home.leaderboard", List.of(),
         new UiRect(card.x() + 24, card.y() + 10,
             Math.max(1, card.width() - 34), layout.metrics().lineHeight()),
@@ -134,11 +135,10 @@ public final class HomeView {
       for (HomeLayout.LeaderboardRow row : layout.rows()) {
         boolean self = state.isSelf(row.account());
         int rankColor = self ? RANK_GOLD : rankColor(row.rank());
-        String rank = "#" + row.rank();
-        renderer.text(rank, row.rect().x(), row.rect().y(), rankColor);
-        int nameX = row.rect().x() + layout.metrics().width(rank) + 4;
-        renderer.text(row.account().playerName(), nameX, row.rect().y(),
-            self ? RANK_GOLD : TITLE_COLOR);
+        // Keep the legacy entry as one draw call.  This preserves the reference space width and
+        // avoids approximating a separator between independently positioned rank/name strings.
+        String entryText = "#" + row.rank() + " " + row.account().playerName();
+        renderer.text(entryText, row.rect().x(), row.rect().y(), rankColor);
         String balance = UiNumbers.formatInteger(row.account().balance());
         renderer.text(balance, card.right() - 10 - layout.metrics().width(balance),
             row.rect().y(), self ? RANK_GOLD : MUTED_WHITE);
@@ -158,15 +158,12 @@ public final class HomeView {
   private static void drawFooter(EconomyUiRenderer renderer, HomeLayout.Layout layout) {
     String economy = "Economy";
     String system = "System";
-    int contentWidth = 14 + layout.metrics().width(economy) + layout.metrics().width(system);
-    int cardWidth = Math.min(layout.leftPanelWidth(),
-        Math.max(1, Math.round(contentWidth * layout.footerScale()) + 16));
-    UiRect card = new UiRect(layout.footer().x(), layout.footer().y(), cardWidth,
-        layout.footer().height());
+    UiRect card = layout.footer();
     renderer.card(card, EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconStyledText(UiIcon.HOME,
         List.of(new UiTextSpan(economy, 0xFF55FFFF), new UiTextSpan(system, 0xFFFF55FF)),
-        card.x() + 8, card.y() + 5, layout.footerScale(), 10, 14);
+        card.x() + 8, card.y() + 5, layout.footerScale(), EconomyUiRenderer.ICON_SIZE,
+        EconomyUiRenderer.ICON_ADVANCE);
     renderer.fill(new UiRect(card.x() + 8, card.bottom() - 3,
         Math.max(0, card.width() - 16), 1), 0x30FFFFFF);
   }

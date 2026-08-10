@@ -13,6 +13,8 @@ import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 class BuffManageViewParityTest {
   @Test
-  void bothTargetsReceiveTheSameBaselineSemanticOperations() {
+  void commonViewProducesDeterministicBaselineSemanticOperations() {
     BuffRow upgrade = BuffRow.inspect(
         BuffManageTestFixtures.buff("speed", true, 1, 3, 2, 3, 4),
         BuffManageTestFixtures.resources(8, 8));
@@ -128,9 +130,28 @@ class BuffManageViewParityTest {
       operations.add(new Operation("translatedButton", rect, arguments + Boolean.toString(hovered),
           key, null, style, enabled));
     }
+    @Override public void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                                               String key, List<String> arguments,
+                                               boolean hovered, boolean enabled) {
+      operations.add(new Operation("translatedIconButton", rect,
+          arguments + Boolean.toString(hovered), key, null, style, enabled));
+    }
     @Override public void icon(UiIcon icon, UiRect rect) {
       operations.add(new Operation("icon", rect, icon, null, null, null, true));
     }
+    @Override public void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                         float scale, int iconSize, int iconAdvance,
+                                         int textColor) {
+      operations.add(new Operation("scaledIconText", new UiRect(originX, originY, iconSize,
+          iconSize), icon + ":" + text, null, null, null, true));
+    }
+    @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans,
+                                               int originX, int originY, float scale,
+                                               int iconSize, int iconAdvance) {
+      operations.add(new Operation("scaledIconStyledText", new UiRect(originX, originY,
+          iconSize, iconSize), icon + ":" + spans, null, null, null, true));
+    }
+    @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {
       operations.add(new Operation("playerHead", rect, playerId + playerName,
           null, null, null, true));

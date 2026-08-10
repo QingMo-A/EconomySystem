@@ -5,6 +5,8 @@ import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.ArrayList;
@@ -54,8 +56,37 @@ public final class RecordingEconomyUiRenderer implements EconomyUiRenderer {
     add("translatedButton", rect, key + arguments + ":" + style + ":" + hovered, enabled);
   }
 
+  @Override public void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                                             String key, List<String> arguments,
+                                             boolean hovered, boolean enabled) {
+    add("translatedIconButton", rect,
+        icon + ":" + key + arguments + ":" + style + ":" + hovered, enabled);
+    if (icon != null) {
+      int textY = rect.y() + (rect.height() - 9) / 2;
+      icon(icon, new UiRect(rect.x() + style.padding(), textY - 1, 10, 10));
+    }
+  }
+
   @Override public void icon(UiIcon icon, UiRect rect) {
     add("icon", rect, icon.name(), true);
+  }
+
+  @Override public void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                       float scale, int iconSize, int iconAdvance,
+                                       int textColor) {
+    add("scaledIconText", new UiRect(originX, originY, iconSize, iconSize),
+        icon + ":" + text + ":" + scale + ":" + iconAdvance, true);
+  }
+
+  @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans,
+                                             int originX, int originY, float scale,
+                                             int iconSize, int iconAdvance) {
+    add("scaledIconStyledText", new UiRect(originX, originY, iconSize, iconSize),
+        icon + ":" + spans + ":" + scale + ":" + iconAdvance, true);
+  }
+
+  @Override public UiTextMetrics metrics() {
+    return UiTextMetrics.APPROXIMATE;
   }
 
   @Override public void item(String itemId, UiRect rect) {

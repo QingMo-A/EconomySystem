@@ -34,6 +34,11 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
     this.font = font;
   }
 
+  /** Draws the Home backdrop in physical screen coordinates before the virtual UI pose. */
+  public void fillPhysicalBackground(int width, int height, int argb) {
+    graphics.fill(0, 0, width, height, argb);
+  }
+
   @Override public void fill(UiRect rect, int argb) {
     graphics.fill(rect.x(), rect.y(), rect.right(), rect.bottom(), argb);
   }
@@ -102,8 +107,9 @@ public final class NeoForge1211UiRenderer implements EconomyUiRenderer {
     int textX;
     if (icon != null) {
       textX = rect.x() + style.padding();
-      icon(icon, new UiRect(textX, textY - 1, 10, 10));
-      textX += 14;
+      icon(icon, new UiRect(textX, textY - 1,
+          EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_SIZE));
+      textX += EconomyUiRenderer.ICON_ADVANCE;
     } else if (style.alignment() == UiTextAlignment.CENTER) {
       textX = rect.x() + (rect.width() - font.width(text)) / 2;
     } else {

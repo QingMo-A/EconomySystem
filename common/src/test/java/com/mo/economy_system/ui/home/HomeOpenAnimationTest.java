@@ -2,6 +2,7 @@ package com.mo.economy_system.ui.home;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.mo.economy_system.ui.animation.UiEasing;
 import org.junit.jupiter.api.Test;
 
 class HomeOpenAnimationTest {
@@ -12,7 +13,7 @@ class HomeOpenAnimationTest {
     assertEquals(50, HomeOpenAnimation.rightOffsetAt(0.0f));
     assertEquals(0, HomeOpenAnimation.leftOffsetAt(1.0f));
     assertEquals(0, HomeOpenAnimation.rightOffsetAt(1.0f));
-    assertEquals(0.875f, HomeOpenAnimation.easeOutCubic(0.5f), 0.00001f);
+    assertEquals(0.875f, UiEasing.easeOutCubic(0.5f), 0.00001f);
     assertEquals(1.0f, HomeOpenAnimation.progressAt(100L,
         100L + HomeOpenAnimation.DURATION_NANOS));
   }

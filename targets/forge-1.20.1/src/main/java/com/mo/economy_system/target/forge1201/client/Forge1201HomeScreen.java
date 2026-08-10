@@ -15,6 +15,7 @@ import com.mo.economy_system.ui.home.HomeLayout;
 import com.mo.economy_system.ui.home.HomeOpenAnimation;
 import com.mo.economy_system.ui.home.HomePort;
 import com.mo.economy_system.ui.home.HomeView;
+import com.mo.economy_system.ui.text.UiTextMetrics;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -79,7 +80,10 @@ public final class Forge1201HomeScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     syncViewport();
     Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
-    float progress = HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
+    // The reference background is a physical-screen layer.  Draw it before the virtual-canvas
+    // pose so fractional viewport scales cannot leave an uncovered edge.
+    renderer.fillPhysicalBackground(width, height, HomeLayout.BACKGROUND_COLOR);
+    float progress = animationProgress();
     HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
         renderer.metrics(), progress);
     UiScale scale = layout.scale();
@@ -92,9 +96,9 @@ public final class Forge1201HomeScreen extends Screen {
   }
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    float progress = HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
+    float progress = animationProgress();
     HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
-        com.mo.economy_system.ui.text.UiTextMetrics.APPROXIMATE, progress);
+        metrics(), progress);
     int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     for (var nav : layout.navButtons()) if (nav.rect().contains(x, y)) {
       controller.handle(new HomeEvent.ActionClicked(nav.route())); return true;
@@ -127,10 +131,19 @@ public final class Forge1201HomeScreen extends Screen {
   @Override public boolean isPauseScreen() { return false; }
 
   private void syncViewport() {
-    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state());
+    HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
+        metrics(), animationProgress());
     if (layout.pageSize() != controller.state().leaderboardPageSize()) {
       controller.handle(new HomeEvent.ViewportChanged(layout.pageSize()));
     }
+  }
+
+  private UiTextMetrics metrics() {
+    return new Forge1201UiTextMetrics(font);
+  }
+
+  private float animationProgress() {
+    return HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
   }
 
   private final class Port implements HomePort {

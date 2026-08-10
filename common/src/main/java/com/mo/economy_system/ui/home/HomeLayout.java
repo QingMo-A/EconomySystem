@@ -81,19 +81,33 @@ public final class HomeLayout {
     }
 
     int footerHeight = Math.max(1, metrics.lineHeight() + 10);
+    float footerScale = footerScale(metrics, leftWidth);
+    int footerWidth = footerWidth(metrics, footerScale);
+    // The layout owns the final version-card rectangle.  Keep the legacy content-width
+    // calculation (including the 16px horizontal card padding) instead of handing HomeView a
+    // left-panel placeholder that it would have to clamp a second time.
     UiRect footer = new UiRect(PANEL_PADDING + leftOffset,
-        height - PANEL_PADDING - footerHeight, Math.max(1, leftWidth), footerHeight);
+        height - PANEL_PADDING - footerHeight, footerWidth, footerHeight);
     UiRect retry = new UiRect(rightX + rightOffset + Math.max(0, (rightWidth - 96) / 2),
         leaderboardY + Math.max(0, (leaderboardHeight - 22) / 2), Math.min(96, rightWidth), 22);
-    float footerScale = footerScale(metrics, leftWidth);
     return new Layout(scale, metrics, List.copyOf(nav), balance, trade, leaderboard,
         List.copyOf(rows), footer, retry, pageSize, footerScale,
         leftWidth, rightX + rightOffset, rightWidth);
   }
 
   private static float footerScale(UiTextMetrics metrics, int maxWidth) {
-    int contentWidth = 14 + metrics.width("Economy") + metrics.width("System");
+    int contentWidth = footerContentWidth(metrics);
     return Math.min(1.0f, maxWidth <= 0 ? 1.0f : (float) maxWidth / contentWidth);
+  }
+
+  private static int footerWidth(UiTextMetrics metrics, float scale) {
+    // Match CardRenderer.drawVersionInfo exactly: truncate rather than round, and add card
+    // padding after scaling the icon + text content.
+    return Math.max(1, (int) (footerContentWidth(metrics) * scale) + 16);
+  }
+
+  private static int footerContentWidth(UiTextMetrics metrics) {
+    return 14 + metrics.width("EconomySystem");
   }
 
   public record Layout(UiScale scale, UiTextMetrics metrics, List<NavButton> navButtons,

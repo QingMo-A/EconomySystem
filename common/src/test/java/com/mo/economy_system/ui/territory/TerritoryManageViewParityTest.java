@@ -12,6 +12,8 @@ import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 class TerritoryManageViewParityTest {
     @Test
-    void bothTargetsReceiveTheSameSemanticOperations() {
+    void commonViewProducesDeterministicSemanticOperations() {
         TerritoryManageState state = new TerritoryManageState(
                 new UUID(0, 1), "spawn", new UUID(0, 2), "owner",
                 List.of(new MemberRow(new UUID(0, 3), "alice")),
@@ -122,6 +124,14 @@ class TerritoryManageViewParityTest {
         }
 
         @Override
+        public void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                                         String key, List<String> arguments, boolean hovered,
+                                         boolean enabled) {
+            operations.add(new Operation("translatedIconButton", rect, key, null, style,
+                    hovered, enabled));
+        }
+
+        @Override
         public void icon(UiIcon icon, UiRect rect) {
             operations.add(new Operation("icon", rect, icon.name(), null, null, false, true));
         }
@@ -133,6 +143,20 @@ class TerritoryManageViewParityTest {
                     new UiRect(originX, originY, iconSize, iconSize),
                     icon.name() + ":" + text + ":" + scale + ":" + iconAdvance,
                     null, null, false, true));
+        }
+
+        @Override
+        public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX,
+                                         int originY, float scale, int iconSize, int iconAdvance) {
+            operations.add(new Operation("scaledIconStyledText",
+                    new UiRect(originX, originY, iconSize, iconSize),
+                    icon.name() + ":" + spans + ":" + scale + ":" + iconAdvance,
+                    null, null, false, true));
+        }
+
+        @Override
+        public UiTextMetrics metrics() {
+            return UiTextMetrics.APPROXIMATE;
         }
 
         @Override

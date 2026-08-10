@@ -10,6 +10,10 @@ import java.util.UUID;
 
 /** Semantic renderer port implemented by each Minecraft target. */
 public interface EconomyUiRenderer {
+    /** Reference icon/text geometry shared by every loader adapter. */
+    int ICON_SIZE = 10;
+    int ICON_ADVANCE = 14;
+
     void fill(UiRect rect, int argb);
 
     void text(String text, int x, int y, int argb);
@@ -28,41 +32,29 @@ public interface EconomyUiRenderer {
     void translatedButton(UiRect rect, UiButtonStyle style, String key,
                           List<String> arguments, boolean hovered, boolean enabled);
 
-    /** Draws a translated left-aligned button with a real semantic icon. */
-    default void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
-                                      String key, List<String> arguments,
-                                      boolean hovered, boolean enabled) {
-        translatedButton(rect, style, key, arguments, hovered, enabled);
-        if (icon != null) {
-            int textY = rect.y() + Math.max(0, (rect.height() - 9) / 2);
-            icon(icon, new UiRect(rect.x() + style.padding(), textY - 1, 10, 10));
-        }
-    }
+    /**
+     * Draws a translated left-aligned button with a real semantic icon.
+     *
+     * <p>This operation is deliberately mandatory.  It is pixel-sensitive: a target must draw
+     * the icon and text from the same reference geometry instead of inheriting a fallback that
+     * can paint the icon over the translated label.</p>
+     */
+    void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                              String key, List<String> arguments,
+                              boolean hovered, boolean enabled);
 
     void icon(UiIcon icon, UiRect rect);
 
     /** Draws one icon/text group under a shared local transform. */
-    default void scaledIconText(UiIcon icon, String text, int originX, int originY,
-                                float scale, int iconSize, int iconAdvance, int textColor) {
-        icon(icon, new UiRect(originX, originY - 1, iconSize, iconSize));
-        text(text, originX + iconAdvance, originY, textColor);
-    }
+    void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                        float scale, int iconSize, int iconAdvance, int textColor);
 
     /** Draws a styled icon/text group under one shared local transform. */
-    default void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY,
-                                      float scale, int iconSize, int iconAdvance) {
-        icon(icon, new UiRect(originX, originY - 1, iconSize, iconSize));
-        int x = originX + iconAdvance;
-        for (UiTextSpan span : spans) {
-            text(span.text(), x, originY, span.color());
-            x += span.text().length() * 6;
-        }
-    }
+    void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY,
+                              float scale, int iconSize, int iconAdvance);
 
     /** Font metrics adapter supplied by a target renderer. */
-    default UiTextMetrics metrics() {
-        return UiTextMetrics.APPROXIMATE;
-    }
+    UiTextMetrics metrics();
 
     /** Draws a target-native item icon from a loader-neutral item identifier. */
     default void item(String itemId, UiRect rect) {

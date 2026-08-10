@@ -13,6 +13,8 @@ import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 class TerritoryDetailViewParityTest {
   @Test
-  void bothTargetsReceiveTheSameNestedSemanticOperations() {
+  void commonViewProducesDeterministicNestedSemanticOperations() {
     TerritoryDetailState state = new TerritoryDetailState(
         TerritoryDetailTestFixtures.territory(List.of(
             new Member(TerritoryDetailTestFixtures.ALICE, "alice"))),
@@ -92,7 +94,24 @@ class TerritoryDetailViewParityTest {
                                            List<String> arguments, boolean hovered, boolean enabled) {
       add("translatedButton", rect, key, enabled);
     }
+    @Override public void translatedIconButton(UiRect rect, UiButtonStyle style, UiIcon icon,
+                                               String key, List<String> arguments,
+                                               boolean hovered, boolean enabled) {
+      add("translatedIconButton", rect, key, enabled);
+    }
     @Override public void icon(UiIcon icon, UiRect rect) { add("icon", rect, icon.name(), true); }
+    @Override public void scaledIconText(UiIcon icon, String text, int originX, int originY,
+                                         float scale, int iconSize, int iconAdvance,
+                                         int textColor) {
+      add("scaledIconText", new UiRect(originX, originY, iconSize, iconSize), text, true);
+    }
+    @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans,
+                                               int originX, int originY, float scale,
+                                               int iconSize, int iconAdvance) {
+      add("scaledIconStyledText", new UiRect(originX, originY, iconSize, iconSize),
+          spans.toString(), true);
+    }
+    @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {
       add("playerHead", rect, playerId + playerName, true);
     }

@@ -13,6 +13,8 @@ import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiTextSpan;
 import com.mo.economy_system.ui.theme.UiButtonStyle;
 import com.mo.economy_system.ui.theme.UiCardStyle;
 import java.util.ArrayList;
@@ -99,6 +101,16 @@ class CheckLayoutAndViewTest {
         boolean enabled) {
       buttons.add(key);
     }
+    @Override public void translatedIconButton(
+        UiRect rect, UiButtonStyle style, UiIcon icon, String key, List<String> arguments,
+        boolean hovered, boolean enabled) {}
+    @Override public void scaledIconText(
+        UiIcon icon, String text, int originX, int originY, float scale, int iconSize,
+        int iconAdvance, int textColor) {}
+    @Override public void scaledIconStyledText(
+        UiIcon icon, List<UiTextSpan> spans, int originX, int originY, float scale,
+        int iconSize, int iconAdvance) {}
+    @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
     @Override public void icon(UiIcon icon, UiRect rect) {}
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {}
     @Override public void tooltip(TooltipModel tooltip, int mouseX, int mouseY) {}
