@@ -12,11 +12,11 @@ their own Minecraft/loader adapters.
 | Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | FORENSIC_REFERENCE_VERIFIED (original `ec4730d3` + final hardening `e8fddeef`; inherited `HomeReferenceParityTest` + `HomeViewParityTest`; production frozen) |
 | About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | FORENSIC_REFERENCE_VERIFIED (original `5d89f765` + final hardening `e8fddeef`; `AboutLegacyReferenceParityTest` 3 tests; resource/logo/QR/version/footer/link-copy hover exact) |
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | FORENSIC_REFERENCE_VERIFIED (original `5d89f765` + final hardening `e8fddeef`; `BalanceLogLegacyReferenceParityTest` 2 tests; row/time/colors/description/search/pagination/format and physical background exact) |
-| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + hardening `e8fddeef` + strict closure `95fbb44b`; `ShopLegacyReferenceParityTest` 7 + `ShopViewParityTest` 2; Shop-only 12x12 texture paging, one-page visibility/hitbox gate, native max-50 search and dynamic title card) |
+| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + hardening `e8fddeef` + strict closure `95fbb44b` + final pixel closure; `ShopLegacyReferenceParityTest` 8 + `ShopViewParityTest` 2; full tooltip colors/raw values, Shop-only 12x12 texture paging, one-page visibility/hitbox gate, physical native search frame and max-50 hint, dynamic title card) |
 | Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + final hardening `e8fddeef`; `ShopPurchaseLegacyReferenceParityTest` 1; purchase quantity/price/button/hover/click geometry exact) |
-| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b`; `MarketLegacyReferenceParityTest` 11 + `MarketViewParityTest` 2; textual paging, one-page gate, compact price, exact filter hit geometry, compact chrome and native max-50 search) |
+| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b` + final pixel closure; `MarketLegacyReferenceParityTest` 13 + `MarketViewParityTest` 2; exact type/gold price/baselines/duration, textual paging, one-page gate, compact price, filter hit geometry and physical native search frame) |
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + strict gate `b4300829`; `MarketCreateLegacyReferenceParityTest` 1 + `MarketConfirmLegacyReferenceParityTest` 1; resolved native names, composite labels and Yen/UiNumbers exact) |
-| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b`; `DeliveryLegacyReferenceParityTest` 7; textual paging, one-page gate, compact claim/page chrome, native max-50 search and dynamic title card) |
+| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b` + final pixel closure; `DeliveryLegacyReferenceParityTest` 7; textual paging, one-page gate, compact claim/page chrome, physical native search frame/max-50 hint and dynamic title card) |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryListLegacyReferenceParityTest` 2; localized title/search/page/12px arrows and once-only physical background) |
 | Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6976818` + final hardening `e8fddeef` strict/multi-viewport only; inherited `TerritoryManageGoldenParityTest` + `TerritoryManageViewParityTest`; production frozen) |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryDetailLegacyReferenceParityTest` 2; Access/Rules semantics, chrome/tooltips and once-only physical background) |
@@ -46,7 +46,9 @@ excluded from both production and test source sets.
 Controller tests cover initial/loading/ready/empty/error, retry, timeout, stale
 and duplicate responses, action enablement, paging/scrolling and navigation.
 Layout tests cover the documented normal, narrow and short viewports. Recording
-renderer tests prove that both target backends receive the same semantic view.
+renderer tests prove deterministic common semantic output.
+Cross-target parity is enforced by mandatory renderer contracts, target source
+gates, common chrome/layout plans, target builds, and shared reference tests.
 
 ## Business Boundary
 
@@ -64,7 +66,7 @@ renderer tests prove that both target backends receive the same semantic view.
 | Starter kit | exactly-once claim, marker/account compensation and outcome policy | persistent player marker, account ledger, clone/login events and command translation |
 | Update check | SemVer parsing/comparison, release JSON validation and result policy | HTTP executor, server-thread dispatch and clickable chat components |
 
-Global audit (2026-08-10, final hardening `e8fddeef` + follow-up `b4300829` + strict closure `95fbb44b`): both target
+Global audit (2026-08-10, final hardening `e8fddeef` + follow-up `b4300829` + strict closure `95fbb44b` + final pixel closure): both target
 active-screen inventories contain 19 Screen classes and pass the common
 semantic View/Controller/Layout architecture gate. Shared GUI textures and
 language resources are packaged from `common` only; Forge and NeoForge JARs
@@ -91,10 +93,13 @@ fullscreen fill before each target shell's pushPose/scale (nested Forge file
 shells checked separately). The strict closure additionally locks exact glow
 rows, semantic family page styles, textual Market/Delivery versus textured
 Shop pagination, hidden one-page hitboxes, compact Market prices, native
-max-50 search widgets, dynamic Shop/Delivery title cards, exact Market filter
+max-50 search widgets, physical native-pixel Shop/Market/Delivery search frames,
+dynamic Shop/Delivery title cards, exact Market filter
 hit rectangles, and common-only 823-key bilingual resources with 396/396
-legacy value parity. Full gates passed with Forge 894 tests and NeoForge 959
-tests (0 failures, 0 errors, 1 skip each) and `buildAllTargets --rerun-tasks`.
+legacy value parity. The final pixel closure adds exact Shop tooltip, Market
+semantic/baseline/duration, and native-frame source/geometry contracts. Full
+gates passed with Forge 900 tests and NeoForge 965 tests (0 failures, 0 errors,
+1 skip each) and `buildAllTargets --rerun-tasks`.
 
 Target-local classes named `Manager`, `SavedData` or `Store` are not by
 themselves evidence of duplicated policy. They are permitted only when they

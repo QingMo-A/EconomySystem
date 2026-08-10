@@ -419,7 +419,7 @@ canonical viewport 使用 exact assertions。
 
 ## 6.5 Renderer contract
 
-`RecordingRenderer` 只能证明 common View deterministic output，不得命名为“两个 target parity”。
+`RecordingRenderer` tests prove deterministic common semantic output; they do not by themselves prove Forge==NeoForge.
 
 Target parity 通过：
 
@@ -428,7 +428,8 @@ Target parity 通过：
 - target tests；
 - common semantic plan；
 
-共同证明。
+Cross-target parity is enforced by mandatory renderer contracts, target source gates,
+common chrome/layout plans, target builds, and shared reference tests.
 
 ---
 
@@ -987,30 +988,46 @@ deviation in the separate ledger below.
 |---|---|---|---|---|---|---:|---:|---|---|
 | Home | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/Screen_Home.java`, `CardRenderer.java` at forensic reference | `HomeReferenceParityTest` + `HomeViewParityTest` (inherited golden tests) | `ec4730d3` + `e8fddeef` (final audit hardening; production frozen) | `6f2bb06da7f9a0116d0cd7890cab220c09aaae24` | 894 | 959 | passed | inherited golden parity rerun green; production remains frozen |
 | Territory Manage | FORENSIC_REFERENCE_VERIFIED | territory management legacy screen and common golden reference | `TerritoryManageGoldenParityTest` + `TerritoryManageViewParityTest` (inherited golden tests) | `6976818` + `e8fddeef` (strict/multi-viewport hardening only; production frozen) | `6f2bb06da7f9a0116d0cd7890cab220c09aaae24` | 894 | 959 | passed | inherited golden parity rerun green; production remains frozen |
-| Shop | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/shop/Screen_Shop.java`, `Screen_BuyItem.java`, `CardRenderer.java` at forensic reference | `ShopLegacyReferenceParityTest` (7), `ShopPurchaseLegacyReferenceParityTest` (1), `ShopViewParityTest` (2) | `c697c0af` + `e8fddeef` + `95fbb44b` | this docs checkpoint | 894 | 959 | passed | 12x12 texture arrows remain Shop-only; one-page controls and hitboxes are absent; native EditBox owns the 50-character hint/value; dynamic version-card width/scale follows translated metrics |
-| Market | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/market/Screen_Market.java`, create/confirm screens, `CardRenderer.java` at forensic reference | `MarketLegacyReferenceParityTest` (11), `MarketCreateLegacyReferenceParityTest` (1), `MarketConfirmLegacyReferenceParityTest` (1), `MarketViewParityTest` (2) | `bd5a6db2` + `e8fddeef` + `b4300829` + `95fbb44b` | this docs checkpoint | 894 | 959 | passed | exact textual `<`/`>` paging, one-page visibility/hitbox gate, compact price thresholds, translated filter text/hit rectangles, compact action/page glow, and native 50-character EditBox policy restored |
-| Delivery | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/deliver_box/Screen_DeliveryBox.java`, `CardRenderer.java` at forensic reference | `DeliveryLegacyReferenceParityTest` (7) | `6b1c1d3c` + `e8fddeef` + `b4300829` + `95fbb44b` | this docs checkpoint | 894 | 959 | passed | exact textual `<`/`>` paging, one-page visibility/hitbox gate, compact claim/page glow, native 50-character EditBox, and dynamic version-card width/scale restored |
+| Shop | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/shop/Screen_Shop.java`, `Screen_BuyItem.java`, `CardRenderer.java` at forensic reference | `ShopLegacyReferenceParityTest` (8), `ShopPurchaseLegacyReferenceParityTest` (1), `ShopViewParityTest` (2), `UiNativeInputFrameTest` (2) | `c697c0af` + `e8fddeef` + `95fbb44b` + `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0` | this docs checkpoint | 900 | 965 | passed | full tooltip separator/delta/base/current/factor/id colors and raw values; Shop-only 12x12 texture arrows, one-page controls/hitboxes, physical native-pixel search frame, max-50 hint/value and dynamic version-card width/scale |
+| Market | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/market/Screen_Market.java`, create/confirm screens, `CardRenderer.java` at forensic reference | `MarketLegacyReferenceParityTest` (13), `MarketCreateLegacyReferenceParityTest` (1), `MarketConfirmLegacyReferenceParityTest` (1), `MarketViewParityTest` (2), `UiNativeInputFrameTest` (2) | `bd5a6db2` + `e8fddeef` + `b4300829` + `95fbb44b` + `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0` | this docs checkpoint | 900 | 965 | passed | exact own/sales/demand type colors, gold price, item/owner baselines and deterministic day-hour duration spacing; textual `<`/`>` paging, one-page gate, compact prices/filter geometry, physical native-pixel search frame and max-50 EditBox policy |
+| Delivery | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/economy_system/deliver_box/Screen_DeliveryBox.java`, `CardRenderer.java` at forensic reference | `DeliveryLegacyReferenceParityTest` (7), `UiNativeInputFrameTest` (2) | `6b1c1d3c` + `e8fddeef` + `b4300829` + `95fbb44b` + `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0` | this docs checkpoint | 900 | 965 | passed | exact textual `<`/`>` paging, one-page visibility/hitbox gate, compact claim/page glow, physical native-pixel search frame/max-50 EditBox, and dynamic version-card width/scale restored |
 | About + Balance | FORENSIC_REFERENCE_VERIFIED | `src/main/java/com/mo/economy_system/screen/Screen_About.java`, `Screen_BalanceLog.java` at forensic reference | `AboutLegacyReferenceParityTest` (3) + `BalanceLogLegacyReferenceParityTest` (2) | `5d89f765` + `e8fddeef` | `6f2bb06da7f9a0116d0cd7890cab220c09aaae24` | 894 | 959 | passed | exact resource/logo/QR/version/footer/link-copy hover and Balance row/time/positive-negative colors, description/search/paging/number format; Balance physical background moved to target and common duplicate fill removed |
 | Remaining Territory | FORENSIC_REFERENCE_VERIFIED | list/detail/access/rules/buff/invite/confirmation screens at forensic reference | `TerritoryListLegacyReferenceParityTest` (2) + `TerritoryDetailLegacyReferenceParityTest` (2) + `TerritoryBuffLegacyReferenceParityTest` (2) + `TerritoryInviteLegacyReferenceParityTest` (2) + `TerritoryConfirmationLegacyReferenceParityTest` (2) + `TerritoryLegacyReferenceParityTest` (3) | `c4d99fea` + `e8fddeef` | `6f2bb06da7f9a0116d0cd7890cab220c09aaae24` | 894 | 959 | passed | localized titles/search frames, page styles and 12x12 arrows, Access/Rules semantics, buff/invite chrome/tooltips, danger confirmation and once-only physical background; Territory Manage frozen |
 | File Check + Transfer | FORENSIC_REFERENCE_VERIFIED | pre-Bridge target references: `3771732197d6fb1eb7e2be752a42801107edb3ac:targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/Screen_ClientFileCheckConsent.java` + `Screen_ClientFileCheckResult.java`; `c4bc5fcac48f181b19b8ee16e36684d23c42e47:targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/Screen_CheckedFileTransferConsent.java` + `Screen_CheckedFileTransferResult.java` (the f334 authority contains no file-workflow screens) | `FileCheckLegacyReferenceParityTest` (4) + `FileTransferLegacyReferenceParityTest` (4) | `8fdb4f88` + `e8fddeef` | `6f2bb06da7f9a0116d0cd7890cab220c09aaae24` | 894 | 959 | passed (`buildAllTargets --rerun-tasks`) | SAFETY_DEVIATION: restored legacy plain title/search/12px-row/action geometry and removed card/icon chrome, while retaining explicit consent/deny, one-shot lifecycle, cancellation, safe target-only filesystem/save APIs and existing wire/server semantics; no wire/server changes |
 | Shared language resources | FORENSIC_REFERENCE_VERIFIED | `en_us.json` and `zh_cn.json` at `f334e640ca1e24157511b7e06f1f76efba90152b` plus active common UI keys | `StrictLanguageResourceParityTest` (2) and migrated language-resource tests | `95fbb44b` | this docs checkpoint | 894 | 959 | passed | common-only authority with 823 keys per locale; all 396 legacy keys are value-exact, placeholders align, active keys are complete, and 20 Market English fallbacks in zh_cn were translated |
-| Strict global audit | FORENSIC_REFERENCE_VERIFIED | all active screens and shared UI primitives; final source/resource/JAR authority audit | `StrictUiForensicAuditTest` (4) + `LegacyMultiViewportParityTest` (1) + `UiStrictChromeReferenceTest` (4) + `UiVersionInfoLayoutTest` (2) + `UiTargetStrictSourceReferenceTest` (3) | `810c765b` + `e8fddeef` + `b4300829` + `95fbb44b` | this docs checkpoint | 894 | 959 | passed (`buildAllTargets --no-daemon --rerun-tasks`) | strict button-command, dynamic title-card, target EditBox/hidden-hitbox, language authority, target isolation/resource/JAR/static, and inherited Home/Territory Manage regression gates are green |
+| Strict global audit | FORENSIC_REFERENCE_VERIFIED | all active screens and shared UI primitives; final source/resource/JAR authority audit | `StrictUiForensicAuditTest` (4) + `LegacyMultiViewportParityTest` (1) + `UiStrictChromeReferenceTest` (4) + `UiVersionInfoLayoutTest` (2) + `UiTargetStrictSourceReferenceTest` (4) + `UiNativeInputFrameTest` (2) | `810c765b` + `e8fddeef` + `b4300829` + `95fbb44b` + `44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0` | this docs checkpoint | 900 | 965 | passed (`buildAllTargets --no-daemon --rerun-tasks`) | strict button-command, dynamic title-card, physical native-pixel search frame/order, target EditBox/hidden-hitbox, language authority, target isolation/resource/JAR/static, and inherited Home/Territory Manage regression gates are green |
 
 ### Strict global audit evidence
 
 - Active Forge/NeoForge `Screen` sources all delegate rendering and input geometry to common `View`/`Layout` contracts; no active target render/click path references `UiTextMetrics.APPROXIMATE` or an approximate convenience overload, and no target owns direct drawing or theme-color policy.
 - Common UI source contains no text-derived semantic icon fallback (`substring(0, 1)`, `icon.name()`); mandatory icon/item-name renderer operations remain loader-neutral and are implemented by both target renderers.
 - Shared GUI icons and language files are common-only; target source duplicates are absent. Both final JARs contain the same 823-key `en_us.json` (SHA-256 `243358a0c36613d0017f81d3a1a624183b96c4b97ad861304f87d86023618b95`) and `zh_cn.json` (`e74b3f4a9bb7fa432f0181aedc3a775e662c9373c7180a55d24afb13b75329af`), plus the required arrow textures; opposite-loader entry counts are zero.
-- Final XML totals are Forge 894 tests / 0 failures / 0 errors / 1 skip and NeoForge 959 tests / 0 failures / 0 errors / 1 skip. `buildAllTargets --no-daemon --rerun-tasks` passed. No blocked followups remain.
+- Final XML totals are Forge 900 tests / 0 failures / 0 errors / 1 skip and NeoForge 965 tests / 0 failures / 0 errors / 1 skip. `buildAllTargets --no-daemon --rerun-tasks` passed. No blocked followups remain.
 
 ### Strict reference closure (`95fbb44b`)
 
 - Button chrome now uses the legacy glow sequence: Market top actions render 7 rows (`36, 32, 28, 24, 20, 16, 12`); compact Market/Delivery actions and all semantic page styles render 4 rows (`36, 32, 28, 24`); Territory actions remain at 6 rows. Stripe, background, border, padding, disabled and shadow parameters are locked by command-level tests.
 - Pagination preserves the family differences from source: Market and Delivery use textual `<` / `>` buttons, while Shop alone uses centered 12x12 arrow textures. All three omit buttons, page text and target click hitboxes when `totalPages <= 1`.
 - Market prices use the exact compact thresholds (`9999`, `10.0k`, `12.3k`, `100.0k`). Filter text rectangles use translated widths, spacing remains visual-only, and inclusive legacy click endpoints are represented by separate hit rectangles.
-- Forge and NeoForge Shop/Market/Delivery native `EditBox` widgets share `SEARCH_MAX_LENGTH = 50`, set localized hints, begin unfocused, and own hint/value/cursor rendering; common views draw only the input-frame chrome.
+- Forge and NeoForge Shop/Market/Delivery native `EditBox` widgets share `SEARCH_MAX_LENGTH = 50`, set localized hints, begin unfocused, and own hint/value/cursor rendering; family common physical helpers receive the rounded native rectangle and draw the frame before the virtual pose, while the main virtual Views draw no search frame.
 - `UiVersionInfoLayout` restores the legacy metric-driven Shop/Delivery footer card formula. Exact tests cover a 234px content width constrained to 120px (`scale = 120/234`, card width 136) and a natural 64px content width (`scale = 1`, card width 80), replacing fixed 120/140 card placeholders.
 - Language authority moved to `common/src/main/resources`: en_us and zh_cn each contain 823 matching keys, the complete 396-key 1.21.1 legacy overlap is value-exact, two missing active keys were added, placeholder signatures match, and the remaining equal locale values are intentional identifiers/symbols rather than English fallback.
+
+### Final UI pixel closure (`44f112d2c85a8c373b41f0eaec9b3979e4cf8cb0`)
+
+- Shop tooltip order remains native item, separator, delta, base, current, factor and item ID;
+  every metadata line now carries its legacy color, and base/current arguments remain raw integers
+  without thousands separators.
+- Market cards restore delivery/market/shop type accents, gold balance price, the legacy
+  item-name and owner baselines, and deterministic day/hour duration spacing (`2天 3小时`).
+- Shop/Market/Delivery common views no longer paint a virtual search frame. Each target shell
+  passes its rounded native `EditBox` rectangle to the family common `renderSearchFrame` helper
+  before `pushPose`/`scale`; `UiNativeInputFrame` inflates it by exactly 4 horizontal and 2
+  vertical physical pixels. The helper preserves the existing `UiInputFramePlan` primitive.
+- RED-before-fix evidence is retained in the execution record: 25 Forge focused tests had five
+  failures across tooltip, Market semantics/duration and physical-frame source gates; focused
+  Forge/NeoForge suites are green after the corrections. Full gates are Forge 900 and NeoForge
+  965 tests, each with zero failures/errors and one skip.
 
 ### Supplemental completion-audit hardening (e8fddeef)
 
