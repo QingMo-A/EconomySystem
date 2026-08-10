@@ -36,8 +36,8 @@ class DeliveryLegacyReferenceParityTest {
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     DeliveryView.render(renderer, state, layout, 0, 0);
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("inputFrame")
-        && op.value().contains("right=-18611")), "orange search frame is required");
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("inputFrame")),
+        "native search chrome is painted by the physical target shell");
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("scaledIconTranslatedText")
         && op.value().contains("screen.delivery_box.title")), "title stays localized");
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")),

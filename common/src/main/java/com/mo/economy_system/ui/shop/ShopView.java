@@ -6,6 +6,7 @@ import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.renderer.UiIcon;
+import com.mo.economy_system.ui.renderer.UiNativeInputFrame;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.text.UiNumbers;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
@@ -16,10 +17,14 @@ import java.util.Optional;
 public final class ShopView {
   private ShopView() {}
 
+  /** Draws the native search field frame in physical target pixels. */
+  public static void renderSearchFrame(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                                       boolean focused) {
+    UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.SHOP_SEARCH_FRAME, focused);
+  }
+
   public static void render(EconomyUiRenderer renderer, ShopState state, ShopLayout.Layout layout,
                             int mouseX, int mouseY) {
-    renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.SHOP_SEARCH_FRAME,
-        layout.search().contains(mouseX, mouseY));
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.SHOP, "screen.shop.title", List.of(),
         layout.title().x() + 8, layout.title().y() + 5,
@@ -81,12 +86,16 @@ public final class ShopView {
           : change < 0 ? EconomyUiTheme.TOOLTIP_PRICE_DOWN : EconomyUiTheme.TOOLTIP_PRICE_SAME;
       return Optional.of(new TooltipModel(List.of(
           new TooltipLine.NativeItem(item.itemId()),
-          new TooltipLine.Literal("-=-=-=-=-=-"),
+          new TooltipLine.ColoredLiteral("-=-=-=-=-=-", 0xFF555555),
           new TooltipLine.ColoredTranslated("screen.shop.item.change_price", List.of(changeText), changeColor),
-          new TooltipLine.Translated("screen.shop.item.basic_price", List.of(UiNumbers.formatInteger(item.basePrice()))),
-          new TooltipLine.Translated("screen.shop.item.current_price", List.of(UiNumbers.formatInteger(item.currentPrice()))),
-          new TooltipLine.Translated("screen.shop.item.fluctuation_factor", List.of(Double.toString(item.fluctuationFactor()))),
-          new TooltipLine.Translated("screen.shop.item.id", List.of(item.itemId())))));
+          new TooltipLine.ColoredTranslated("screen.shop.item.basic_price",
+              List.of(Integer.toString(item.basePrice())), 0xFFAAAAAA),
+          new TooltipLine.ColoredTranslated("screen.shop.item.current_price",
+              List.of(Integer.toString(item.currentPrice())), 0xFFFFFF55),
+          new TooltipLine.ColoredTranslated("screen.shop.item.fluctuation_factor",
+              List.of(Double.toString(item.fluctuationFactor())), 0xFFAAAAAA),
+          new TooltipLine.ColoredTranslated("screen.shop.item.id", List.of(item.itemId()),
+              0xFF555555))));
     }
     return Optional.empty();
   }

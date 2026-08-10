@@ -8,6 +8,7 @@ import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.market.MarketAction;
 import com.mo.economy_system.ui.market.MarketController;
 import com.mo.economy_system.ui.market.MarketEvent;
@@ -62,7 +63,7 @@ public final class NeoForge1211MarketScreen extends Screen {
     controller.pollNavigation().ifPresent(this::navigate);
   }
   private void navigate(UiNavigation navigation) { if (minecraft == null) return; if (navigation instanceof UiNavigation.Route route && route.route() == EconomyUiRoute.HOME) minecraft.setScreen(new NeoForge1211HomeScreen()); else if (navigation instanceof UiNavigation.Back) onClose(); }
-  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) { NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font); renderer.fillPhysicalBackground(width, height, MarketLayout.BACKGROUND_COLOR); MarketLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale(); syncSearchWidget(layout); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f); MarketView.render(renderer, controller.state(), layout, controller.viewerId(), scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick); }
+  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) { NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font); renderer.fillPhysicalBackground(width, height, MarketLayout.BACKGROUND_COLOR); MarketLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale(); syncSearchWidget(layout); if (search != null) MarketView.renderSearchFrame(renderer, new UiRect(search.getX(), search.getY(), search.getWidth(), search.getHeight()), search.isFocused()); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f); MarketView.render(renderer, controller.state(), layout, controller.viewerId(), scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick); }
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
     MarketLayout.Layout layout = commonLayout(metrics()); int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     for (MarketLayout.FilterTab tab : layout.filterTabs()) if (tab.hitRect().contains(x, y)) { controller.handle(new MarketEvent.FilterChanged(tab.filter())); return true; }

@@ -6,6 +6,7 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
+import com.mo.economy_system.ui.renderer.UiNativeInputFrame;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.text.UiNumbers;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
@@ -23,11 +24,14 @@ public final class MarketView {
       DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
   private MarketView() {}
 
+  /** Draws the native search field frame in physical target pixels. */
+  public static void renderSearchFrame(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                                       boolean focused) {
+    UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.MARKET_SEARCH_FRAME, focused);
+  }
+
   public static void render(EconomyUiRenderer renderer, MarketState state, MarketLayout.Layout layout,
                             UUID viewerId, int mouseX, int mouseY) {
-    renderer.inputFrame(new UiRect(layout.search().x() - 4, layout.search().y() - 2,
-            layout.search().width() + 8, layout.search().height() + 4),
-        EconomyUiTheme.MARKET_SEARCH_FRAME, layout.search().contains(mouseX, mouseY));
     renderer.translatedButton(layout.createSales(), EconomyUiTheme.MARKET_TOP_SALES_BUTTON,
         "screen.market.create_sales", List.of(), layout.createSales().contains(mouseX, mouseY),
         state.can(MarketAction.CREATE_SALES));
@@ -73,13 +77,15 @@ public final class MarketView {
       renderer.translatedTextInRect(own ? "screen.market.filter.mine"
           : order.type() == MarketOrderType.SALES ? "screen.market.sales" : "screen.market.demand", List.of(),
           new UiRect(left, card.card().y() + 6, 104, 14),
-          own ? EconomyUiTheme.DELIVERY_ACCENT : EconomyUiTheme.TEXT_SECONDARY,
+          own ? EconomyUiTheme.DELIVERY_ACCENT
+              : order.type() == MarketOrderType.SALES ? EconomyUiTheme.MARKET_ACCENT
+              : EconomyUiTheme.SHOP_ACCENT,
           UiTextAlignment.LEFT);
       renderer.textInRect("\uFFE5" + UiNumbers.formatLegacyMarketNumber(order.totalPrice()),
           new UiRect(left + 104, card.card().y() + 6,
-              Math.max(1, right - left - 104), 14), EconomyUiTheme.MARKET_ACCENT,
+              Math.max(1, right - left - 104), 14), EconomyUiTheme.BALANCE_ACCENT,
           UiTextAlignment.RIGHT);
-      UiRect itemNameRect = new UiRect(left, card.card().y() + 22,
+      UiRect itemNameRect = new UiRect(left, card.card().y() + 6 + lineHeight + 2,
           Math.max(1, right - left), lineHeight);
       renderer.itemDisplayNameWithSuffix(order.item().itemId(), " x" + order.quantity(), itemNameRect,
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
@@ -88,7 +94,7 @@ public final class MarketView {
       int ownerWidth = Math.max(1, right - left - MarketLayout.ACTION_BUTTON_WIDTH
           - MarketLayout.ACTION_BUTTON_GAP);
       renderer.translatedTextWithSuffix(ownerKey, List.of(), ": " + order.ownerName(),
-          new UiRect(left, card.card().bottom() - 20, ownerWidth, lineHeight),
+          new UiRect(left, card.card().bottom() - 12, ownerWidth, lineHeight),
           EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
       if (!own && order.type() == MarketOrderType.SALES
           && state.can(MarketAction.ADMIN_REMOVE_SALES)) {
@@ -145,12 +151,12 @@ public final class MarketView {
     return Optional.empty();
   }
 
-  private static String formatDuration(long millis) {
+  static String formatDuration(long millis) {
     long totalSeconds = millis / 1000L;
     long days = totalSeconds / 86400L;
     long hours = (totalSeconds % 86400L) / 3600L;
     long minutes = (totalSeconds % 3600L) / 60L;
-    if (days > 0) return days + "\u5929" + hours + "\u5C0F\u65F6";
+    if (days > 0) return days + "\u5929 " + hours + "\u5C0F\u65F6";
     if (hours > 0) return hours + "\u5C0F\u65F6 " + minutes + "\u5206\u949F";
     return minutes + "\u5206\u949F";
   }

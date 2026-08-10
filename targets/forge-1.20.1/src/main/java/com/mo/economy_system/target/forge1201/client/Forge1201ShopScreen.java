@@ -9,6 +9,7 @@ import com.mo.economy_system.platform.EconomyServices;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.shop.ShopAction;
 import com.mo.economy_system.ui.shop.ShopController;
 import com.mo.economy_system.ui.shop.ShopEvent;
@@ -71,6 +72,8 @@ public final class Forge1201ShopScreen extends Screen {
     renderer.fillPhysicalBackground(width, height, ShopLayout.BACKGROUND_COLOR);
     ShopLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale();
     syncSearchWidget(layout);
+    if (search != null) ShopView.renderSearchFrame(renderer,
+        new UiRect(search.getX(), search.getY(), search.getWidth(), search.getHeight()), search.isFocused());
     graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     ShopView.render(renderer, controller.state(), layout, scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick);
   }

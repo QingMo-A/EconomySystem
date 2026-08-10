@@ -7,9 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mo.economy_system.common.network.MarketOrderFilter;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
+import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.testsupport.RecordingEconomyUiRenderer;
 import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
+import com.mo.economy_system.common.market.MarketOrderType;
+import com.mo.economy_system.common.network.MarketOrderSnapshot;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -57,8 +60,8 @@ class MarketLegacyReferenceParityTest {
     assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("icon")
         && (op.value().equals("ARROW_LEFT") || op.value().equals("ARROW_RIGHT"))),
         "Market pagination does not use the Shop arrow textures");
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("inputFrame")),
-        "search uses dedicated four-edge frame, not market card chrome");
+    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("inputFrame")),
+        "native search chrome is painted by the physical target shell");
   }
 
   @Test
@@ -141,6 +144,62 @@ class MarketLegacyReferenceParityTest {
         && op.value().contains("\uFFE5" + "20")),
         "legacy price text is Yen-prefixed and formatted");
   }
+
+  @Test
+  void cardSemanticsRestoreLegacyTypePriceAndBaselineColors() {
+    MarketState state = new MarketState(List.of(
+        new MarketRow(MarketTestFixtures.order(0, MarketOrderType.SALES, MarketTestFixtures.VIEWER, false)),
+        new MarketRow(MarketTestFixtures.order(1, MarketOrderType.SALES, new java.util.UUID(2, 2), false)),
+        new MarketRow(MarketTestFixtures.order(2, MarketOrderType.DEMAND, new java.util.UUID(2, 3), false))),
+        0, 15, 3, 2, 1, MarketOrderFilter.ALL, "", ScreenState.READY, null, -1, 1,
+        Set.of(MarketAction.values()));
+    MarketLayout.Layout layout = MarketLayout.calculate(640, 360, state,
+        new UiTextMetrics() {
+          @Override public int width(String text) { return text == null ? 0 : text.length() * 6; }
+          @Override public int lineHeight() { return 9; }
+        }, 1.0f);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    MarketView.render(renderer, state, layout, MarketTestFixtures.VIEWER, 0, 0);
+
+    var typeLabels = renderer.operations().stream()
+        .filter(op -> op.kind().equals("translatedTextInRect")
+            && (op.value().startsWith("screen.market.filter.mine")
+                || op.value().startsWith("screen.market.sales")
+                || op.value().startsWith("screen.market.demand"))
+            && op.rect().y() < 100)
+        .toList();
+    assertEquals(3, typeLabels.size());
+    assertEquals(EconomyUiTheme.DELIVERY_ACCENT, paintColor(renderer, typeLabels.get(0)));
+    assertEquals(EconomyUiTheme.MARKET_ACCENT, paintColor(renderer, typeLabels.get(1)));
+    assertEquals(EconomyUiTheme.SHOP_ACCENT, paintColor(renderer, typeLabels.get(2)));
+
+    var prices = renderer.operations().stream().filter(op -> op.kind().equals("textInRect")
+        && op.value().startsWith("\uFFE5")).toList();
+    assertEquals(3, prices.size());
+    for (var price : prices) assertEquals(EconomyUiTheme.BALANCE_ACCENT, paintColor(renderer, price));
+    assertEquals(layout.cards().get(0).card().y() + 6 + 9 + 2,
+        findOperation(renderer, "itemDisplayNameWithSuffix", 0).rect().y());
+    assertEquals(layout.cards().get(0).card().bottom() - 12,
+        findOperation(renderer, "translatedTextWithSuffix", 0).rect().y());
+  }
+
+  @Test
+  void marketDurationDayAndHourHaveLegacySeparatorSpace() {
+    assertEquals("2\u5929 3\u5C0F\u65F6", MarketView.formatDuration(2L * 86_400_000L + 3L * 3_600_000L));
+    assertEquals("3\u5C0F\u65F6 12\u5206\u949F", MarketView.formatDuration(3L * 3_600_000L + 12L * 60_000L));
+  }
+
+  private static int paintColor(RecordingEconomyUiRenderer renderer,
+                                RecordingEconomyUiRenderer.Operation operation) {
+    return renderer.paints().stream().filter(paint -> paint.kind().equals(operation.kind())
+        && paint.rect().equals(operation.rect())).findFirst().orElseThrow().argb();
+  }
+
+  private static RecordingEconomyUiRenderer.Operation findOperation(RecordingEconomyUiRenderer renderer,
+                                                                      String kind, int index) {
+    return renderer.operations().stream().filter(op -> op.kind().equals(kind)).toList().get(index);
+  }
+
 
   @Test
   void marketPaginationIsHiddenOnOnePageAndHitboxesStayInactive() {

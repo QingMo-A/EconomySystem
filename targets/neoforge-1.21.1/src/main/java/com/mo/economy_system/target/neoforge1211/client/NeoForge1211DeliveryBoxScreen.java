@@ -15,6 +15,7 @@ import com.mo.economy_system.ui.delivery.DeliveryLayout;
 import com.mo.economy_system.ui.delivery.DeliveryPort;
 import com.mo.economy_system.ui.delivery.DeliveryView;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.geometry.UiRect;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
@@ -86,6 +87,8 @@ public final class NeoForge1211DeliveryBoxScreen extends Screen {
     DeliveryLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
     syncSearchWidget(layout);
+    if (search != null) DeliveryView.renderSearchFrame(renderer,
+        new UiRect(search.getX(), search.getY(), search.getWidth(), search.getHeight()), search.isFocused());
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     DeliveryView.render(renderer, controller.state(), layout,

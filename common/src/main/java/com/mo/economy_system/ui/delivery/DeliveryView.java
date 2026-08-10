@@ -5,6 +5,7 @@ import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
 import com.mo.economy_system.ui.renderer.TooltipModel;
+import com.mo.economy_system.ui.renderer.UiNativeInputFrame;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
@@ -14,10 +15,14 @@ import java.util.Optional;
 public final class DeliveryView {
   private DeliveryView() {}
 
+  /** Draws the native search field frame in physical target pixels. */
+  public static void renderSearchFrame(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                                       boolean focused) {
+    UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.DELIVERY_SEARCH_FRAME, focused);
+  }
+
   public static void render(EconomyUiRenderer renderer, DeliveryState state,
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.DELIVERY_SEARCH_FRAME,
-        layout.search().contains(mouseX, mouseY));
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(com.mo.economy_system.ui.renderer.UiIcon.DELIVERY, "screen.delivery_box.title", List.of(),
         layout.title().x() + 8,

@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.TooltipLine;
+import com.mo.economy_system.ui.renderer.TooltipModel;
 import com.mo.economy_system.ui.testsupport.RecordingEconomyUiRenderer;
 import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.common.network.ShopItemSnapshot;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -107,6 +110,63 @@ class ShopLegacyReferenceParityTest {
         .orElseThrow().lines().get(2);
     assertTrue(change.getClass().getSimpleName().contains("Colored"),
         "price change line must carry an explicit target-resolved color (red/green/gray)");
+  }
+
+  @Test
+  void tooltipRestoresEveryLegacyLineColorAndRawPriceValues() {
+    ShopItemSnapshot expensive = new ShopItemSnapshot("expensive", "minecraft:stone",
+        10_000, 12_345, 10_000, "stone", 0.1, "", "", 0, 64, 64);
+    ShopState state = new ShopState(List.of(new ShopRow(expensive)),
+        0, 15, "", ScreenState.READY, null, -1, Set.of(ShopAction.values()));
+    TooltipModel tooltip = ShopView.tooltipAt(state, ShopLayout.calculate(640, 360, state), 55, 56)
+        .orElseThrow();
+    assertEquals(7, tooltip.lines().size());
+    assertTrue(tooltip.lines().get(0) instanceof TooltipLine.NativeItem);
+    assertEquals("minecraft:stone", ((TooltipLine.NativeItem) tooltip.lines().get(0)).itemId());
+    assertTrue(tooltip.lines().get(1) instanceof TooltipLine.ColoredLiteral);
+    TooltipLine.ColoredLiteral separator = (TooltipLine.ColoredLiteral) tooltip.lines().get(1);
+    assertEquals("-=-=-=-=-=-", separator.text());
+    assertEquals(0xFF555555, separator.color());
+
+    TooltipLine.ColoredTranslated delta = (TooltipLine.ColoredTranslated) tooltip.lines().get(2);
+    assertEquals(0xFFFF5555, delta.color());
+    assertEquals(List.of("+2345"), delta.arguments());
+    TooltipLine.ColoredTranslated base = (TooltipLine.ColoredTranslated) tooltip.lines().get(3);
+    assertEquals("screen.shop.item.basic_price", base.key());
+    assertEquals(0xFFAAAAAA, base.color());
+    assertEquals(List.of("10000"), base.arguments());
+    TooltipLine.ColoredTranslated current = (TooltipLine.ColoredTranslated) tooltip.lines().get(4);
+    assertEquals("screen.shop.item.current_price", current.key());
+    assertEquals(0xFFFFFF55, current.color());
+    assertEquals(List.of("12345"), current.arguments());
+    TooltipLine.ColoredTranslated factor = (TooltipLine.ColoredTranslated) tooltip.lines().get(5);
+    assertEquals("screen.shop.item.fluctuation_factor", factor.key());
+    assertEquals(0xFFAAAAAA, factor.color());
+    TooltipLine.ColoredTranslated id = (TooltipLine.ColoredTranslated) tooltip.lines().get(6);
+    assertEquals("screen.shop.item.id", id.key());
+    assertEquals(0xFF555555, id.color());
+
+    for (int[] prices : new int[][] {{10_000, 9_000}, {10_000, 10_000}}) {
+      ShopItemSnapshot variant = new ShopItemSnapshot("variant", "minecraft:stone", 10_000,
+          prices[0], prices[1], "stone", 0.1, "", "", 0, 64, 64);
+      ShopState variantState = new ShopState(List.of(new ShopRow(variant)), 0, 15, "",
+          ScreenState.READY, null, -1, Set.of(ShopAction.values()));
+      TooltipLine.ColoredTranslated variantDelta = (TooltipLine.ColoredTranslated)
+          ShopView.tooltipAt(variantState, ShopLayout.calculate(640, 360, variantState), 55, 56)
+              .orElseThrow().lines().get(2);
+      assertEquals(prices[0] > prices[1] ? 0xFFFF5555 : 0xFFAAAAAA, variantDelta.color());
+      int deltaValue = prices[0] - prices[1];
+      assertEquals(List.of(deltaValue > 0 ? "+" + deltaValue : Integer.toString(deltaValue)), variantDelta.arguments());
+    }
+    ShopItemSnapshot down = new ShopItemSnapshot("down", "minecraft:stone", 10_000,
+        9_000, 10_000, "stone", 0.1, "", "", 0, 64, 64);
+    ShopState downState = new ShopState(List.of(new ShopRow(down)), 0, 15, "",
+        ScreenState.READY, null, -1, Set.of(ShopAction.values()));
+    TooltipLine.ColoredTranslated downDelta = (TooltipLine.ColoredTranslated)
+        ShopView.tooltipAt(downState, ShopLayout.calculate(640, 360, downState), 55, 56)
+            .orElseThrow().lines().get(2);
+    assertEquals(0xFF55FF55, downDelta.color());
+    assertEquals(List.of("-1000"), downDelta.arguments());
   }
 
   @Test

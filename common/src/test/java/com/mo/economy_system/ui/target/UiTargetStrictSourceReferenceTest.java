@@ -52,6 +52,41 @@ class UiTargetStrictSourceReferenceTest {
     assertTrue(shop.contains("if (state.totalPages() > 1)"));
     assertTrue(market.contains("if (state.totalPages() > 1)"));
     assertTrue(delivery.contains("if (state.totalPages() > 1)"));
+    assertFalse(shop.contains("renderer.inputFrame("),
+        "native search frame is target-owned in physical pixels");
+    assertFalse(market.contains("renderer.inputFrame("),
+        "native search frame is target-owned in physical pixels");
+    assertFalse(delivery.contains("renderer.inputFrame("),
+        "native search frame is target-owned in physical pixels");
+  }
+
+  @Test
+  void everyTargetDrawsNativeFrameFromWidgetPixelsBeforeVirtualScale() throws IOException {
+    for (String path : List.of(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client/Forge1201ShopScreen.java",
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client/Forge1201MarketScreen.java",
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client/Forge1201DeliveryBoxScreen.java",
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/NeoForge1211ShopScreen.java",
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/NeoForge1211MarketScreen.java",
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/NeoForge1211DeliveryBoxScreen.java")) {
+      String source = read(path);
+      String view = path.contains("ShopScreen") ? "ShopView.renderSearchFrame"
+          : path.contains("MarketScreen") ? "MarketView.renderSearchFrame"
+          : "DeliveryView.renderSearchFrame";
+      assertTrue(source.contains(view), path);
+      assertFalse(source.contains("SEARCH_FRAME"),
+          path + " must use the family common frame style, not target-owned tokens");
+      assertTrue(source.contains("search.getX()"), path);
+      assertTrue(source.contains("search.getY()"), path);
+      assertTrue(source.contains("search.getWidth()"), path);
+      assertTrue(source.contains("search.getHeight()"), path);
+      assertTrue(source.contains("search.isFocused()"), path);
+      int frame = source.indexOf(view);
+      int push = source.indexOf("graphics.pose().pushPose()", frame);
+      int scale = source.indexOf("graphics.pose().scale", push);
+      assertTrue(frame >= 0 && push > frame && scale > push,
+          path + " frame must precede virtual scale");
+    }
   }
 
   private static List<TargetSearch> targets() {
