@@ -6,6 +6,7 @@ import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.UiIcon;
 import com.mo.economy_system.ui.renderer.UiTextAlignment;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
+import com.mo.economy_system.ui.text.UiNumbers;
 import java.util.List;
 
 /** Semantic balance-log table renderer shared by both targets. */
@@ -43,7 +44,7 @@ public final class BalanceLogView {
       var entry = row.row().entry();
       renderer.card(row.rect(), i % 2 == 0 ? EconomyUiTheme.MARKET_CARD : EconomyUiTheme.DELIVERY_CARD,
           false);
-      renderer.text(Long.toString(entry.timeMillis()), row.rect().x() + 6,
+      renderer.text(UiNumbers.formatTimestamp(entry.timeMillis()), row.rect().x() + 6,
           row.rect().y() + 4, EconomyUiTheme.TEXT_SECONDARY);
       renderer.text(entry.category(), row.rect().x() + 84, row.rect().y() + 4,
           EconomyUiTheme.SHOP_ACCENT);

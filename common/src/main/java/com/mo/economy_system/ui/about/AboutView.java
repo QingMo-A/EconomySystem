@@ -14,18 +14,21 @@ public final class AboutView {
   public static void render(EconomyUiRenderer renderer, AboutState state,
                             AboutLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
-    renderer.icon(UiIcon.ABOUT, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedText("screen.about.title", List.of(), layout.title().x() + 16,
-        layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
+    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.scaledIconText(UiIcon.ABOUT, "About", layout.title().x() + 8,
+        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,
+        EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.about.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
     renderer.card(layout.panel(), EconomyUiTheme.HOME_CARD, false);
     renderer.translatedText("screen.about.title", List.of(), layout.panel().x() + 12,
         layout.panel().y() + 8, EconomyUiTheme.TEXT_PRIMARY);
-    renderer.text(state.modName(), layout.panel().x() + 12, layout.panel().y() + 28,
+    int lineHeight = Math.max(1, layout.metrics().lineHeight());
+    renderer.text(state.modName(), layout.panel().x() + 12,
+        layout.panel().y() + 8 + lineHeight + 4,
         EconomyUiTheme.TEXT_SECONDARY);
     renderer.translatedTextInRect("screen.about.author_name", List.of(state.author()),
-        new UiRect(layout.panel().x() + 12, layout.panel().y() + 42,
+        new UiRect(layout.panel().x() + 12, layout.panel().y() + 8 + lineHeight * 2 + 6,
             layout.panel().width() - 24, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
     renderer.translatedTextInRect("screen.about.github_url", List.of(state.githubUrl()), layout.github(),
         layout.github().contains(mouseX, mouseY) ? EconomyUiTheme.MARKET_ACCENT : EconomyUiTheme.TEXT_PRIMARY,
