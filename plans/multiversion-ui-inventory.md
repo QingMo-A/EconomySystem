@@ -16,7 +16,7 @@ their own Minecraft/loader adapters.
 | Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | FORENSIC_REFERENCE_VERIFIED (`c697c0af`, `ShopLegacyReferenceParityTest`) |
 | Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (`bd5a6db2`, `MarketLegacyReferenceParityTest`) |
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (`bd5a6db2`, `MarketLegacyReferenceParityTest`) |
-| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | pixel/reference parity accepted |
+| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (`6b1c1d3c`, `DeliveryLegacyReferenceParityTest`) |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | pixel/reference parity accepted |
 | Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | pixel/reference parity accepted |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | pixel/reference parity accepted |
