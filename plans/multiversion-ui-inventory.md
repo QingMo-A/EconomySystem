@@ -1,6 +1,6 @@
 # Multiversion UI / Logic Inventory
 
-Status: implementation inventory, 2026-08-08. NeoForge 1.21.1 remains the
+Status: implementation inventory, 2026-08-10. NeoForge 1.21.1 remains the
 behavior and visual reference, but active production code no longer compiles
 the root `src/main/java` tree. Both targets compile `common/src/main/java` plus
 their own Minecraft/loader adapters.
@@ -17,12 +17,12 @@ their own Minecraft/loader adapters.
 | Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | pixel/reference parity accepted; fixed 9-entry wire page |
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | pixel/reference parity accepted |
 | Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | pixel/reference parity accepted |
-| Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | migrated |
+| Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | pixel/reference parity accepted |
 | Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | migrated |
-| Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | migrated |
-| Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | migrated |
-| Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | migrated |
-| Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | migrated; one-shot decision |
+| Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | pixel/reference parity accepted |
+| Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | pixel/reference parity accepted |
+| Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | pixel/reference parity accepted |
+| Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | pixel/reference parity accepted; one-shot decision |
 | Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | migrated |
 | Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | migrated |
 
