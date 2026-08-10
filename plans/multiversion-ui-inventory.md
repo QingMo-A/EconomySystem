@@ -12,8 +12,8 @@ their own Minecraft/loader adapters.
 | Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | migrated |
 | About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | pixel/reference parity accepted |
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | pixel/reference parity accepted |
-| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | migrated |
-| Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | migrated |
+| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | pixel/reference parity accepted |
+| Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | pixel/reference parity accepted |
 | Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | migrated; fixed 9-entry wire page |
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | migrated |
 | Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | migrated |
