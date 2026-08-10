@@ -993,7 +993,7 @@ deviation in the separate ledger below.
 | About + Balance | VERIFIED | `src/main/java/com/mo/economy_system/screen/Screen_About.java`, `Screen_BalanceLog.java` at forensic reference | `AboutLegacyReferenceParityTest` + `BalanceLogLegacyReferenceParityTest` (2 exact tests; initial pre-fix failures recorded) | `5d89f765` | `2b45c3c0` | 835 | 900 | passed | localized About title/mod name, gray About cards, gold Balance panel/actions, legacy alternating table rows and footer geometry |
 | Remaining Territory | VERIFIED | list/detail/access/rules/buff/invite/confirmation screens at forensic reference | `TerritoryListLegacyReferenceParityTest` + `TerritoryDetailLegacyReferenceParityTest` + `TerritoryBuffLegacyReferenceParityTest` + `TerritoryInviteLegacyReferenceParityTest` + `TerritoryConfirmationLegacyReferenceParityTest` + `TerritoryLegacyReferenceParityTest` (13 exact tests; initial pre-fix failures recorded) | `c4d99fea` | `d35206d7` | 848 | 913 | passed | localized titles/search frames, territory page styles and 12x12 arrows, Access/Rules player/action semantics, buff/invite chrome/tooltips, danger confirmation; Territory Manage frozen |
 | File Check + Transfer | VERIFIED | pre-Bridge target references: `3771732197d6fb1eb7e2be752a42801107edb3ac:targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/Screen_ClientFileCheckConsent.java` + `Screen_ClientFileCheckResult.java`; `c4bc5fcac48f181b19b8ee16e36684d23c42e47:targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/Screen_CheckedFileTransferConsent.java` + `Screen_CheckedFileTransferResult.java` (the f334 authority contains no file-workflow screens) | `FileCheckLegacyReferenceParityTest` + `FileTransferLegacyReferenceParityTest` (8 exact tests; initial pre-fix run 8/8 failed with real coordinate/chrome mismatches) | `8fdb4f88` | `7d50c744` | 856 | 921 | passed (`buildAllTargets --rerun-tasks`) | SAFETY_DEVIATION: restored legacy plain title/search/12px-row/action geometry and removed card/icon chrome, while retaining explicit consent/deny, one-shot lifecycle, cancellation, safe target-only filesystem/save APIs and existing wire/server semantics; no wire/server changes |
-| Strict global audit | VERIFIED | all active screens and shared UI primitives; final source/resource/JAR authority audit | `StrictUiForensicAuditTest` (3 cross-family architecture/reference gate tests) | `810c765b` | `<docs>` | 859 | 924 | passed (`buildAllTargets --no-daemon --rerun-tasks`) | no blocked followup; File Workflow provenance is an explicit safety deviation because f334 has no corresponding screens and visual evidence uses 3771732/c4bc5fc |
+| Strict global audit | VERIFIED | all active screens and shared UI primitives; final source/resource/JAR authority audit | `StrictUiForensicAuditTest` (3 cross-family architecture/reference gate tests) | `810c765b` | `24edc3e6` | 859 | 924 | passed (`buildAllTargets --no-daemon --rerun-tasks`) | no blocked followup; File Workflow provenance is an explicit safety deviation because f334 has no corresponding screens and visual evidence uses 3771732/c4bc5fc |
 
 ### Strict global audit evidence
 
@@ -1029,13 +1029,10 @@ Started: `2026-08-09 America/Caracas`
 | 6 | File Check + Transfer | FIRST_PASS_ACCEPTED | `f260728d` | `e481a46e` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
 | 7 | Global audit | FIRST_PASS_ACCEPTED | `49387b1` | `ddadf482` | 821 | 886 | passed | Historical checkpoint; forensic row above is authoritative |
 
-允许状态：
+本次已完成审计的最终状态：
 
 ```text
-PENDING
-IN_PROGRESS
-ACCEPTED
-BLOCKED_WITH_FOLLOWUP
+VERIFIED
 ```
 
 最终除有明确 followup 的项目外，应全部 ACCEPTED。
