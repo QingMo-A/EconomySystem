@@ -9,7 +9,7 @@ their own Minecraft/loader adapters.
 
 | Feature family | Common source of truth | Forge 1.20.1 shell | NeoForge 1.21.1 shell | Target-only API boundary | Status |
 |---|---|---|---|---|---|
-| Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | migrated |
+| Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | pixel/reference parity accepted |
 | About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | pixel/reference parity accepted |
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | pixel/reference parity accepted |
 | Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | pixel/reference parity accepted |
@@ -18,7 +18,7 @@ their own Minecraft/loader adapters.
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | pixel/reference parity accepted |
 | Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | pixel/reference parity accepted |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | pixel/reference parity accepted |
-| Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | migrated |
+| Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | pixel/reference parity accepted |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | pixel/reference parity accepted |
 | Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | pixel/reference parity accepted |
 | Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | pixel/reference parity accepted |
@@ -62,6 +62,17 @@ renderer tests prove that both target backends receive the same semantic view.
 | TPA | request store, TTL, potion reservation transaction and fail-closed teleport outcomes | player/inventory/chunk/teleport/effect APIs and command translation |
 | Starter kit | exactly-once claim, marker/account compensation and outcome policy | persistent player marker, account ledger, clone/login events and command translation |
 | Update check | SemVer parsing/comparison, release JSON validation and result policy | HTTP executor, server-thread dispatch and clickable chat components |
+
+Global audit (2026-08-10): both target active-screen inventories contain 19
+Screen classes and pass the common semantic View/Controller/Layout architecture
+gate. Shared GUI textures and language resources are packaged from `common`
+only; Forge and NeoForge JARs contain no opposite-loader classes or target
+source paths. Target visual-authority scans contain no page layout/theme
+constants, and semantic icon fallback scans are clean (pagination arrows are
+intentional text controls). Production target layout hitboxes use real target
+font metrics where text width affects geometry; the remaining approximate
+metric helper is confined to loader-neutral defaults/tests. Renderer contracts
+remain mandatory with explicit Forge/NeoForge implementations.
 
 Target-local classes named `Manager`, `SavedData` or `Store` are not by
 themselves evidence of duplicated policy. They are permitted only when they

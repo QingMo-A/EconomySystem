@@ -991,7 +991,7 @@ Started: `2026-08-09 America/Caracas`
 | 4 | Delivery | ACCEPTED | `2b5ede4a` | `<docs>` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
 | 5 | Remaining Territory | ACCEPTED | `65094073` | `<docs>` | 821 | 886 | passed | List/detail/access/rules, buffs, invite and confirmation legacy geometry, title/version cards, pagination and physical backgrounds |
 | 6 | File Check + Transfer | ACCEPTED | `f260728d` | `<docs>` | 821 | 886 | passed | Consent/result shared chrome, physical backgrounds, explicit safety semantics and target-only lifecycle APIs preserved |
-| 7 | Global audit | PENDING |  |  |  |  |  |  |
+| 7 | Global audit | ACCEPTED | `49387b1` | `<docs>` | 821 | 886 | passed | Active-screen/common-contract, target visual authority, shared resource, fake-icon, metrics, renderer and Forge/NeoForge JAR isolation audits passed |
 
 允许状态：
 
