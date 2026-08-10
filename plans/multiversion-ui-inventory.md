@@ -12,11 +12,11 @@ their own Minecraft/loader adapters.
 | Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | FORENSIC_REFERENCE_VERIFIED (original `ec4730d3` + final hardening `e8fddeef`; inherited `HomeReferenceParityTest` + `HomeViewParityTest`; production frozen) |
 | About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | FORENSIC_REFERENCE_VERIFIED (original `5d89f765` + final hardening `e8fddeef`; `AboutLegacyReferenceParityTest` 3 tests; resource/logo/QR/version/footer/link-copy hover exact) |
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | FORENSIC_REFERENCE_VERIFIED (original `5d89f765` + final hardening `e8fddeef`; `BalanceLogLegacyReferenceParityTest` 2 tests; row/time/colors/description/search/pagination/format and physical background exact) |
-| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + final hardening `e8fddeef`; `ShopLegacyReferenceParityTest` 6 + `ShopViewParityTest` 2; card-only hit target, native tooltip/search, page baseline, Yen/UiNumbers and colored price delta) |
+| Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + hardening `e8fddeef` + strict closure `95fbb44b`; `ShopLegacyReferenceParityTest` 7 + `ShopViewParityTest` 2; Shop-only 12x12 texture paging, one-page visibility/hitbox gate, native max-50 search and dynamic title card) |
 | Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | FORENSIC_REFERENCE_VERIFIED (original `c697c0af` + final hardening `e8fddeef`; `ShopPurchaseLegacyReferenceParityTest` 1; purchase quantity/price/button/hover/click geometry exact) |
-| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + baseline/gate `b4300829`; `MarketLegacyReferenceParityTest` 9 + `MarketViewParityTest` 2; composite owner/item/count, native tooltip metadata, native-name search and page label y=virtualHeight-35 exact) |
+| Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b`; `MarketLegacyReferenceParityTest` 11 + `MarketViewParityTest` 2; textual paging, one-page gate, compact price, exact filter hit geometry, compact chrome and native max-50 search) |
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (original `bd5a6db2` + hardening `e8fddeef` + strict gate `b4300829`; `MarketCreateLegacyReferenceParityTest` 1 + `MarketConfirmLegacyReferenceParityTest` 1; resolved native names, composite labels and Yen/UiNumbers exact) |
-| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + hardening `e8fddeef` + baseline/gate `b4300829`; `DeliveryLegacyReferenceParityTest` 6; composite native item/count/source, claim/retry style, native-only tooltip, native-name search and page label y=virtualHeight-35 exact) |
+| Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6b1c1d3c` + hardening `e8fddeef` + baseline `b4300829` + strict closure `95fbb44b`; `DeliveryLegacyReferenceParityTest` 7; textual paging, one-page gate, compact claim/page chrome, native max-50 search and dynamic title card) |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryListLegacyReferenceParityTest` 2; localized title/search/page/12px arrows and once-only physical background) |
 | Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | FORENSIC_REFERENCE_VERIFIED (original `6976818` + final hardening `e8fddeef` strict/multi-viewport only; inherited `TerritoryManageGoldenParityTest` + `TerritoryManageViewParityTest`; production frozen) |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryDetailLegacyReferenceParityTest` 2; Access/Rules semantics, chrome/tooltips and once-only physical background) |
@@ -25,6 +25,7 @@ their own Minecraft/loader adapters.
 | Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | FORENSIC_REFERENCE_VERIFIED (original `c4d99fea` + final hardening `e8fddeef`; `TerritoryConfirmationLegacyReferenceParityTest` 2; danger confirmation and once-only physical background; one-shot decision) |
 | Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | FORENSIC_REFERENCE_VERIFIED (original `8fdb4f88` + final hardening `e8fddeef`; `FileCheckLegacyReferenceParityTest` 4); SAFETY_DEVIATION: legacy plain geometry restored while consent/deny, one-shot lifecycle, cancellation and safe target-only scan semantics remain |
 | Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | FORENSIC_REFERENCE_VERIFIED (original `8fdb4f88` + final hardening `e8fddeef`; `FileTransferLegacyReferenceParityTest` 4); SAFETY_DEVIATION: legacy plain geometry restored while explicit consent/deny, lifecycle guards and target-only save APIs remain |
+| Shared language resources | `common/src/main/resources/assets/economy_system/lang` | packaged from common | packaged from common | none | FORENSIC_REFERENCE_VERIFIED (`95fbb44b`; en_us/zh_cn 823 keys each, f334 legacy overlap 396/396 value-exact, active keys complete, placeholders aligned, no target-local copies or Market English fallback) |
 
 Every active `*Screen.java` under the two target adapter packages is covered by
 an architecture gate requiring a common UI contract. The legacy
@@ -63,7 +64,7 @@ renderer tests prove that both target backends receive the same semantic view.
 | Starter kit | exactly-once claim, marker/account compensation and outcome policy | persistent player marker, account ledger, clone/login events and command translation |
 | Update check | SemVer parsing/comparison, release JSON validation and result policy | HTTP executor, server-thread dispatch and clickable chat components |
 
-Global audit (2026-08-10, final hardening `e8fddeef` + follow-up `b4300829`): both target
+Global audit (2026-08-10, final hardening `e8fddeef` + follow-up `b4300829` + strict closure `95fbb44b`): both target
 active-screen inventories contain 19 Screen classes and pass the common
 semantic View/Controller/Layout architecture gate. Shared GUI textures and
 language resources are packaged from `common` only; Forge and NeoForge JARs
@@ -87,9 +88,13 @@ semantics, and native tooltip trigger/order/color rules. The table-driven
 short and fractional scaling; it now asserts Market/Delivery page-label and
 button baselines independently. The strict gate proves exactly one physical
 fullscreen fill before each target shell's pushPose/scale (nested Forge file
-shells checked separately). Full gates passed with Forge 879 tests and
-NeoForge 944 tests (0 failures, 0 errors, 1 skip each) and
-`buildAllTargets --rerun-tasks`.
+shells checked separately). The strict closure additionally locks exact glow
+rows, semantic family page styles, textual Market/Delivery versus textured
+Shop pagination, hidden one-page hitboxes, compact Market prices, native
+max-50 search widgets, dynamic Shop/Delivery title cards, exact Market filter
+hit rectangles, and common-only 823-key bilingual resources with 396/396
+legacy value parity. Full gates passed with Forge 894 tests and NeoForge 959
+tests (0 failures, 0 errors, 1 skip each) and `buildAllTargets --rerun-tasks`.
 
 Target-local classes named `Manager`, `SavedData` or `Store` are not by
 themselves evidence of duplicated policy. They are permitted only when they
