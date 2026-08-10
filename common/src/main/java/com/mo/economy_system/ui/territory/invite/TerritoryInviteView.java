@@ -16,6 +16,10 @@ public final class TerritoryInviteView {
       TerritoryInviteLayout.Layout layout, int mouseX, int mouseY, long tick) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), TerritoryInviteLayout.BACKGROUND_COLOR);
     renderer.card(layout.rows(), EconomyUiTheme.TERRITORY_CARD, false);
+    UiRect searchFrame = new UiRect(layout.search().x() - 4, layout.search().y() - 2,
+        layout.search().width() + 8, layout.search().height() + 4);
+    renderer.inputFrame(searchFrame, EconomyUiTheme.TERRITORY_SEARCH_FRAME,
+        layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.invite.title", List.of(), layout.title(),
         EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
     renderer.translatedTextInRect("screen.invite.territory", List.of(state.territoryName()), layout.subtitle(),
@@ -46,12 +50,20 @@ public final class TerritoryInviteView {
       }
     }
     if (state.totalPages() > 1) {
-      renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON, "<",
-          layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+      boolean previousEnabled = state.page() > 0;
+      renderer.button(layout.previousButton(), previousEnabled
+          ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
+          layout.previousButton().y() + 4, 12, 12));
       renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-      renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON, ">",
-          layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+      boolean nextEnabled = state.page() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled
+          ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+      renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
+          layout.nextButton().y() + 4, 12, 12));
     }
     renderer.translatedButton(layout.backButton(), EconomyUiTheme.HOME_ABOUT_BUTTON,
         "button.invite.back", List.of(), layout.backButton().contains(mouseX, mouseY), true);

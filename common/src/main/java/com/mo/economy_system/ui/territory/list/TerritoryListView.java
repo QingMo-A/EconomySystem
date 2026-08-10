@@ -19,14 +19,14 @@ public final class TerritoryListView {
                             TerritoryListLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
         TerritoryListLayout.BACKGROUND_COLOR);
-    renderer.card(layout.searchBackground(), EconomyUiTheme.TERRITORY_CARD,
+    renderer.inputFrame(layout.searchBackground(), EconomyUiTheme.TERRITORY_SEARCH_FRAME,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.territory.list.search", List.of(), layout.search(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
-    renderer.scaledIconText(UiIcon.TERRITORY, "Territory", layout.title().x() + 8,
-        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,
-        EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
+    renderer.scaledIconTranslatedText(UiIcon.TERRITORY, "screen.territory.title", List.of(),
+        layout.title().x() + 8, layout.title().y() + 5, 1.0f,
+        EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.territory.list.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
 
@@ -78,12 +78,20 @@ public final class TerritoryListView {
     }
 
     if (state.totalPages() > 1) {
-      renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
-          layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+      boolean previousEnabled = state.page() > 0;
+      renderer.button(layout.previousButton(), previousEnabled
+              ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
+          layout.previousButton().y() + 5, 12, 12));
       renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-      renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages() ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
-          layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+      boolean nextEnabled = state.page() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled
+              ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+      renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
+          layout.nextButton().y() + 5, 12, 12));
     }
   }
 

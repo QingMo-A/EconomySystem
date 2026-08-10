@@ -72,13 +72,20 @@ public final class BuffManageView {
         }
 
         if (state.totalPages() > 1) {
-            renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
-                    layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+            boolean previousEnabled = state.page() > 0;
+            renderer.button(layout.previousButton(), previousEnabled
+                    ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+                    "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+            renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
+                    layout.previousButton().y() + 5, 12, 12));
             renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
                     EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-            renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages() ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
-                    layout.nextButton().contains(mouseX, mouseY),
-                    state.page() + 1 < state.totalPages());
+            boolean nextEnabled = state.page() + 1 < state.totalPages();
+            renderer.button(layout.nextButton(), nextEnabled
+                    ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+                    "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+            renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
+                    layout.nextButton().y() + 5, 12, 12));
         }
 
         renderer.icon(UiIcon.TERRITORY, new UiRect(layout.footerTitle().x(),
@@ -106,15 +113,7 @@ public final class BuffManageView {
     private static void renderSearchFrame(EconomyUiRenderer renderer, UiRect search) {
         UiRect frame = new UiRect(search.x() - 4, search.y() - 2,
                 search.width() + 8, search.height() + 4);
-        renderer.fill(frame, 0xE04A5568);
-        renderer.fill(new UiRect(frame.x(), frame.y(), frame.width(), 1),
-                EconomyUiTheme.TERRITORY_ACCENT);
-        renderer.fill(new UiRect(frame.x(), frame.bottom() - 1, frame.width(), 1),
-                EconomyUiTheme.TERRITORY_ACCENT);
-        renderer.fill(new UiRect(frame.x(), frame.y(), 1, frame.height()),
-                EconomyUiTheme.TERRITORY_ACCENT);
-        renderer.fill(new UiRect(frame.right() - 1, frame.y(), 1, frame.height()),
-                EconomyUiTheme.TERRITORY_ACCENT);
+        renderer.inputFrame(frame, EconomyUiTheme.TERRITORY_SEARCH_FRAME, false);
     }
 
     private static UiButtonStyle actionStyle(BuffRow row) {

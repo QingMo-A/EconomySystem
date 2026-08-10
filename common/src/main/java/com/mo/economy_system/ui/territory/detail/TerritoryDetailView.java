@@ -20,9 +20,9 @@ public final class TerritoryDetailView {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
         TerritoryDetailLayout.BACKGROUND_COLOR);
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
-    renderer.scaledIconText(UiIcon.TERRITORY, "Territory", layout.title().x() + 8,
-        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,
-        EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
+    renderer.scaledIconTranslatedText(UiIcon.TERRITORY, titleKey(state.view()), List.of(),
+        layout.title().x() + 8, layout.title().y() + 5, 1.0f,
+        EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.territory.detail.territory",
         List.of(state.territory().summary().name()), layout.subtitle(),
         EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
@@ -34,12 +34,20 @@ public final class TerritoryDetailView {
     }
 
     if (state.view() != TerritoryDetailViewKind.MAIN && state.totalPages() > 1) {
-      renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON, "<",
-          layout.previousButton().contains(mouseX, mouseY), state.scroll() > 0);
+      boolean previousEnabled = state.scroll() > 0;
+      renderer.button(layout.previousButton(), previousEnabled
+              ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.previousButton().contains(mouseX, mouseY), previousEnabled);
+      renderer.icon(UiIcon.ARROW_LEFT, new UiRect(layout.previousButton().x() + 19,
+          layout.previousButton().y() + 4, 12, 12));
       renderer.textInRect((state.scroll() + 1) + " / " + state.totalPages(), layout.pageText(),
           EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-      renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON, ">",
-          layout.nextButton().contains(mouseX, mouseY), state.scroll() + 1 < state.totalPages());
+      boolean nextEnabled = state.scroll() + 1 < state.totalPages();
+      renderer.button(layout.nextButton(), nextEnabled
+              ? EconomyUiTheme.TERRITORY_PAGE_BUTTON : EconomyUiTheme.TERRITORY_PAGE_BUTTON_DISABLED,
+          "", layout.nextButton().contains(mouseX, mouseY), nextEnabled);
+      renderer.icon(UiIcon.ARROW_RIGHT, new UiRect(layout.nextButton().x() + 19,
+          layout.nextButton().y() + 4, 12, 12));
     }
     renderer.translatedButton(layout.backButton(), EconomyUiTheme.TERRITORY_BUTTON, "gui.back",
         List.of(), layout.backButton().contains(mouseX, mouseY), state.can(TerritoryDetailAction.BACK));
@@ -78,7 +86,7 @@ public final class TerritoryDetailView {
 
   private static void renderNested(EconomyUiRenderer renderer, TerritoryDetailState state,
                                    TerritoryDetailLayout.Layout layout, int mouseX, int mouseY) {
-    renderSearchFrame(renderer, layout.search());
+    renderSearchFrame(renderer, layout.search(), mouseX, mouseY);
     if (state.screenState() == ScreenState.LOADING) {
       message(renderer, "screen.territory.detail.loading", layout.rows(), EconomyUiTheme.TEXT_PRIMARY);
       return;
@@ -163,14 +171,11 @@ public final class TerritoryDetailView {
     renderer.translatedTextInRect(key, List.of(), rect, color, UiTextAlignment.CENTER);
   }
 
-  private static void renderSearchFrame(EconomyUiRenderer renderer, UiRect search) {
+  private static void renderSearchFrame(EconomyUiRenderer renderer, UiRect search,
+                                        int mouseX, int mouseY) {
     UiRect frame = new UiRect(search.x() - 4, search.y() - 2,
         search.width() + 8, search.height() + 4);
-    renderer.fill(frame, 0xE04A5568);
-    renderer.fill(new UiRect(frame.x(), frame.y(), frame.width(), 1), EconomyUiTheme.TERRITORY_ACCENT);
-    renderer.fill(new UiRect(frame.x(), frame.bottom() - 1, frame.width(), 1), EconomyUiTheme.TERRITORY_ACCENT);
-    renderer.fill(new UiRect(frame.x(), frame.y(), 1, frame.height()), EconomyUiTheme.TERRITORY_ACCENT);
-    renderer.fill(new UiRect(frame.right() - 1, frame.y(), 1, frame.height()), EconomyUiTheme.TERRITORY_ACCENT);
+    renderer.inputFrame(frame, EconomyUiTheme.TERRITORY_SEARCH_FRAME, search.contains(mouseX, mouseY));
   }
 
   private static String titleKey(TerritoryDetailViewKind view) {

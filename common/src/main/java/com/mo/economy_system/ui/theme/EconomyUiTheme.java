@@ -134,6 +134,12 @@ public final class EconomyUiTheme {
     public static final UiInputFrameStyle MARKET_SEARCH_FRAME = SHOP_SEARCH_FRAME;
     public static final UiInputFrameStyle DELIVERY_SEARCH_FRAME = UiInputFrameStyle.of(
             0xE04A5568, 0xFFFFB74D);
+    /** Territory reference search fields use the purple accent and the shared four-edge frame. */
+    public static final UiInputFrameStyle TERRITORY_SEARCH_FRAME = UiInputFrameStyle.of(
+            0xE04A5568, TERRITORY_ACCENT);
+    /** Territory list/detail/buff/invite paging uses the legacy purple action chrome. */
+    public static final UiButtonStyle TERRITORY_PAGE_BUTTON = pageButton(TERRITORY_ACCENT);
+    public static final UiButtonStyle TERRITORY_PAGE_BUTTON_DISABLED = disabledPageButton();
 
     private static UiButtonStyle actionButton(int accent) {
         return actionButton(accent, 8);
