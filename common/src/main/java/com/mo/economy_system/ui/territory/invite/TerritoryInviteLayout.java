@@ -8,6 +8,7 @@ import java.util.List;
 
 /** Shared invite directory geometry in the 640x360 virtual coordinate space. */
 public final class TerritoryInviteLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private static final int PANEL_WIDTH = 420;
   private static final int PANEL_PADDING = 12;
   private static final int ROW_HEIGHT = 24;

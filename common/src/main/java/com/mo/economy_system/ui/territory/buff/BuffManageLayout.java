@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class BuffManageLayout {
+    public static final int BACKGROUND_COLOR = 0xB0000000;
     public static final int CARD_WIDTH = 200;
     public static final int CARD_HEIGHT = 88;
     public static final int LIST_START_Y = 55;
@@ -34,7 +35,7 @@ public final class BuffManageLayout {
             cards.add(new Card(visible.get(i), card,
                     new UiRect(actionX, card.bottom() - 8 - Math.min(ACTION_HEIGHT, card.height()),
                             Math.min(ACTION_WIDTH, card.width()), Math.min(ACTION_HEIGHT, card.height())),
-                    new UiRect(card.x() + 8, card.y() + 20, Math.min(32, card.width()), Math.min(32, card.height())),
+                    new UiRect(card.x() + 8, card.y() + 28, Math.min(32, card.width()), Math.min(32, card.height())),
                     new UiRect(textX, card.y() + 5, Math.max(1, textWidth - 62), 16),
                     new UiRect(Math.max(textX, card.right() - 68), card.y() + 5,
                             Math.min(60, textWidth), 16),
@@ -49,8 +50,8 @@ public final class BuffManageLayout {
         UiRect retry = new UiRect(panel + Math.max(0, (listWidth - 96) / 2),
                 LIST_START_Y + Math.max(0, (height - LIST_START_Y - 45 - 22) / 2),
                 Math.min(96, listWidth), 22);
-        UiRect footerTitle = new UiRect(panel, height - 20,
-                Math.max(0, previous.x() - panel - 8), 12);
+        UiRect footerTitle = new UiRect(panel, height - 31,
+                Math.max(0, previous.x() - panel - 8), 19);
         UiRect escHint = new UiRect(Math.max(panel, width - panel - 180), height - 20, 180, 12);
         return new Layout(scale, new UiRect(panel, 20, Math.min(200, listWidth), 20),
                 new UiRect(panel, 40, listWidth, 14), List.copyOf(cards), previous, next,

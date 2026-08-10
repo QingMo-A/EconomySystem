@@ -20,7 +20,7 @@ public final class BuffManageView {
     public static void render(EconomyUiRenderer renderer, BuffManageState state,
                               BuffManageLayout.Layout layout, int mouseX, int mouseY) {
         renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-                0xB0000000);
+                BuffManageLayout.BACKGROUND_COLOR);
         renderSearchFrame(renderer, layout.search());
 
         if (state.screenState() == ScreenState.LOADING) {
@@ -72,11 +72,11 @@ public final class BuffManageView {
         }
 
         if (state.totalPages() > 1) {
-            renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON, "<",
+            renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
                     layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
             renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
                     EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-            renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON, ">",
+            renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages() ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
                     layout.nextButton().contains(mouseX, mouseY),
                     state.page() + 1 < state.totalPages());
         }

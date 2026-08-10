@@ -82,8 +82,9 @@ public final class Forge1201BuffManageScreen extends Screen {
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     var layout = commonLayout(); UiScale scale = layout.scale();
-    graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, BuffManageLayout.BACKGROUND_COLOR);
+    graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     BuffManageView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();

@@ -9,6 +9,7 @@ import java.util.List;
 
 /** Pure, loader-neutral geometry for territory administration detail views. */
 public final class TerritoryDetailLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   public static final int ROW_HEIGHT = 42;
   public static final int ACTION_HEIGHT = 22;
   private static final int TITLE_Y = 18;

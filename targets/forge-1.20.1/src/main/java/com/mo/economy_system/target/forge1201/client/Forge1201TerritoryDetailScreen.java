@@ -109,11 +109,13 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     TerritoryDetailLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TerritoryDetailLayout.BACKGROUND_COLOR);
     if (search != null) search.visible = controller.state().view()
         != com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN;
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    TerritoryDetailView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+    TerritoryDetailView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);

@@ -8,6 +8,7 @@ import java.util.List;
 
 /** Pure virtual-coordinate layout for the territory card grid. */
 public final class TerritoryListLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   public static final int CARD_WIDTH = 200;
   public static final int CARD_HEIGHT = 120;
   private static final int GRID_START_Y = 55;
@@ -52,7 +53,7 @@ public final class TerritoryListLayout {
     UiRect retry = new UiRect(Math.max(panel, (width - 120) / 2),
         GRID_START_Y + Math.max(0, (height - GRID_START_Y - FOOTER_HEIGHT - 28) / 2),
         Math.min(120, Math.max(1, width - panel * 2)), 24);
-    UiRect title = new UiRect(panel, height - panel - 14, Math.max(1, width / 2), 14);
+    UiRect title = new UiRect(panel, height - panel - 31, 240, 19);
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - 14, 90, 14);
     UiRect search = new UiRect(panel, 20, Math.min(SEARCH_WIDTH, Math.max(1, width - panel * 2)), 20);
     UiRect searchBackground = new UiRect(search.x() - 4, search.y() - 2,

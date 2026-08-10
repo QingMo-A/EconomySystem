@@ -18,12 +18,11 @@ public final class TerritoryDetailView {
   public static void render(EconomyUiRenderer renderer, TerritoryDetailState state,
                             TerritoryDetailLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        0xB0000000);
-    renderer.icon(UiIcon.TERRITORY, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedTextInRect(titleKey(state.view()), List.of(),
-        new UiRect(layout.title().x() + 16, layout.title().y(),
-            Math.max(1, layout.title().width() - 16), layout.title().height()),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+        TerritoryDetailLayout.BACKGROUND_COLOR);
+    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.scaledIconText(UiIcon.TERRITORY, "Territory", layout.title().x() + 8,
+        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,
+        EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.territory.detail.territory",
         List.of(state.territory().summary().name()), layout.subtitle(),
         EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);

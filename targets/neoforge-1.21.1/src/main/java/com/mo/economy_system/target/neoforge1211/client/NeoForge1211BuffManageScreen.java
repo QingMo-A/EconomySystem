@@ -89,9 +89,10 @@ public final class NeoForge1211BuffManageScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     BuffManageLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, BuffManageLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
     BuffManageView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();

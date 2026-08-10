@@ -18,14 +18,15 @@ public final class TerritoryListView {
   public static void render(EconomyUiRenderer renderer, TerritoryListState state,
                             TerritoryListLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()),
-        0xB0000000);
+        TerritoryListLayout.BACKGROUND_COLOR);
     renderer.card(layout.searchBackground(), EconomyUiTheme.TERRITORY_CARD,
         layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.territory.list.search", List.of(), layout.search(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
-    renderer.icon(UiIcon.TERRITORY, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedText("screen.territory.title", List.of(), layout.title().x() + 16,
-        layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
+    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.scaledIconText(UiIcon.TERRITORY, "Territory", layout.title().x() + 8,
+        layout.title().y() + 5, 1.0f, EconomyUiRenderer.ICON_SIZE,
+        EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.territory.list.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
 
@@ -76,12 +77,14 @@ public final class TerritoryListView {
           state.can(TerritoryListAction.MANAGE));
     }
 
-    renderer.button(layout.previousButton(), EconomyUiTheme.TERRITORY_BUTTON, "<",
-        layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
-    renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
-        EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    renderer.button(layout.nextButton(), EconomyUiTheme.TERRITORY_BUTTON, ">",
-        layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+    if (state.totalPages() > 1) {
+      renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, "<",
+          layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+      renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(),
+          EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+      renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages() ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED, ">",
+          layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+    }
   }
 
   private static UiCardStyle cardStyle(TerritoryListRow row) {

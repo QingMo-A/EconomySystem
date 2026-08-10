@@ -89,9 +89,11 @@ public final class NeoForge1211TerritoryListScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     TerritoryListLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TerritoryListLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    TerritoryListView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout,
+    TerritoryListView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);

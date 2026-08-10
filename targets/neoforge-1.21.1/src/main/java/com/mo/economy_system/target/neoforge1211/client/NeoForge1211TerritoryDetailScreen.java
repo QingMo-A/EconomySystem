@@ -113,10 +113,12 @@ public final class NeoForge1211TerritoryDetailScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     TerritoryDetailLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TerritoryDetailLayout.BACKGROUND_COLOR);
     if (search != null) search.visible = controller.state().view() != TerritoryDetailViewKind.MAIN;
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    TerritoryDetailView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout,
+    TerritoryDetailView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);

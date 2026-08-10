@@ -66,8 +66,11 @@ public final class NeoForge1211TerritoryInviteScreen extends Screen {
   }
   private void navigate(UiNavigation navigation) { if (minecraft != null && navigation instanceof UiNavigation.Back) minecraft.setScreen(parent); }
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-    var layout = commonLayout(); UiScale scale = layout.scale(); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    TerritoryInviteView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout, scale.toVirtualX(mouseX), scale.toVirtualY(mouseY), clientTick);
+    var layout = commonLayout(); UiScale scale = layout.scale();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TerritoryInviteLayout.BACKGROUND_COLOR);
+    graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
+    TerritoryInviteView.render(renderer, controller.state(), layout, scale.toVirtualX(mouseX), scale.toVirtualY(mouseY), clientTick);
     graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick);
   }
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {

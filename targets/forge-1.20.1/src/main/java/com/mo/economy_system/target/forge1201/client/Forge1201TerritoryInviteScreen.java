@@ -78,9 +78,11 @@ public final class Forge1201TerritoryInviteScreen extends Screen {
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     var layout = commonLayout();
     UiScale scale = layout.scale();
+    Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, TerritoryInviteLayout.BACKGROUND_COLOR);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    TerritoryInviteView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+    TerritoryInviteView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY), clientTick);
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
