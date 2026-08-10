@@ -985,13 +985,13 @@ Started: `2026-08-09 America/Caracas`
 |---|---|---|---|---|---:|---:|---|---|
 | 0 | Territory Manage | ACCEPTED | `6976818` | `cb7228f` | inherited | inherited | passed | pixel parity template |
 | 0 | Home | ACCEPTED | `ec4730d` | `a2cb32c` | 821 | 886 | passed | pixel parity template |
-| 1 | About + Balance | ACCEPTED | `21f37d1a` | `<docs>` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
-| 2 | Shop family | ACCEPTED | `82dbf067` | `<docs>` | 821 | 886 | passed | Catalog/purchase card geometry, arrows, dynamic price delta, common animation |
-| 3 | Market family | ACCEPTED | `6ab64e31` | `<docs>` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
-| 4 | Delivery | ACCEPTED | `2b5ede4a` | `<docs>` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
-| 5 | Remaining Territory | ACCEPTED | `65094073` | `<docs>` | 821 | 886 | passed | List/detail/access/rules, buffs, invite and confirmation legacy geometry, title/version cards, pagination and physical backgrounds |
-| 6 | File Check + Transfer | ACCEPTED | `f260728d` | `<docs>` | 821 | 886 | passed | Consent/result shared chrome, physical backgrounds, explicit safety semantics and target-only lifecycle APIs preserved |
-| 7 | Global audit | ACCEPTED | `49387b1` | `<docs>` | 821 | 886 | passed | Active-screen/common-contract, target visual authority, shared resource, fake-icon, metrics, renderer and Forge/NeoForge JAR isolation audits passed |
+| 1 | About + Balance | ACCEPTED | `21f37d1a` | `921a1193` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
+| 2 | Shop family | ACCEPTED | `82dbf067` | `fec80f38` | 821 | 886 | passed | Catalog/purchase card geometry, arrows, dynamic price delta, common animation |
+| 3 | Market family | ACCEPTED | `6ab64e31` | `4ffaef18` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
+| 4 | Delivery | ACCEPTED | `2b5ede4a` | `9199d91e` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
+| 5 | Remaining Territory | ACCEPTED | `65094073` | `7090ee7b` | 821 | 886 | passed | List/detail/access/rules, buffs, invite and confirmation legacy geometry, title/version cards, pagination and physical backgrounds |
+| 6 | File Check + Transfer | ACCEPTED | `f260728d` | `e481a46e` | 821 | 886 | passed | Consent/result shared chrome, physical backgrounds, explicit safety semantics and target-only lifecycle APIs preserved |
+| 7 | Global audit | ACCEPTED | `49387b1` | `ddadf482` | 821 | 886 | passed | Active-screen/common-contract, target visual authority, shared resource, fake-icon, metrics, renderer and Forge/NeoForge JAR isolation audits passed |
 
 允许状态：
 
