@@ -12,6 +12,7 @@ import com.mo.economy_system.ui.shop.ShopAction;
 import com.mo.economy_system.ui.shop.ShopController;
 import com.mo.economy_system.ui.shop.ShopEvent;
 import com.mo.economy_system.ui.shop.ShopLayout;
+import com.mo.economy_system.ui.shop.ShopOpenAnimation;
 import com.mo.economy_system.ui.shop.ShopPort;
 import com.mo.economy_system.ui.shop.ShopRow;
 import com.mo.economy_system.ui.shop.ShopView;
@@ -30,6 +31,7 @@ public final class NeoForge1211ShopScreen extends Screen {
   private final ShopController controller = new ShopController(port);
   private EditBox search;
   private long appliedRevision = -1;
+  private long animationStartedAtNanos = -1L;
 
   public NeoForge1211ShopScreen() { this(null); }
   public NeoForge1211ShopScreen(Screen parent) {
@@ -38,8 +40,9 @@ public final class NeoForge1211ShopScreen extends Screen {
   }
 
   @Override protected void init() {
+    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
     String value = search == null ? "" : search.getValue();
-    ShopLayout.Layout layout = commonLayout();
+    ShopLayout.Layout layout = commonLayout(metrics());
     UiScale scale = layout.scale();
     search = new EditBox(font, Math.round(layout.search().x() * scale.value()),
         Math.round(layout.search().y() * scale.value()),
@@ -72,20 +75,23 @@ public final class NeoForge1211ShopScreen extends Screen {
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-    ShopLayout.Layout layout = commonLayout();
+    NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, ShopLayout.BACKGROUND_COLOR);
+    ShopLayout.Layout layout = commonLayout(renderer.metrics());
     UiScale scale = layout.scale();
+    syncSearchWidget(layout);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    ShopView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout,
+    ShopView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
   }
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    ShopLayout.Layout layout = commonLayout();
+    ShopLayout.Layout layout = commonLayout(metrics());
     int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
-    for (ShopLayout.Card card : layout.cards()) if (card.buyButton().contains(x, y)) {
+    for (ShopLayout.Card card : layout.cards()) if (card.card().contains(x, y)) {
       controller.handle(new ShopEvent.ActionClicked(ShopAction.BUY, card.row().item().shopItemId()));
       return true;
     }
@@ -116,14 +122,18 @@ public final class NeoForge1211ShopScreen extends Screen {
   @Override public boolean isPauseScreen() { return false; }
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
-  private ShopLayout.Layout commonLayout() {
-    ShopLayout.Layout layout = ShopLayout.calculate(width, height, controller.state());
+  private ShopLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics metrics) {
+    ShopLayout.Layout layout = ShopLayout.calculate(width, height, controller.state(), metrics, animationProgress());
     if (layout.pageSize() != controller.state().pageSize()) {
       controller.handle(new ShopEvent.ViewportChanged(layout.pageSize()));
-      layout = ShopLayout.calculate(width, height, controller.state());
+      layout = ShopLayout.calculate(width, height, controller.state(), metrics, animationProgress());
     }
     return layout;
   }
+
+  private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new NeoForge1211UiTextMetrics(font); }
+  private float animationProgress() { return ShopOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
+  private void syncSearchWidget(ShopLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
 
   private final class Port implements ShopPort {
     private long requestId = -1;
