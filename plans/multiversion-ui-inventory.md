@@ -23,8 +23,8 @@ their own Minecraft/loader adapters.
 | Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryBuffLegacyReferenceParityTest`) |
 | Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryInviteLegacyReferenceParityTest`) |
 | Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryConfirmationLegacyReferenceParityTest`); one-shot decision |
-| Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | pixel/reference parity accepted; consent and local scan safety preserved |
-| Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | pixel/reference parity accepted; explicit consent and target-only save APIs preserved |
+| Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | FORENSIC_REFERENCE_VERIFIED (`8fdb4f88`, `FileCheckLegacyReferenceParityTest`); SAFETY_DEVIATION: legacy plain geometry restored while consent/deny, one-shot lifecycle, cancellation and safe target-only scan semantics remain |
+| Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | FORENSIC_REFERENCE_VERIFIED (`8fdb4f88`, `FileTransferLegacyReferenceParityTest`); SAFETY_DEVIATION: legacy plain geometry restored while explicit consent/deny, lifecycle guards and target-only save APIs remain |
 
 Every active `*Screen.java` under the two target adapter packages is covered by
 an architecture gate requiring a common UI contract. The legacy
