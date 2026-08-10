@@ -16,14 +16,20 @@ public final class MarketView {
 
   public static void render(EconomyUiRenderer renderer, MarketState state, MarketLayout.Layout layout,
                             UUID viewerId, int mouseX, int mouseY) {
-    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
+    renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), MarketLayout.BACKGROUND_COLOR);
     renderer.card(layout.search(), EconomyUiTheme.MARKET_CARD, layout.search().contains(mouseX, mouseY));
     renderer.translatedTextInRect("screen.market.search", List.of(), layout.search(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
-    renderer.translatedTextInRect(filterKey(state.filter()), List.of(), layout.filter(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
     renderer.translatedButton(layout.createSales(), EconomyUiTheme.MARKET_BUTTON, "screen.market.create_sales", List.of(), layout.createSales().contains(mouseX, mouseY), state.can(MarketAction.CREATE_SALES));
     renderer.translatedButton(layout.createDemand(), EconomyUiTheme.MARKET_BUTTON, "screen.market.create_demand", List.of(), layout.createDemand().contains(mouseX, mouseY), state.can(MarketAction.CREATE_DEMAND));
-    renderer.icon(UiIcon.MARKET, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedText("screen.market.title", List.of(), layout.title().x() + 16, layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
+    for (MarketLayout.FilterTab tab : layout.filterTabs()) {
+      boolean selected = tab.filter() == state.filter();
+      renderer.translatedTextInRect(filterKey(tab.filter()), List.of(), tab.rect(),
+          selected ? EconomyUiTheme.TEXT_PRIMARY : EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
+      if (selected) {
+        renderer.fill(new UiRect(tab.rect().x(), tab.rect().bottom() - 1,
+            tab.rect().width() - 20, 1), EconomyUiTheme.MARKET_ACCENT);
+      }
+    }
     renderer.translatedTextInRect("screen.market.esc", List.of(), layout.esc(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
     if (state.screenState() == ScreenState.LOADING) renderer.translatedTextInRect("screen.market.loading", List.of(), layout.message(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
     else if (state.screenState() == ScreenState.ERROR) {
@@ -32,18 +38,37 @@ public final class MarketView {
     } else if (state.screenState() == ScreenState.EMPTY) renderer.translatedTextInRect("screen.market.empty", List.of(), layout.message(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.CENTER);
     for (MarketLayout.Card card : layout.cards()) {
       var order = card.row().order();
-      renderer.card(card.card(), order.type() == MarketOrderType.SALES ? EconomyUiTheme.MARKET_CARD : EconomyUiTheme.DELIVERY_CARD, card.card().contains(mouseX, mouseY));
+      boolean own = viewerId != null && viewerId.equals(order.ownerId());
+      renderer.card(card.card(), own ? EconomyUiTheme.DELIVERY_CARD
+          : order.type() == MarketOrderType.SALES ? EconomyUiTheme.MARKET_CARD : EconomyUiTheme.SHOP_CARD,
+          card.card().contains(mouseX, mouseY));
       renderer.item(order.item().itemId(), card.itemIcon());
-      renderer.textInRect(order.ownerName(), new UiRect(card.card().x() + 46, card.card().y() + 10, card.card().width() - 114, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
-      renderer.translatedTextInRect(order.type() == MarketOrderType.SALES ? "screen.market.sales" : "screen.market.demand", List.of(), new UiRect(card.card().x() + 46, card.card().y() + 25, 80, 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
-      renderer.translatedTextInRect("screen.market.price", List.of(Integer.toString(order.totalPrice())), new UiRect(card.card().x() + 46, card.card().y() + 42, 78, 14), EconomyUiTheme.MARKET_ACCENT, UiTextAlignment.LEFT);
+      int left = card.card().x() + 8;
+      int right = card.card().right() - 8;
+      renderer.translatedTextInRect(own ? "screen.market.filter.mine"
+          : order.type() == MarketOrderType.SALES ? "screen.market.sales" : "screen.market.demand", List.of(),
+          new UiRect(left, card.card().y() + 6, 104, 14), own ? EconomyUiTheme.DELIVERY_ACCENT : EconomyUiTheme.TEXT_SECONDARY,
+          UiTextAlignment.LEFT);
+      renderer.translatedTextInRect("screen.market.price", List.of(Integer.toString(order.totalPrice())),
+          new UiRect(left + 104, card.card().y() + 6, Math.max(1, right - left - 104), 14), EconomyUiTheme.MARKET_ACCENT,
+          UiTextAlignment.RIGHT);
+      renderer.textInRect(order.item().itemId() + " x" + order.quantity(),
+          new UiRect(left, card.card().y() + 22, right - left, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
+      String ownerKey = order.type() == MarketOrderType.SALES ? "screen.market.seller" : "screen.market.requester";
+      int ownerLabelWidth = Math.min(64, Math.max(1, layout.metrics().width(order.type() == MarketOrderType.SALES ? "Seller" : "Requester")));
+      renderer.translatedTextInRect(ownerKey, List.of(), new UiRect(left, card.card().bottom() - 20, ownerLabelWidth, 14),
+          EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
+      renderer.textInRect(": " + order.ownerName(), new UiRect(left + ownerLabelWidth, card.card().bottom() - 20,
+          Math.max(1, right - left - ownerLabelWidth - 70), 14), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.LEFT);
       MarketAction action = actionFor(order, viewerId);
       renderer.translatedButton(card.actionButton(), action == null ? EconomyUiTheme.DISABLED_BUTTON : EconomyUiTheme.MARKET_BUTTON,
           actionKey(action), List.of(), card.actionButton().contains(mouseX, mouseY), action != null && state.can(action));
     }
-    renderer.button(layout.previousButton(), EconomyUiTheme.MARKET_BUTTON, "<", layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
+    renderer.button(layout.previousButton(), state.page() > 0 ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED,
+        "<", layout.previousButton().contains(mouseX, mouseY), state.page() > 0);
     renderer.textInRect((state.page() + 1) + " / " + state.totalPages(), layout.pageText(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    renderer.button(layout.nextButton(), EconomyUiTheme.MARKET_BUTTON, ">", layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
+    renderer.button(layout.nextButton(), state.page() + 1 < state.totalPages() ? EconomyUiTheme.PAGE_BUTTON : EconomyUiTheme.PAGE_BUTTON_DISABLED,
+        ">", layout.nextButton().contains(mouseX, mouseY), state.page() + 1 < state.totalPages());
   }
 
   public static MarketAction actionFor(com.mo.economy_system.common.network.MarketOrderSnapshot order, UUID viewerId) {

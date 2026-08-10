@@ -12,6 +12,7 @@ import com.mo.economy_system.ui.market.MarketAction;
 import com.mo.economy_system.ui.market.MarketController;
 import com.mo.economy_system.ui.market.MarketEvent;
 import com.mo.economy_system.ui.market.MarketLayout;
+import com.mo.economy_system.ui.market.MarketOpenAnimation;
 import com.mo.economy_system.ui.market.MarketPort;
 import com.mo.economy_system.ui.market.MarketRow;
 import com.mo.economy_system.ui.market.MarketView;
@@ -29,6 +30,7 @@ public final class NeoForge1211MarketScreen extends Screen {
   private final MarketController controller;
   private EditBox search;
   private long appliedRequest = -1;
+  private long animationStartedAtNanos = -1L;
 
   public NeoForge1211MarketScreen() { this(null); }
   public NeoForge1211MarketScreen(Screen parent) {
@@ -39,7 +41,8 @@ public final class NeoForge1211MarketScreen extends Screen {
     controller = new MarketController(viewer, port);
   }
   @Override protected void init() {
-    String value = search == null ? "" : search.getValue(); MarketLayout.Layout layout = commonLayout(); UiScale scale = layout.scale();
+    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
+    String value = search == null ? "" : search.getValue(); MarketLayout.Layout layout = commonLayout(metrics()); UiScale scale = layout.scale();
     search = new EditBox(font, Math.round(layout.search().x() * scale.value()), Math.round(layout.search().y() * scale.value()), Math.max(1, Math.round(layout.search().width() * scale.value())), Math.max(1, Math.round(layout.search().height() * scale.value())), Component.translatable("screen.market.search"));
     search.setMaxLength(64); search.setValue(value); search.setResponder(text -> controller.handle(new MarketEvent.QueryChanged(text))); addRenderableWidget(search);
     if (controller.state().screenState() == ScreenState.IDLE) controller.handle(new MarketEvent.Initialize(System.nanoTime()));
@@ -55,9 +58,10 @@ public final class NeoForge1211MarketScreen extends Screen {
     controller.pollNavigation().ifPresent(this::navigate);
   }
   private void navigate(UiNavigation navigation) { if (minecraft == null) return; if (navigation instanceof UiNavigation.Route route && route.route() == EconomyUiRoute.HOME) minecraft.setScreen(new NeoForge1211HomeScreen()); else if (navigation instanceof UiNavigation.Back) onClose(); }
-  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) { MarketLayout.Layout layout = commonLayout(); UiScale scale = layout.scale(); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f); MarketView.render(new NeoForge1211UiRenderer(graphics, font), controller.state(), layout, controller.viewerId(), scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick); }
+  @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) { NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font); renderer.fillPhysicalBackground(width, height, MarketLayout.BACKGROUND_COLOR); MarketLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale(); syncSearchWidget(layout); graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f); MarketView.render(renderer, controller.state(), layout, controller.viewerId(), scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick); }
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    MarketLayout.Layout layout = commonLayout(); int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
+    MarketLayout.Layout layout = commonLayout(metrics()); int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
+    for (MarketLayout.FilterTab tab : layout.filterTabs()) if (tab.rect().contains(x, y)) { controller.handle(new MarketEvent.FilterChanged(tab.filter())); return true; }
     for (MarketLayout.Card card : layout.cards()) if (card.actionButton().contains(x, y)) { MarketAction action = MarketView.actionFor(card.row().order(), controller.viewerId()); if (action != null) controller.handle(new MarketEvent.ActionClicked(action, card.row().order().tradeId())); return true; }
     if (layout.createSales().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_SALES, null)); return true; }
     if (layout.createDemand().contains(x, y)) { controller.handle(new MarketEvent.ActionClicked(MarketAction.CREATE_DEMAND, null)); return true; }
@@ -72,7 +76,10 @@ public final class NeoForge1211MarketScreen extends Screen {
   @Override public void onClose() { if (minecraft == null) return; if (parent != null) minecraft.setScreen(parent); else minecraft.setScreen(new NeoForge1211HomeScreen()); }
   @Override public boolean isPauseScreen() { return false; }
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
-  private MarketLayout.Layout commonLayout() { MarketLayout.Layout layout = MarketLayout.calculate(width, height, controller.state()); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new MarketEvent.ViewportChanged(layout.pageSize())); layout = MarketLayout.calculate(width, height, controller.state()); } return layout; }
+  private MarketLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics textMetrics) { MarketLayout.Layout layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new MarketEvent.ViewportChanged(layout.pageSize())); layout = MarketLayout.calculate(width, height, controller.state(), textMetrics, animationProgress()); } return layout; }
+  private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new NeoForge1211UiTextMetrics(font); }
+  private float animationProgress() { return MarketOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
+  private void syncSearchWidget(MarketLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
   private final class Port implements MarketPort {
     private long requestId = -1;
     @Override public long nextRequestId() { return ClientMarketState.nextPageRequestId(); }

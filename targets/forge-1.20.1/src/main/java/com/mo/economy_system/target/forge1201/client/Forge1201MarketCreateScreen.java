@@ -105,10 +105,13 @@ public final class Forge1201MarketCreateScreen extends Screen {
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
+    renderer.fillPhysicalBackground(width, height, MarketCreateLayout.BACKGROUND_COLOR);
     MarketCreateLayout.Layout layout = layout();
     UiScale scale = layout.scale();
+    syncInputs(layout);
     graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    MarketCreateView.render(new Forge1201UiRenderer(graphics, font), controller.state(), layout,
+    MarketCreateView.render(renderer, controller.state(), layout,
         scale.toVirtualX(mouseX), scale.toVirtualY(mouseY));
     graphics.pose().popPose();
     super.render(graphics, mouseX, mouseY, partialTick);
@@ -136,6 +139,12 @@ public final class Forge1201MarketCreateScreen extends Screen {
   @Override public boolean isPauseScreen() { return false; }
 
   private MarketCreateLayout.Layout layout() { return MarketCreateLayout.calculate(width, height, controller == null ? null : controller.state()); }
+  private void syncInputs(MarketCreateLayout.Layout layout) {
+    UiScale scale = layout.scale();
+    if (itemId != null) { itemId.setX(sx(layout.itemId().x(), scale)); itemId.setY(sy(layout.itemId().y(), scale)); itemId.setWidth(sw(layout.itemId().width(), scale)); itemId.setHeight(sh(layout.itemId().height(), scale)); }
+    if (quantity != null) { quantity.setX(sx(layout.quantity().x(), scale)); quantity.setY(sy(layout.quantity().y(), scale)); quantity.setWidth(sw(layout.quantity().width(), scale)); quantity.setHeight(sh(layout.quantity().height(), scale)); }
+    if (price != null) { price.setX(sx(layout.price().x(), scale)); price.setY(sy(layout.price().y(), scale)); price.setWidth(sw(layout.price().width(), scale)); price.setHeight(sh(layout.price().height(), scale)); }
+  }
 
   private final class Port implements MarketCreatePort {
     private final Player player;

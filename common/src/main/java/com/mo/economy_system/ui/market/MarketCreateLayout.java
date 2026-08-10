@@ -8,35 +8,62 @@ import java.util.List;
 
 /** Stable virtual-coordinate layout for the market create forms. */
 public final class MarketCreateLayout {
+  public static final int BACKGROUND_COLOR = 0xB0000000;
   private MarketCreateLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, MarketCreateState state) {
     UiScale scale = UiScale.fit(physicalWidth, physicalHeight, EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth(), height = scale.virtualHeight(), pad = EconomyUiTheme.PANEL_PADDING;
-    int panelWidth = Math.max(180, Math.min(300, (width - pad * 3) / 2));
-    int leftX = Math.max(pad, (width - panelWidth * 2 - pad) / 2);
-    int rightX = leftX + panelWidth + pad;
-    int panelY = 48, panelHeight = Math.max(160, height - 94);
+    MarketCreateMode mode = state == null ? MarketCreateMode.SALES : state.mode();
+    int panelY, panelHeight, leftX, rightX, leftWidth, rightWidth;
+    if (mode == MarketCreateMode.DEMAND) {
+      rightWidth = Math.min(420, Math.max(180, width - pad * 2));
+      panelHeight = Math.min(238, Math.max(160, height - pad * 2));
+      leftWidth = 0;
+      leftX = 0;
+      rightX = Math.max(pad, (width - rightWidth) / 2);
+      panelY = Math.max(pad, (height - panelHeight) / 2);
+    } else {
+      leftWidth = Math.min(292, Math.max(160, (width - pad * 3) / 2));
+      rightWidth = Math.min(300, Math.max(180, width - leftWidth - pad * 3));
+      int contentWidth = leftWidth + pad + rightWidth;
+      leftX = Math.max(pad, (width - contentWidth) / 2);
+      rightX = leftX + leftWidth + pad;
+      panelY = 52;
+      panelHeight = Math.min(252, Math.max(160, height - 88));
+    }
     List<Slot> slots = new ArrayList<>();
-    if (state.mode() == MarketCreateMode.SALES) {
-      int slotSize = 24, gap = 5;
+    if (mode == MarketCreateMode.SALES && state != null) {
+      int slotSize = 24, gap = 4;
       for (MarketInventoryItem item : state.inventory()) {
         int index = slots.size(), col = index % 9, row = index / 9;
-        slots.add(new Slot(item, new UiRect(leftX + pad + col * (slotSize + gap), panelY + 34 + row * (slotSize + gap), slotSize, slotSize)));
+        int gridWidth = 9 * slotSize + 8 * gap;
+        int gridX = leftX + Math.max(pad, (leftWidth - gridWidth) / 2);
+        slots.add(new Slot(item, new UiRect(gridX + col * (slotSize + gap), panelY + 34 + row * (slotSize + gap), slotSize, slotSize)));
       }
     }
-    UiRect itemId = new UiRect(rightX + 96, panelY + 52, Math.max(80, panelWidth - 108), 20);
-    UiRect quantity = new UiRect(rightX + 96, panelY + 84, Math.max(52, panelWidth - 108), 20);
-    UiRect price = new UiRect(rightX + 96, panelY + 116, Math.max(52, panelWidth - 108), 20);
-    UiRect decrement = new UiRect(rightX + 96, panelY + 146, 28, 20);
-    UiRect increment = new UiRect(rightX + 128, panelY + 146, 28, 20);
-    UiRect all = new UiRect(rightX + 160, panelY + 146, 48, 20);
-    UiRect submit = new UiRect(rightX + (panelWidth - 124) / 2, panelY + panelHeight - 30, 124, 22);
+    int labelWidth = 72;
+    int fieldWidth = Math.max(80, rightWidth - pad * 2 - labelWidth);
+    int fieldX = rightX + pad + labelWidth;
+    UiRect itemId = mode == MarketCreateMode.DEMAND
+        ? new UiRect(fieldX, panelY + 84, fieldWidth, 20) : new UiRect(fieldX, panelY + 52, 0, 0);
+    UiRect quantity = mode == MarketCreateMode.DEMAND
+        ? new UiRect(fieldX, panelY + 112, Math.min(120, fieldWidth), 20)
+        : new UiRect(fieldX, panelY + 82, Math.min(58, fieldWidth), 20);
+    UiRect price = mode == MarketCreateMode.DEMAND
+        ? new UiRect(fieldX, panelY + 140, Math.min(140, fieldWidth), 20)
+        : new UiRect(fieldX, panelY + 112, Math.min(150, fieldWidth), 20);
+    int adjustY = quantity.y() - 1;
+    UiRect decrement = mode == MarketCreateMode.SALES ? new UiRect(quantity.x() + quantity.width() + 8, adjustY, 30, 22) : new UiRect(0, 0, 0, 0);
+    UiRect increment = mode == MarketCreateMode.SALES ? new UiRect(decrement.right() + 4, adjustY, 30, 22) : new UiRect(0, 0, 0, 0);
+    UiRect all = mode == MarketCreateMode.SALES ? new UiRect(increment.right() + 4, adjustY, 48, 22) : new UiRect(0, 0, 0, 0);
+    UiRect submit = new UiRect(rightX + (rightWidth - 120) / 2, panelY + panelHeight - 36, 120, 22);
     UiRect back = new UiRect(pad, height - pad - 18, 80, 18);
-    UiRect title = new UiRect(pad, pad, Math.max(1, width - pad * 2), 18);
-    UiRect message = new UiRect(rightX + 8, panelY + 170, panelWidth - 16, 28);
-    return new Layout(scale, title, new UiRect(leftX, panelY, panelWidth, panelHeight),
-        new UiRect(rightX, panelY, panelWidth, panelHeight), slots, itemId, quantity, price,
+    UiRect title = new UiRect(pad, pad + 12, 240, 24);
+    UiRect message = new UiRect(rightX + pad, panelY + (mode == MarketCreateMode.DEMAND ? 168 : 178), Math.max(1, rightWidth - pad * 2), 28);
+    UiRect inventoryPanel = mode == MarketCreateMode.SALES ? new UiRect(leftX, panelY, leftWidth, panelHeight) : new UiRect(0, 0, 0, 0);
+    return new Layout(scale, title, inventoryPanel,
+        new UiRect(rightX, panelY, rightWidth, panelHeight), slots, itemId, quantity, price,
         decrement, increment, all, submit, back, message);
   }
 
