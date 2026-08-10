@@ -975,8 +975,8 @@ if ($local -ne $remote) {
 Codex 在开始时填写：
 
 ```text
-Execution base SHA: <current origin/bridge>
-Started: <date/time>
+Execution base SHA: `9c2797bca0ca4f44e27ee800d61699065616274b`
+Started: `2026-08-09 America/Caracas`
 ```
 
 每个 Phase 的 docs commit 更新下面状态：
@@ -985,7 +985,7 @@ Started: <date/time>
 |---|---|---|---|---|---:|---:|---|---|
 | 0 | Territory Manage | ACCEPTED | `6976818` | `cb7228f` | inherited | inherited | passed | pixel parity template |
 | 0 | Home | ACCEPTED | `ec4730d` | `a2cb32c` | 821 | 886 | passed | pixel parity template |
-| 1 | About + Balance | PENDING |  |  |  |  |  |  |
+| 1 | About + Balance | ACCEPTED | `21f37d1a` | `<docs>` | 821 | 886 | passed | About animation/version card, shared textures, legacy timestamp formatting |
 | 2 | Shop family | PENDING |  |  |  |  |  |  |
 | 3 | Market family | PENDING |  |  |  |  |  |  |
 | 4 | Delivery | PENDING |  |  |  |  |  |  |

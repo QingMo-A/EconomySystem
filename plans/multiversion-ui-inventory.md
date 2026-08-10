@@ -10,8 +10,8 @@ their own Minecraft/loader adapters.
 | Feature family | Common source of truth | Forge 1.20.1 shell | NeoForge 1.21.1 shell | Target-only API boundary | Status |
 |---|---|---|---|---|---|
 | Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | migrated |
-| About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | migrated |
-| Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | migrated |
+| About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | pixel/reference parity accepted |
+| Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | pixel/reference parity accepted |
 | Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | migrated |
 | Shop purchase | `ui/shop/ShopPurchase*` | `Forge1201ShopPurchaseScreen` | `NeoForge1211ShopPurchaseScreen` | EditBox and network send | migrated |
 | Market list | `ui/market/Market*` | `Forge1201MarketScreen` | `NeoForge1211MarketScreen` | item rendering, EditBox, network send | migrated; fixed 9-entry wire page |
