@@ -23,8 +23,8 @@ their own Minecraft/loader adapters.
 | Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | pixel/reference parity accepted |
 | Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | pixel/reference parity accepted |
 | Territory delete / member removal | `ui/territory/confirm` | `Forge1201TerritoryConfirmationScreen` | `NeoForge1211TerritoryConfirmationScreen` | destructive request send | pixel/reference parity accepted; one-shot decision |
-| Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | migrated |
-| Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | migrated |
+| Client file check | `ui/check` | `Forge1201ClientFileCheckScreens` | NeoForge consent/result shells | disk scan lifecycle and Screen API | pixel/reference parity accepted; consent and local scan safety preserved |
+| Checked file transfer | `ui/transfer` | Forge consent/result shells | NeoForge consent/result shells | filesystem handles, save dialog behavior, Screen API | pixel/reference parity accepted; explicit consent and target-only save APIs preserved |
 
 Every active `*Screen.java` under the two target adapter packages is covered by
 an architecture gate requiring a common UI contract. The legacy

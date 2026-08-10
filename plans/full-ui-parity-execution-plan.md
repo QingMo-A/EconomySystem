@@ -990,7 +990,7 @@ Started: `2026-08-09 America/Caracas`
 | 3 | Market family | ACCEPTED | `6ab64e31` | `<docs>` | 821 | 886 | passed | List/create/confirm legacy geometry, item/order metadata, filter tabs, animation and physical backgrounds |
 | 4 | Delivery | ACCEPTED | `2b5ede4a` | `<docs>` | 821 | 886 | passed | Legacy 200x70 two-row cards, item/source/count, claim and footer/pagination geometry |
 | 5 | Remaining Territory | ACCEPTED | `65094073` | `<docs>` | 821 | 886 | passed | List/detail/access/rules, buffs, invite and confirmation legacy geometry, title/version cards, pagination and physical backgrounds |
-| 6 | File Check + Transfer | PENDING |  |  |  |  |  |  |
+| 6 | File Check + Transfer | ACCEPTED | `f260728d` | `<docs>` | 821 | 886 | passed | Consent/result shared chrome, physical backgrounds, explicit safety semantics and target-only lifecycle APIs preserved |
 | 7 | Global audit | PENDING |  |  |  |  |  |  |
 
 允许状态：
