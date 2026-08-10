@@ -9,7 +9,7 @@ their own Minecraft/loader adapters.
 
 | Feature family | Common source of truth | Forge 1.20.1 shell | NeoForge 1.21.1 shell | Target-only API boundary | Status |
 |---|---|---|---|---|---|
-| Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | pixel/reference parity accepted |
+| Home navigation | `ui/home` and `common/client/ui` | `Forge1201HomeScreen` | `NeoForge1211HomeScreen` | Screen lifecycle, key/mouse events | FORENSIC_REFERENCE_VERIFIED (inherited golden `ec4730d3`, `HomeReferenceParityTest` + `HomeViewParityTest`; production frozen) |
 | About | `ui/about` | `Forge1201AboutScreen` | `NeoForge1211AboutScreen` | texture and clipboard translation | FORENSIC_REFERENCE_VERIFIED (`5d89f765`, `AboutLegacyReferenceParityTest`) |
 | Balance log | `ui/balance` | `Forge1201BalanceLogScreen` | `NeoForge1211BalanceLogScreen` | EditBox, network send, drawing | FORENSIC_REFERENCE_VERIFIED (`5d89f765`, `BalanceLogLegacyReferenceParityTest`) |
 | Shop catalog | `ui/shop/Shop*` | `Forge1201ShopScreen` | `NeoForge1211ShopScreen` | item rendering and widgets | FORENSIC_REFERENCE_VERIFIED (`c697c0af`, `ShopLegacyReferenceParityTest`) |
@@ -18,7 +18,7 @@ their own Minecraft/loader adapters.
 | Market create / confirm | `ui/market/MarketCreate*`, `MarketConfirm*` | Forge create/confirm shells | NeoForge create/confirm shells | inventory snapshot, registry lookup, widgets | FORENSIC_REFERENCE_VERIFIED (`bd5a6db2`, `MarketLegacyReferenceParityTest`) |
 | Delivery box | `ui/delivery` | `Forge1201DeliveryBoxScreen` | `NeoForge1211DeliveryBoxScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (`6b1c1d3c`, `DeliveryLegacyReferenceParityTest`) |
 | Territory list | `ui/territory/list` | `Forge1201TerritoryListScreen` | `NeoForge1211TerritoryListScreen` | EditBox and navigation shell | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryListLegacyReferenceParityTest`) |
-| Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | pixel/reference parity accepted |
+| Territory management | `ui/territory` | `Forge1201TerritoryManageScreen` | `NeoForge1211TerritoryManageScreen` | player head/item rendering and network send | FORENSIC_REFERENCE_VERIFIED (inherited golden `6976818`, `TerritoryManageGoldenParityTest` + `TerritoryManageViewParityTest`; production frozen) |
 | Territory detail / access / rules | `ui/territory/detail` | `Forge1201TerritoryDetailScreen` | `NeoForge1211TerritoryDetailScreen` | widgets and network send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryDetailLegacyReferenceParityTest`) |
 | Territory buffs | `ui/territory/buff` | `Forge1201BuffManageScreen` | `NeoForge1211BuffManageScreen` | item rendering and network send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryBuffLegacyReferenceParityTest`) |
 | Territory invite | `ui/territory/invite` | `Forge1201TerritoryInviteScreen` | `NeoForge1211TerritoryInviteScreen` | player list request and network send | FORENSIC_REFERENCE_VERIFIED (`c4d99fea`, `TerritoryInviteLegacyReferenceParityTest`) |
