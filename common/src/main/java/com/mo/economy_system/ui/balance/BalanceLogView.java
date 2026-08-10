@@ -16,15 +16,14 @@ public final class BalanceLogView {
   public static void render(EconomyUiRenderer renderer, BalanceLogState state,
                             BalanceLogLayout.Layout layout, int mouseX, int mouseY) {
     renderer.fill(new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight()), 0xB0000000);
-    renderer.card(layout.panel(), EconomyUiTheme.MARKET_CARD, false);
-    renderer.icon(UiIcon.BALANCE, new UiRect(layout.title().x(), layout.title().y(), 12, 12));
-    renderer.translatedText("screen.balance_log.title", List.of(), layout.title().x() + 16,
+    renderer.card(layout.panel(), EconomyUiTheme.BALANCE_CARD, false);
+    renderer.translatedText("screen.balance_log.title", List.of(), layout.title().x(),
         layout.title().y(), EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.balance_log.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
     for (BalanceLogLayout.Tab tab : layout.tabs()) {
       boolean selected = tab.category().equals(state.category());
-      renderer.button(tab.rect(), selected ? EconomyUiTheme.MARKET_BUTTON : EconomyUiTheme.DISABLED_BUTTON,
+      renderer.button(tab.rect(), selected ? EconomyUiTheme.BALANCE_BUTTON : EconomyUiTheme.DISABLED_BUTTON,
           tab.category(), tab.rect().contains(mouseX, mouseY), true);
     }
     if (state.screenState() == ScreenState.LOADING) {
@@ -42,8 +41,7 @@ public final class BalanceLogView {
     for (int i = 0; i < layout.rows().size(); i++) {
       BalanceLogLayout.Row row = layout.rows().get(i);
       var entry = row.row().entry();
-      renderer.card(row.rect(), i % 2 == 0 ? EconomyUiTheme.MARKET_CARD : EconomyUiTheme.DELIVERY_CARD,
-          false);
+      renderer.fill(row.rect(), i % 2 == 0 ? 0x301A2633 : 0x201A2633);
       renderer.text(UiNumbers.formatTimestamp(entry.timeMillis()), row.rect().x() + 6,
           row.rect().y() + 4, EconomyUiTheme.TEXT_SECONDARY);
       renderer.text(entry.category(), row.rect().x() + 84, row.rect().y() + 4,
@@ -54,15 +52,17 @@ public final class BalanceLogView {
       renderer.text(entry.beforeBalance() + " -> " + entry.afterBalance(), row.rect().x() + 188,
           row.rect().y() + 4, EconomyUiTheme.TEXT_PRIMARY);
       renderer.textInRect(entry.reason(), new UiRect(row.rect().x() + 320, row.rect().y() + 2,
-          Math.max(1, row.rect().width() - 326), 18), EconomyUiTheme.TEXT_SECONDARY,
+          Math.max(80, row.rect().width() - 330), 18), EconomyUiTheme.TEXT_SECONDARY,
           UiTextAlignment.LEFT);
     }
-    renderer.translatedButton(layout.previousButton(), EconomyUiTheme.MARKET_BUTTON,
+    renderer.translatedButton(layout.previousButton(), state.hasPreviousPage()
+            ? EconomyUiTheme.BALANCE_BUTTON : EconomyUiTheme.BALANCE_BUTTON_DISABLED,
         "screen.balance_log.previous", List.of(), layout.previousButton().contains(mouseX, mouseY),
         state.hasPreviousPage());
     renderer.textInRect((state.page() + 1) + " / " + state.totalPages() + "  " + state.total(),
         layout.pageText(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
-    renderer.translatedButton(layout.nextButton(), EconomyUiTheme.MARKET_BUTTON,
+    renderer.translatedButton(layout.nextButton(), state.hasNextPage()
+            ? EconomyUiTheme.BALANCE_BUTTON : EconomyUiTheme.BALANCE_BUTTON_DISABLED,
         "screen.balance_log.next", List.of(), layout.nextButton().contains(mouseX, mouseY),
         state.hasNextPage());
   }
