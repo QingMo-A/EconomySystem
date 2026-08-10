@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'base'
     id 'idea'
@@ -5,6 +7,95 @@ plugins {
     id 'net.minecraftforge.gradle' version '6.0.36' apply false
     id 'org.spongepowered.mixin' version '0.7.38' apply false
 }
+
+// Keep the root build fail-fast as well as settings.gradle: this script is also used by tooling
+// that evaluates the root project directly and must never silently drift from the project graph.
+def targetManifestFile = rootProject.file('gradle/economy-targets.json')
+if (!targetManifestFile.isFile()) {
+    throw new GradleException("Missing economy target manifest: ${targetManifestFile}")
+}
+
+def targetManifest
+try {
+    targetManifest = new JsonSlurper().parse(targetManifestFile)
+} catch (Exception exception) {
+    throw new GradleException("Unable to parse economy target manifest: ${targetManifestFile}", exception)
+}
+
+def manifestError = { String message ->
+    throw new GradleException("Invalid economy target manifest: ${message}")
+}
+if (!(targetManifest instanceof Map)) manifestError('root must be an object')
+if (targetManifest.schemaVersion?.toString() != '1') {
+    manifestError("unsupported schemaVersion '${targetManifest.schemaVersion}' (expected 1)")
+}
+def targetEntries = targetManifest.targets
+if (!(targetEntries instanceof List) || targetEntries.isEmpty()) {
+    manifestError('targets must be a non-empty array')
+}
+def defaultTargetId = targetManifest.defaultTarget?.toString()?.trim()
+if (!defaultTargetId) manifestError('defaultTarget must be non-empty')
+
+def allowedLoaders = ['forge', 'neoforge'] as Set
+def ids = [] as Set
+def projectPaths = [] as Set
+def taskSuffixes = [] as Set
+def targetsRoot = rootProject.file('targets').canonicalFile
+def targetProjects = []
+targetEntries.eachWithIndex { rawTarget, index ->
+    if (!(rawTarget instanceof Map)) manifestError("targets[${index}] must be an object")
+    def requiredText = { String field ->
+        def value = rawTarget[field]?.toString()?.trim()
+        if (!value) manifestError("targets[${index}].${field} must be non-empty")
+        value
+    }
+    def id = requiredText('id')
+    def projectPath = requiredText('projectPath')
+    def taskSuffix = requiredText('taskSuffix')
+    def displayName = requiredText('displayName')
+    def loader = requiredText('loader')
+    def minecraftVersion = requiredText('minecraftVersion')
+    def javaVersionValue = rawTarget.javaVersion
+    if (javaVersionValue == null || javaVersionValue.toString().trim().isEmpty()) {
+        manifestError("targets[${index}].javaVersion must be a positive integer")
+    }
+    int javaVersion
+    try {
+        javaVersion = Integer.parseInt(javaVersionValue.toString())
+    } catch (NumberFormatException exception) {
+        manifestError("targets[${index}].javaVersion must be a positive integer")
+    }
+    if (javaVersion <= 0) manifestError("targets[${index}].javaVersion must be positive")
+    if (!allowedLoaders.contains(loader)) {
+        manifestError("targets[${index}].loader '${loader}' is not supported")
+    }
+    if (!projectPath.startsWith(':targets:') || projectPath == ':targets:' || projectPath.contains('..')) {
+        manifestError("targets[${index}].projectPath must be below :targets:")
+    }
+    if (!ids.add(id)) manifestError("duplicate id '${id}'")
+    if (!projectPaths.add(projectPath)) manifestError("duplicate projectPath '${projectPath}'")
+    if (!taskSuffixes.add(taskSuffix)) manifestError("duplicate taskSuffix '${taskSuffix}'")
+
+    def relativeDirectory = projectPath.substring(1).replace(':', '/')
+    def targetDirectory = new File(rootProject.projectDir, relativeDirectory).canonicalFile
+    if (!(targetDirectory.path == targetsRoot.path
+            || targetDirectory.path.startsWith(targetsRoot.path + File.separator))) {
+        manifestError("targets[${index}].projectPath escapes the targets directory")
+    }
+    if (!targetDirectory.isDirectory()) {
+        manifestError("targets[${index}] directory does not exist: ${targetDirectory}")
+    }
+    if (!new File(targetDirectory, 'build.gradle').isFile()) {
+        manifestError("targets[${index}] is missing build.gradle: ${targetDirectory}")
+    }
+
+    targetProjects << [id: id, projectPath: projectPath, taskSuffix: taskSuffix,
+                       displayName: displayName, loader: loader,
+                       minecraftVersion: minecraftVersion, javaVersion: javaVersion,
+                       directory: targetDirectory]
+}
+if (!ids.contains(defaultTargetId)) manifestError("defaultTarget '${defaultTargetId}' is not present")
+def defaultTarget = targetProjects.find { it.id == defaultTargetId }
 
 subprojects {
     version = rootProject.mod_version
@@ -18,104 +109,104 @@ idea {
     }
 }
 
-def targetTasks = [
-        [suffix: 'NeoForge1211', path: ':targets:neoforge-1.21.1', description: 'NeoForge 1.21.1'],
-        [suffix: 'Forge1201', path: ':targets:forge-1.20.1', description: 'Forge 1.20.1']
-]
-
-// Gradle's unqualified task selector otherwise also picks identically named
-// run tasks from every subproject. Keep the legacy root commands bound to the
-// NeoForge baseline while fully-qualified/versioned Forge commands still work.
+// Gradle's unqualified task selector otherwise also picks identically named run tasks from every
+// subproject. Keep the legacy root commands bound to the manifest default target while the
+// versioned aliases remain available for every target.
 if (gradle.startParameter.currentDir.canonicalFile == rootProject.projectDir.canonicalFile) {
     ['runClient', 'runServer', 'runData'].each { taskName ->
         if (gradle.startParameter.taskNames.contains(taskName)) {
-            gradle.startParameter.excludedTaskNames.add(
-                    ":targets:forge-1.20.1:${taskName}".toString()
-            )
+            targetProjects.findAll { it.id != defaultTarget.id }.each { target ->
+                gradle.startParameter.excludedTaskNames.add(
+                    "${target.projectPath}:${taskName}".toString()
+                )
+            }
         }
     }
 }
 
-targetTasks.each { target ->
-    tasks.register("compile${target.suffix}") {
-        group = 'economy system'
-        description = "Compile the ${target.description} target."
-        dependsOn("${target.path}:compileJava")
-    }
+def targetLifecycle = { Map target, String taskName -> "${target.projectPath}:${taskName}".toString() }
 
-    tasks.register("process${target.suffix}Resources") {
+def registerTargetAlias = { Map target, String taskPrefix, String taskName, String description ->
+    tasks.register("${taskPrefix}${target.taskSuffix}") {
         group = 'economy system'
-        description = "Process resources for the ${target.description} target."
-        dependsOn("${target.path}:processResources")
-    }
-
-    tasks.register("build${target.suffix}") {
-        group = 'economy system'
-        description = "Build the ${target.description} target."
-        dependsOn("${target.path}:build")
-    }
-
-    tasks.register("run${target.suffix}Client") {
-        group = 'economy system'
-        description = "Run the ${target.description} client."
-        dependsOn("${target.path}:runClient")
-    }
-
-    tasks.register("run${target.suffix}Server") {
-        group = 'economy system'
-        description = "Run the ${target.description} dedicated server."
-        dependsOn("${target.path}:runServer")
+        description = "${description} ${target.displayName} target."
+        dependsOn(targetLifecycle(target, taskName))
     }
 }
 
+targetProjects.each { target ->
+    registerTargetAlias(target, 'compile', 'compileJava', 'Compile the')
+    tasks.register("process${target.taskSuffix}Resources") {
+        group = 'economy system'
+        description = "Process resources for the ${target.displayName} target."
+        dependsOn(targetLifecycle(target, 'processResources'))
+    }
+    registerTargetAlias(target, 'test', 'test', 'Test the')
+    registerTargetAlias(target, 'build', 'build', 'Build the')
+    tasks.register("run${target.taskSuffix}Client") {
+        group = 'economy system'
+        description = "Run the ${target.displayName} client."
+        dependsOn(targetLifecycle(target, 'runClient'))
+    }
+    tasks.register("run${target.taskSuffix}Server") {
+        group = 'economy system'
+        description = "Run the ${target.displayName} dedicated server."
+        dependsOn(targetLifecycle(target, 'runServer'))
+    }
+    tasks.register("run${target.taskSuffix}Data") {
+        group = 'economy system'
+        description = "Run ${target.displayName} data generation."
+        dependsOn(targetLifecycle(target, 'runData'))
+    }
+}
+
+// Preserve the one explicit secondary-development command. NeoForge's Dev2 run is a compatibility
+// exception, but its project path is still resolved through the manifest and validated at config time.
+def neoForgeTarget = targetProjects.find { it.id == 'neoforge-1.21.1' }
+if (neoForgeTarget == null) manifestError("required compatibility target 'neoforge-1.21.1' is not present")
 tasks.register('runNeoForge1211ClientDev2') {
     group = 'economy system'
     description = 'Run the NeoForge 1.21.1 secondary development client.'
-    dependsOn(':targets:neoforge-1.21.1:runClientDev2')
+    dependsOn(targetLifecycle(neoForgeTarget, 'runClientDev2'))
 }
 
-tasks.register('runNeoForge1211Data') {
-    group = 'economy system'
-    description = 'Run NeoForge 1.21.1 data generation.'
-    dependsOn(':targets:neoforge-1.21.1:runData')
+def registerDefaultRunAlias = { String alias, String targetTask, String aliasDescription ->
+    tasks.register(alias) {
+        group = 'economy system'
+        description = aliasDescription
+        dependsOn(targetLifecycle(defaultTarget, targetTask))
+    }
 }
+registerDefaultRunAlias('runClient', 'runClient', 'Run the primary manifest-default development client.')
+registerDefaultRunAlias('runServer', 'runServer', 'Run the primary manifest-default dedicated server.')
+registerDefaultRunAlias('runData', 'runData', 'Run manifest-default data generation.')
 
-// Preserve the pre-Bridge developer commands as explicit NeoForge 1.21.1
-// entry points. The versioned aliases above remain available for automation.
-tasks.register('runClient') {
-    group = 'economy system'
-    description = 'Run the primary NeoForge 1.21.1 development client.'
-    dependsOn(':targets:neoforge-1.21.1:runClient')
-}
-
-tasks.register('runServer') {
-    group = 'economy system'
-    description = 'Run the primary NeoForge 1.21.1 dedicated server.'
-    dependsOn(':targets:neoforge-1.21.1:runServer')
-}
-
-tasks.register('runData') {
-    group = 'economy system'
-    description = 'Run primary NeoForge 1.21.1 data generation.'
-    dependsOn(':targets:neoforge-1.21.1:runData')
-}
-
-tasks.register('runForge1201Data') {
-    group = 'economy system'
-    description = 'Run Forge 1.20.1 data generation.'
-    dependsOn(':targets:forge-1.20.1:runData')
+def targetDependencies = { String taskName ->
+    targetProjects.collect { targetLifecycle(it, taskName) }
 }
 
 tasks.register('compileAllTargets') {
-    group = 'build'
+    group = 'economy system'
     description = 'Compile every supported loader and Minecraft target.'
-    dependsOn(':targets:neoforge-1.21.1:compileJava', ':targets:forge-1.20.1:compileJava')
+    dependsOn(targetDependencies('compileJava'))
+}
+
+tasks.register('testAllTargets') {
+    group = 'economy system'
+    description = 'Test every supported loader and Minecraft target.'
+    dependsOn(targetDependencies('test'))
 }
 
 tasks.register('buildAllTargets') {
-    group = 'build'
+    group = 'economy system'
     description = 'Build every supported loader and Minecraft target.'
-    dependsOn(':targets:neoforge-1.21.1:build', ':targets:forge-1.20.1:build')
+    dependsOn(targetDependencies('build'))
+}
+
+tasks.register('verifyAllTargets') {
+    group = 'economy system'
+    description = 'Test and build every supported loader and Minecraft target.'
+    dependsOn('testAllTargets', 'buildAllTargets')
 }
 
 tasks.named('build') {

@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -15,7 +17,107 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
 }
 
+// The manifest is the only target registry. Keep validation in settings so an invalid entry
+// fails before Gradle creates a partially configured project graph.
+def targetManifestFile = file('gradle/economy-targets.json')
+if (!targetManifestFile.isFile()) {
+    throw new GradleException("Missing economy target manifest: ${targetManifestFile}")
+}
+
+def targetManifest
+try {
+    targetManifest = new JsonSlurper().parse(targetManifestFile)
+} catch (Exception exception) {
+    throw new GradleException("Unable to parse economy target manifest: ${targetManifestFile}", exception)
+}
+
+def manifestError = { String message ->
+    throw new GradleException("Invalid economy target manifest: ${message}")
+}
+if (!(targetManifest instanceof Map)) {
+    manifestError('root must be an object')
+}
+if (targetManifest.schemaVersion?.toString() != '1') {
+    manifestError("unsupported schemaVersion '${targetManifest.schemaVersion}' (expected 1)")
+}
+def targetEntries = targetManifest.targets
+if (!(targetEntries instanceof List) || targetEntries.isEmpty()) {
+    manifestError('targets must be a non-empty array')
+}
+def defaultTargetId = targetManifest.defaultTarget?.toString()?.trim()
+if (!defaultTargetId) {
+    manifestError('defaultTarget must be non-empty')
+}
+
+def allowedLoaders = ['forge', 'neoforge'] as Set
+def ids = [] as Set
+def projectPaths = [] as Set
+def taskSuffixes = [] as Set
+def targetsRoot = new File(rootDir, 'targets').canonicalFile
+def rawTargetEntries = targetEntries
+targetEntries = []
+rawTargetEntries.eachWithIndex { rawTarget, index ->
+    if (!(rawTarget instanceof Map)) {
+        manifestError("targets[${index}] must be an object")
+    }
+    def requiredText = { String field ->
+        def value = rawTarget[field]?.toString()?.trim()
+        if (!value) manifestError("targets[${index}].${field} must be non-empty")
+        value
+    }
+    def id = requiredText('id')
+    def projectPath = requiredText('projectPath')
+    def taskSuffix = requiredText('taskSuffix')
+    def displayName = requiredText('displayName')
+    def loader = requiredText('loader')
+    def minecraftVersion = requiredText('minecraftVersion')
+    def javaVersionValue = rawTarget.javaVersion
+    if (javaVersionValue == null || javaVersionValue.toString().trim().isEmpty()) {
+        manifestError("targets[${index}].javaVersion must be a positive integer")
+    }
+    int javaVersion
+    try {
+        javaVersion = Integer.parseInt(javaVersionValue.toString())
+    } catch (NumberFormatException exception) {
+        manifestError("targets[${index}].javaVersion must be a positive integer")
+    }
+    if (javaVersion <= 0) manifestError("targets[${index}].javaVersion must be positive")
+    if (!allowedLoaders.contains(loader)) {
+        manifestError("targets[${index}].loader '${loader}' is not supported")
+    }
+    if (!projectPath.startsWith(':targets:') || projectPath == ':targets:' || projectPath.contains('..')) {
+        manifestError("targets[${index}].projectPath must be below :targets:")
+    }
+    if (!ids.add(id)) manifestError("duplicate id '${id}'")
+    if (!projectPaths.add(projectPath)) manifestError("duplicate projectPath '${projectPath}'")
+    if (!taskSuffixes.add(taskSuffix)) manifestError("duplicate taskSuffix '${taskSuffix}'")
+
+    def relativeDirectory = projectPath.substring(1).replace(':', '/')
+    def targetDirectory = new File(rootDir, relativeDirectory).canonicalFile
+    if (!(targetDirectory.path == targetsRoot.path
+            || targetDirectory.path.startsWith(targetsRoot.path + File.separator))) {
+        manifestError("targets[${index}].projectPath escapes the targets directory")
+    }
+    if (!targetDirectory.isDirectory()) {
+        manifestError("targets[${index}] directory does not exist: ${targetDirectory}")
+    }
+    if (!new File(targetDirectory, 'build.gradle').isFile()) {
+        manifestError("targets[${index}] is missing build.gradle: ${targetDirectory}")
+    }
+
+    targetEntries << [id: id, projectPath: projectPath, taskSuffix: taskSuffix, displayName: displayName,
+                      loader: loader, minecraftVersion: minecraftVersion, javaVersion: javaVersion,
+                      directory: targetDirectory]
+}
+if (!ids.contains(defaultTargetId)) {
+    manifestError("defaultTarget '${defaultTargetId}' is not present")
+}
+
 rootProject.name = 'EconomySystem'
 
-include('targets:neoforge-1.21.1')
-include('targets:forge-1.20.1')
+targetEntries.each { target ->
+    include(target.projectPath)
+}
+targetEntries.each { target ->
+    project(target.projectPath).projectDir = target.directory
+}
