@@ -90,16 +90,23 @@ class TargetManifestContractTest {
     String build = read(root.resolve("build.gradle"));
 
     assertTrue(settings.contains("economy-targets.json"), "settings must load the target manifest");
+    assertTrue(settings.contains("JsonSlurper"), "settings must be the manifest parser");
     assertFalse(settings.contains("include('targets:neoforge-1.21.1')"));
     assertFalse(settings.contains("include('targets:forge-1.20.1')"));
-    assertTrue(settings.contains("targetEntries.each"), "settings must include every manifest target");
+    assertTrue(settings.contains("normalizedTargets"), "settings must expose normalized targets");
+    assertTrue(settings.contains("normalizedTargets.each"), "settings must include every manifest target");
     assertTrue(settings.contains("schemaVersion"), "settings must validate the schema version");
     assertTrue(settings.contains("allowedLoaders"), "settings must validate loader names");
     assertTrue(settings.contains("projectPath.startsWith"), "settings must constrain target paths");
     assertTrue(settings.contains("defaultTarget"), "settings must validate the default target");
     assertTrue(settings.contains("javaVersion"), "settings must validate Java versions");
 
-    assertTrue(build.contains("economy-targets.json"), "root build must load the target manifest");
+    assertTrue(build.contains("economyTargetManifest"), "root build must consume the settings model");
+    assertFalse(build.contains("JsonSlurper"), "root build must not parse the target manifest");
+    assertFalse(build.contains("economy-targets.json"), "root build must not reopen the manifest");
+    assertFalse(build.contains("allowedLoaders"), "root build must not duplicate schema validation");
+    assertFalse(build.contains("schemaVersion"), "root build must not duplicate schema validation");
+    assertFalse(build.contains("projectPath.startsWith"), "root build must not duplicate path validation");
     assertFalse(build.contains("def targetTasks = ["), "target registry cannot be duplicated in root build");
     assertFalse(build.contains("dependsOn(':targets:"), "aggregate dependencies must not hardcode target paths");
     assertFalse(build.contains("dependsOn(\":targets:"), "aggregate dependencies must not hardcode target paths");
@@ -109,29 +116,59 @@ class TargetManifestContractTest {
     assertTrue(build.contains("targetProjects.collect"), "aggregate dependencies must be collected from targets");
     assertTrue(build.contains("defaultTarget"), "legacy aliases must resolve the manifest default");
     assertTrue(build.contains("excludedTaskNames"), "default aliases must exclude non-default run selectors");
+    assertTrue(build.contains("runNeoForge1211ClientDev2"), "Dev2 compatibility alias must remain available");
+    assertTrue(build.contains("neoForgeTarget != null"), "Dev2 compatibility target must be optional");
+    assertFalse(build.contains("required compatibility target"), "Dev2 alias must not be a registry requirement");
+    assertTrue(build.contains("validateTargetManifest"), "manifest lifecycle gate must be registered");
+    assertRequiredLifecycleContract(build);
+    assertTrue(build.contains("requiredTargetLifecycleTasks.each"),
+        "validator must iterate the required lifecycle contract");
+    for (String alias : List.of(
+        "compile", "process", "test", "build", "run", "compileAllTargets", "testAllTargets",
+        "buildAllTargets", "verifyAllTargets")) {
+      assertTrue(build.contains(alias), "required root alias contract: " + alias);
+    }
+    assertTrue(build.contains("dependsOn('validateTargetManifest'"),
+        "verifyAllTargets must validate the manifest lifecycle first");
   }
 
   @Test
-  void addingManifestEntryFeedsPureAggregateCollectionWithoutFileMutation() throws Exception {
-    String manifest = read(repositoryRoot().resolve("gradle/economy-targets.json"));
-    List<Map<String, String>> targets = targetObjects(manifest);
-    Map<String, String> future = new LinkedHashMap<>();
-    future.put("id", "future-loader-1.22.0");
-    future.put("projectPath", ":targets:future-loader-1.22.0");
-    future.put("taskSuffix", "FutureLoader1220");
-    List<Map<String, String>> expanded = new ArrayList<>(targets);
-    expanded.add(future);
+  void aggregateDependenciesAndIncludesAreManifestDrivenSourceContracts() throws Exception {
+    Path root = repositoryRoot();
+    String settings = read(root.resolve("settings.gradle"));
+    String build = read(root.resolve("build.gradle"));
 
-    List<String> projectPaths = dependencyPaths(expanded, "test");
-    assertEquals(targets.size() + 1, projectPaths.size());
-    assertTrue(projectPaths.contains(":targets:future-loader-1.22.0:test"));
-    assertEquals(
-        dependencyPaths(targets, "test").size() + 1,
-        dependencyPaths(expanded, "test").size());
-    for (String lifecycle : List.of("compileJava", "test", "build")) {
-      assertTrue(dependencyPaths(expanded, lifecycle).contains(
-          ":targets:future-loader-1.22.0:" + lifecycle), lifecycle);
-    }
+    assertTrue(settings.contains("normalizedTargets"), "settings must include normalized manifest targets");
+    assertTrue(settings.contains("normalizedTargets.each"), "settings includes must come from normalized targets");
+    assertTrue(build.contains("targetProjects.collect"), "root aggregate dependencies must collect targets");
+    assertTrue(build.contains("targetDependencies"), "root aggregate dependency helper must be manifest-driven");
+    assertAggregateDependsOn(build, "compileAllTargets", "compileJava");
+    assertAggregateDependsOn(build, "testAllTargets", "test");
+    assertAggregateDependsOn(build, "buildAllTargets", "build");
+    assertFalse(build.contains(":targets:forge-1.20.1"), "aggregate graph must not hardcode Forge");
+    assertFalse(build.contains(":targets:neoforge-1.21.1"), "aggregate graph must not hardcode NeoForge");
+  }
+
+  private static void assertAggregateDependsOn(String build, String aggregate, String lifecycle) {
+    int start = build.indexOf("tasks.register('" + aggregate + "'");
+    assertTrue(start >= 0, aggregate + " task registration missing");
+    int next = build.indexOf("tasks.register('", start + 1);
+    String declaration = build.substring(start, next < 0 ? build.length() : next);
+    assertTrue(declaration.contains("dependsOn(targetDependencies('" + lifecycle + "'))"),
+        aggregate + " must depend on targetDependencies('" + lifecycle + "')");
+  }
+
+  private static void assertRequiredLifecycleContract(String build) {
+    int start = build.indexOf("def requiredTargetLifecycleTasks");
+    assertTrue(start >= 0, "validator must declare one lifecycle contract");
+    int end = build.indexOf("tasks.register('validateTargetManifest'", start);
+    assertTrue(end > start, "lifecycle contract must be declared before its validator");
+    String declaration = build.substring(start, end);
+    Matcher matcher = Pattern.compile("'([^']+)'").matcher(declaration);
+    Set<String> lifecycleTasks = new java.util.LinkedHashSet<>();
+    while (matcher.find()) lifecycleTasks.add(matcher.group(1));
+    assertEquals(Set.of("compileJava", "processResources", "test", "build", "runClient", "runServer", "runData"),
+        lifecycleTasks, "required lifecycle task set changed");
   }
 
   private static void assertTarget(
@@ -186,12 +223,6 @@ class TargetManifestContractTest {
 
   private static String read(Path path) throws IOException {
     return Files.readString(path, StandardCharsets.UTF_8);
-  }
-
-  private static List<String> dependencyPaths(List<Map<String, String>> targets, String lifecycle) {
-    return targets.stream()
-        .map(target -> target.get("projectPath") + ":" + lifecycle)
-        .toList();
   }
 
   private static Path repositoryRoot() {

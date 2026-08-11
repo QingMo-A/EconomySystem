@@ -1,5 +1,3 @@
-import groovy.json.JsonSlurper
-
 plugins {
     id 'base'
     id 'idea'
@@ -8,94 +6,27 @@ plugins {
     id 'org.spongepowered.mixin' version '0.7.38' apply false
 }
 
-// Keep the root build fail-fast as well as settings.gradle: this script is also used by tooling
-// that evaluates the root project directly and must never silently drift from the project graph.
-def targetManifestFile = rootProject.file('gradle/economy-targets.json')
-if (!targetManifestFile.isFile()) {
-    throw new GradleException("Missing economy target manifest: ${targetManifestFile}")
+// settings.gradle is the sole manifest parser and validator.  Every root build invocation must
+// consume the normalized model it publishes rather than reopening the JSON or duplicating checks.
+if (!gradle.ext.has('economyTargetManifest')) {
+    throw new GradleException('Validated economy target manifest is unavailable')
 }
-
-def targetManifest
-try {
-    targetManifest = new JsonSlurper().parse(targetManifestFile)
-} catch (Exception exception) {
-    throw new GradleException("Unable to parse economy target manifest: ${targetManifestFile}", exception)
+def economyTargetManifest = gradle.ext.get('economyTargetManifest')
+if (!(economyTargetManifest instanceof Map) || !(economyTargetManifest.targets instanceof List)
+        || economyTargetManifest.targets.isEmpty()) {
+    throw new GradleException('Validated economy target manifest is unavailable')
 }
-
-def manifestError = { String message ->
-    throw new GradleException("Invalid economy target manifest: ${message}")
+def targetProjects = economyTargetManifest.targets.collect { target ->
+    [id: target.id, projectPath: target.projectPath, taskSuffix: target.taskSuffix,
+     displayName: target.displayName, loader: target.loader,
+     minecraftVersion: target.minecraftVersion, javaVersion: target.javaVersion,
+     directory: target.directory]
 }
-if (!(targetManifest instanceof Map)) manifestError('root must be an object')
-if (targetManifest.schemaVersion?.toString() != '1') {
-    manifestError("unsupported schemaVersion '${targetManifest.schemaVersion}' (expected 1)")
-}
-def targetEntries = targetManifest.targets
-if (!(targetEntries instanceof List) || targetEntries.isEmpty()) {
-    manifestError('targets must be a non-empty array')
-}
-def defaultTargetId = targetManifest.defaultTarget?.toString()?.trim()
-if (!defaultTargetId) manifestError('defaultTarget must be non-empty')
-
-def allowedLoaders = ['forge', 'neoforge'] as Set
-def ids = [] as Set
-def projectPaths = [] as Set
-def taskSuffixes = [] as Set
-def targetsRoot = rootProject.file('targets').canonicalFile
-def targetProjects = []
-targetEntries.eachWithIndex { rawTarget, index ->
-    if (!(rawTarget instanceof Map)) manifestError("targets[${index}] must be an object")
-    def requiredText = { String field ->
-        def value = rawTarget[field]?.toString()?.trim()
-        if (!value) manifestError("targets[${index}].${field} must be non-empty")
-        value
-    }
-    def id = requiredText('id')
-    def projectPath = requiredText('projectPath')
-    def taskSuffix = requiredText('taskSuffix')
-    def displayName = requiredText('displayName')
-    def loader = requiredText('loader')
-    def minecraftVersion = requiredText('minecraftVersion')
-    def javaVersionValue = rawTarget.javaVersion
-    if (javaVersionValue == null || javaVersionValue.toString().trim().isEmpty()) {
-        manifestError("targets[${index}].javaVersion must be a positive integer")
-    }
-    int javaVersion
-    try {
-        javaVersion = Integer.parseInt(javaVersionValue.toString())
-    } catch (NumberFormatException exception) {
-        manifestError("targets[${index}].javaVersion must be a positive integer")
-    }
-    if (javaVersion <= 0) manifestError("targets[${index}].javaVersion must be positive")
-    if (!allowedLoaders.contains(loader)) {
-        manifestError("targets[${index}].loader '${loader}' is not supported")
-    }
-    if (!projectPath.startsWith(':targets:') || projectPath == ':targets:' || projectPath.contains('..')) {
-        manifestError("targets[${index}].projectPath must be below :targets:")
-    }
-    if (!ids.add(id)) manifestError("duplicate id '${id}'")
-    if (!projectPaths.add(projectPath)) manifestError("duplicate projectPath '${projectPath}'")
-    if (!taskSuffixes.add(taskSuffix)) manifestError("duplicate taskSuffix '${taskSuffix}'")
-
-    def relativeDirectory = projectPath.substring(1).replace(':', '/')
-    def targetDirectory = new File(rootProject.projectDir, relativeDirectory).canonicalFile
-    if (!(targetDirectory.path == targetsRoot.path
-            || targetDirectory.path.startsWith(targetsRoot.path + File.separator))) {
-        manifestError("targets[${index}].projectPath escapes the targets directory")
-    }
-    if (!targetDirectory.isDirectory()) {
-        manifestError("targets[${index}] directory does not exist: ${targetDirectory}")
-    }
-    if (!new File(targetDirectory, 'build.gradle').isFile()) {
-        manifestError("targets[${index}] is missing build.gradle: ${targetDirectory}")
-    }
-
-    targetProjects << [id: id, projectPath: projectPath, taskSuffix: taskSuffix,
-                       displayName: displayName, loader: loader,
-                       minecraftVersion: minecraftVersion, javaVersion: javaVersion,
-                       directory: targetDirectory]
-}
-if (!ids.contains(defaultTargetId)) manifestError("defaultTarget '${defaultTargetId}' is not present")
+def defaultTargetId = economyTargetManifest.defaultTarget?.toString()?.trim()
 def defaultTarget = targetProjects.find { it.id == defaultTargetId }
+if (defaultTarget == null) {
+    throw new GradleException('Validated economy target manifest is unavailable')
+}
 
 subprojects {
     version = rootProject.mod_version
@@ -160,14 +91,15 @@ targetProjects.each { target ->
     }
 }
 
-// Preserve the one explicit secondary-development command. NeoForge's Dev2 run is a compatibility
-// exception, but its project path is still resolved through the manifest and validated at config time.
+// Preserve the one explicit secondary-development command when the manifest contains the matching
+// target.  This compatibility alias is optional and must never constrain manifest membership.
 def neoForgeTarget = targetProjects.find { it.id == 'neoforge-1.21.1' }
-if (neoForgeTarget == null) manifestError("required compatibility target 'neoforge-1.21.1' is not present")
-tasks.register('runNeoForge1211ClientDev2') {
-    group = 'economy system'
-    description = 'Run the NeoForge 1.21.1 secondary development client.'
-    dependsOn(targetLifecycle(neoForgeTarget, 'runClientDev2'))
+if (neoForgeTarget != null) {
+    tasks.register('runNeoForge1211ClientDev2') {
+        group = 'economy system'
+        description = 'Run the NeoForge 1.21.1 secondary development client.'
+        dependsOn(targetLifecycle(neoForgeTarget, 'runClientDev2'))
+    }
 }
 
 def registerDefaultRunAlias = { String alias, String targetTask, String aliasDescription ->
@@ -203,10 +135,51 @@ tasks.register('buildAllTargets') {
     dependsOn(targetDependencies('build'))
 }
 
+def requiredTargetLifecycleTasks = [
+    'compileJava', 'processResources', 'test', 'build', 'runClient', 'runServer', 'runData'
+].asImmutable()
+
+tasks.register('validateTargetManifest') {
+    group = 'economy system'
+    description = 'Validate manifest target lifecycle tasks and root aliases.'
+    doLast {
+        targetProjects.each { target ->
+            def targetProject = project(target.projectPath)
+            requiredTargetLifecycleTasks.each { lifecycleTask ->
+                if (targetProject.tasks.findByName(lifecycleTask) == null) {
+                    throw new GradleException(
+                        "Target ${target.id} is missing required lifecycle task ${lifecycleTask}")
+                }
+            }
+
+            [
+                "compile${target.taskSuffix}",
+                "process${target.taskSuffix}Resources",
+                "test${target.taskSuffix}",
+                "build${target.taskSuffix}",
+                "run${target.taskSuffix}Client",
+                "run${target.taskSuffix}Server",
+                "run${target.taskSuffix}Data"
+            ].each { aliasTask ->
+                if (rootProject.tasks.findByName(aliasTask) == null) {
+                    throw new GradleException(
+                        "Target ${target.id} is missing required alias task ${aliasTask}")
+                }
+            }
+        }
+
+        ['compileAllTargets', 'testAllTargets', 'buildAllTargets', 'verifyAllTargets'].each { aggregate ->
+            if (rootProject.tasks.findByName(aggregate) == null) {
+                throw new GradleException("Manifest aggregate task ${aggregate} is missing")
+            }
+        }
+    }
+}
+
 tasks.register('verifyAllTargets') {
     group = 'economy system'
     description = 'Test and build every supported loader and Minecraft target.'
-    dependsOn('testAllTargets', 'buildAllTargets')
+    dependsOn('validateTargetManifest', 'testAllTargets', 'buildAllTargets')
 }
 
 tasks.named('build') {

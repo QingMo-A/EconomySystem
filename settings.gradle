@@ -55,7 +55,7 @@ def projectPaths = [] as Set
 def taskSuffixes = [] as Set
 def targetsRoot = new File(rootDir, 'targets').canonicalFile
 def rawTargetEntries = targetEntries
-targetEntries = []
+def normalizedTargets = []
 rawTargetEntries.eachWithIndex { rawTarget, index ->
     if (!(rawTarget instanceof Map)) {
         manifestError("targets[${index}] must be an object")
@@ -105,19 +105,32 @@ rawTargetEntries.eachWithIndex { rawTarget, index ->
         manifestError("targets[${index}] is missing build.gradle: ${targetDirectory}")
     }
 
-    targetEntries << [id: id, projectPath: projectPath, taskSuffix: taskSuffix, displayName: displayName,
-                      loader: loader, minecraftVersion: minecraftVersion, javaVersion: javaVersion,
-                      directory: targetDirectory]
+    normalizedTargets << [id: id, projectPath: projectPath, taskSuffix: taskSuffix, displayName: displayName,
+                          loader: loader, minecraftVersion: minecraftVersion, javaVersion: javaVersion,
+                          directory: targetDirectory]
 }
 if (!ids.contains(defaultTargetId)) {
     manifestError("defaultTarget '${defaultTargetId}' is not present")
 }
 
+// Expose the validated, normalized manifest once for every Gradle invocation.  Root build logic
+// consumes this immutable-ish model and must never reopen or independently validate the JSON.
+gradle.ext.economyTargetManifest = [
+    schemaVersion: 1,
+    defaultTarget: defaultTargetId,
+    targets: normalizedTargets.collect { target ->
+        [id: target.id, projectPath: target.projectPath, taskSuffix: target.taskSuffix,
+         displayName: target.displayName, loader: target.loader,
+         minecraftVersion: target.minecraftVersion, javaVersion: target.javaVersion,
+         directory: target.directory].asImmutable()
+    }.asImmutable()
+].asImmutable()
+
 rootProject.name = 'EconomySystem'
 
-targetEntries.each { target ->
+normalizedTargets.each { target ->
     include(target.projectPath)
 }
-targetEntries.each { target ->
+normalizedTargets.each { target ->
     project(target.projectPath).projectDir = target.directory
 }
