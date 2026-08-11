@@ -1,14 +1,15 @@
 # Multiversion Target Onboarding Infrastructure
 
-Status: **IMPLEMENTED / HARDENED / VERIFIED**
+Status: **CLOSED / FROZEN / VERIFIED**
 UI phase: **CLOSED**
-Next phase: **TARGET ONBOARDING**
+Target onboarding infrastructure phase: **CLOSED**
+Next phase: **UNSELECTED**
 
 ```text
 MULTIVERSION_COMMON_UI_PARITY_PHASE = CLOSED
+MULTIVERSION_TARGET_ONBOARDING_INFRASTRUCTURE_PHASE = CLOSED
 
-NEXT_PHASE =
-MULTIVERSION_TARGET_ONBOARDING_INFRASTRUCTURE
+NEXT_PHASE = UNSELECTED
 ```
 
 This plan records the build and architecture contract after the UI parity phase. It does not reopen
@@ -124,7 +125,8 @@ task justified by a loader capability.
 - Execution base: local and origin `bridge` at `ccb44c78d35ccca9fd9552d1ed029225eab0a37f` before
   hardening; no manifest data change (`schemaVersion: 1`).
 - Code checkpoint: see git history (the code/test commit precedes this documentation commit).
-- Documentation checkpoint: see git history; no self SHA is recorded here.
+- Documentation checkpoint: final phase-closing docs checkpoint: see git history; no self SHA is
+  recorded here.
 - Supported IDs: `neoforge-1.21.1`, `forge-1.20.1`.
 - Default target: `neoforge-1.21.1`.
 - Compatibility aliases: `compile{NeoForge1211,Forge1201}`,
@@ -168,3 +170,72 @@ task justified by a loader capability.
   contract.
 - A target-exclusive task is acceptable only when it is explicitly named, justified by an API
   capability, and still resolved through the manifest; common lifecycle behavior must remain shared.
+
+## Final architecture baseline
+
+The target onboarding infrastructure is now formally closed and frozen. The baseline is:
+
+```text
+UI parity phase:
+CLOSED
+
+Target onboarding infrastructure phase:
+CLOSED
+
+Runtime architecture:
+common-first
+
+Supported target registry:
+gradle/economy-targets.json
+
+Manifest validation authority:
+settings.gradle
+
+Root build:
+validated-model consumer
+
+Current targets:
+forge-1.20.1
+neoforge-1.21.1
+
+Default target:
+neoforge-1.21.1
+```
+
+## Freeze rule
+
+Target onboarding infrastructure is now frozen.
+
+Normal future target onboarding may:
+
+1. Create `targets/<new-target>`.
+2. Add the target entry to `gradle/economy-targets.json`.
+3. Implement the corresponding platform, network, persistence, registry, event, and UI adapters.
+4. Add version-compatibility tests and record any capability deviations.
+
+Normal onboarding must not edit the settings manifest registry logic, root aggregate architecture,
+or already-closed UI parity implementation merely to accommodate a version. Common business changes
+belong to a separately scoped feature, not to target-code duplication.
+
+## Reopen conditions
+
+This phase may be reopened only if one of these verifiable conditions occurs:
+
+1. A new target proves that the manifest schema lacks a genuinely necessary shared field.
+2. A Gradle or loader upgrade makes the manifest lifecycle contract impossible to satisfy.
+3. `validateTargetManifest` or the aggregate task graph develops a reproducible defect.
+4. Default-target routing develops a reproducible defect.
+5. A new target exposes a real cross-version capability that the current architecture cannot express.
+
+Cosmetic refactoring, speculative abstraction, or reducing a few lines of Groovy is not a reopening
+condition.
+
+## Next-phase boundary
+
+```text
+NEXT_PHASE = UNSELECTED
+```
+
+The next phase is intentionally not selected by this plan. It must be initiated by an explicit user
+choice of either a concrete Minecraft/loader target version or a concrete EconomySystem gameplay or
+economy feature. This plan does not autonomously select a version or begin feature work.
