@@ -1,6 +1,6 @@
 # Multiversion Target Onboarding Infrastructure
 
-Status: **IMPLEMENTED / VERIFIED**
+Status: **IMPLEMENTED / HARDENED / VERIFIED**
 UI phase: **CLOSED**
 Next phase: **TARGET ONBOARDING**
 
@@ -20,6 +20,27 @@ Make a new Minecraft/loader target an explicit, reviewable adapter exercise rath
 hand-maintained Gradle registry. One manifest is the source for project inclusion, target aliases,
 aggregate verification, default-run routing, and fail-fast target metadata checks.
 
+## Hardening result
+
+The target manifest lifecycle boundary is now enforced in the Gradle implementation:
+
+- `settings.gradle` is the sole `JsonSlurper` parser and authoritative validator. It retains all
+  schema, loader, uniqueness, path-canonicalization, directory, build-file, Java-version, and
+  default-target fail-fast checks.
+- Settings publishes the normalized immutable-ish `gradle.ext.economyTargetManifest` model. Root
+  `build.gradle` consumes that model and fails fast with `Validated economy target manifest is
+  unavailable` when the handoff is missing; it does not reopen JSON or duplicate schema logic.
+- `runNeoForge1211ClientDev2` is conditional on the manifest's NeoForge target. Removing that target
+  removes only the compatibility alias and does not make configuration fail.
+- `validateTargetManifest` checks every manifest project for `compileJava`, `processResources`,
+  `test`, `build`, `runClient`, `runServer`, and `runData`, then checks every generated per-target
+  alias and all four aggregate tasks with target-specific diagnostics.
+- `verifyAllTargets` depends on `validateTargetManifest`, `testAllTargets`, and `buildAllTargets`,
+  making lifecycle registration a required verification gate.
+- `TargetManifestContractTest` locks the sole-parser/model-handoff boundary, optional Dev2 behavior,
+  lifecycle set, alias contract, aggregate source wiring, and verify integration. Its former
+  future-target map test is now an explicit source contract plus real Gradle dry-run evidence.
+
 ## Common, manifest, and target roles
 
 `common/` = runtime/domain/UI source of truth. `gradle/economy-targets.json` = supported-version
@@ -31,8 +52,8 @@ source of truth. `targets/<version>/` = Minecraft/loader API adapters.
   or UI policy.
 - `targets/<version>/` owns registration, network binding, persistence, native item/player/world
   conversion, filesystem access, and rendering/Screen lifecycle.
-- `settings.gradle` validates and includes every manifest project. Root `build.gradle` validates the
-  same contract and creates all lifecycle/aggregate tasks from the parsed collection.
+- `settings.gradle` validates and includes every manifest project, then publishes the normalized
+  model. Root `build.gradle` consumes that validated model and creates all lifecycle/aggregate tasks.
 
 ## Manifest contract
 
@@ -81,8 +102,10 @@ feature removal or redesign is not an accepted deviation.
 ## Gradle lifecycle and task policy
 
 The manifest owns common lifecycle aliases for every target: compile, processResources, test, build,
-run Client, run Server, and run Data. It also owns `compileAllTargets`, `testAllTargets`,
-`buildAllTargets`, and `verifyAllTargets` (the latter depends on the test and build aggregates).
+run Client, run Server, and run Data. `validateTargetManifest` checks those seven project tasks plus
+the generated aliases for every manifest entry and the four global aggregates. It also owns
+`compileAllTargets`, `testAllTargets`, `buildAllTargets`, and `verifyAllTargets`; the latter depends
+on lifecycle validation, the test aggregate, and the build aggregate.
 
 Legacy root `runClient`, `runServer`, and `runData` resolve `defaultTarget` and dynamically exclude
 non-default subproject run selectors. The explicit `runNeoForge1211ClientDev2` compatibility alias is
@@ -98,8 +121,9 @@ task justified by a loader capability.
 
 ## Verification checkpoint
 
-- Base/preflight checkpoint: local and origin `bridge` at `0cf37b63a3cd5a2efefb650524502bc2b8a11ae0`.
-- Code checkpoint: `0cc23b0653106dbe5e962eb60a5f2fa76ffd83ce`.
+- Execution base: local and origin `bridge` at `ccb44c78d35ccca9fd9552d1ed029225eab0a37f` before
+  hardening; no manifest data change (`schemaVersion: 1`).
+- Code checkpoint: see git history (the code/test commit precedes this documentation commit).
 - Documentation checkpoint: see git history; no self SHA is recorded here.
 - Supported IDs: `neoforge-1.21.1`, `forge-1.20.1`.
 - Default target: `neoforge-1.21.1`.
@@ -107,6 +131,15 @@ task justified by a loader capability.
   `process{NeoForge1211,Forge1201}Resources`, `test{NeoForge1211,Forge1201}`,
   `build{NeoForge1211,Forge1201}`, `run{NeoForge1211,Forge1201}{Client,Server,Data}`,
   `runNeoForge1211ClientDev2`, and root `runClient`/`runServer`/`runData`.
+- `validateTargetManifest --no-daemon`: passed; required lifecycle and alias contracts present for
+  both manifest targets.
+- Aggregate task-graph dry-runs (all passed; both target project paths present):
+  `compileAllTargets --dry-run`, `testAllTargets --dry-run`, `buildAllTargets --dry-run`, and
+  `verifyAllTargets --dry-run`.
+- Default alias dry-runs (all passed; NeoForge default only): `runClient --dry-run`,
+  `runServer --dry-run`, and `runData --dry-run`.
+- Dev2 compatibility dry-run (passed; no client launch):
+  `runNeoForge1211ClientDev2 --dry-run`.
 - Final target XML totals: Forge 904 tests, 0 failures, 0 errors, 1 skipped; NeoForge 969 tests,
   0 failures, 0 errors, 1 skipped.
 - `:targets:forge-1.20.1:test --no-daemon --rerun-tasks`: passed.
@@ -119,9 +152,13 @@ task justified by a loader capability.
 - Root `runClient`, `runServer`, and `runData --dry-run`: each selects only
   `:targets:neoforge-1.21.1` plus the root alias.
 - Static checks: common production sources contain no Minecraft/Forge/NeoForge imports; target
-  registries and aggregate dependencies contain no hardcoded target paths.
-- JAR checks: both built JARs contain common classes and their own adapter classes, contain zero
-  opposite-loader target/API entries, and contain zero deleted legacy packet entries.
+  registries and aggregate dependencies contain no hardcoded target paths. `build.gradle` contains
+  no `JsonSlurper`, `allowedLoaders`, or schema/path validator; the only target ID literal is the
+  optional Dev2 lookup.
+- JAR/resource checks: Forge JAR contains common classes plus Forge adapter classes and no
+  NeoForge/Forge-opposite target/API entries; NeoForge JAR contains common classes plus NeoForge
+  adapter classes and no Forge target/API entries. Both contain zero deleted legacy packet entries
+  and the expected common `en_us.json`/`zh_cn.json` language resources (2 each).
 
 ## Exceptions and operational notes
 
