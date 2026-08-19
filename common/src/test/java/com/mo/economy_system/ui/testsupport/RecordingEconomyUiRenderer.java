@@ -135,6 +135,10 @@ public final class RecordingEconomyUiRenderer implements EconomyUiRenderer {
     add("item", rect, itemId, true);
   }
 
+  @Override public void itemWithCount(String itemId, int count, UiRect rect) {
+    add("itemWithCount", rect, itemId + ":" + count, true);
+  }
+
   @Override public void texture(String textureId, UiRect rect) {
     add("texture", rect, textureId, true);
   }

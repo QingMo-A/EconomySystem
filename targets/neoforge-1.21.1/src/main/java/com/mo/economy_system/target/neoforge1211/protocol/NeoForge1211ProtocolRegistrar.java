@@ -130,6 +130,15 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(registrar, EconomyMessages.UPDATE_TERRITORY_PERMISSION, NeoForge1211TerritoryManagementHandlers::permission);
     bindCommon(registrar, EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP, NeoForge1211TerritoryManagementHandlers::transfer);
     bindCommon(registrar, EconomyMessages.UPDATE_TERRITORY_RULE, NeoForge1211TerritoryManagementHandlers::rule);
+    bindCommon(registrar, EconomyMessages.MAILBOX_DATA_REQUEST, NeoForge1211MailboxHandlers::request);
+    bindCommon(registrar, EconomyMessages.MAILBOX_DATA_RESPONSE, NeoForge1211MailboxHandlers::response);
+    bindCommon(registrar, EconomyMessages.MAILBOX_MARK_READ, NeoForge1211MailboxHandlers::markRead);
+    bindCommon(registrar, EconomyMessages.MAILBOX_DELETE, NeoForge1211MailboxHandlers::delete);
+    bindCommon(registrar, EconomyMessages.MAILBOX_CLAIM_ATTACHMENT, NeoForge1211MailboxHandlers::claimAttachment);
+    bindCommon(registrar, EconomyMessages.MAILBOX_CLAIM_ALL, NeoForge1211MailboxHandlers::claimAll);
+    bindCommon(registrar, EconomyMessages.MAILBOX_SEND_PLAYER, NeoForge1211MailboxHandlers::sendPlayer);
+    bindCommon(registrar, EconomyMessages.MAILBOX_SEND_RESULT, NeoForge1211MailboxHandlers::sendResult);
+    bindCommon(registrar, EconomyMessages.MAILBOX_NOTIFICATION, NeoForge1211MailboxHandlers::notification);
   }
 
   private static <T extends EconomyNetworkMessage> void bindCommon(

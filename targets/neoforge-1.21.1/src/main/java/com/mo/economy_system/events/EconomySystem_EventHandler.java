@@ -60,6 +60,7 @@ public class EconomySystem_EventHandler {
 
         // 注册指令
         Command_Economy.register(event.getServer().getCommands().getDispatcher());
+        com.mo.economy_system.commands.economy_system.Command_Mailbox.register(event.getServer().getCommands().getDispatcher());
         Command_Tpa.register(event.getServer().getCommands().getDispatcher());
         Command_RedPacket.register(event.getServer().getCommands().getDispatcher());
         Command_TerritoryClaim.register(event.getServer().getCommands().getDispatcher());

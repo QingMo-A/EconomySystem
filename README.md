@@ -67,6 +67,33 @@
   
 ---
 
+## Public API（第三方模组集成）
+
+EconomySystem 从 Public API **1.0.0** 开始提供稳定的服务端调用接口，第三方模组应只依赖：
+
+```text
+com.mo.economy_system.api.*
+```
+
+统一入口：
+
+```java
+EconomyApiSession api = EconomySystemApi.forLevel(serverLevel);
+```
+
+目前开放：
+
+- 梦鱼币余额查询、精确增加/扣除、原子转账与流水查询；
+- 系统邮件、全服公告、带物品附件的补偿/奖励投递；
+- 玩家市场只读查询；
+- 领地只读查询与 OWNER / MEMBER 关系判断。
+
+可通过 `gradlew.bat buildApiAllTargets` 构建 Forge 1.20.1 / NeoForge 1.21.1 的 `-api.jar` 与 `-api-sources.jar`。运行时仍需安装完整 EconomySystem 模组。
+
+完整使用说明见 [`docs/public-api-v1.md`](docs/public-api-v1.md)。
+
+---
+
 ## ToDo (计划实现的功能)
 
 功能不分先后，以下每个功能都有可能被实现：

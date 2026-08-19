@@ -122,6 +122,24 @@ public final class EconomyMessages {
       new EconomyMessageType<>(EconomyProtocol.TRANSFER_TERRITORY_OWNERSHIP, TransferTerritoryOwnershipMessage.class);
   public static final EconomyMessageType<UpdateTerritoryRuleMessage> UPDATE_TERRITORY_RULE =
       new EconomyMessageType<>(EconomyProtocol.UPDATE_TERRITORY_RULE, UpdateTerritoryRuleMessage.class);
+  public static final EconomyMessageType<MailboxDataRequestMessage> MAILBOX_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_DATA_REQUEST, MailboxDataRequestMessage.class);
+  public static final EconomyMessageType<MailboxDataResponseMessage> MAILBOX_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_DATA_RESPONSE, MailboxDataResponseMessage.class);
+  public static final EconomyMessageType<MailboxMarkReadMessage> MAILBOX_MARK_READ =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_MARK_READ, MailboxMarkReadMessage.class);
+  public static final EconomyMessageType<MailboxDeleteMessage> MAILBOX_DELETE =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_DELETE, MailboxDeleteMessage.class);
+  public static final EconomyMessageType<MailboxClaimAttachmentMessage> MAILBOX_CLAIM_ATTACHMENT =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_CLAIM_ATTACHMENT, MailboxClaimAttachmentMessage.class);
+  public static final EconomyMessageType<MailboxClaimAllMessage> MAILBOX_CLAIM_ALL =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_CLAIM_ALL, MailboxClaimAllMessage.class);
+  public static final EconomyMessageType<MailboxSendPlayerMessage> MAILBOX_SEND_PLAYER =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_SEND_PLAYER, MailboxSendPlayerMessage.class);
+  public static final EconomyMessageType<MailboxSendResultMessage> MAILBOX_SEND_RESULT =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_SEND_RESULT, MailboxSendResultMessage.class);
+  public static final EconomyMessageType<MailboxNotificationMessage> MAILBOX_NOTIFICATION =
+      new EconomyMessageType<>(EconomyProtocol.MAILBOX_NOTIFICATION, MailboxNotificationMessage.class);
 
   private EconomyMessages() {}
 }

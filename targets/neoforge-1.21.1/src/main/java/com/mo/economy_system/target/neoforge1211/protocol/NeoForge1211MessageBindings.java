@@ -63,6 +63,15 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.UPDATE_TERRITORY_PERMISSION);
     registry.register(EconomyMessages.TRANSFER_TERRITORY_OWNERSHIP);
     registry.register(EconomyMessages.UPDATE_TERRITORY_RULE);
+    registry.register(EconomyMessages.MAILBOX_DATA_REQUEST);
+    registry.register(EconomyMessages.MAILBOX_DATA_RESPONSE);
+    registry.register(EconomyMessages.MAILBOX_MARK_READ);
+    registry.register(EconomyMessages.MAILBOX_DELETE);
+    registry.register(EconomyMessages.MAILBOX_CLAIM_ATTACHMENT);
+    registry.register(EconomyMessages.MAILBOX_CLAIM_ALL);
+    registry.register(EconomyMessages.MAILBOX_SEND_PLAYER);
+    registry.register(EconomyMessages.MAILBOX_SEND_RESULT);
+    registry.register(EconomyMessages.MAILBOX_NOTIFICATION);
     EconomyProtocol.validateBindings(registry.values());
     registry.freeze();
     return registry;

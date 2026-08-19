@@ -1,11 +1,13 @@
 package com.mo.economy_system.ui.delivery;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.delivery.DeliveryBoxTestFixtures;
+import com.mo.economy_system.common.mail.MailAttachmentSnapshot;
+import com.mo.economy_system.common.mail.MailSnapshot;
+import com.mo.economy_system.common.mail.MailType;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import java.util.List;
@@ -14,36 +16,44 @@ import org.junit.jupiter.api.Test;
 
 class DeliveryControllerTest {
   @Test
-  void rejectsStaleResponsesFiltersPagesAndClaimsWithCurrentRequest() {
+  void rejectsStaleResponsesFiltersAndClaimsSelectedMailAttachmentWithCurrentRequest() {
     FakePort port = new FakePort();
-    DeliveryController controller = new DeliveryController(port);
-    UUID first = UUID.randomUUID();
-    UUID second = UUID.randomUUID();
+    DeliveryController controller = new DeliveryController(port, mail ->
+        mail.attachments().isEmpty() ? "" : "Diamond Sword");
+    UUID firstMail = UUID.randomUUID();
+    UUID secondMail = UUID.randomUUID();
+    UUID firstAttachment = UUID.randomUUID();
+    UUID secondAttachment = UUID.randomUUID();
+
     controller.handle(new DeliveryEvent.Initialize(10));
     assertEquals(ScreenState.LOADING, controller.state().screenState());
     assertEquals(1, port.lastRequest);
 
-    controller.handle(new DeliveryEvent.DataLoaded(0, List.of(DeliveryBoxTestFixtures.entry(first, 1))));
+    controller.handle(new DeliveryEvent.DataLoaded(0,
+        List.of(mail(firstMail, firstAttachment, 1, false))));
     assertEquals(ScreenState.LOADING, controller.state().screenState());
-    List<DeliveryBoxEntrySnapshot> entries = List.of(
-        DeliveryBoxTestFixtures.entry(first, 1), DeliveryBoxTestFixtures.entry(second, 2));
-    controller.handle(new DeliveryEvent.DataLoaded(1, entries));
+
+    controller.handle(new DeliveryEvent.DataLoaded(1, List.of(
+        mail(firstMail, firstAttachment, 1, false),
+        mail(secondMail, secondAttachment, 2, true))));
     assertEquals(ScreenState.READY, controller.state().screenState());
     assertEquals(1, controller.state().requestId());
-    assertEquals(2, controller.state().totalPages());
 
-    controller.handle(new DeliveryEvent.FilterChanged(second.toString().substring(0, 8)));
-    assertEquals(1, controller.state().filteredRows().size());
-    controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.CLAIM, second, 20));
+    controller.handle(new DeliveryEvent.FilterChanged("Diamond Sword"));
+    assertEquals(2, controller.state().filteredRows().size());
+    controller.handle(new DeliveryEvent.MailSelected(secondMail));
+    controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.CLAIM, secondAttachment, 20));
     assertEquals(ScreenState.LOADING, controller.state().screenState());
-    assertEquals(second, port.claimed);
+    assertEquals(secondMail, port.claimedMail);
+    assertEquals(secondAttachment, port.claimedAttachment);
     assertEquals(1, port.claimRequest);
+
     controller.handle(new DeliveryEvent.DataLoaded(1, List.of()));
     assertEquals(ScreenState.EMPTY, controller.state().screenState());
   }
 
   @Test
-  void timesOutRetriesAndNavigatesHome() {
+  void timesOutRetriesNavigatesHomeAndCompose() {
     FakePort port = new FakePort();
     DeliveryController controller = new DeliveryController(port);
     controller.handle(new DeliveryEvent.Initialize(100));
@@ -52,8 +62,12 @@ class DeliveryControllerTest {
     controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.RETRY, null, 200));
     assertEquals(2, port.lastRequest);
     controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.BACK, null, 0));
-    UiNavigation.Route route = (UiNavigation.Route) controller.pollNavigation().orElseThrow();
-    assertEquals(EconomyUiRoute.HOME, route.route());
+    UiNavigation.Route home = (UiNavigation.Route) controller.pollNavigation().orElseThrow();
+    assertEquals(EconomyUiRoute.HOME, home.route());
+
+    controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.COMPOSE, null, 0));
+    UiNavigation.Route compose = (UiNavigation.Route) controller.pollNavigation().orElseThrow();
+    assertEquals(EconomyUiRoute.MAIL_COMPOSE, compose.route());
   }
 
   @Test
@@ -66,13 +80,29 @@ class DeliveryControllerTest {
     assertEquals(1, state.filteredRows().size());
   }
 
+  private static MailSnapshot mail(UUID mailId, UUID attachmentId, int count, boolean read) {
+    DeliveryBoxEntrySnapshot entry = DeliveryBoxTestFixtures.entry(attachmentId, count);
+    return new MailSnapshot(mailId, MailType.MARKET, null, "", "", "", entry.source(),
+        1, 0, read, false, true,
+        List.of(new MailAttachmentSnapshot(entry.entryId(), entry.item())));
+  }
+
   private static final class FakePort implements DeliveryPort {
     private long next;
     private long lastRequest = -1;
     private long claimRequest = -1;
-    private UUID claimed;
+    private UUID claimedMail;
+    private UUID claimedAttachment;
+
     @Override public long nextRequestId() { return ++next; }
     @Override public void requestData(long requestId) { lastRequest = requestId; }
-    @Override public void claim(UUID entryId, long requestId) { claimed = entryId; claimRequest = requestId; }
+    @Override public void markRead(UUID mailId, long requestId) {}
+    @Override public void delete(UUID mailId, long requestId) {}
+    @Override public void claim(UUID mailId, UUID entryId, long requestId) {
+      claimedMail = mailId;
+      claimedAttachment = entryId;
+      claimRequest = requestId;
+    }
+    @Override public void claimAll(UUID mailId, long requestId) {}
   }
 }

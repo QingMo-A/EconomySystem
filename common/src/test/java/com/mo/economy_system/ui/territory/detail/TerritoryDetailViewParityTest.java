@@ -112,6 +112,7 @@ class TerritoryDetailViewParityTest {
           spans.toString(), true);
     }
     @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
+    @Override public void itemWithCount(String itemId, int count, UiRect rect) {}
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {
       add("playerHead", rect, playerId + playerName, true);
     }

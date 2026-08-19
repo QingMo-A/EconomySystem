@@ -34,5 +34,18 @@ public final class ShopPurchaseLayout {
     return new Layout(scale, card, item, quantityLabel, quantity, confirm, back, message);
   }
   public record Layout(UiScale scale, UiRect card, UiRect item, UiRect quantityLabel, UiRect quantity,
-                       UiRect confirm, UiRect back, UiRect message) {}
+                       UiRect confirm, UiRect back, UiRect message) {
+    /** Title is anchored to the card's upper-left content inset. */
+    public UiRect title() {
+      return new UiRect(card.x() + PANEL_PADDING, card.y() + 10,
+          Math.max(1, card.width() - PANEL_PADDING * 2), 16);
+    }
+
+    /** Item name sits beside the icon, leaving the title and price rows independent. */
+    public UiRect itemName() {
+      int x = card.x() + card.width() / 2 + 16;
+      return new UiRect(x, card.y() + 34,
+          Math.max(1, card.right() - PANEL_PADDING - x), 16);
+    }
+  }
 }

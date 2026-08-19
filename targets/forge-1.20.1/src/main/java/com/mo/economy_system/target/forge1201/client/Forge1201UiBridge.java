@@ -16,6 +16,7 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
     return switch (route) {
       case HOME -> Optional.of(new Forge1201HomeScreen());
       case DELIVERY_BOX -> Optional.of(new Forge1201DeliveryBoxScreen());
+      case MAIL_COMPOSE -> Optional.of(new Forge1201MailboxComposeScreen(null));
       case TERRITORY -> Optional.of(new Forge1201TerritoryListScreen());
       case SHOP -> Optional.of(new Forge1201ShopScreen());
       case MARKET -> Optional.of(new Forge1201MarketScreen());
@@ -28,6 +29,7 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
   public boolean supports(EconomyUiRoute route) {
     return route == EconomyUiRoute.HOME
         || route == EconomyUiRoute.DELIVERY_BOX
+        || route == EconomyUiRoute.MAIL_COMPOSE
         || route == EconomyUiRoute.TERRITORY
         || route == EconomyUiRoute.SHOP
         || route == EconomyUiRoute.MARKET

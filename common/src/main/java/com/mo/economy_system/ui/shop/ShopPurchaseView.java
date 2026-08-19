@@ -12,10 +12,9 @@ public final class ShopPurchaseView {
   private ShopPurchaseView() {}
   public static void render(EconomyUiRenderer renderer, ShopPurchaseState state, ShopPurchaseLayout.Layout layout, int mouseX, int mouseY) {
     renderer.card(layout.card(), EconomyUiTheme.SHOP_PURCHASE_PANEL, false);
-    renderer.translatedTextInRect("screen.shop.purchase.title", List.of(), new UiRect(layout.card().x()+12, layout.card().y()+10, layout.card().width()-24, 16), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+    renderer.translatedTextInRect("screen.shop.purchase.title", List.of(), layout.title(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
     renderer.item(state.row().item().itemId(), layout.item());
-    renderer.itemDisplayName(state.row().item().itemId(), new UiRect(layout.card().x()+12, layout.card().y()+16,
-        layout.card().width()-24, 14), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.CENTER);
+    renderer.itemDisplayName(state.row().item().itemId(), layout.itemName(), EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
     renderer.translatedTextInRect("screen.shop.purchase.unit_price", List.of(Integer.toString(state.row().item().currentPrice())),
         new UiRect(layout.card().x()+12, layout.card().y()+56, layout.card().width()-24, 16), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.CENTER);
     renderer.translatedTextInRect("screen.shop.purchase.total", List.of(Long.toString(state.totalPrice())),

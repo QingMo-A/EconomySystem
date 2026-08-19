@@ -47,9 +47,10 @@ public final class NeoForge1211TerritoryInviteScreen extends Screen {
     var layout = commonLayout();
     float scale = layout.scale().value();
     var rect = layout.search();
-    search = new EditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
+    search = new NeoForge1211UnderlinedEditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
         Math.max(1, Math.round(rect.width() * scale)), Math.max(1, Math.round(rect.height() * scale)),
         Component.translatable("screen.invite.search"));
+    NeoForge1211UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setResponder(value -> controller.handle(new TerritoryInviteEvent.FilterChanged(value)));
     addRenderableWidget(search);

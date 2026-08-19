@@ -87,6 +87,22 @@ public interface EconomyUiRenderer {
         icon(UiIcon.SHOP, rect);
     }
 
+    /**
+     * Draws a target-native item icon and its stack-count decoration as one semantic operation.
+     *
+     * <p>The count is explicit even when it is {@code 1}.  Target implementations must render
+     * the item and the decoration in the same scaled pose and use the native item-decoration
+     * primitive, rather than relying on a follow-up ordinary text draw whose depth can be hidden
+     * by the item model.</p>
+     */
+    void itemWithCount(String itemId, int count, UiRect rect);
+
+    /** Draws the claimed-state mask/check above an already rendered item. Targets may raise Z explicitly. */
+    default void claimedItemOverlay(UiRect rect) {
+        fill(rect, 0x66000000);
+        textInRect("✓", rect, 0xFF9BE7A7, UiTextAlignment.CENTER);
+    }
+
     /** Draws a target-owned bitmap/texture identified by a stable resource id. */
     default void texture(String textureId, UiRect rect) {
         // A target may omit optional decorative assets while preserving layout.

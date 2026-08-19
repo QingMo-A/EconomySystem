@@ -2,6 +2,8 @@ package com.mo.economy_system.ui.territory.list;
 
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.text.UiTextMetrics;
+import com.mo.economy_system.ui.text.UiVersionInfoLayout;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +20,13 @@ public final class TerritoryListLayout {
   private TerritoryListLayout() {}
 
   public static Layout calculate(int physicalWidth, int physicalHeight, TerritoryListState state) {
+    return calculate(physicalWidth, physicalHeight, state, UiTextMetrics.APPROXIMATE);
+  }
+
+  /** Calculates geometry using the target's native font metrics. */
+  public static Layout calculate(int physicalWidth, int physicalHeight, TerritoryListState state,
+                                 UiTextMetrics metrics) {
+    if (metrics == null) metrics = UiTextMetrics.APPROXIMATE;
     UiScale scale = UiScale.fit(physicalWidth, physicalHeight,
         EconomyUiTheme.BASE_WIDTH, EconomyUiTheme.BASE_HEIGHT);
     int width = scale.virtualWidth();
@@ -53,8 +62,15 @@ public final class TerritoryListLayout {
     UiRect retry = new UiRect(Math.max(panel, (width - 120) / 2),
         GRID_START_Y + Math.max(0, (height - GRID_START_Y - FOOTER_HEIGHT - 28) / 2),
         Math.min(120, Math.max(1, width - panel * 2)), 24);
-    UiRect title = new UiRect(panel, height - panel - 31, 240, 19);
-    UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - 14, 90, 14);
+    // List, shop and delivery screens all anchor their footer title cards to the same bottom
+    // baseline.  Derive the card height from target font metrics instead of the old hard-coded
+    // 31px offset (which left this title visibly above the other pages).
+    UiVersionInfoLayout.Result versionInfo = UiVersionInfoLayout.calculate(metrics,
+        "screen.territory.title", List.of(), panel, height - panel, 240);
+    UiRect title = versionInfo.card();
+    int lineHeight = Math.max(1, metrics.lineHeight());
+    UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight,
+        90, lineHeight);
     UiRect search = new UiRect(panel, 20, Math.min(SEARCH_WIDTH, Math.max(1, width - panel * 2)), 20);
     UiRect searchBackground = new UiRect(search.x() - 4, search.y() - 2,
         search.width() + 8, search.height() + 4);

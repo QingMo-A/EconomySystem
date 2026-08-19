@@ -76,6 +76,7 @@ class HomeViewParityTest {
     @Override public void scaledIconText(UiIcon icon, String text, int originX, int originY, float scale, int iconSize, int iconAdvance, int textColor) { add("scaledIconText", new UiRect(originX, originY, iconSize, iconSize), text, true); }
     @Override public void scaledIconStyledText(UiIcon icon, List<UiTextSpan> spans, int originX, int originY, float scale, int iconSize, int iconAdvance) { add("scaledIconStyledText", new UiRect(originX, originY, iconSize, iconSize), spans.toString(), true); }
     @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
+    @Override public void itemWithCount(String itemId, int count, UiRect rect) { add("itemWithCount", rect, itemId + ":" + count, true); }
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) { add("playerHead", rect, playerName, true); }
     @Override public void tooltip(TooltipModel tooltip, int mouseX, int mouseY) { add("tooltip", new UiRect(mouseX, mouseY, 0, 0), tooltip.toString(), true); }
     @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}

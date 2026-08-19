@@ -22,7 +22,13 @@ public final class UiNativeInputFrame {
   /** Paints the common frame while the target is still in physical coordinates. */
   public static void render(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
                             UiInputFrameStyle style, boolean focused) {
+    render(renderer, nativeWidgetRect, style, focused, false);
+  }
+
+  /** Paints the same accent when the field is hovered, even before it receives focus. */
+  public static void render(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                            UiInputFrameStyle style, boolean focused, boolean hovered) {
     if (renderer == null || style == null) throw new IllegalArgumentException("frame renderer/style");
-    renderer.inputFrame(frameRect(nativeWidgetRect), style, focused);
+    renderer.inputFrame(frameRect(nativeWidgetRect), style, focused || hovered);
   }
 }

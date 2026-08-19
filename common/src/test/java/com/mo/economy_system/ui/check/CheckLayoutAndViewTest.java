@@ -112,6 +112,7 @@ class CheckLayoutAndViewTest {
         int iconSize, int iconAdvance) {}
     @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
     @Override public void icon(UiIcon icon, UiRect rect) {}
+    @Override public void itemWithCount(String itemId, int count, UiRect rect) {}
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {}
     @Override public void tooltip(TooltipModel tooltip, int mouseX, int mouseY) {}
     @Override public void itemDisplayNameWithSuffix(String itemId, String suffix, UiRect rect, int color, UiTextAlignment alignment) {}

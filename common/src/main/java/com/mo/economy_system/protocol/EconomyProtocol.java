@@ -16,7 +16,7 @@ import java.util.Set;
  */
 public final class EconomyProtocol {
     /** Bumped because Bridge codecs are intentionally incompatible with legacy packets. */
-    public static final String VERSION = "bridge-1";
+    public static final String VERSION = "bridge-2";
 
     private static final List<EconomyMessageSpec> DECLARATIONS = new ArrayList<>();
 
@@ -64,6 +64,15 @@ public final class EconomyProtocol {
     public static final EconomyMessageSpec UPDATE_TERRITORY_PERMISSION = c2s(41, "economy_system:territory_system/packet_update_territory_permission");
     public static final EconomyMessageSpec TRANSFER_TERRITORY_OWNERSHIP = c2s(42, "economy_system:territory_system/packet_transfer_territory_ownership");
     public static final EconomyMessageSpec UPDATE_TERRITORY_RULE = c2s(43, "economy_system:territory_system/packet_update_territory_rule");
+    public static final EconomyMessageSpec MAILBOX_DATA_REQUEST = c2s(44, "economy_system:mailbox/packet_data_request");
+    public static final EconomyMessageSpec MAILBOX_DATA_RESPONSE = s2c(45, "economy_system:mailbox/packet_data_response");
+    public static final EconomyMessageSpec MAILBOX_MARK_READ = c2s(46, "economy_system:mailbox/packet_mark_read");
+    public static final EconomyMessageSpec MAILBOX_DELETE = c2s(47, "economy_system:mailbox/packet_delete");
+    public static final EconomyMessageSpec MAILBOX_CLAIM_ATTACHMENT = c2s(48, "economy_system:mailbox/packet_claim_attachment");
+    public static final EconomyMessageSpec MAILBOX_CLAIM_ALL = c2s(49, "economy_system:mailbox/packet_claim_all");
+    public static final EconomyMessageSpec MAILBOX_SEND_PLAYER = c2s(50, "economy_system:mailbox/packet_send_player");
+    public static final EconomyMessageSpec MAILBOX_SEND_RESULT = s2c(51, "economy_system:mailbox/packet_send_result");
+    public static final EconomyMessageSpec MAILBOX_NOTIFICATION = s2c(52, "economy_system:mailbox/packet_notification");
 
     public static final List<EconomyMessageSpec> ALL = List.copyOf(DECLARATIONS);
     private static final Map<Integer, EconomyMessageSpec> BY_DISCRIMINATOR;

@@ -40,8 +40,12 @@ class ShopLegacyReferenceParityTest {
 
   @Test
   void shopChromeAndPriceFormattingAreReferenceValues() {
-    assertEquals(0xE04A5568, EconomyUiThemeProbe.searchBackground());
-    assertEquals(0xFF4FC3F7, EconomyUiThemeProbe.searchBorder());
+    assertEquals(0, EconomyUiThemeProbe.searchBackground());
+    assertEquals(0, EconomyUiThemeProbe.searchTop());
+    assertEquals(com.mo.economy_system.ui.theme.EconomyUiTheme.CARD_BORDER,
+        EconomyUiThemeProbe.searchUnderline(false));
+    assertEquals(com.mo.economy_system.ui.theme.EconomyUiTheme.MARKET_ACCENT,
+        EconomyUiThemeProbe.searchUnderline(true));
     assertEquals("\uFFE5" + "1,234,567", "\uFFE5" + com.mo.economy_system.ui.text.UiNumbers.formatInteger(1_234_567));
   }
 
@@ -183,6 +187,9 @@ class ShopLegacyReferenceParityTest {
 
   private static final class EconomyUiThemeProbe {
     static int searchBackground() { return com.mo.economy_system.ui.theme.EconomyUiTheme.SHOP_SEARCH_FRAME.background(); }
-    static int searchBorder() { return com.mo.economy_system.ui.theme.EconomyUiTheme.SHOP_SEARCH_FRAME.top(false); }
+    static int searchTop() { return com.mo.economy_system.ui.theme.EconomyUiTheme.SHOP_SEARCH_FRAME.top(false); }
+    static int searchUnderline(boolean focused) {
+      return com.mo.economy_system.ui.theme.EconomyUiTheme.SHOP_SEARCH_FRAME.bottom(focused);
+    }
   }
 }

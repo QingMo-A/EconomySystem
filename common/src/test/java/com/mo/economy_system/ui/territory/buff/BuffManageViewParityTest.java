@@ -152,6 +152,7 @@ class BuffManageViewParityTest {
           iconSize, iconSize), icon + ":" + spans, null, null, null, true));
     }
     @Override public UiTextMetrics metrics() { return UiTextMetrics.APPROXIMATE; }
+    @Override public void itemWithCount(String itemId, int count, UiRect rect) {}
     @Override public void playerHead(UUID playerId, String playerName, UiRect rect) {
       operations.add(new Operation("playerHead", rect, playerId + playerName,
           null, null, null, true));

@@ -49,9 +49,10 @@ public final class Forge1201TerritoryInviteScreen extends Screen {
     var layout = commonLayout();
     float scale = layout.scale().value();
     var rect = layout.search();
-    search = new EditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
+    search = new Forge1201UnderlinedEditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
         Math.max(1, Math.round(rect.width() * scale)), Math.max(1, Math.round(rect.height() * scale)),
         Component.translatable("screen.invite.search"));
+    Forge1201UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setValue(search.getValue());
     search.setResponder(value -> controller.handle(new TerritoryInviteEvent.FilterChanged(value)));

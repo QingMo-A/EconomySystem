@@ -26,6 +26,15 @@ import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
+import com.mo.economy_system.common.network.MailboxClaimAllMessage;
+import com.mo.economy_system.common.network.MailboxClaimAttachmentMessage;
+import com.mo.economy_system.common.network.MailboxDataRequestMessage;
+import com.mo.economy_system.common.network.MailboxDataResponseMessage;
+import com.mo.economy_system.common.network.MailboxDeleteMessage;
+import com.mo.economy_system.common.network.MailboxMarkReadMessage;
+import com.mo.economy_system.common.network.MailboxNotificationMessage;
+import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
+import com.mo.economy_system.common.network.MailboxSendResultMessage;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
@@ -54,6 +63,7 @@ import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.DeliveryBoxWireCodec;
+import com.mo.economy_system.network.MailboxWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryManagementWireCodec;
 import com.mo.economy_system.network.TerritoryMemberRemovalWireCodec;
@@ -370,6 +380,33 @@ public final class Forge1201NetworkChannel {
         .decoder(targetDecoder(DeliveryBoxWireCodec::decodeClaim))
         .consumerMainThread(Forge1201DeliveryBoxHandlers::claim)
         .add();
+    CHANNEL.messageBuilder(MailboxDataRequestMessage.class, EconomyMessages.MAILBOX_DATA_REQUEST.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeRequest)).decoder(targetDecoder(MailboxWireCodec::decodeRequest))
+        .consumerMainThread(Forge1201MailboxHandlers::request).add();
+    CHANNEL.messageBuilder(MailboxDataResponseMessage.class, EconomyMessages.MAILBOX_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(targetEncoder(MailboxWireCodec::encodeResponse)).decoder(targetDecoder(MailboxWireCodec::decodeResponse))
+        .consumerMainThread(Forge1201MailboxHandlers::response).add();
+    CHANNEL.messageBuilder(MailboxMarkReadMessage.class, EconomyMessages.MAILBOX_MARK_READ.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeMarkRead)).decoder(targetDecoder(MailboxWireCodec::decodeMarkRead))
+        .consumerMainThread(Forge1201MailboxHandlers::markRead).add();
+    CHANNEL.messageBuilder(MailboxDeleteMessage.class, EconomyMessages.MAILBOX_DELETE.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeDelete)).decoder(targetDecoder(MailboxWireCodec::decodeDelete))
+        .consumerMainThread(Forge1201MailboxHandlers::delete).add();
+    CHANNEL.messageBuilder(MailboxClaimAttachmentMessage.class, EconomyMessages.MAILBOX_CLAIM_ATTACHMENT.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeClaimAttachment)).decoder(targetDecoder(MailboxWireCodec::decodeClaimAttachment))
+        .consumerMainThread(Forge1201MailboxHandlers::claimAttachment).add();
+    CHANNEL.messageBuilder(MailboxClaimAllMessage.class, EconomyMessages.MAILBOX_CLAIM_ALL.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeClaimAll)).decoder(targetDecoder(MailboxWireCodec::decodeClaimAll))
+        .consumerMainThread(Forge1201MailboxHandlers::claimAll).add();
+    CHANNEL.messageBuilder(MailboxSendPlayerMessage.class, EconomyMessages.MAILBOX_SEND_PLAYER.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(MailboxWireCodec::encodeSendPlayer)).decoder(targetDecoder(MailboxWireCodec::decodeSendPlayer))
+        .consumerMainThread(Forge1201MailboxHandlers::sendPlayer).add();
+    CHANNEL.messageBuilder(MailboxSendResultMessage.class, EconomyMessages.MAILBOX_SEND_RESULT.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(targetEncoder(MailboxWireCodec::encodeSendResult)).decoder(targetDecoder(MailboxWireCodec::decodeSendResult))
+        .consumerMainThread(Forge1201MailboxHandlers::sendResult).add();
+    CHANNEL.messageBuilder(MailboxNotificationMessage.class, EconomyMessages.MAILBOX_NOTIFICATION.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(targetEncoder(MailboxWireCodec::encodeNotification)).decoder(targetDecoder(MailboxWireCodec::decodeNotification))
+        .consumerMainThread(Forge1201MailboxHandlers::notification).add();
 
     CHANNEL
         .messageBuilder(
@@ -574,6 +611,13 @@ public final class Forge1201NetworkChannel {
     CHANNEL.sendToServer(message);
   }
 
+  static void sendToServer(MailboxDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(MailboxMarkReadMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(MailboxDeleteMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(MailboxClaimAttachmentMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(MailboxClaimAllMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(MailboxSendPlayerMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+
   static void sendToServer(ServerPlayerListRequestMessage message) {
     requireRegistered();
     CHANNEL.sendToServer(message);
@@ -658,6 +702,21 @@ public final class Forge1201NetworkChannel {
   }
 
   static void sendToPlayer(ServerPlayer player, DeliveryBoxDataResponseMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+
+  static void sendToPlayer(ServerPlayer player, MailboxDataResponseMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+
+  static void sendToPlayer(ServerPlayer player, MailboxSendResultMessage message) {
+    requireRegistered();
+    CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+  }
+
+  static void sendToPlayer(ServerPlayer player, MailboxNotificationMessage message) {
     requireRegistered();
     CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
   }

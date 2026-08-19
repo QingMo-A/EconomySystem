@@ -58,9 +58,10 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     TerritoryDetailLayout.Layout layout = commonLayout();
     var rect = layout.search();
     float scale = layout.scale().value();
-    search = new EditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
+    search = new Forge1201UnderlinedEditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
         Math.max(1, Math.round(rect.width() * scale)), Math.max(1, Math.round(rect.height() * scale)),
         Component.translatable("screen.territory.detail.search"));
+    Forge1201UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setHint(Component.translatable("screen.territory.detail.search"));
     search.setValue(value);

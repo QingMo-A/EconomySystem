@@ -16,7 +16,10 @@ public final class ShopPurchaseController extends AbstractEconomyScreenControlle
 
   @Override public void handle(ShopPurchaseEvent event) {
     if (event instanceof ShopPurchaseEvent.QuantityChanged value) {
-      replaceState(state(state().row(), Math.max(0, value.quantity()), state().availableQuantity(), ScreenState.READY, null));
+      // Validate as the user types so an over-capacity value is visible immediately and the
+      // confirm action is disabled until the value becomes valid again.
+      replaceState(state(state().row(), Math.max(0, value.quantity()),
+          state().availableQuantity(), ScreenState.READY, null));
     } else if (event instanceof ShopPurchaseEvent.ActionClicked value && value.action() != null && state().can(value.action())) {
       if (value.action() == ShopPurchaseAction.BACK) navigate(new UiNavigation.Back()); else submit();
     }
@@ -45,7 +48,23 @@ public final class ShopPurchaseController extends AbstractEconomyScreenControlle
     long price;
     try { price = Math.multiplyExact((long) row.item().currentPrice(), quantity); }
     catch (ArithmeticException ignored) { price = Long.MAX_VALUE; }
-    return new ShopPurchaseState(row, quantity, price, available, screenState, error,
-        Set.of(ShopPurchaseAction.CONFIRM, ShopPurchaseAction.BACK));
+    ScreenState resolvedState = screenState;
+    String resolvedError = error;
+    if (screenState == ScreenState.READY) {
+      if (quantity < 1) {
+        resolvedState = ScreenState.ERROR;
+        resolvedError = "screen.shop.purchase.invalid_quantity";
+      } else if (quantity > available) {
+        resolvedState = ScreenState.ERROR;
+        resolvedError = "screen.shop.purchase.inventory_full";
+      } else if (price == Long.MAX_VALUE) {
+        resolvedState = ScreenState.ERROR;
+        resolvedError = "screen.shop.purchase.price_overflow";
+      }
+    }
+    Set<ShopPurchaseAction> actions = resolvedState == ScreenState.ERROR
+        ? Set.of(ShopPurchaseAction.BACK)
+        : Set.of(ShopPurchaseAction.CONFIRM, ShopPurchaseAction.BACK);
+    return new ShopPurchaseState(row, quantity, price, available, resolvedState, resolvedError, actions);
   }
 }

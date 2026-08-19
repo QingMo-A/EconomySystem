@@ -7,132 +7,118 @@ import com.mo.economy_system.common.delivery.DeliveryBoxTestFixtures;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.testsupport.RecordingEconomyUiRenderer;
-import com.mo.economy_system.ui.text.UiTextMetrics;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/** Exact geometry/chrome assertions transcribed from the legacy delivery-box screen. */
+/** Mailbox interaction/geometry contract replacing the old delivery-grid parity assertions. */
 class DeliveryLegacyReferenceParityTest {
   @Test
-  void legacyGridKeepsTwoRowsAndSixEntriesAtReferenceViewport() {
-    DeliveryState state = ready(6, 6, 0);
+  void mailboxUsesThreePanesAtReferenceViewport() {
+    DeliveryState state = ready(4, 4, 0);
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
-    assertEquals(3, layout.columns());
-    assertEquals(2, layout.rows());
-    assertEquals(6, layout.pageSize());
-    assertEquals(new UiRect(12, 55, 200, 70), layout.cards().get(0).card());
-    assertEquals(new UiRect(220, 55, 200, 70), layout.cards().get(1).card());
-    assertEquals(new UiRect(428, 133, 200, 70), layout.cards().get(5).card());
-    assertEquals(new UiRect(20, 74, 32, 32), layout.cards().get(0).itemIcon());
-    assertEquals(new UiRect(144, 99, 60, 18), layout.cards().get(0).claimButton());
+
+    assertEquals(new UiRect(12, 52, 96, 266), layout.categoryPanel());
+    assertEquals(new UiRect(116, 52, 190, 48), layout.cards().get(0).card());
+    assertEquals(new UiRect(314, 52, 314, 266), layout.detailPanel());
+    assertEquals(1, layout.columns());
+    assertEquals(4, layout.rows());
+    assertEquals(4, layout.pageSize());
+    assertTrue(layout.attachmentCard().contains(layout.detailItemIcon()));
+    assertEquals(new UiRect(layout.attachmentCard().x(), layout.attachmentCard().y(), 28, 28),
+        layout.attachmentCard());
   }
 
   @Test
-  void legacyChromeUsesLocalizedTitleNativeItemAndDeliveryActions() {
-    DeliveryState state = ready(1, 6, 0);
+  void mailboxRendersCategoriesMailPreviewDetailAndAttachmentAction() {
+    DeliveryState state = ready(1, 4, 0);
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     DeliveryView.render(renderer, state, layout, 0, 0);
-    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("inputFrame")),
-        "native search chrome is painted by the physical target shell");
+
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("scaledIconTranslatedText")
-        && op.value().contains("screen.delivery_box.title")), "title stays localized");
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")),
-        "item label must use the native item display name");
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedButton")
-        && op.value().startsWith("button.delivery_box.claim")
-        && op.value().contains("accent=" + (EconomyUiTheme.DELIVERY_ACCENT & 0x00FFFFFF))),
-        "claim uses the delivery action style");
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
-        && op.value().contains("accent=" + EconomyUiTheme.SHOP_ACCENT)),
-        "legacy delivery cards use the shop-orange card accent");
-  }
-
-  @Test
-  void deliveryNameAndCountShareOneTruncatedNativeLineAndRetryUsesDeliveryStyle() {
-    DeliveryState state = ready(1, 6, 0);
-    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
-    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
-    DeliveryView.render(renderer, state, layout, 0, 0);
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemDisplayNameWithSuffix")
-        && op.value().contains(" x2")), "legacy name and count are truncated as one line");
+        && op.value().contains("screen.delivery_box.title")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextWithSuffix")
+        && op.value().startsWith("screen.mailbox.category.all")));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
-        && op.value().startsWith("screen.delivery_box.item.source") && op.rect().width() == 78),
-        "legacy source text excludes the claim button and is truncated to the remaining width");
-
-    DeliveryState error = new DeliveryState(state.rows(), 0, 6, "", ScreenState.ERROR,
-        "screen.delivery_box.sync_failed", 1, Set.of(DeliveryAction.RETRY));
-    renderer = new RecordingEconomyUiRenderer();
-    DeliveryView.render(renderer, error, layout, layout.message().x(), layout.message().y());
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedButton")
-        && op.value().startsWith("screen.delivery_box.retry")
-        && op.value().contains(EconomyUiTheme.DELIVERY_CLAIM_BUTTON.toString())),
-        "retry stays in the delivery action style family, not the Home navigation style");
+        && op.value().startsWith("screen.mailbox.sender.market")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
+        && op.value().startsWith("screen.mailbox.subject.market_return")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
+        && op.value().startsWith("screen.mailbox.attachments")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemWithCount")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
+        && op.rect().equals(layout.attachmentCard())
+        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
   }
 
   @Test
-  void legacyPagingUsesTextualAnglesAndOrangePageStyle() {
-    DeliveryState state = ready(7, 6, 1);
+  void selectedMailUsesDeliveryAccentAndAttachmentKeepsItemAccent() {
+    DeliveryState state = ready(2, 4, 0);
+    UUID second = state.rows().get(1).entryId();
+    state = new DeliveryState(state.rows(), 0, 4, "", DeliveryCategory.ALL, second,
+        ScreenState.READY, null, 1, Set.of(DeliveryAction.CLAIM, DeliveryAction.BACK));
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
     RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
     DeliveryView.render(renderer, state, layout, 0, 0);
+
+    UiRect selectedRect = layout.cards().get(1).card();
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
+        && op.rect().equals(selectedRect)
+        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
+        && op.rect().equals(layout.attachmentCard())
+        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
+  }
+
+  @Test
+  void marketCategoryContainsLegacyMarketDeliveriesWhileOtherCategoriesCanBeEmpty() {
+    DeliveryState state = ready(2, 4, 0);
+    assertEquals(2, state.count(DeliveryCategory.MARKET));
+    assertEquals(0, state.count(DeliveryCategory.SYSTEM));
+    DeliveryState system = new DeliveryState(state.rows(), 0, 4, "", DeliveryCategory.SYSTEM, null,
+        ScreenState.READY, null, 1, state.actions());
+    assertTrue(system.filteredRows().isEmpty());
+  }
+
+  @Test
+  void mailboxPagingUsesTextualAnglesAndListLocalControls() {
+    DeliveryState state = ready(5, 4, 0);
+    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
+    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
+    DeliveryView.render(renderer, state, layout, 0, 0);
+
+    assertEquals(2, state.totalPages());
+    assertEquals(116, layout.previousButton().x());
+    assertEquals(264, layout.nextButton().x());
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
         && op.value().startsWith("<:")));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
         && op.value().startsWith(">:")));
-    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("icon")
-        && (op.value().equals("ARROW_LEFT") || op.value().equals("ARROW_RIGHT"))));
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("button")
-        && op.value().contains("accent=" + (EconomyUiTheme.SHOP_ACCENT & 0x00FFFFFF))));
   }
 
   @Test
-  void pageLabelUsesLegacyBaselineWhileButtonsStayAtFooter() {
-    UiTextMetrics metrics = new UiTextMetrics() {
-      @Override public int width(String text) { return 6; }
-      @Override public int lineHeight() { return 11; }
-    };
-    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, ready(7, 6, 1), metrics);
-    assertEquals(325, layout.pageText().y(),
-        "legacy Screen_DeliveryBox draws page text at virtualHeight - 35");
-    assertEquals(11, layout.pageText().height(),
-        "page label uses the target font line height");
-    assertEquals(320, layout.previousButton().y(),
-        "legacy page buttons remain at virtualHeight - 40");
-    assertEquals(320, layout.nextButton().y(),
-        "legacy page buttons remain at virtualHeight - 40");
-  }
-
-  @Test
-  void tooltipRetainsNativeCountAndSourceLines() {
-    DeliveryState state = ready(1, 6, 0);
+  void listAndDetailItemHoverUseNativeItemTooltip() {
+    DeliveryState state = ready(1, 4, 0);
     DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
-    var tooltip = DeliveryView.tooltipAt(layout, 20, 74).orElseThrow();
-    assertEquals(1, tooltip.lines().size());
-    assertTrue(tooltip.lines().get(0).getClass().getSimpleName().equals("NativeItem"),
-        "legacy delivery icon hover delegates to the native ItemStack tooltip");
-  }
-
-  @Test
-  void deliveryPaginationIsHiddenOnOnePage() {
-    DeliveryState state = ready(1, 6, 0);
-    DeliveryLayout.Layout layout = DeliveryLayout.calculate(640, 360, state);
-    RecordingEconomyUiRenderer renderer = new RecordingEconomyUiRenderer();
-    DeliveryView.render(renderer, state, layout, 0, 0);
-    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("button")
-        && (op.value().startsWith("<:") || op.value().startsWith(">:"))));
-    assertTrue(renderer.operations().stream().noneMatch(op -> op.kind().equals("textInRect")
-        && op.rect().equals(layout.pageText())));
+    UiRect listIcon = layout.cards().get(0).itemIcon();
+    var listTooltip = DeliveryView.tooltipAt(layout, listIcon.x(), listIcon.y()).orElseThrow();
+    var detailTooltip = DeliveryView.tooltipAt(state, layout,
+        layout.detailItemIcon().x(), layout.detailItemIcon().y()).orElseThrow();
+    assertEquals(1, listTooltip.lines().size());
+    assertEquals(1, detailTooltip.lines().size());
+    assertEquals("NativeItem", listTooltip.lines().get(0).getClass().getSimpleName());
+    assertEquals("NativeItem", detailTooltip.lines().get(0).getClass().getSimpleName());
   }
 
   private static DeliveryState ready(int count, int pageSize, int page) {
     List<DeliveryRow> rows = java.util.stream.IntStream.range(0, count)
         .mapToObj(i -> new DeliveryRow(DeliveryBoxTestFixtures.entry(new UUID(4, i + 1), i + 2)))
         .toList();
-    return new DeliveryState(rows, page, pageSize, "", ScreenState.READY, null, 1,
-        Set.of(DeliveryAction.CLAIM, DeliveryAction.BACK));
+    UUID selected = rows.isEmpty() ? null : rows.get(Math.min(page * pageSize, rows.size() - 1)).entryId();
+    return new DeliveryState(rows, page, pageSize, "", DeliveryCategory.ALL, selected,
+        ScreenState.READY, null, 1, Set.of(DeliveryAction.CLAIM, DeliveryAction.BACK));
   }
 }

@@ -23,6 +23,15 @@ import com.mo.economy_system.common.network.DeliveryBoxDataResponseMessage;
 import com.mo.economy_system.common.network.EconomyMessages;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
+import com.mo.economy_system.common.network.MailboxClaimAllMessage;
+import com.mo.economy_system.common.network.MailboxClaimAttachmentMessage;
+import com.mo.economy_system.common.network.MailboxDataRequestMessage;
+import com.mo.economy_system.common.network.MailboxDataResponseMessage;
+import com.mo.economy_system.common.network.MailboxDeleteMessage;
+import com.mo.economy_system.common.network.MailboxMarkReadMessage;
+import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
+import com.mo.economy_system.common.network.MailboxSendResultMessage;
+import com.mo.economy_system.common.network.MailboxNotificationMessage;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
@@ -51,6 +60,7 @@ import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.DeliveryBoxWireCodec;
+import com.mo.economy_system.network.MailboxWireCodec;
 import com.mo.economy_system.network.TerritoryDataWireCodec;
 import com.mo.economy_system.network.TerritoryInviteWireCodec;
 import com.mo.economy_system.network.TerritoryManagementWireCodec;
@@ -173,6 +183,42 @@ public final class NeoForge1211MessageCodecs {
       public DeliveryBoxClaimMessage decode(RegistryFriendlyByteBuf buffer) {
         return DeliveryBoxWireCodec.decodeClaim(wire(buffer));
       }
+    });
+    register(codecs, EconomyMessages.MAILBOX_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxDataRequestMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeRequest(message, wire(buffer)); }
+      public MailboxDataRequestMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeRequest(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxDataResponseMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeResponse(message, wire(buffer)); }
+      public MailboxDataResponseMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeResponse(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_MARK_READ, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxMarkReadMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeMarkRead(message, wire(buffer)); }
+      public MailboxMarkReadMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeMarkRead(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_DELETE, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxDeleteMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeDelete(message, wire(buffer)); }
+      public MailboxDeleteMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeDelete(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_CLAIM_ATTACHMENT, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxClaimAttachmentMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeClaimAttachment(message, wire(buffer)); }
+      public MailboxClaimAttachmentMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeClaimAttachment(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_CLAIM_ALL, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxClaimAllMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeClaimAll(message, wire(buffer)); }
+      public MailboxClaimAllMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeClaimAll(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_SEND_PLAYER, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxSendPlayerMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeSendPlayer(message, wire(buffer)); }
+      public MailboxSendPlayerMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeSendPlayer(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_SEND_RESULT, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxSendResultMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeSendResult(message, wire(buffer)); }
+      public MailboxSendResultMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeSendResult(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.MAILBOX_NOTIFICATION, new NeoForge1211MessageCodec<>() {
+      public void encode(MailboxNotificationMessage message, RegistryFriendlyByteBuf buffer) { MailboxWireCodec.encodeNotification(message, wire(buffer)); }
+      public MailboxNotificationMessage decode(RegistryFriendlyByteBuf buffer) { return MailboxWireCodec.decodeNotification(wire(buffer)); }
     });
     register(codecs, EconomyMessages.MODIFY_MODE, new NeoForge1211MessageCodec<>() {
       public void encode(ModifyTerritoryModeMessage message, RegistryFriendlyByteBuf buffer) {

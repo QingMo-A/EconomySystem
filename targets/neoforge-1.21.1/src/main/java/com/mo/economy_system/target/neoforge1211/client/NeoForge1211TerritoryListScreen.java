@@ -45,11 +45,12 @@ public final class NeoForge1211TerritoryListScreen extends Screen {
     String value = search == null ? "" : search.getValue();
     TerritoryListLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
-    search = new EditBox(font, Math.round(layout.search().x() * scale.value()),
+    search = new NeoForge1211UnderlinedEditBox(font, Math.round(layout.search().x() * scale.value()),
         Math.round(layout.search().y() * scale.value()),
         Math.max(1, Math.round(layout.search().width() * scale.value())),
         Math.max(1, Math.round(layout.search().height() * scale.value())),
         Component.translatable("screen.territory.list.search"));
+    NeoForge1211UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setValue(value);
     search.setResponder(text -> controller.handle(new TerritoryListEvent.FilterChanged(text)));
@@ -156,10 +157,12 @@ public final class NeoForge1211TerritoryListScreen extends Screen {
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
   private TerritoryListLayout.Layout commonLayout() {
-    TerritoryListLayout.Layout layout = TerritoryListLayout.calculate(width, height, controller.state());
+    TerritoryListLayout.Layout layout = TerritoryListLayout.calculate(width, height, controller.state(),
+        new NeoForge1211UiTextMetrics(font));
     if (layout.pageSize() != controller.state().pageSize()) {
       controller.handle(new TerritoryListEvent.ViewportChanged(layout.pageSize()));
-      layout = TerritoryListLayout.calculate(width, height, controller.state());
+      layout = TerritoryListLayout.calculate(width, height, controller.state(),
+          new NeoForge1211UiTextMetrics(font));
     }
     return layout;
   }

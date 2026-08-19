@@ -124,6 +124,7 @@ class FinalBridgeLanguageResourcesTest {
         "screen.home.sell_orders",
         "screen.home.demand_orders",
         "screen.home.leaderboard",
+        "screen.home.leaderboard.self",
         "screen.home.loading",
         "screen.home.sync_failed",
         "screen.home.sync_timeout",

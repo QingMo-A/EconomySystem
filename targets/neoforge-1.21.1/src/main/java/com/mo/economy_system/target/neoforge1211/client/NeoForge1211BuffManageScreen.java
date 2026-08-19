@@ -48,10 +48,11 @@ public final class NeoForge1211BuffManageScreen extends Screen {
     BuffManageLayout.Layout layout = commonLayout();
     var rect = layout.search();
     float scale = layout.scale().value();
-    search = new EditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
+    search = new NeoForge1211UnderlinedEditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
         Math.max(1, Math.round(rect.width() * scale)),
         Math.max(1, Math.round(rect.height() * scale)),
         Component.translatable("screen.territory.buff.search"));
+    NeoForge1211UiInputAdapter.apply(search);
     search.setMaxLength(50);
     search.setHint(Component.translatable("screen.territory.buff.search"));
     search.setValue(value);

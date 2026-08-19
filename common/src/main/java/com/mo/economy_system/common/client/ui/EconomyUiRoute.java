@@ -6,6 +6,7 @@ public enum EconomyUiRoute {
     SHOP("screen.shop.title"),
     MARKET("screen.market.title"),
     DELIVERY_BOX("screen.delivery_box.title"),
+    MAIL_COMPOSE("screen.mailbox.compose.title"),
     TERRITORY("screen.territory.title"),
     ABOUT("screen.about.title"),
     BALANCE_LOG("screen.balance_log.title");

@@ -12,7 +12,6 @@ import com.mo.economy_system.ui.geometry.UiScale;
 import com.mo.economy_system.ui.home.HomeController;
 import com.mo.economy_system.ui.home.HomeEvent;
 import com.mo.economy_system.ui.home.HomeLayout;
-import com.mo.economy_system.ui.home.HomeOpenAnimation;
 import com.mo.economy_system.ui.home.HomePort;
 import com.mo.economy_system.ui.home.HomeView;
 import com.mo.economy_system.ui.text.UiTextMetrics;
@@ -29,7 +28,6 @@ public final class Forge1201HomeScreen extends Screen {
   private final HomeController controller;
   private long appliedBalanceRevision;
   private long appliedMarketRequestId = -1;
-  private long animationStartedAtNanos = -1L;
 
   public Forge1201HomeScreen() {
     super(Component.translatable(EconomyUiRoute.HOME.titleKey()));
@@ -41,7 +39,6 @@ public final class Forge1201HomeScreen extends Screen {
   }
 
   @Override protected void init() {
-    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
     if (controller.state().screenState() == ScreenState.IDLE) {
       controller.handle(new HomeEvent.Initialize(System.nanoTime()));
     }
@@ -83,9 +80,8 @@ public final class Forge1201HomeScreen extends Screen {
     // The reference background is a physical-screen layer.  Draw it before the virtual-canvas
     // pose so fractional viewport scales cannot leave an uncovered edge.
     renderer.fillPhysicalBackground(width, height, HomeLayout.BACKGROUND_COLOR);
-    float progress = animationProgress();
     HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
-        renderer.metrics(), progress);
+        renderer.metrics(), 1.0f);
     UiScale scale = layout.scale();
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
@@ -96,9 +92,8 @@ public final class Forge1201HomeScreen extends Screen {
   }
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    float progress = animationProgress();
     HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
-        metrics(), progress);
+        metrics(), 1.0f);
     int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     for (var nav : layout.navButtons()) if (nav.rect().contains(x, y)) {
       controller.handle(new HomeEvent.ActionClicked(nav.route())); return true;
@@ -132,7 +127,7 @@ public final class Forge1201HomeScreen extends Screen {
 
   private void syncViewport() {
     HomeLayout.Layout layout = HomeLayout.calculate(width, height, controller.state(),
-        metrics(), animationProgress());
+        metrics(), 1.0f);
     if (layout.pageSize() != controller.state().leaderboardPageSize()) {
       controller.handle(new HomeEvent.ViewportChanged(layout.pageSize()));
     }
@@ -140,10 +135,6 @@ public final class Forge1201HomeScreen extends Screen {
 
   private UiTextMetrics metrics() {
     return new Forge1201UiTextMetrics(font);
-  }
-
-  private float animationProgress() {
-    return HomeOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
   }
 
   private final class Port implements HomePort {

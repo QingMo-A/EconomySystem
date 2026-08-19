@@ -41,6 +41,15 @@ class TerritoryListLayoutTest {
     }
   }
 
+  @Test
+  void footerTitleSharesTheBottomBaselineUsedByOtherListScreens() {
+    TerritoryListState state = new TerritoryListState(List.of(), 0, 1, "",
+        ScreenState.EMPTY, null, -1, java.util.Set.of(TerritoryListAction.BACK));
+    TerritoryListLayout.Layout layout = TerritoryListLayout.calculate(640, 360, state);
+    assertTrue(layout.title().bottom() == layout.scale().virtualHeight() - 12,
+        "territory footer card must sit on the shared bottom baseline");
+  }
+
   private static Summary summary(UUID id, String name) {
     return new Summary(id, new UUID(0, 8), "owner", name, new Position(0, 64, 0),
         new Position(10, 70, 10), "minecraft:overworld");

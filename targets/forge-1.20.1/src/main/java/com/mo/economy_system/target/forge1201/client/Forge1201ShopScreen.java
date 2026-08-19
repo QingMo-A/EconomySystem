@@ -14,7 +14,6 @@ import com.mo.economy_system.ui.shop.ShopAction;
 import com.mo.economy_system.ui.shop.ShopController;
 import com.mo.economy_system.ui.shop.ShopEvent;
 import com.mo.economy_system.ui.shop.ShopLayout;
-import com.mo.economy_system.ui.shop.ShopOpenAnimation;
 import com.mo.economy_system.ui.shop.ShopPort;
 import com.mo.economy_system.ui.shop.ShopRow;
 import com.mo.economy_system.ui.shop.ShopView;
@@ -36,7 +35,6 @@ public final class Forge1201ShopScreen extends Screen {
   private final ShopController controller = new ShopController(port, Forge1201ShopScreen::nativeDisplayName);
   private EditBox search;
   private long appliedRevision = -1;
-  private long animationStartedAtNanos = -1L;
 
   public Forge1201ShopScreen() { this(null); }
   public Forge1201ShopScreen(Screen parent) {
@@ -44,12 +42,12 @@ public final class Forge1201ShopScreen extends Screen {
     this.parent = parent;
   }
   @Override protected void init() {
-    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
     String value = search == null ? "" : search.getValue();
     ShopLayout.Layout layout = commonLayout(metrics()); UiScale scale = layout.scale();
-    search = new EditBox(font, Math.round(layout.search().x() * scale.value()), Math.round(layout.search().y() * scale.value()),
+    search = new Forge1201UnderlinedEditBox(font, Math.round(layout.search().x() * scale.value()), Math.round(layout.search().y() * scale.value()),
         Math.max(1, Math.round(layout.search().width() * scale.value())), Math.max(1, Math.round(layout.search().height() * scale.value())),
         Component.translatable("screen.shop.search"));
+    Forge1201UiInputAdapter.apply(search);
     search.setMaxLength(com.mo.economy_system.ui.text.UiSearchPolicy.SEARCH_MAX_LENGTH); search.setHint(Component.translatable("text.shop.search_hint")); search.setFocused(false); search.setValue(value);
     search.setResponder(text -> controller.handle(new ShopEvent.FilterChanged(text))); addRenderableWidget(search);
     if (controller.state().screenState() == ScreenState.IDLE) controller.handle(new ShopEvent.Initialize(System.nanoTime()));
@@ -72,8 +70,7 @@ public final class Forge1201ShopScreen extends Screen {
     renderer.fillPhysicalBackground(width, height, ShopLayout.BACKGROUND_COLOR);
     ShopLayout.Layout layout = commonLayout(renderer.metrics()); UiScale scale = layout.scale();
     syncSearchWidget(layout);
-    if (search != null) ShopView.renderSearchFrame(renderer,
-        new UiRect(search.getX(), search.getY(), search.getWidth(), search.getHeight()), search.isFocused());
+    if (search != null) { UiRect searchRect = new UiRect(search.getX(), search.getY(), search.getWidth(), search.getHeight()); ShopView.renderSearchFrame(renderer, searchRect, search.isFocused(), searchRect.contains(mouseX, mouseY)); }
     graphics.pose().pushPose(); graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     ShopView.render(renderer, controller.state(), layout, scale.toVirtualX(mouseX), scale.toVirtualY(mouseY)); graphics.pose().popPose(); super.render(graphics, mouseX, mouseY, partialTick);
   }
@@ -93,9 +90,8 @@ public final class Forge1201ShopScreen extends Screen {
   @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) { if (keyCode == 256) { onClose(); return true; } return super.keyPressed(keyCode, scanCode, modifiers); }
   @Override public void onClose() { if (minecraft == null) return; if (parent != null) minecraft.setScreen(parent); else minecraft.setScreen(new Forge1201HomeScreen()); }
   @Override public boolean isPauseScreen() { return false; }
-  private ShopLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics metrics) { ShopLayout.Layout layout = ShopLayout.calculate(width, height, controller.state(), metrics, animationProgress()); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new ShopEvent.ViewportChanged(layout.pageSize())); layout = ShopLayout.calculate(width, height, controller.state(), metrics, animationProgress()); } return layout; }
+  private ShopLayout.Layout commonLayout(com.mo.economy_system.ui.text.UiTextMetrics metrics) { ShopLayout.Layout layout = ShopLayout.calculate(width, height, controller.state(), metrics, 1.0f); if (layout.pageSize() != controller.state().pageSize()) { controller.handle(new ShopEvent.ViewportChanged(layout.pageSize())); layout = ShopLayout.calculate(width, height, controller.state(), metrics, 1.0f); } return layout; }
   private com.mo.economy_system.ui.text.UiTextMetrics metrics() { return new Forge1201UiTextMetrics(font); }
-  private float animationProgress() { return ShopOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime()); }
   private void syncSearchWidget(ShopLayout.Layout layout) { if (search == null) return; UiScale scale = layout.scale(); search.setX(Math.round(layout.search().x() * scale.value())); search.setY(Math.round(layout.search().y() * scale.value())); search.setWidth(Math.max(1, Math.round(layout.search().width() * scale.value()))); search.setHeight(Math.max(1, Math.round(layout.search().height() * scale.value()))); }
   private static String nativeDisplayName(ShopItemSnapshot snapshot) {
     ResourceLocation location = ResourceLocation.tryParse(snapshot.itemId());

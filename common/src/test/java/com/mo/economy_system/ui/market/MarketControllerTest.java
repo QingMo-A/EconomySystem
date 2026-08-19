@@ -131,6 +131,18 @@ class MarketControllerTest {
     assertEquals(1, filtered.filteredRows().size());
   }
 
+  @Test
+  void initializeCanBeRepeatedToRefreshAnExistingMarketScreen() {
+    FakePort port = new FakePort();
+    MarketController controller = new MarketController(MarketTestFixtures.VIEWER, port);
+    controller.handle(new MarketEvent.Initialize(0));
+    controller.handle(new MarketEvent.DataLoaded(0, 1, 0, 1, 1, 0,
+        List.of(MarketTestFixtures.sales(0))));
+    controller.handle(new MarketEvent.Initialize(10));
+    assertEquals(new Request(1, 0, MarketOrderFilter.ALL, ""), port.requests.get(1));
+    assertEquals(ScreenState.LOADING, controller.state().screenState());
+  }
+
   private static final class FakePort implements MarketPort {
     private long nextId;
     private final List<Request> requests = new ArrayList<>();

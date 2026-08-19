@@ -7,7 +7,6 @@ import com.mo.economy_system.ui.about.AboutEvent;
 import com.mo.economy_system.ui.about.AboutLayout;
 import com.mo.economy_system.ui.about.AboutPort;
 import com.mo.economy_system.ui.about.AboutView;
-import com.mo.economy_system.ui.about.AboutOpenAnimation;
 import com.mo.economy_system.ui.core.UiNavigation;
 import com.mo.economy_system.ui.geometry.UiScale;
 import net.minecraft.client.Minecraft;
@@ -20,7 +19,6 @@ public final class NeoForge1211AboutScreen extends Screen {
   private final Screen parent;
   private final Port port = new Port();
   private final AboutController controller = new AboutController(port);
-  private long animationStartedAtNanos = -1L;
 
   public NeoForge1211AboutScreen() { this(null); }
   public NeoForge1211AboutScreen(Screen parent) {
@@ -28,14 +26,17 @@ public final class NeoForge1211AboutScreen extends Screen {
     this.parent = parent;
   }
 
-  @Override protected void init() {
-    if (animationStartedAtNanos < 0L) animationStartedAtNanos = System.nanoTime();
+  @Override public void tick() {
+    super.tick();
+    // The common controller owns the route decision.  Consume it from the target shell so the
+    // in-panel Back button follows the same navigation path as ESC and does not become a no-op.
+    controller.pollNavigation().ifPresent(this::navigate);
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     NeoForge1211UiRenderer renderer = new NeoForge1211UiRenderer(graphics, font);
     renderer.fillPhysicalBackground(width, height, AboutLayout.BACKGROUND_COLOR);
-    AboutLayout.Layout layout = AboutLayout.calculate(width, height, renderer.metrics(), animationProgress());
+    AboutLayout.Layout layout = AboutLayout.calculate(width, height, renderer.metrics(), 1.0f);
     UiScale scale = layout.scale();
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
@@ -47,7 +48,7 @@ public final class NeoForge1211AboutScreen extends Screen {
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
     AboutLayout.Layout layout = AboutLayout.calculate(width, height,
-        new NeoForge1211UiTextMetrics(font), animationProgress());
+        new NeoForge1211UiTextMetrics(font), 1.0f);
     int x = layout.scale().toVirtualX(mouseX), y = layout.scale().toVirtualY(mouseY);
     if (layout.github().contains(x, y)) {
       controller.handle(new AboutEvent.ActionClicked(AboutAction.COPY_GITHUB));
@@ -55,6 +56,7 @@ public final class NeoForge1211AboutScreen extends Screen {
     }
     if (layout.backButton().contains(x, y) || layout.esc().contains(x, y)) {
       controller.handle(new AboutEvent.ActionClicked(AboutAction.BACK));
+      controller.pollNavigation().ifPresent(this::navigate);
       return true;
     }
     return super.mouseClicked(mouseX, mouseY, button);
@@ -72,8 +74,13 @@ public final class NeoForge1211AboutScreen extends Screen {
   @Override public boolean isPauseScreen() { return false; }
   @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {}
 
-  private float animationProgress() {
-    return AboutOpenAnimation.easedProgressAt(animationStartedAtNanos, System.nanoTime());
+  private void navigate(UiNavigation navigation) {
+    if (minecraft == null) return;
+    if (navigation instanceof UiNavigation.Route route && route.route() == EconomyUiRoute.HOME) {
+      onClose();
+    } else if (navigation instanceof UiNavigation.Back) {
+      onClose();
+    }
   }
 
   private final class Port implements AboutPort {

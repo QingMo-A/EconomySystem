@@ -23,6 +23,12 @@ public final class ShopView {
     UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.SHOP_SEARCH_FRAME, focused);
   }
 
+  public static void renderSearchFrame(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                                       boolean focused, boolean hovered) {
+    UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.SHOP_SEARCH_FRAME,
+        focused, hovered);
+  }
+
   public static void render(EconomyUiRenderer renderer, ShopState state, ShopLayout.Layout layout,
                             int mouseX, int mouseY) {
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);

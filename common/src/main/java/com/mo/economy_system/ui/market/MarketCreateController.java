@@ -11,6 +11,9 @@ import java.util.Set;
 public final class MarketCreateController
     extends AbstractEconomyScreenController<MarketCreateState, MarketCreateEvent> {
   private final MarketCreatePort port;
+  private List<String> completionSuggestions = List.of();
+  private int completionSelection = -1;
+  private boolean completionOpen;
 
   public MarketCreateController(MarketCreateMode mode, List<MarketInventoryItem> inventory,
                                 MarketCreatePort port) {
@@ -35,6 +38,9 @@ public final class MarketCreateController
     if (event instanceof MarketCreateEvent.InventoryChanged value) inventory(value.inventory());
     else if (event instanceof MarketCreateEvent.SlotSelected value) select(value.slot());
     else if (event instanceof MarketCreateEvent.ItemIdChanged value) item(value.itemId());
+    else if (event instanceof MarketCreateEvent.CompletionMoved value) moveCompletion(value.delta());
+    else if (event instanceof MarketCreateEvent.CompletionAccepted value) acceptCompletion(value.index());
+    else if (event instanceof MarketCreateEvent.CompletionDismissed) dismissCompletion();
     else if (event instanceof MarketCreateEvent.QuantityChanged value) quantity(value.quantity());
     else if (event instanceof MarketCreateEvent.PriceChanged value) price(value.totalPrice());
     else if (event instanceof MarketCreateEvent.ActionClicked value) action(value.action());
@@ -61,12 +67,65 @@ public final class MarketCreateController
   }
 
   private void item(String value) {
-    replace(copy(state().selectedSlot(), value == null ? "" : value.trim(), state().quantity(),
-        state().totalPrice(), null));
+    String itemId = value == null ? "" : value.trim();
+    replace(copy(state().selectedSlot(), itemId, state().quantity(), state().totalPrice(), null));
+    refreshCompletion(itemId);
+  }
+
+  private void refreshCompletion(String itemId) {
+    if (state().mode() != MarketCreateMode.DEMAND || itemId.isBlank()) {
+      dismissCompletion();
+      return;
+    }
+    List<String> values = port.itemIdSuggestions(itemId);
+    if (values == null || values.isEmpty()) {
+      dismissCompletion();
+      return;
+    }
+    completionSuggestions = values.stream().filter(value -> value != null && !value.isBlank())
+        .distinct().toList();
+    completionSelection = completionSuggestions.isEmpty() ? -1 : 0;
+    completionOpen = !completionSuggestions.isEmpty();
+  }
+
+  private void moveCompletion(int delta) {
+    if (!completionOpen || completionSuggestions.isEmpty() || delta == 0) return;
+    int size = completionSuggestions.size();
+    int next = (completionSelection + delta) % size;
+    if (next < 0) next += size;
+    completionSelection = next;
+  }
+
+  private void acceptCompletion(int index) {
+    if (!completionOpen || completionSuggestions.isEmpty()) return;
+    int selected = index >= 0 && index < completionSuggestions.size() ? index : completionSelection;
+    if (selected < 0 || selected >= completionSuggestions.size()) return;
+    String value = completionSuggestions.get(selected);
+    replace(copy(state().selectedSlot(), value, state().quantity(), state().totalPrice(), null));
+    dismissCompletion();
+  }
+
+  private void dismissCompletion() {
+    completionSuggestions = List.of();
+    completionSelection = -1;
+    completionOpen = false;
+  }
+
+  /** Current bounded suggestions, empty when the field is unfocused/dismissed. */
+  public List<String> completionSuggestions() {
+    return completionOpen ? completionSuggestions : List.of();
+  }
+
+  public int completionSelection() {
+    return completionOpen ? completionSelection : -1;
+  }
+
+  public boolean completionOpen() {
+    return completionOpen && !completionSuggestions.isEmpty();
   }
 
   private void quantity(int value) {
-    replace(copy(state().selectedSlot(), state().itemId(), Math.max(0, value), state().totalPrice(), null));
+    replace(copy(state().selectedSlot(), state().itemId(), boundedQuantity(value), state().totalPrice(), null));
   }
 
   private void price(int value) {
@@ -116,16 +175,23 @@ public final class MarketCreateController
     return state().itemId().isBlank() ? 64 : Math.max(1, port.maxStackSize(state().itemId()));
   }
 
+  /** Keeps typed and button-driven quantities in the same inclusive [1, max] range. */
+  private int boundedQuantity(int value) {
+    int max = Math.max(1, maxQuantity());
+    return Math.min(max, Math.max(1, value));
+  }
+
   private int clampQuantity(int value, List<MarketInventoryItem> inventory, int selectedSlot) {
-    if (value < 0) return 0;
+    if (value < 1) return 1;
     if (state().mode() == MarketCreateMode.SALES) {
       MarketInventoryItem selected = inventory.stream().filter(item -> item.slot() == selectedSlot).findFirst().orElse(null);
-      if (selected == null) return Math.min(value, 1);
+      if (selected == null) return 1;
       int available = inventory.stream().filter(item -> item.itemId().equals(selected.itemId()))
           .mapToInt(MarketInventoryItem::count).sum();
       return Math.min(value, Math.max(1, available));
     }
-    return value;
+    return Math.min(value, Math.max(1, state().itemId().isBlank() ? 64
+        : Math.max(1, port.maxStackSize(state().itemId()))));
   }
 
   private MarketCreateState copy(int slot, String itemId, int quantity, int price, String error) {

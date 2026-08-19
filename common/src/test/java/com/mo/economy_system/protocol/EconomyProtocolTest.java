@@ -56,17 +56,26 @@ class EconomyProtocolTest {
             "SERVER_TO_CLIENT|economy_system:territory_system/packet_single_territory_data_response",
             "CLIENT_TO_SERVER|economy_system:territory_system/packet_update_territory_permission",
             "CLIENT_TO_SERVER|economy_system:territory_system/packet_transfer_territory_ownership",
-            "CLIENT_TO_SERVER|economy_system:territory_system/packet_update_territory_rule"
+            "CLIENT_TO_SERVER|economy_system:territory_system/packet_update_territory_rule",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_data_request",
+            "SERVER_TO_CLIENT|economy_system:mailbox/packet_data_response",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_mark_read",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_delete",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_claim_attachment",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_claim_all",
+            "CLIENT_TO_SERVER|economy_system:mailbox/packet_send_player",
+            "SERVER_TO_CLIENT|economy_system:mailbox/packet_send_result",
+            "SERVER_TO_CLIENT|economy_system:mailbox/packet_notification"
     );
 
     @Test
     void manifestIsAppendOnlyAndComplete() {
-        assertEquals("bridge-1", EconomyProtocol.VERSION);
-        assertEquals(44, EconomyProtocol.ALL.size());
-        assertEquals(31, EconomyProtocol.ALL.stream()
+        assertEquals("bridge-2", EconomyProtocol.VERSION);
+        assertEquals(53, EconomyProtocol.ALL.size());
+        assertEquals(37, EconomyProtocol.ALL.stream()
                 .filter(spec -> spec.direction() == EconomyMessageDirection.CLIENT_TO_SERVER)
                 .count());
-        assertEquals(13, EconomyProtocol.ALL.stream()
+        assertEquals(16, EconomyProtocol.ALL.stream()
                 .filter(spec -> spec.direction() == EconomyMessageDirection.SERVER_TO_CLIENT)
                 .count());
 

@@ -160,6 +160,12 @@ class TerritoryManageViewParityTest {
         }
 
         @Override
+        public void itemWithCount(String itemId, int count, UiRect rect) {
+            operations.add(new Operation("itemWithCount", rect, itemId + ":" + count,
+                    null, null, false, true));
+        }
+
+        @Override
         public void playerHead(UUID playerId, String playerName, UiRect rect) {
             operations.add(new Operation("playerHead", rect, playerId + ":" + playerName,
                     null, null, false, true));

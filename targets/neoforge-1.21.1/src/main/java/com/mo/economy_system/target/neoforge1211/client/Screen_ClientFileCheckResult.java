@@ -37,13 +37,14 @@ public final class Screen_ClientFileCheckResult extends Screen {
     CheckResultLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
     search =
-        new EditBox(
+        new NeoForge1211UnderlinedEditBox(
             font,
             Math.round(layout.search().x() * scale.value()),
             Math.round(layout.search().y() * scale.value()),
             Math.max(1, Math.round(layout.search().width() * scale.value())),
             Math.max(1, Math.round(layout.search().height() * scale.value())),
             Component.translatable("screen.check_result.search"));
+    NeoForge1211UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setHint(Component.translatable("screen.check_result.search"));
     search.setValue(value);

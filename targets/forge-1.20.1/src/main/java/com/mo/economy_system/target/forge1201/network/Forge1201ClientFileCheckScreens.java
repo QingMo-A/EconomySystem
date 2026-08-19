@@ -10,6 +10,7 @@ import com.mo.economy_system.common.network.ClientFileCheckRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultRequestMessage;
 import com.mo.economy_system.common.network.ClientFileCheckResultResponseMessage;
 import com.mo.economy_system.target.forge1201.client.Forge1201ClientFileCheckClientRuntime;
+import com.mo.economy_system.target.forge1201.client.Forge1201UnderlinedEditBox;
 import com.mo.economy_system.target.forge1201.client.Forge1201UiRenderer;
 import com.mo.economy_system.ui.check.CheckConsentAction;
 import com.mo.economy_system.ui.check.CheckConsentController;
@@ -283,7 +284,7 @@ public final class Forge1201ClientFileCheckScreens {
       CheckResultLayout.Layout layout = commonLayout();
       UiScale scale = layout.scale();
       search =
-          new EditBox(
+          new Forge1201UnderlinedEditBox(
               font,
               Math.round(layout.search().x() * scale.value()),
               Math.round(layout.search().y() * scale.value()),

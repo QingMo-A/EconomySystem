@@ -53,6 +53,30 @@ public final class DeliveryBoxLedger implements DeliveryBoxRepository {
     }
   }
 
+  /** Removes a newly-added unreserved group, primarily for cross-ledger transaction rollback. */
+  public synchronized boolean removeUnclaimedBatch(UUID ownerId, Set<UUID> entryIds, DirtyMarker dirty) {
+    Objects.requireNonNull(ownerId, "ownerId");
+    Objects.requireNonNull(entryIds, "entryIds");
+    Objects.requireNonNull(dirty, "dirty");
+    if (entryIds.isEmpty()) return true;
+    List<DeliveryBoxEntrySnapshot> values = boxes.get(ownerId);
+    if (values == null) return false;
+    for (UUID entryId : entryIds) {
+      if (reserved.contains(new ClaimKey(ownerId, entryId))) return false;
+      if (values.stream().noneMatch(entry -> entry.entryId().equals(entryId))) return false;
+    }
+    List<DeliveryBoxEntrySnapshot> before = List.copyOf(values);
+    values.removeIf(entry -> entryIds.contains(entry.entryId()));
+    if (values.isEmpty()) boxes.remove(ownerId);
+    try {
+      dirty.markDirty();
+      return true;
+    } catch (RuntimeException failure) {
+      boxes.put(ownerId, new ArrayList<>(before));
+      throw failure;
+    }
+  }
+
   public synchronized Reservation reserve(UUID ownerId, UUID entryId) {
     Objects.requireNonNull(ownerId, "ownerId");
     Objects.requireNonNull(entryId, "entryId");

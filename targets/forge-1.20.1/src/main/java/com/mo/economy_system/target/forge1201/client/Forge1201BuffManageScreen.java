@@ -48,9 +48,10 @@ public final class Forge1201BuffManageScreen extends Screen {
     String value = search == null ? "" : search.getValue();
     var rect = commonLayout().search();
     float scale = commonLayout().scale().value();
-    search = new EditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
+    search = new Forge1201UnderlinedEditBox(font, Math.round(rect.x() * scale), Math.round(rect.y() * scale),
         Math.max(1, Math.round(rect.width() * scale)), Math.max(1, Math.round(rect.height() * scale)),
         Component.translatable("screen.territory.search"));
+    Forge1201UiInputAdapter.apply(search);
     search.setMaxLength(50);
     search.setHint(Component.translatable("screen.territory.buff.search"));
     search.setValue(value);

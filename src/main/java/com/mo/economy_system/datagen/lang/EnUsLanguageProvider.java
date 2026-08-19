@@ -79,7 +79,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.HOME_BALANCE_TEXT_KEY, "Balance: %s");
     add(Util_MessageKeys.HOME_SHOP_BUTTON_KEY, "Shop");
     add(Util_MessageKeys.HOME_MARKET_BUTTON_KEY, "Market");
-    add(Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY, "Delivery Box");
+    add(Util_MessageKeys.HOME_DELIVERY_BOX_BUTTON_KEY, "Mailbox");
     add(Util_MessageKeys.HOME_TERRITORY_BUTTON_KEY, "Territory");
     add(Util_MessageKeys.HOME_ABOUT_BUTTON_KEY, "About");
     add("screen.home.balance", "Balance");
@@ -87,6 +87,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.home.sell_orders", "Sell orders: %s");
     add("screen.home.demand_orders", "Demand orders: %s");
     add("screen.home.leaderboard", "Leaderboard");
+    add("screen.home.leaderboard.self", "%s (You)");
     add("screen.home.loading", "Loading account data...");
     add("screen.home.sync_failed", "Account data could not be loaded");
     add("screen.home.sync_timeout", "Account data request timed out");
@@ -313,23 +314,70 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, "Order Delivered By Player: %s %s %s");
 
     // Screen_DeliveryBox | 收货箱
-    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "Delivery Box Title");
-    add(Util_MessageKeys.DELIVERY_BOX_HINT_TEXT_KEY, "Delivery Box Hint");
-    add(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY, "Delivery Box No Items");
-    add(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, "Delivery Box Source: %s");
-    add(Util_MessageKeys.DELIVERY_BOX_DATA_ID_KEY, "Delivery Box Data Id: %s");
-    add(Util_MessageKeys.DELIVERY_BOX_ITEM_ID_KEY, "Delivery Box Item Id: %s");
-    add(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY, "Delivery Box Claim");
+    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "Mailbox Title");
+    add(Util_MessageKeys.DELIVERY_BOX_HINT_TEXT_KEY, "Mailbox Hint");
+    add(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY, "Mailbox No Items");
+    add(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, "Mailbox Source: %s");
+    add(Util_MessageKeys.DELIVERY_BOX_DATA_ID_KEY, "Mailbox Data Id: %s");
+    add(Util_MessageKeys.DELIVERY_BOX_ITEM_ID_KEY, "Mailbox Item Id: %s");
+    add(Util_MessageKeys.DELIVERY_BOX_CLAIM_BUTTON_KEY, "Mailbox Claim");
     add(
         Util_MessageKeys.DELIVERY_BOX_ITEM_NAME_AND_COUNT_KEY,
-        "Delivery Box Item Name And Count: %s %s");
-    add("screen.delivery_box.search", "Search delivery box");
+        "Mailbox Item Name And Count: %s %s");
+    add("screen.delivery_box.search", "Search mailbox");
     add("screen.delivery_box.esc", "Press ESC to return");
-    add("screen.delivery_box.loading", "Loading delivery box...");
-    add("screen.delivery_box.empty", "Delivery box is empty");
-    add("screen.delivery_box.sync_failed", "Delivery box could not be loaded");
-    add("screen.delivery_box.sync_timeout", "Delivery box request timed out");
+    add("screen.delivery_box.loading", "Loading mailbox...");
+    add("screen.delivery_box.empty", "Mailbox is empty");
+    add("screen.delivery_box.sync_failed", "Mailbox could not be loaded");
+    add("screen.delivery_box.sync_timeout", "Mailbox request timed out");
     add("screen.delivery_box.retry", "Retry");
+    add("screen.mailbox.category.all", "All");
+    add("screen.mailbox.category.unread", "Unread");
+    add("screen.mailbox.category.market", "Market");
+    add("screen.mailbox.category.system", "System");
+    add("screen.mailbox.category.player", "Players");
+    add("screen.mailbox.category.announcement", "Announcements");
+    add("screen.mailbox.category_empty", "No mail in this category");
+    add("screen.mailbox.sender.market", "From: Market System");
+    add("screen.mailbox.sender.system", "From: System");
+    add("screen.mailbox.sender.player", "From: Player");
+    add("screen.mailbox.sender.compensation", "From: System Compensation");
+    add("screen.mailbox.sender.announcement", "From: System Announcement");
+    add("screen.mailbox.subject.market_return", "Market order return");
+    add("screen.mailbox.subject.system_delivery", "System item mail");
+    add("screen.mailbox.subject.player_delivery", "Player item mail");
+    add("screen.mailbox.subject.compensation", "System compensation");
+    add("screen.mailbox.subject.announcement", "System announcement");
+    add("screen.mailbox.body.market_return", "Your market order has ended. Unhandled items were returned as an attachment.");
+    add("screen.mailbox.body.system_delivery", "The system sent you an item attachment.");
+    add("screen.mailbox.body.player_delivery", "Another player sent you an item attachment.");
+    add("screen.mailbox.body.compensation", "You received system compensation.");
+    add("screen.mailbox.body.announcement", "The system published an announcement.");
+    add("screen.mailbox.attachments", "Attachments (%s)");
+    add("screen.mailbox.source", "Source: %s");
+    add("screen.mailbox.compose", "Compose");
+    add("screen.mailbox.compose.title", "Compose mail");
+    add("screen.mailbox.compose.recipient", "Recipient");
+    add("screen.mailbox.compose.subject", "Subject");
+    add("screen.mailbox.compose.body", "Message");
+    add("screen.mailbox.compose.attachments", "Attachments %s/%s");
+    add("screen.mailbox.compose.send", "Send");
+    add("screen.mailbox.compose.back", "Back");
+    add("screen.mailbox.claim_short", "Get");
+    add("screen.mailbox.claim_all", "Claim all");
+    add("screen.mailbox.delete", "Delete mail");
+    add("screen.mailbox.dismiss", "Hide announcement");
+    add("message.mailbox.delete.has_attachments", "Claim all attachments before deleting this mail");
+    add("message.mailbox.claim_all.success", "Claimed %s attachment(s)");
+    add("message.mailbox.new_mail", "You received new mail from %s");
+    add("message.mailbox.send.success", "Mail sent successfully");
+    add("message.mailbox.send.recipient_not_found", "Player not found");
+    add("message.mailbox.send.cannot_send_to_self", "You cannot send mail to yourself");
+    add("message.mailbox.send.invalid_content", "Mail content is invalid");
+    add("message.mailbox.send.invalid_attachment", "An attachment changed; select it again");
+    add("message.mailbox.send.recipient_mailbox_full", "The recipient's mailbox is full");
+    add("message.mailbox.send.rate_limited", "You are sending mail too quickly");
+    add("message.mailbox.send.failed", "Mail could not be sent");
 
     // RedPacket Command | 红包指令
     add(Util_MessageKeys.RED_PACKET_INSUFFICIENT_BALANCE, "Red Packet Insufficient Balance");
@@ -642,9 +690,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("message.market.deliver_demand.persist_failed", "Market data could not be saved");
     add("message.market.deliver_demand.state_unknown", "Market state is uncertain; refresh before retrying");
     add("message.market.deliver_demand.rollback_failed", "Delivery rollback needs administrator attention");
-    add("message.market.expired.sales_return", "Your sales order for %s x%s expired; the items were returned to your delivery box");
+    add("message.market.expired.sales_return", "Your sales order for %s x%s expired; the items were returned to your mailbox");
     add("message.market.expired.demand_refunded", "Your demand order for %s expired; %s coins were refunded");
-    add("message.market.expired.demand_delivered", "Your delivered demand item %s x%s expired; it was moved to your delivery box");
+    add("message.market.expired.demand_delivered", "Your delivered demand item %s x%s expired; it was moved to your mailbox");
     add(Util_MessageKeys.MARKET_DELIVER_DEMAND_FAILED, "Could not deliver the demand order");
     add(
         Util_MessageKeys.MARKET_DELIVER_DEMAND_REQUESTER_NOTICE,

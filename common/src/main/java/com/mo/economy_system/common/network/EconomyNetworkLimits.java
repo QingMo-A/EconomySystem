@@ -23,6 +23,16 @@ public final class EconomyNetworkLimits {
   public static final int MAX_MARKET_RESPONSE_WIRE_BYTES = MAX_MARKET_RESPONSE_ESTIMATED_BYTES;
   public static final int MAX_DELIVERY_BOX_ENTRIES = 256;
   public static final int MAX_DELIVERY_SOURCE_LENGTH = 128;
+  public static final int MAX_MAIL_SENDER_LENGTH = 64;
+  public static final int MAX_MAIL_SUBJECT_LENGTH = 96;
+  public static final int MAX_MAIL_BODY_LENGTH = 2_048;
+  public static final int MAX_MAIL_SOURCE_LENGTH = 128;
+  public static final int MAX_MAILS_PER_PLAYER = 256;
+  public static final int MAX_MAIL_ANNOUNCEMENTS = 256;
+  public static final int MAX_MAIL_ATTACHMENTS = 27;
+  public static final int MAX_PLAYER_MAIL_ATTACHMENTS = 6;
+  public static final long PLAYER_MAIL_COOLDOWN_MILLIS = 3_000L;
+  public static final int MAX_MAILBOX_RESPONSE_WIRE_BYTES = 1024 * 1024;
   public static final int MAX_DELIVERY_RESPONSE_WIRE_BYTES = 1024 * 1024;
   public static final int MAX_TERRITORIES_PER_RESPONSE = 2_048;
   public static final int MAX_TERRITORY_NAME_LENGTH = 128;

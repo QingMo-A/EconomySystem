@@ -6,6 +6,9 @@ public sealed interface MarketCreateEvent permits
     MarketCreateEvent.InventoryChanged,
     MarketCreateEvent.SlotSelected,
     MarketCreateEvent.ItemIdChanged,
+    MarketCreateEvent.CompletionMoved,
+    MarketCreateEvent.CompletionAccepted,
+    MarketCreateEvent.CompletionDismissed,
     MarketCreateEvent.QuantityChanged,
     MarketCreateEvent.PriceChanged,
     MarketCreateEvent.ActionClicked {
@@ -18,6 +21,15 @@ public sealed interface MarketCreateEvent permits
   record SlotSelected(int slot) implements MarketCreateEvent {}
 
   record ItemIdChanged(String itemId) implements MarketCreateEvent {}
+
+  /** Moves the highlighted registry-id suggestion by a signed row delta. */
+  record CompletionMoved(int delta) implements MarketCreateEvent {}
+
+  /** Accepts the highlighted row without submitting the order. */
+  record CompletionAccepted(int index) implements MarketCreateEvent {}
+
+  /** Hides the dropdown while retaining the current text. */
+  record CompletionDismissed() implements MarketCreateEvent {}
 
   record QuantityChanged(int quantity) implements MarketCreateEvent {}
 

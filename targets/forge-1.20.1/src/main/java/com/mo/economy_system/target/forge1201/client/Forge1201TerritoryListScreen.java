@@ -42,11 +42,12 @@ public final class Forge1201TerritoryListScreen extends Screen {
     String value = search == null ? "" : search.getValue();
     TerritoryListLayout.Layout layout = commonLayout();
     UiScale scale = layout.scale();
-    search = new EditBox(font, Math.round(layout.search().x() * scale.value()),
+    search = new Forge1201UnderlinedEditBox(font, Math.round(layout.search().x() * scale.value()),
         Math.round(layout.search().y() * scale.value()),
         Math.max(1, Math.round(layout.search().width() * scale.value())),
         Math.max(1, Math.round(layout.search().height() * scale.value())),
         Component.translatable("screen.territory.list.search"));
+    Forge1201UiInputAdapter.apply(search);
     search.setMaxLength(64);
     search.setValue(value);
     search.setResponder(text -> controller.handle(new TerritoryListEvent.FilterChanged(text)));
@@ -142,10 +143,12 @@ public final class Forge1201TerritoryListScreen extends Screen {
   @Override public boolean isPauseScreen() { return false; }
 
   private TerritoryListLayout.Layout commonLayout() {
-    TerritoryListLayout.Layout layout = TerritoryListLayout.calculate(width, height, controller.state());
+    TerritoryListLayout.Layout layout = TerritoryListLayout.calculate(width, height, controller.state(),
+        new Forge1201UiTextMetrics(font));
     if (layout.pageSize() != controller.state().pageSize()) {
       controller.handle(new TerritoryListEvent.ViewportChanged(layout.pageSize()));
-      layout = TerritoryListLayout.calculate(width, height, controller.state());
+      layout = TerritoryListLayout.calculate(width, height, controller.state(),
+          new Forge1201UiTextMetrics(font));
     }
     return layout;
   }

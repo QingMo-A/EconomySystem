@@ -30,6 +30,12 @@ public final class MarketView {
     UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.MARKET_SEARCH_FRAME, focused);
   }
 
+  public static void renderSearchFrame(EconomyUiRenderer renderer, UiRect nativeWidgetRect,
+                                       boolean focused, boolean hovered) {
+    UiNativeInputFrame.render(renderer, nativeWidgetRect, EconomyUiTheme.MARKET_SEARCH_FRAME,
+        focused, hovered);
+  }
+
   public static void render(EconomyUiRenderer renderer, MarketState state, MarketLayout.Layout layout,
                             UUID viewerId, int mouseX, int mouseY) {
     renderer.translatedButton(layout.createSales(), EconomyUiTheme.MARKET_TOP_SALES_BUTTON,

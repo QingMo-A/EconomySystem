@@ -112,6 +112,27 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.register('apiJar', Jar) {
+    group = 'economy system'
+    description = 'Build the public EconomySystem API-only jar for Forge 1.20.1.'
+    archiveClassifier = 'api'
+    manifest {
+        attributes('EconomySystem-API-Version': '1.0.0')
+    }
+    from(sourceSets.main.output) {
+        include 'com/mo/economy_system/api/**'
+    }
+}
+
+tasks.register('apiSourcesJar', Jar) {
+    group = 'economy system'
+    description = 'Build the public EconomySystem API sources jar for Forge 1.20.1.'
+    archiveClassifier = 'api-sources'
+    from(sourceSets.main.allSource) {
+        include 'com/mo/economy_system/api/**'
+    }
+}
+
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
             minecraft_version_range: forge_1201_minecraft_version_range,

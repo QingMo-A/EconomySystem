@@ -135,10 +135,15 @@ public final class HomeView {
       for (HomeLayout.LeaderboardRow row : layout.rows()) {
         boolean self = state.isSelf(row.account());
         int rankColor = self ? RANK_GOLD : rankColor(row.rank());
-        // Keep the legacy entry as one draw call.  This preserves the reference space width and
-        // avoids approximating a separator between independently positioned rank/name strings.
         String entryText = "#" + row.rank() + " " + row.account().playerName();
-        renderer.text(entryText, row.rect().x(), row.rect().y(), rankColor);
+        // Keep each row as one clipped semantic draw. Self rows use a translated template so the
+        // marker is localized ("(你)"/"(You)") and never leaks to other accounts.
+        if (self) {
+          renderer.translatedTextWithSuffix("screen.home.leaderboard.self", List.of(entryText), "",
+              row.rect(), rankColor, UiTextAlignment.LEFT);
+        } else {
+          renderer.text(entryText, row.rect().x(), row.rect().y(), rankColor);
+        }
         String balance = UiNumbers.formatInteger(row.account().balance());
         renderer.text(balance, card.right() - 10 - layout.metrics().width(balance),
             row.rect().y(), self ? RANK_GOLD : MUTED_WHITE);
@@ -172,7 +177,7 @@ public final class HomeView {
     return switch (route) {
       case SHOP -> EconomyUiTheme.HOME_NAV_SHOP_STYLE;
       case MARKET -> EconomyUiTheme.HOME_NAV_MARKET_STYLE;
-      case DELIVERY_BOX -> EconomyUiTheme.HOME_NAV_DELIVERY_STYLE;
+      case DELIVERY_BOX, MAIL_COMPOSE -> EconomyUiTheme.HOME_NAV_DELIVERY_STYLE;
       case TERRITORY -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
       case ABOUT, BALANCE_LOG -> EconomyUiTheme.HOME_NAV_ABOUT_STYLE;
       case HOME -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
@@ -183,7 +188,7 @@ public final class HomeView {
     return switch (route) {
       case SHOP -> UiIcon.SHOP;
       case MARKET -> UiIcon.MARKET;
-      case DELIVERY_BOX -> UiIcon.DELIVERY;
+      case DELIVERY_BOX, MAIL_COMPOSE -> UiIcon.DELIVERY;
       case TERRITORY -> UiIcon.TERRITORY;
       case ABOUT, BALANCE_LOG -> UiIcon.ABOUT;
       case HOME -> UiIcon.HOME;

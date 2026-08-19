@@ -22,6 +22,15 @@ import com.mo.economy_system.common.network.DeliveryBoxDataResponseMessage;
 import com.mo.economy_system.common.network.InvitePlayerMessage;
 import com.mo.economy_system.common.network.MarketDataRequestMessage;
 import com.mo.economy_system.common.network.MarketDataResponseMessage;
+import com.mo.economy_system.common.network.MailboxClaimAllMessage;
+import com.mo.economy_system.common.network.MailboxClaimAttachmentMessage;
+import com.mo.economy_system.common.network.MailboxDataRequestMessage;
+import com.mo.economy_system.common.network.MailboxDataResponseMessage;
+import com.mo.economy_system.common.network.MailboxDeleteMessage;
+import com.mo.economy_system.common.network.MailboxMarkReadMessage;
+import com.mo.economy_system.common.network.MailboxNotificationMessage;
+import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
+import com.mo.economy_system.common.network.MailboxSendResultMessage;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.PurchaseSalesOrderMessage;
 import com.mo.economy_system.common.network.RemoveDemandOrderMessage;
@@ -149,6 +158,12 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       Forge1201NetworkChannel.sendToServer((DeliveryBoxClaimMessage) message);
       return;
     }
+    if (message instanceof MailboxDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof MailboxMarkReadMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof MailboxDeleteMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof MailboxClaimAttachmentMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof MailboxClaimAllMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof MailboxSendPlayerMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message.getClass() == ModifyTerritoryModeMessage.class) {
       Forge1201NetworkChannel.sendToServer((ModifyTerritoryModeMessage) message);
       return;
@@ -223,6 +238,18 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     }
     if (message.getClass() == DeliveryBoxDataResponseMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (DeliveryBoxDataResponseMessage) message);
+      return;
+    }
+    if (message instanceof MailboxDataResponseMessage value) {
+      Forge1201NetworkChannel.sendToPlayer(player, value);
+      return;
+    }
+    if (message instanceof MailboxSendResultMessage value) {
+      Forge1201NetworkChannel.sendToPlayer(player, value);
+      return;
+    }
+    if (message instanceof MailboxNotificationMessage value) {
+      Forge1201NetworkChannel.sendToPlayer(player, value);
       return;
     }
     if (message.getClass() == SingleTerritoryDataResponseMessage.class) {

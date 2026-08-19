@@ -34,6 +34,9 @@ public final class EconomyUiTheme {
     public static final int TEXT_ERROR = 0xFFFF7777;
     public static final int TEXT_SUCCESS = 0xFF9BE7A7;
     public static final int TEXT_LOCKED = 0xFFB0BBC6;
+    /** Global native-input policy; page-specific frame accents remain in the existing frame tokens. */
+    public static final UiInputStyle INPUT_STYLE = new UiInputStyle(
+            TEXT_PRIMARY, TEXT_LOCKED, TEXT_MUTED, false, true);
     /** Legacy shop tooltip price delta tones (ChatFormatting.RED/GREEN/GRAY). */
     public static final int TOOLTIP_PRICE_UP = 0xFFFF5555;
     public static final int TOOLTIP_PRICE_DOWN = 0xFF55FF55;
@@ -78,7 +81,7 @@ public final class EconomyUiTheme {
             ABOUT_ACCENT, 3, 0xCC, 0xFF);
     public static final UiCardStyle SHOP_PURCHASE_PANEL = new UiCardStyle(
             0xB01A2A3A, 0xB01A2A3A, 0xFF4A8ACF, 0xFF4A8ACF,
-            0xFF4A8ACF, 0, 0, 0);
+            0xFF4A8ACF, 3, 0xFF, 0xFF);
     public static final UiButtonStyle TERRITORY_BUTTON = actionButton(TERRITORY_ACCENT);
     public static final UiButtonStyle TERRITORY_PRIMARY_BUTTON = TERRITORY_BUTTON;
     public static final UiButtonStyle TERRITORY_WARN_BUTTON = actionButton(0xFFE2A93B);
@@ -136,14 +139,17 @@ public final class EconomyUiTheme {
     /** Balance log tabs and paging use the gold balance theme. */
     public static final UiButtonStyle BALANCE_BUTTON_DISABLED = disabledPageButton();
 
-    public static final UiInputFrameStyle SHOP_SEARCH_FRAME = UiInputFrameStyle.of(
-            0xE04A5568, 0xFF4FC3F7);
+    /** Transparent inputs use a quiet underline that changes to the page accent on focus/hover. */
+    public static final UiInputFrameStyle SHOP_SEARCH_FRAME = UiInputFrameStyle.underline(
+            CARD_BORDER, MARKET_ACCENT);
     public static final UiInputFrameStyle MARKET_SEARCH_FRAME = SHOP_SEARCH_FRAME;
-    public static final UiInputFrameStyle DELIVERY_SEARCH_FRAME = UiInputFrameStyle.of(
-            0xE04A5568, 0xFFFFB74D);
-    /** Territory reference search fields use the purple accent and the shared four-edge frame. */
-    public static final UiInputFrameStyle TERRITORY_SEARCH_FRAME = UiInputFrameStyle.of(
-            0xE04A5568, TERRITORY_ACCENT);
+    public static final UiInputFrameStyle INPUT_ERROR_FRAME = UiInputFrameStyle.underline(
+            TEXT_ERROR, TEXT_ERROR);
+    public static final UiInputFrameStyle DELIVERY_SEARCH_FRAME = UiInputFrameStyle.underline(
+            CARD_BORDER, 0xFFFFB74D);
+    /** Territory inputs use the same transparent treatment with a purple focused underline. */
+    public static final UiInputFrameStyle TERRITORY_SEARCH_FRAME = UiInputFrameStyle.underline(
+            CARD_BORDER, TERRITORY_ACCENT);
     /** Territory list/detail/buff/invite paging uses the legacy purple action chrome. */
     public static final UiButtonStyle TERRITORY_PAGE_BUTTON = pageButton(TERRITORY_ACCENT);
     public static final UiButtonStyle TERRITORY_PAGE_BUTTON_DISABLED = disabledPageButton();

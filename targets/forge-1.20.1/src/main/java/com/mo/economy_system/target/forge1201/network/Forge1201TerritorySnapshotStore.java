@@ -176,7 +176,7 @@ public final class Forge1201TerritorySnapshotStore extends SavedData
         .toList();
   }
 
-  /** Returns an immutable strict snapshot for command-side inspection. */
+  /** Returns an immutable strict snapshot for command-side inspection and package-local adapters. */
   synchronized List<Owned> allSnapshots() {
     return parseStrictRoot(raw).snapshots();
   }

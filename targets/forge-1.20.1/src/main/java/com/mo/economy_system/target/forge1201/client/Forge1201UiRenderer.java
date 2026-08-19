@@ -218,6 +218,20 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     renderItem(item == null ? Items.AIR.getDefaultInstance() : item.getDefaultInstance(), rect);
   }
 
+  @Override public void itemWithCount(String itemId, int count, UiRect rect) {
+    ResourceLocation location = ResourceLocation.tryParse(itemId);
+    var item = location == null ? Items.AIR : BuiltInRegistries.ITEM.get(location);
+    renderItemWithCount(item == null ? Items.AIR.getDefaultInstance() : item.getDefaultInstance(), count, rect);
+  }
+
+  @Override public void claimedItemOverlay(UiRect rect) {
+    graphics.pose().pushPose();
+    graphics.pose().translate(0, 0, 300);
+    graphics.fill(rect.x(), rect.y(), rect.right(), rect.bottom(), 0x66000000);
+    drawTextInRect(Component.literal("✓"), rect, 0xFF9BE7A7, UiTextAlignment.CENTER);
+    graphics.pose().popPose();
+  }
+
   @Override public void texture(String textureId, UiRect rect) {
     ResourceLocation texture = ResourceLocation.tryParse(textureId);
     if (texture == null) return;
@@ -267,6 +281,18 @@ public final class Forge1201UiRenderer implements EconomyUiRenderer {
     graphics.pose().pushPose();
     graphics.pose().scale(scale, scale, 1.0f);
     graphics.renderItem(stack, Math.round(rect.x() / scale), Math.round(rect.y() / scale));
+    graphics.pose().popPose();
+  }
+
+  /** Renders the item and native count decoration in one scaled pose. */
+  private void renderItemWithCount(ItemStack stack, int count, UiRect rect) {
+    float scale = Math.min(rect.width(), rect.height()) / 16.0f;
+    graphics.pose().pushPose();
+    graphics.pose().scale(scale, scale, 1.0f);
+    int x = Math.round(rect.x() / scale);
+    int y = Math.round(rect.y() / scale);
+    graphics.renderItem(stack, x, y);
+    graphics.renderItemDecorations(font, stack, x, y, Integer.toString(count));
     graphics.pose().popPose();
   }
 

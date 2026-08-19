@@ -135,6 +135,14 @@ tasks.register('buildAllTargets') {
     dependsOn(targetDependencies('build'))
 }
 
+tasks.register('buildApiAllTargets') {
+    group = 'economy system'
+    description = 'Build API-only and API-sources jars for every supported EconomySystem target.'
+    dependsOn(targetProjects.collectMany { target -> [
+        targetLifecycle(target, 'apiJar'), targetLifecycle(target, 'apiSourcesJar')
+    ] })
+}
+
 def requiredTargetLifecycleTasks = [
     'compileJava', 'processResources', 'test', 'build', 'runClient', 'runServer', 'runData'
 ].asImmutable()

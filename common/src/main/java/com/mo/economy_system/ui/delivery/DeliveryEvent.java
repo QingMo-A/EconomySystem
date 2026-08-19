@@ -1,20 +1,21 @@
 package com.mo.economy_system.ui.delivery;
 
-import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
+import com.mo.economy_system.common.mail.MailSnapshot;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 public sealed interface DeliveryEvent
     permits DeliveryEvent.Initialize, DeliveryEvent.Retry, DeliveryEvent.DataLoaded,
-        DeliveryEvent.DataFailed, DeliveryEvent.FilterChanged, DeliveryEvent.ViewportChanged,
+        DeliveryEvent.DataFailed, DeliveryEvent.FilterChanged, DeliveryEvent.CategoryChanged,
+        DeliveryEvent.MailSelected, DeliveryEvent.ViewportChanged,
         DeliveryEvent.NextPage, DeliveryEvent.PreviousPage, DeliveryEvent.Scroll,
         DeliveryEvent.ActionClicked, DeliveryEvent.Tick {
   record Initialize(long nowNanos) implements DeliveryEvent {}
   record Retry(long nowNanos) implements DeliveryEvent {}
-  record DataLoaded(long requestId, List<DeliveryBoxEntrySnapshot> entries) implements DeliveryEvent {
+  record DataLoaded(long requestId, List<MailSnapshot> mails) implements DeliveryEvent {
     public DataLoaded {
-      entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
+      mails = List.copyOf(Objects.requireNonNull(mails, "mails"));
     }
   }
   record DataFailed(long requestId, String errorKey) implements DeliveryEvent {
@@ -23,6 +24,16 @@ public sealed interface DeliveryEvent
     }
   }
   record FilterChanged(String value) implements DeliveryEvent {}
+  record CategoryChanged(DeliveryCategory category) implements DeliveryEvent {
+    public CategoryChanged {
+      Objects.requireNonNull(category, "category");
+    }
+  }
+  record MailSelected(UUID entryId) implements DeliveryEvent {
+    public MailSelected {
+      Objects.requireNonNull(entryId, "entryId");
+    }
+  }
   record ViewportChanged(int pageSize) implements DeliveryEvent {}
   record NextPage() implements DeliveryEvent {}
   record PreviousPage() implements DeliveryEvent {}

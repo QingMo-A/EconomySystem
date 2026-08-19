@@ -142,6 +142,27 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.register('apiJar', Jar) {
+    group = 'economy system'
+    description = 'Build the public EconomySystem API-only jar for NeoForge 1.21.1.'
+    archiveClassifier = 'api'
+    manifest {
+        attributes('EconomySystem-API-Version': '1.0.0')
+    }
+    from(sourceSets.main.output) {
+        include 'com/mo/economy_system/api/**'
+    }
+}
+
+tasks.register('apiSourcesJar', Jar) {
+    group = 'economy system'
+    description = 'Build the public EconomySystem API sources jar for NeoForge 1.21.1.'
+    archiveClassifier = 'api-sources'
+    from(sourceSets.main.allSource) {
+        include 'com/mo/economy_system/api/**'
+    }
+}
+
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
@@ -167,6 +188,8 @@ publishing {
     publications {
         register('mavenJava', MavenPublication) {
             from(components.java)
+            artifact(tasks.named('apiJar'))
+            artifact(tasks.named('apiSourcesJar'))
         }
     }
     repositories {

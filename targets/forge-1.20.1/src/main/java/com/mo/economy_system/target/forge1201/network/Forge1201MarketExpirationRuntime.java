@@ -2,6 +2,8 @@ package com.mo.economy_system.target.forge1201.network;
 
 import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
+import com.mo.economy_system.common.mail.MailRecord;
+import com.mo.economy_system.common.mail.MailType;
 import com.mo.economy_system.common.market.MarketExpirationFeedback;
 import com.mo.economy_system.common.market.MarketExpirationOutcome;
 import com.mo.economy_system.common.market.MarketExpirationResult;
@@ -9,6 +11,7 @@ import com.mo.economy_system.common.market.MarketExpirationService;
 import com.mo.economy_system.common.market.MarketOrder;
 import com.mo.economy_system.common.market.MarketOrderRemovalResult;
 import com.mo.economy_system.common.market.MarketOrderType;
+import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
 import com.mo.economy_system.platform.EconomyServices;
@@ -87,6 +90,11 @@ public final class Forge1201MarketExpirationRuntime {
       int quantity,
       String source) {
     try {
+      Forge1201MailboxSavedData mailbox = Forge1201MailboxSavedData.get(level);
+      if (mailbox.ledger().listPersonal(ownerId).size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
+        LOGGER.warn("Expired market delivery deferred because mailbox is full owner={}", ownerId);
+        return false;
+      }
       ItemStack template = Forge1201Platform.nativeItemStacks()
           .restoreSnapshot(item, level.registryAccess())
           .orElseThrow();
@@ -103,6 +111,23 @@ public final class Forge1201MarketExpirationRuntime {
         remaining -= count;
       }
       delivery.ledger().addAll(ownerId, entries, delivery::markDirty);
+      boolean mailAdded = false;
+      try {
+        long now = System.currentTimeMillis();
+        mailbox.ledger().addPersonal(ownerId,
+            new MailRecord(UUID.randomUUID(), MailType.MARKET, null, "", "", "", source,
+                now, 0, entries.stream().map(DeliveryBoxEntrySnapshot::entryId).toList(), false, true),
+            mailbox::markDirty);
+        mailAdded = true;
+      } catch (RuntimeException metadataFailure) {
+        // The attachment delivery is authoritative. If mailbox metadata cannot be created,
+        // MailboxQueryService will safely adopt these legacy-style entries on the next refresh.
+        LOGGER.warn("Expired market delivery metadata fallback owner={}", ownerId, metadataFailure);
+      }
+      if (mailAdded) {
+        Forge1201MailboxHandlers.notifyNewMail(
+            level.getServer().getPlayerList().getPlayer(ownerId), MailType.MARKET, "", "");
+      }
       return true;
     } catch (RuntimeException failure) {
       // Snapshot conversion happens before mutation and DeliveryBoxLedger.addAll is atomic.
@@ -117,6 +142,7 @@ public final class Forge1201MarketExpirationRuntime {
       EconomySavedData economy,
       MarketExpirationOutcome outcome) {
     MarketOrder order = outcome.order();
+    if (outcome.result() == MarketExpirationResult.RETURNED_TO_DELIVERY) return;
     String itemName = itemName(level, order);
     Component message;
     if (outcome.result() == MarketExpirationResult.REFUNDED) {

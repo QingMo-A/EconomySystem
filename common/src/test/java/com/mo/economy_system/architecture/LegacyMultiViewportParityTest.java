@@ -118,10 +118,12 @@ class LegacyMultiViewportParityTest {
 
       var delivery = DeliveryLayout.calculate(width, height, deliveryState());
       assertScale(delivery.scale(), virtualWidth, virtualHeight);
-      assertEquals(12, delivery.search().x());
+      assertEquals(12, delivery.categoryPanel().x());
+      assertEquals(116, delivery.search().x());
       assertEquals(20, delivery.search().y());
-      assertEquals(Math.max(55, virtualHeight - 40), delivery.previousButton().y());
-      assertEquals(virtualHeight - 35, delivery.pageText().y());
+      assertEquals(314, delivery.detailPanel().x());
+      assertEquals(virtualHeight - 66, delivery.previousButton().y());
+      assertEquals(virtualHeight - 60, delivery.pageText().y());
 
       var about = AboutLayout.calculate(width, height, com.mo.economy_system.ui.text.UiTextMetrics.APPROXIMATE, 1.0f);
       assertScale(about.scale(), virtualWidth, virtualHeight);
@@ -139,7 +141,7 @@ class LegacyMultiViewportParityTest {
       var list = TerritoryListLayout.calculate(width, height, territoryListState());
       assertScale(list.scale(), virtualWidth, virtualHeight);
       assertEquals(20, list.search().y());
-      assertEquals(virtualHeight - 12 - 31, list.title().y());
+      assertEquals(virtualHeight - 12 - 19, list.title().y());
       var detail = TerritoryDetailLayout.calculate(width, height, territoryDetailState());
       assertScale(detail.scale(), virtualWidth, virtualHeight);
       assertEquals(18, detail.title().y());
