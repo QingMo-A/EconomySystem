@@ -7,16 +7,16 @@ import com.mo.economy_system.ui.theme.EconomyUiTheme;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Pure, loader-neutral geometry for territory administration detail views. */
+/** Pure, loader-neutral geometry for the unified territory management center. */
 public final class TerritoryDetailLayout {
   public static final int BACKGROUND_COLOR = 0xB0000000;
-  public static final int ROW_HEIGHT = 42;
+  public static final int ROW_HEIGHT = 40;
   public static final int ACTION_HEIGHT = 22;
-  private static final int TITLE_Y = 18;
-  private static final int SEARCH_Y = 45;
-  private static final int LIST_Y = 76;
-  private static final int FOOTER_HEIGHT = 36;
-  private static final int ACTION_WIDTH = 94;
+  private static final int TITLE_Y = 14;
+  private static final int BODY_Y = 48;
+  private static final int NAV_WIDTH = 112;
+  private static final int NAV_GAP = 8;
+  private static final int FOOTER_HEIGHT = 34;
 
   private TerritoryDetailLayout() {}
 
@@ -26,63 +26,127 @@ public final class TerritoryDetailLayout {
     int width = scale.virtualWidth();
     int height = scale.virtualHeight();
     int panel = EconomyUiTheme.PANEL_PADDING;
-    int contentWidth = Math.max(1, width - panel * 2);
-    int contentHeight = Math.max(1, height - LIST_Y - FOOTER_HEIGHT);
-    int pageSize = Math.max(1, (contentHeight + EconomyUiTheme.CARD_SPACING)
-        / (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING));
-    UiRect title = new UiRect(panel, TITLE_Y, contentWidth, 14);
-    UiRect subtitle = new UiRect(panel, TITLE_Y + 16, contentWidth, 12);
-    UiRect search = new UiRect(panel, SEARCH_Y, Math.min(220, contentWidth), 20);
-    UiRect rows = new UiRect(panel, LIST_Y, contentWidth, contentHeight);
-    UiRect previous = new UiRect(Math.max(panel, width / 2 - 76), height - 28, 58, 20);
-    UiRect pageText = new UiRect(Math.max(panel, width / 2 - 12), height - 28, 24, 20);
-    UiRect next = new UiRect(Math.min(width - panel - 58, width / 2 + 18), height - 28, 58, 20);
-    UiRect back = new UiRect(panel, height - 28, 72, 20);
-    UiRect retry = new UiRect(panel + Math.max(0, (contentWidth - 96) / 2),
-        LIST_Y + Math.max(0, (contentHeight - 22) / 2), Math.min(96, contentWidth), 22);
+    int contentX = panel + NAV_WIDTH + NAV_GAP;
+    int contentWidth = Math.max(1, width - contentX - panel);
+    int footerY = Math.max(BODY_Y + 40, height - FOOTER_HEIGHT);
 
-    List<MainAction> mainActions = mainActions(width, height, panel, contentWidth);
+    UiRect title = new UiRect(panel, TITLE_Y, Math.max(1, width - panel * 2), 14);
+    UiRect subtitle = new UiRect(panel, TITLE_Y + 16, Math.max(1, width - panel * 2), 12);
+    UiRect navigationPanel = new UiRect(panel, BODY_Y, NAV_WIDTH,
+        Math.max(1, footerY - BODY_Y));
+    List<NavigationButton> navigationButtons = navigationButtons(navigationPanel, state.view());
+    UiRect back = new UiRect(navigationPanel.x() + 8,
+        Math.max(navigationPanel.y() + 8, navigationPanel.bottom() - 28),
+        Math.max(1, navigationPanel.width() - 16), 20);
+
+    UiRect content = new UiRect(contentX, BODY_Y, contentWidth,
+        Math.max(1, footerY - BODY_Y));
+    UiRect search = new UiRect(content.x() + 8, content.y() + 8,
+        Math.min(160, Math.max(1, content.width() - 16)), 20);
+    UiRect invite = new UiRect(Math.max(content.x() + 8, content.right() - 110),
+        content.y() + 8, 102, 20);
+
+    int rowsY = state.searchVisible() ? content.y() + 38 : content.y() + 10;
+    int fullRowsHeight = Math.max(1, content.bottom() - rowsY);
+    int fullPageSize = Math.max(1, (fullRowsHeight + EconomyUiTheme.CARD_SPACING)
+        / (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING));
+    boolean needsPager = state.searchVisible() && state.rowCount() > fullPageSize;
+    int rowsBottom = needsPager ? content.bottom() - 30 : content.bottom();
+    UiRect rows = new UiRect(content.x(), rowsY, content.width(),
+        Math.max(1, rowsBottom - rowsY));
+    int pageSize = Math.max(1, (rows.height() + EconomyUiTheme.CARD_SPACING)
+        / (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING));
+
+    List<QuickAction> quickActions = state.view() == TerritoryDetailViewKind.MAIN
+        ? quickActions(content) : List.of();
+    List<SettingAction> settingsActions = state.view() == TerritoryDetailViewKind.SETTINGS
+        ? settingsActions(content) : List.of();
     List<AccessCard> accessCards = new ArrayList<>();
     List<RuleCard> ruleCards = new ArrayList<>();
     List<TransferCard> transferCards = new ArrayList<>();
     switch (state.view()) {
-      case ACCESS -> addAccessCards(state.visibleAccessRows(), accessCards, panel, contentWidth);
-      case RULES -> addRuleCards(state.visibleRuleRows(), ruleCards, panel, contentWidth);
-      case TRANSFER -> addTransferCards(state.visibleTransferRows(), transferCards, panel, contentWidth);
-      case MAIN -> { }
+      case ACCESS -> addAccessCards(state.visibleAccessRows(), accessCards, rows);
+      case RULES -> addRuleCards(state.visibleRuleRows(), ruleCards, rows);
+      case TRANSFER -> addTransferCards(state.visibleTransferRows(), transferCards, rows);
+      case MAIN, SETTINGS -> { }
     }
-    return new Layout(scale, title, subtitle, search, rows, List.copyOf(mainActions),
-        List.copyOf(accessCards), List.copyOf(ruleCards), List.copyOf(transferCards),
-        previous, pageText, next, retry, back, pageSize);
+
+    int pagerY = content.bottom() - 25;
+    int pagerGroupWidth = 158;
+    int pagerX = Math.max(content.x() + 8,
+        content.x() + (content.width() - pagerGroupWidth) / 2);
+    UiRect previous = new UiRect(pagerX, pagerY, 44, 20);
+    UiRect pageText = new UiRect(pagerX + 52, pagerY, 54, 20);
+    UiRect next = new UiRect(pagerX + 114, pagerY, 44, 20);
+    UiRect retry = new UiRect(content.x() + Math.max(0, (content.width() - 96) / 2),
+        rows.y() + Math.max(0, (rows.height() - 22) / 2), Math.min(96, content.width()), 22);
+
+    return new Layout(scale, title, subtitle, navigationPanel, List.copyOf(navigationButtons), content,
+        search, invite, rows, List.copyOf(quickActions), List.copyOf(settingsActions),
+        List.of(), List.copyOf(accessCards), List.copyOf(ruleCards),
+        List.copyOf(transferCards), previous, pageText, next, retry, back, pageSize);
   }
 
-  private static List<MainAction> mainActions(int width, int height, int panel, int contentWidth) {
+  private static List<NavigationButton> navigationButtons(UiRect panel, TerritoryDetailViewKind view) {
     TerritoryDetailAction[] actions = {
-        TerritoryDetailAction.RESIZE,
-        TerritoryDetailAction.BUFFS,
+        TerritoryDetailAction.OVERVIEW,
         TerritoryDetailAction.ACCESS,
         TerritoryDetailAction.RULES,
-        TerritoryDetailAction.TRANSFER
+        TerritoryDetailAction.BUFFS,
+        TerritoryDetailAction.SETTINGS
     };
-    int buttonWidth = Math.min(240, Math.max(120, contentWidth));
-    int x = Math.max(panel, (width - buttonWidth) / 2);
-    int startY = Math.max(LIST_Y, (height - (actions.length * ACTION_HEIGHT
-        + (actions.length - 1) * EconomyUiTheme.CARD_SPACING)) / 2);
-    List<MainAction> result = new ArrayList<>();
+    List<NavigationButton> result = new ArrayList<>();
     for (int index = 0; index < actions.length; index++) {
-      result.add(new MainAction(actions[index],
-          new UiRect(x, startY + index * (ACTION_HEIGHT + EconomyUiTheme.CARD_SPACING),
-              buttonWidth, ACTION_HEIGHT)));
+      TerritoryDetailAction action = actions[index];
+      boolean selected = switch (action) {
+        case OVERVIEW -> view == TerritoryDetailViewKind.MAIN;
+        case ACCESS -> view == TerritoryDetailViewKind.ACCESS;
+        case RULES -> view == TerritoryDetailViewKind.RULES;
+        case SETTINGS -> view == TerritoryDetailViewKind.SETTINGS || view == TerritoryDetailViewKind.TRANSFER;
+        default -> false;
+      };
+      result.add(new NavigationButton(action,
+          new UiRect(panel.x() + 8, panel.y() + 10 + index * 30,
+              Math.max(1, panel.width() - 16), 22), selected));
+    }
+    return result;
+  }
+
+  private static List<QuickAction> quickActions(UiRect content) {
+    int gap = EconomyUiTheme.CARD_SPACING;
+    int width = Math.min(126, Math.max(80, (content.width() - 24 - gap) / 2));
+    int y = content.bottom() - 34;
+    return List.of(
+        new QuickAction(TerritoryDetailAction.RESIZE,
+            new UiRect(content.x() + 12, y, width, ACTION_HEIGHT)),
+        new QuickAction(TerritoryDetailAction.INVITE,
+            new UiRect(content.x() + 12 + width + gap, y, width, ACTION_HEIGHT)));
+  }
+
+  private static List<SettingAction> settingsActions(UiRect content) {
+    TerritoryDetailAction[] actions = {
+        TerritoryDetailAction.COPY_ID,
+        TerritoryDetailAction.RESIZE,
+        TerritoryDetailAction.TRANSFER,
+        TerritoryDetailAction.DELETE
+    };
+    List<SettingAction> result = new ArrayList<>();
+    int startY = content.y() + 14;
+    for (int index = 0; index < actions.length; index++) {
+      UiRect row = new UiRect(content.x() + 8, startY + index * 54,
+          Math.max(1, content.width() - 16), 46);
+      UiRect button = new UiRect(Math.max(row.x(), row.right() - 112), row.y() + 12, 104, 22);
+      result.add(new SettingAction(actions[index], row, button));
     }
     return result;
   }
 
   private static void addAccessCards(List<TerritoryAccessRow> values, List<AccessCard> output,
-                                     int panel, int width) {
+                                     UiRect rows) {
     for (int index = 0; index < values.size(); index++) {
-      int y = LIST_Y + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
-      UiRect card = new UiRect(panel, y, width, ROW_HEIGHT);
-      UiRect action = actionRect(card);
+      int y = rows.y() + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
+      UiRect card = new UiRect(rows.x(), y, rows.width(), ROW_HEIGHT);
+      UiRect action = new UiRect(Math.max(card.x(), card.right() - 102), card.y() + 11, 94, 20);
       output.add(new AccessCard(values.get(index), card,
           new UiRect(card.x() + 8, card.y() + 8, 26, 26),
           new UiRect(card.x() + 42, card.y() + 5, Math.max(1, action.x() - card.x() - 50), 16),
@@ -92,11 +156,12 @@ public final class TerritoryDetailLayout {
   }
 
   private static void addRuleCards(List<TerritoryRuleRow> values, List<RuleCard> output,
-                                    int panel, int width) {
+                                   UiRect rows) {
     for (int index = 0; index < values.size(); index++) {
-      int y = LIST_Y + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
-      UiRect card = new UiRect(panel, y, width, ROW_HEIGHT);
-      UiRect action = actionRect(card);
+      int y = rows.y() + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
+      UiRect card = new UiRect(rows.x(), y, rows.width(), ROW_HEIGHT);
+      UiRect action = new UiRect(Math.max(card.x() + 150, card.right() - 150),
+          card.y() + 11, 142, 20);
       output.add(new RuleCard(values.get(index), card,
           new UiRect(card.x() + 10, card.y() + 6, Math.max(1, action.x() - card.x() - 18), 14),
           new UiRect(card.x() + 10, card.y() + 22, Math.max(1, action.x() - card.x() - 18), 14),
@@ -105,11 +170,11 @@ public final class TerritoryDetailLayout {
   }
 
   private static void addTransferCards(List<PlayerSummary> values, List<TransferCard> output,
-                                        int panel, int width) {
+                                       UiRect rows) {
     for (int index = 0; index < values.size(); index++) {
-      int y = LIST_Y + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
-      UiRect card = new UiRect(panel, y, width, ROW_HEIGHT);
-      UiRect action = actionRect(card);
+      int y = rows.y() + index * (ROW_HEIGHT + EconomyUiTheme.CARD_SPACING);
+      UiRect card = new UiRect(rows.x(), y, rows.width(), ROW_HEIGHT);
+      UiRect action = new UiRect(Math.max(card.x(), card.right() - 102), card.y() + 11, 94, 20);
       output.add(new TransferCard(values.get(index), card,
           new UiRect(card.x() + 8, card.y() + 8, 26, 26),
           new UiRect(card.x() + 42, card.y() + 7, Math.max(1, action.x() - card.x() - 50), 14),
@@ -118,18 +183,19 @@ public final class TerritoryDetailLayout {
     }
   }
 
-  private static UiRect actionRect(UiRect card) {
-    int width = Math.min(ACTION_WIDTH, Math.max(1, card.width() / 3));
-    return new UiRect(Math.max(card.x(), card.right() - width - 8), card.y() + 11, width, 20);
-  }
-
   public record Layout(
       UiScale scale,
       UiRect title,
       UiRect subtitle,
+      UiRect navigationPanel,
+      List<NavigationButton> navigationButtons,
+      UiRect content,
       UiRect search,
+      UiRect inviteButton,
       UiRect rows,
-      List<MainAction> mainActions,
+      List<QuickAction> quickActions,
+      List<SettingAction> settingsActions,
+      List<PresetButton> presetButtons,
       List<AccessCard> accessCards,
       List<RuleCard> ruleCards,
       List<TransferCard> transferCards,
@@ -140,7 +206,10 @@ public final class TerritoryDetailLayout {
       UiRect backButton,
       int pageSize) {
     public Layout {
-      mainActions = List.copyOf(mainActions);
+      navigationButtons = List.copyOf(navigationButtons);
+      quickActions = List.copyOf(quickActions);
+      settingsActions = List.copyOf(settingsActions);
+      presetButtons = List.copyOf(presetButtons);
       accessCards = List.copyOf(accessCards);
       ruleCards = List.copyOf(ruleCards);
       transferCards = List.copyOf(transferCards);
@@ -148,7 +217,10 @@ public final class TerritoryDetailLayout {
     }
   }
 
-  public record MainAction(TerritoryDetailAction action, UiRect rect) {}
+  public record NavigationButton(TerritoryDetailAction action, UiRect rect, boolean selected) {}
+  public record QuickAction(TerritoryDetailAction action, UiRect rect) {}
+  public record SettingAction(TerritoryDetailAction action, UiRect row, UiRect button) {}
+  public record PresetButton(TerritoryRulePreset preset, UiRect rect) {}
   public record AccessCard(TerritoryAccessRow row, UiRect card, UiRect head, UiRect name,
                            UiRect status, UiRect actionButton) {}
   public record RuleCard(TerritoryRuleRow row, UiRect card, UiRect name, UiRect description,

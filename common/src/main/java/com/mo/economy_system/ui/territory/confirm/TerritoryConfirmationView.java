@@ -25,7 +25,7 @@ public final class TerritoryConfirmationView {
     renderer.translatedTextInRect(title, List.of(),
         new UiRect(layout.card().x() + 30, layout.card().y() + 10,
             layout.card().width() - 42, 16), EconomyUiTheme.TEXT_ERROR, UiTextAlignment.LEFT);
-    renderer.translatedTextInRect(body, args, layout.message(), EconomyUiTheme.TEXT_PRIMARY,
+    renderer.translatedTextInRect(body, args, layout.message(), EconomyUiTheme.TEXT_ERROR,
         UiTextAlignment.CENTER);
     renderer.translatedButton(layout.confirm(), EconomyUiTheme.TERRITORY_DANGER_BUTTON,
         "screen.territory.confirm.confirm", List.of(), layout.confirm().contains(mouseX, mouseY),

@@ -5,14 +5,24 @@ import java.util.List;
 import java.util.UUID;
 
 public sealed interface TerritoryInviteEvent permits TerritoryInviteEvent.Initialize,
-    TerritoryInviteEvent.PlayersLoaded, TerritoryInviteEvent.FilterChanged,
+    TerritoryInviteEvent.PlayersLoaded, TerritoryInviteEvent.PlayersFailed,
+    TerritoryInviteEvent.FilterChanged,
     TerritoryInviteEvent.ViewportChanged, TerritoryInviteEvent.Scroll,
     TerritoryInviteEvent.InviteClicked, TerritoryInviteEvent.Retry,
     TerritoryInviteEvent.Back, TerritoryInviteEvent.Tick {
   record Initialize(long nowNanos) implements TerritoryInviteEvent {}
   record PlayersLoaded(long requestId, long revision, List<PlayerSummary> players)
       implements TerritoryInviteEvent {
-    public PlayersLoaded { players = List.copyOf(players); }
+    public PlayersLoaded {
+      if (requestId < 0 || revision < 0) throw new IllegalArgumentException("player response identity");
+      players = List.copyOf(players);
+    }
+  }
+  record PlayersFailed(long requestId, String errorKey) implements TerritoryInviteEvent {
+    public PlayersFailed {
+      if (requestId < 0) throw new IllegalArgumentException("requestId");
+      errorKey = errorKey == null || errorKey.isBlank() ? "screen.invite.sync_failed" : errorKey;
+    }
   }
   record FilterChanged(String value) implements TerritoryInviteEvent {}
   record ViewportChanged(int pageSize) implements TerritoryInviteEvent {

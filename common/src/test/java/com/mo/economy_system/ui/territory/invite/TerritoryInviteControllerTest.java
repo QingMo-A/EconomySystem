@@ -32,9 +32,56 @@ class TerritoryInviteControllerTest {
     assertEquals(ScreenState.READY, controller.state().screenState());
     controller.handle(new TerritoryInviteEvent.InviteClicked(TARGET, 20));
     controller.handle(new TerritoryInviteEvent.InviteClicked(TARGET, 21));
+    controller.handle(new TerritoryInviteEvent.InviteClicked(TARGET, 100));
     assertEquals(List.of(TARGET), port.invites);
+    assertInstanceOf(UiNavigation.Back.class, controller.pollNavigation().orElseThrow());
     controller.handle(new TerritoryInviteEvent.FilterChanged("other"));
     assertEquals(List.of("other"), controller.state().visiblePlayers().stream().map(PlayerSummary::playerName).toList());
+  }
+
+  @Test
+  void eligibleEmptyErrorStaleDuplicateAndUnknownResponsesAreFailSafe() {
+    FakePort port = new FakePort();
+    TerritoryInviteController controller = controller(port);
+    controller.handle(new TerritoryInviteEvent.Initialize(10));
+    controller.handle(new TerritoryInviteEvent.PlayersLoaded(2, 1,
+        List.of(new PlayerSummary(TARGET, "stale"))));
+    controller.handle(new TerritoryInviteEvent.PlayersFailed(9, "unknown"));
+    assertEquals(ScreenState.LOADING, controller.state().screenState());
+
+    controller.handle(new TerritoryInviteEvent.PlayersLoaded(1, 2, List.of(
+        new PlayerSummary(OWNER, "owner"), new PlayerSummary(VIEWER, "viewer"))));
+    assertEquals(ScreenState.EMPTY, controller.state().screenState());
+    controller.handle(new TerritoryInviteEvent.PlayersLoaded(1, 3,
+        List.of(new PlayerSummary(TARGET, "duplicate"))));
+    assertEquals(ScreenState.EMPTY, controller.state().screenState());
+
+    controller.handle(new TerritoryInviteEvent.Retry(20));
+    controller.handle(new TerritoryInviteEvent.PlayersFailed(2, "screen.invite.sync_failed"));
+    assertEquals(ScreenState.ERROR, controller.state().screenState());
+    assertEquals("screen.invite.sync_failed", controller.state().errorKey());
+  }
+
+  @Test
+  void olderPlayerRevisionIsRejectedAndViewportClampsAgainstNewPageSize() {
+    FakePort port = new FakePort();
+    TerritoryInviteController controller = controller(port);
+    controller.handle(new TerritoryInviteEvent.Initialize(1));
+    controller.handle(new TerritoryInviteEvent.PlayersLoaded(1, 5, List.of(
+        new PlayerSummary(TARGET, "a"),
+        new PlayerSummary(new UUID(0, 5), "b"),
+        new PlayerSummary(new UUID(0, 6), "c"))));
+    controller.handle(new TerritoryInviteEvent.ViewportChanged(1));
+    controller.handle(new TerritoryInviteEvent.Scroll(1));
+    controller.handle(new TerritoryInviteEvent.Scroll(1));
+    assertEquals(2, controller.state().page());
+    controller.handle(new TerritoryInviteEvent.ViewportChanged(3));
+    assertEquals(0, controller.state().page());
+
+    controller.handle(new TerritoryInviteEvent.Retry(2));
+    controller.handle(new TerritoryInviteEvent.PlayersLoaded(2, 4,
+        List.of(new PlayerSummary(new UUID(0, 7), "older"))));
+    assertEquals(ScreenState.LOADING, controller.state().screenState());
   }
 
   @Test

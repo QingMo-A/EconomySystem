@@ -1,16 +1,11 @@
 package com.mo.economy_system.ui.territory.detail;
 
 import com.mo.economy_system.common.network.PlayerSummary;
-import com.mo.economy_system.common.territory.TerritorySnapshots.Member;
 import com.mo.economy_system.common.territory.TerritorySnapshots.Owned;
-import com.mo.economy_system.common.territory.TerritorySnapshots.Rule;
 import com.mo.economy_system.ui.core.ScreenState;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 public record TerritoryDetailState(
@@ -35,20 +30,12 @@ public record TerritoryDetailState(
     Objects.requireNonNull(screenState, "screenState");
   }
 
+  /** The member page intentionally lists authorized members only; adding people belongs to Invite. */
   public List<TerritoryAccessRow> accessRows() {
-    Set<UUID> owners = Set.of(territory.summary().ownerId());
-    LinkedHashMap<UUID, TerritoryAccessRow> rows = new LinkedHashMap<>();
-    for (PlayerSummary player : players) {
-      if (!owners.contains(player.playerId())) {
-        rows.put(player.playerId(), new TerritoryAccessRow(player.playerId(), player.playerName(), false));
-      }
-    }
-    for (Member member : territory.authorizedMembers()) {
-      if (!owners.contains(member.playerId())) {
-        rows.put(member.playerId(), new TerritoryAccessRow(member.playerId(), member.playerName(), true));
-      }
-    }
-    return filterAccess(List.copyOf(rows.values()));
+    return territory.authorizedMembers().stream()
+        .filter(member -> matches(member.playerName()))
+        .map(member -> new TerritoryAccessRow(member.playerId(), member.playerName(), true))
+        .toList();
   }
 
   public List<PlayerSummary> transferRows() {
@@ -69,7 +56,7 @@ public record TerritoryDetailState(
       case ACCESS -> accessRows().size();
       case RULES -> ruleRows().size();
       case TRANSFER -> transferRows().size();
-      case MAIN -> 0;
+      case MAIN, SETTINGS -> 0;
     };
   }
 
@@ -77,20 +64,14 @@ public record TerritoryDetailState(
     return Math.max(1, (rowCount() + pageSize - 1) / pageSize);
   }
 
-  public List<TerritoryAccessRow> visibleAccessRows() {
-    return slice(accessRows());
-  }
+  public List<TerritoryAccessRow> visibleAccessRows() { return slice(accessRows()); }
+  public List<TerritoryRuleRow> visibleRuleRows() { return slice(ruleRows()); }
+  public List<PlayerSummary> visibleTransferRows() { return slice(transferRows()); }
 
-  public List<TerritoryRuleRow> visibleRuleRows() {
-    return slice(ruleRows());
-  }
-
-  public List<PlayerSummary> visibleTransferRows() {
-    return slice(transferRows());
-  }
-
-  private List<TerritoryAccessRow> filterAccess(List<TerritoryAccessRow> rows) {
-    return rows.stream().filter(row -> matches(row.playerName())).toList();
+  public boolean searchVisible() {
+    return view == TerritoryDetailViewKind.ACCESS
+        || view == TerritoryDetailViewKind.RULES
+        || view == TerritoryDetailViewKind.TRANSFER;
   }
 
   private boolean matches(TerritoryRuleRow row) {
@@ -109,20 +90,30 @@ public record TerritoryDetailState(
     return values.subList(start, Math.min(values.size(), start + pageSize));
   }
 
-  /** Whether an action is meaningful for the current view and lifecycle state. */
+  /** Whether an action is meaningful for the current management section and lifecycle state. */
   public boolean can(TerritoryDetailAction action) {
     Objects.requireNonNull(action, "action");
     if (action == TerritoryDetailAction.BACK) return true;
     if (action == TerritoryDetailAction.RETRY) return screenState == ScreenState.ERROR;
-    if (screenState != ScreenState.READY && screenState != ScreenState.EMPTY) return false;
+    if (screenState != ScreenState.READY && screenState != ScreenState.EMPTY
+        && screenState != ScreenState.LOADING) return false;
+
+    if (action == TerritoryDetailAction.OVERVIEW
+        || action == TerritoryDetailAction.ACCESS
+        || action == TerritoryDetailAction.RULES
+        || action == TerritoryDetailAction.BUFFS
+        || action == TerritoryDetailAction.SETTINGS) return true;
+    if (screenState == ScreenState.LOADING) return false;
+
     return switch (view) {
-      case MAIN -> action == TerritoryDetailAction.RESIZE
-          || action == TerritoryDetailAction.BUFFS
-          || action == TerritoryDetailAction.ACCESS
-          || action == TerritoryDetailAction.RULES
-          || action == TerritoryDetailAction.TRANSFER;
-      case ACCESS -> action == TerritoryDetailAction.TOGGLE_ACCESS;
+      case MAIN -> action == TerritoryDetailAction.RESIZE || action == TerritoryDetailAction.INVITE;
+      case ACCESS -> action == TerritoryDetailAction.TOGGLE_ACCESS
+          || action == TerritoryDetailAction.INVITE;
       case RULES -> action == TerritoryDetailAction.CYCLE_RULE;
+      case SETTINGS -> action == TerritoryDetailAction.COPY_ID
+          || action == TerritoryDetailAction.RESIZE
+          || action == TerritoryDetailAction.TRANSFER
+          || action == TerritoryDetailAction.DELETE;
       case TRANSFER -> action == TerritoryDetailAction.TRANSFER_OWNERSHIP;
     };
   }

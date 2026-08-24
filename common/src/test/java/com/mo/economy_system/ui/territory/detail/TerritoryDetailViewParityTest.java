@@ -53,7 +53,7 @@ class TerritoryDetailViewParityTest {
     TerritoryDetailView.render(renderer, main, mainLayout, 0, 0);
     assertTrue(renderer.operations.stream().anyMatch(value ->
         value.kind.equals("translatedButton")
-            && value.value.equals("message.territory_management.buff")));
+            && value.value.equals("button.territory.nav.buffs")));
 
     TerritoryDetailState error = new TerritoryDetailState(main.territory(), List.of(),
         TerritoryDetailViewKind.MAIN, 0, 5, "", ScreenState.ERROR,

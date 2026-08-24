@@ -20,7 +20,8 @@ class TerritoryInviteLayoutTest {
     TerritoryInviteState state = new TerritoryInviteState(new UUID(0, 1), "territory",
         new UUID(0, 2), new UUID(0, 3), Set.of(), players, "", 0, 5,
         ScreenState.READY, null, -1, 1, 0);
-    for (int[] size : new int[][]{{320, 180}, {640, 360}, {854, 480}, {1280, 720}, {180, 120}}) {
+    for (int[] size : new int[][]{{320, 180}, {640, 360}, {854, 480}, {1280, 720},
+        {1920, 1080}, {180, 120}, {160, 90}, {640, 80}}) {
       var layout = TerritoryInviteLayout.calculate(size[0], size[1], state);
       UiRect viewport = new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight());
       for (UiRect rect : List.of(layout.title(), layout.subtitle(), layout.search(), layout.rows(),

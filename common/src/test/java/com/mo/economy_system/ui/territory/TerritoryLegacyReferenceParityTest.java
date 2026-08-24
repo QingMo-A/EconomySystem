@@ -83,16 +83,18 @@ class TerritoryLegacyReferenceParityTest {
 
     assertTrue(renderer.operations().stream().anyMatch(operation ->
         operation.kind().equals("scaledIconTranslatedText")
-            && operation.value().contains("screen.territory.detail.access.title")),
+            && operation.value().contains("screen.territory.detail.title")),
         "detail title remains localized");
     assertTrue(renderer.operations().stream().anyMatch(operation ->
         operation.kind().equals("icon") && operation.value().equals(UiIcon.ARROW_LEFT.name())
-            && operation.rect().equals(new UiRect(layout.previousButton().x() + 19,
+            && operation.rect().equals(new UiRect(layout.previousButton().x()
+                + (layout.previousButton().width() - 12) / 2,
                 layout.previousButton().y() + 4, 12, 12))),
         "detail previous control uses a 12px arrow texture");
     assertTrue(renderer.operations().stream().anyMatch(operation ->
         operation.kind().equals("icon") && operation.value().equals(UiIcon.ARROW_RIGHT.name())
-            && operation.rect().equals(new UiRect(layout.nextButton().x() + 19,
+            && operation.rect().equals(new UiRect(layout.nextButton().x()
+                + (layout.nextButton().width() - 12) / 2,
                 layout.nextButton().y() + 4, 12, 12))),
         "detail next control uses a 12px arrow texture");
   }
@@ -106,7 +108,8 @@ class TerritoryLegacyReferenceParityTest {
 
   private static TerritoryDetailState detailState() {
     Owned owned = new Owned(summary(new UUID(2, 1), "spawn"),
-        List.of(new Member(new UUID(2, 2), "alice")), Optional.empty(),
+        List.of(new Member(new UUID(2, 2), "alice"),
+            new Member(new UUID(2, 5), "dave")), Optional.empty(),
         rules(), List.of());
     List<PlayerSummary> players = List.of(new PlayerSummary(new UUID(2, 3), "bob"),
         new PlayerSummary(new UUID(2, 4), "cara"));

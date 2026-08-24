@@ -18,6 +18,7 @@ public final class TerritoryInviteController
   private final UUID territoryId;
   private long startedAt;
   private boolean inFlight;
+  private boolean submitted;
 
   public TerritoryInviteController(UUID territoryId, String territoryName, UUID ownerId,
       UUID viewerId, java.util.Set<UUID> existingMemberIds, TerritoryInvitePort port) {
@@ -32,6 +33,7 @@ public final class TerritoryInviteController
     if (event instanceof TerritoryInviteEvent.Initialize value) request(value.nowNanos());
     else if (event instanceof TerritoryInviteEvent.Retry value) request(value.nowNanos());
     else if (event instanceof TerritoryInviteEvent.PlayersLoaded value) loaded(value);
+    else if (event instanceof TerritoryInviteEvent.PlayersFailed value) failed(value);
     else if (event instanceof TerritoryInviteEvent.FilterChanged value) filter(value.value());
     else if (event instanceof TerritoryInviteEvent.ViewportChanged value) viewport(value.pageSize());
     else if (event instanceof TerritoryInviteEvent.Scroll value) page(Integer.signum(value.steps()));
@@ -51,11 +53,23 @@ public final class TerritoryInviteController
   }
 
   private void loaded(TerritoryInviteEvent.PlayersLoaded event) {
-    if (event.requestId() != state().requestId() || event.revision() < state().playerRevision()) return;
+    if (!inFlight || state().screenState() != ScreenState.LOADING
+        || event.requestId() != state().requestId()
+        || event.revision() < state().playerRevision()) return;
     inFlight = false;
-    ScreenState status = event.players().isEmpty() ? ScreenState.EMPTY : ScreenState.READY;
+    TerritoryInviteState next = copy(0, state().pageSize(), ScreenState.READY, null, -1,
+        event.revision(), state().cooldownUntilTick(), event.players());
+    ScreenState status = next.eligiblePlayers().isEmpty() ? ScreenState.EMPTY : ScreenState.READY;
     replace(copy(0, state().pageSize(), status, null, -1, event.revision(),
         state().cooldownUntilTick(), event.players()));
+  }
+
+  private void failed(TerritoryInviteEvent.PlayersFailed event) {
+    if (!inFlight || state().screenState() != ScreenState.LOADING
+        || event.requestId() != state().requestId()) return;
+    inFlight = false;
+    replace(copy(state().page(), state().pageSize(), ScreenState.ERROR, event.errorKey(), -1,
+        state().playerRevision(), state().cooldownUntilTick(), state().players()));
   }
 
   private void filter(String value) {
@@ -66,7 +80,8 @@ public final class TerritoryInviteController
 
   private void viewport(int pageSize) {
     int size = Math.max(1, pageSize);
-    int page = Math.min(state().page(), Math.max(0, state().totalPages() - 1));
+    int pages = Math.max(1, (state().eligiblePlayers().size() + size - 1) / size);
+    int page = Math.min(state().page(), pages - 1);
     replace(copy(page, size, state().screenState(), state().errorKey(), state().requestId(),
         state().playerRevision(), state().cooldownUntilTick(), state().players()));
   }
@@ -79,12 +94,15 @@ public final class TerritoryInviteController
   }
 
   private void invite(TerritoryInviteEvent.InviteClicked event) {
-    if (!state().canInvite(event.playerId()) || event.tick() < state().cooldownUntilTick()) return;
+    if (submitted || !state().canInvite(event.playerId())
+        || event.tick() < state().cooldownUntilTick()) return;
     long until = event.tick() > Long.MAX_VALUE - CLICK_COOLDOWN_TICKS
         ? Long.MAX_VALUE : event.tick() + CLICK_COOLDOWN_TICKS;
+    submitted = true;
     port.submitInvite(territoryId, event.playerId());
     replace(copy(state().page(), state().pageSize(), state().screenState(), state().errorKey(),
         state().requestId(), state().playerRevision(), until, state().players()));
+    navigate(new UiNavigation.Back());
   }
 
   private void tick(long nowNanos) {

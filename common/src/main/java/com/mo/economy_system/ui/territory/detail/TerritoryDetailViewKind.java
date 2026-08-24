@@ -4,5 +4,6 @@ public enum TerritoryDetailViewKind {
   MAIN,
   ACCESS,
   RULES,
+  SETTINGS,
   TRANSFER
 }
