@@ -33,6 +33,26 @@ class NeoForge1211UiBridgeTest {
     }
 
     @Test
+    void nestedTerritoryPagesUseCommonModelsAndExistingWireMessages() throws Exception {
+        String manage = read(repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/NeoForge1211TerritoryManageScreen.java"));
+        assertTrue(manage.contains("NeoForge1211BuffManageScreen"));
+        assertTrue(manage.contains("NeoForge1211TerritoryInviteScreen"));
+        assertTrue(manage.contains("NeoForge1211TerritoryConfirmationScreen"));
+        assertTrue(manage.contains("NeoForge1211TerritoryDetailScreen"));
+        assertFalse(manage.contains("Screen_TerritoryPlayerAction"));
+
+        String detail = read(repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client/NeoForge1211TerritoryDetailScreen.java"));
+        assertTrue(detail.contains("TerritoryDetailController"));
+        assertTrue(detail.contains("TerritoryDetailLayout"));
+        assertTrue(detail.contains("TerritoryDetailView.render"));
+        assertTrue(detail.contains("UpdateTerritoryPermissionMessage"));
+        assertTrue(detail.contains("UpdateTerritoryRuleMessage"));
+        assertTrue(detail.contains("TransferTerritoryOwnershipMessage"));
+    }
+
+    @Test
     void aboutAndPurchaseShellsConsumeNavigationAndDisableVanillaBlur() throws Exception {
         assertTrue(NeoForge1211AboutScreen.class.getDeclaredMethod("tick") != null);
         assertTrue(NeoForge1211ShopPurchaseScreen.class.getDeclaredMethod("renderBackground",

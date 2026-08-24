@@ -18,7 +18,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import com.mo.economy_system.target.forge1201.client.Forge1201TerritoryManageScreen;
+import com.mo.economy_system.target.forge1201.client.Forge1201TerritoryDetailScreen;
 
 /** Forge 1.20.1 territory page for migrated protocols 17-22. */
 public final class Screen_Territory extends Screen
@@ -193,7 +193,7 @@ public final class Screen_Territory extends Screen
                     .orElse(null);
             if (row != null && row.owned()) {
               Minecraft.getInstance()
-                  .setScreen(new Forge1201TerritoryManageScreen(row.ownedSnapshot(), this));
+                  .setScreen(new Forge1201TerritoryDetailScreen(row.ownedSnapshot(), this));
             }
           } else {
             TerritoryRow row =

@@ -7,7 +7,7 @@ import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.client.TerritoryDataClientApplier;
 import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.core.territory_system.TerritoryNetworkSnapshots;
-import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryManageScreen;
+import com.mo.economy_system.target.neoforge1211.client.NeoForge1211TerritoryDetailScreen;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211HomeScreen;
 import com.mo.economy_system.screen.components.CardRenderer;
 import com.mo.economy_system.screen.components.UiButtonRenderer;
@@ -508,7 +508,7 @@ public class Screen_Territory extends Screen
                     EconomySystem_NetworkManager.sendToServer(new TeleportToTerritoryMessage(territory.getTerritoryID()));
                 } else if ("manage".equals(btnArea.actionType())) {
                     if (this.minecraft != null) {
-                        this.minecraft.setScreen(new NeoForge1211TerritoryManageScreen(
+                        this.minecraft.setScreen(new NeoForge1211TerritoryDetailScreen(
                             TerritoryNetworkSnapshots.owned(territory), this));
                     }
                 }

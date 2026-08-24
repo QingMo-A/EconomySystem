@@ -44,6 +44,26 @@ class Forge1201UiBridgeTest {
   }
 
   @Test
+  void nestedTerritoryPagesUseCommonModelsAndExistingWireMessages() throws Exception {
+    String manage = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client/Forge1201TerritoryManageScreen.java"));
+    assertTrue(manage.contains("Forge1201BuffManageScreen"));
+    assertTrue(manage.contains("Forge1201TerritoryInviteScreen"));
+    assertTrue(manage.contains("Forge1201TerritoryConfirmationScreen"));
+    assertTrue(manage.contains("Forge1201TerritoryDetailScreen"));
+    assertFalse(manage.contains("Screen_TerritoryPlayerAction"));
+
+    String detail = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client/Forge1201TerritoryDetailScreen.java"));
+    assertTrue(detail.contains("TerritoryDetailController"));
+    assertTrue(detail.contains("TerritoryDetailLayout"));
+    assertTrue(detail.contains("TerritoryDetailView.render"));
+    assertTrue(detail.contains("UpdateTerritoryPermissionMessage"));
+    assertTrue(detail.contains("UpdateTerritoryRuleMessage"));
+    assertTrue(detail.contains("TransferTerritoryOwnershipMessage"));
+  }
+
+  @Test
   void aboutAndPurchaseShellsConsumeNavigationAndDisableVanillaBlur() throws Exception {
     assertTrue(Forge1201AboutScreen.class.getDeclaredMethod("tick") != null);
     assertTrue(Forge1201ShopPurchaseScreen.class.getDeclaredMethod("renderBackground",

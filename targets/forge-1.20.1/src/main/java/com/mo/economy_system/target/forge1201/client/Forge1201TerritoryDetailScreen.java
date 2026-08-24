@@ -16,6 +16,7 @@ import com.mo.economy_system.target.forge1201.network.Forge1201SingleTerritoryCl
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import com.mo.economy_system.ui.geometry.UiScale;
+import com.mo.economy_system.ui.territory.confirm.TerritoryConfirmationKind;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailAction;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailController;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailEvent;
@@ -23,14 +24,14 @@ import com.mo.economy_system.ui.territory.detail.TerritoryDetailLayout;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailPort;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailView;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Forge 1.20.1 shell for the common territory detail family. */
+/** Forge 1.20.1 shell for the unified common territory management center. */
 public final class Forge1201TerritoryDetailScreen extends Screen {
   private static final AtomicLong IDS = new AtomicLong(1);
 
@@ -66,18 +67,19 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     search.setHint(Component.translatable("screen.territory.detail.search"));
     search.setValue(value);
     search.setResponder(text -> controller.handle(new TerritoryDetailEvent.FilterChanged(text)));
-    search.visible = controller.state().view() != com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN;
+    search.visible = controller.state().searchVisible();
     addRenderableWidget(search);
     if (controller.state().screenState() == ScreenState.IDLE) {
       controller.handle(new TerritoryDetailEvent.Initialize(System.nanoTime()));
+    } else if (controller.state().screenState() != ScreenState.LOADING) {
+      controller.handle(new TerritoryDetailEvent.Retry(System.nanoTime()));
     }
   }
 
   @Override public void tick() {
     super.tick();
     controller.handle(new TerritoryDetailEvent.Tick(System.nanoTime()));
-    Forge1201SingleTerritoryClientState.Snapshot snapshot =
-        Forge1201SingleTerritoryClientState.snapshot();
+    Forge1201SingleTerritoryClientState.Snapshot snapshot = Forge1201SingleTerritoryClientState.snapshot();
     if (snapshot.requestId() == port.requestId && snapshot.requestId() != appliedTerritoryResponse) {
       appliedTerritoryResponse = snapshot.requestId();
       if (snapshot.kind() == SingleTerritoryDataResponseKind.DATA && snapshot.territory() != null) {
@@ -92,8 +94,7 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
       appliedPlayerRevision = players.revision();
       controller.handle(new TerritoryDetailEvent.PlayersLoaded(players.revision(), players.players()));
     }
-    if (search != null) search.visible = controller.state().view()
-        != com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN;
+    if (search != null) search.visible = controller.state().searchVisible();
     controller.pollNavigation().ifPresent(this::navigate);
   }
 
@@ -101,9 +102,17 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     if (minecraft == null) return;
     if (navigation instanceof UiNavigation.Back) {
       minecraft.setScreen(parent);
-    } else if (navigation instanceof UiNavigation.Target target
-        && target.targetId().equals("territory-buffs")) {
-      minecraft.setScreen(new Forge1201BuffManageScreen(controller.state().territory(), this));
+    } else if (navigation instanceof UiNavigation.Target target) {
+      Owned territory = controller.state().territory();
+      if (target.targetId().equals("territory-buffs")) {
+        minecraft.setScreen(new Forge1201BuffManageScreen(territory, this));
+      } else if (target.targetId().equals("territory-invite")) {
+        minecraft.setScreen(new Forge1201TerritoryInviteScreen(territory, this));
+      } else if (target.targetId().equals("territory-delete")) {
+        minecraft.setScreen(new Forge1201TerritoryConfirmationScreen(
+            TerritoryConfirmationKind.REMOVE_TERRITORY,
+            territory.summary().territoryId(), territory.summary().name(), null, "", this));
+      }
     }
   }
 
@@ -112,8 +121,7 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     UiScale scale = layout.scale();
     Forge1201UiRenderer renderer = new Forge1201UiRenderer(graphics, font);
     renderer.fillPhysicalBackground(width, height, TerritoryDetailLayout.BACKGROUND_COLOR);
-    if (search != null) search.visible = controller.state().view()
-        != com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN;
+    if (search != null) search.visible = controller.state().searchVisible();
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
     TerritoryDetailView.render(renderer, controller.state(), layout,
@@ -126,36 +134,55 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     TerritoryDetailLayout.Layout layout = commonLayout();
     int x = layout.scale().toVirtualX(mouseX);
     int y = layout.scale().toVirtualY(mouseY);
-    if (controller.state().view() == com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN) {
-      for (var action : layout.mainActions()) if (action.rect().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.ActionClicked(action.action(), null));
-        return true;
+
+    for (var nav : layout.navigationButtons()) if (nav.rect().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.ActionClicked(nav.action(), null, System.nanoTime()));
+      return true;
+    }
+    for (var action : layout.quickActions()) if (action.rect().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.ActionClicked(action.action(), null, System.nanoTime()));
+      return true;
+    }
+    for (var setting : layout.settingsActions()) if (setting.button().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.ActionClicked(setting.action(), null, System.nanoTime()));
+      return true;
+    }
+    if (controller.state().view() == TerritoryDetailViewKind.ACCESS
+        && layout.inviteButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.ActionClicked(TerritoryDetailAction.INVITE, null,
+          System.nanoTime()));
+      return true;
+    }
+    for (var row : layout.accessCards()) if (row.actionButton().contains(x, y)) {
+      if (minecraft != null) {
+        var territory = controller.state().territory();
+        minecraft.setScreen(new Forge1201TerritoryConfirmationScreen(
+            TerritoryConfirmationKind.REMOVE_MEMBER,
+            territory.summary().territoryId(), territory.summary().name(),
+            row.row().playerId(), row.row().playerName(), this));
       }
-    } else {
-      for (var row : layout.accessCards()) if (row.actionButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.ActionClicked(TerritoryDetailAction.TOGGLE_ACCESS,
-            row.row().playerId(), System.nanoTime()));
-        return true;
-      }
-      for (var row : layout.ruleCards()) if (row.actionButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.RuleClicked(row.row().action(), System.nanoTime()));
-        return true;
-      }
-      for (var row : layout.transferCards()) if (row.actionButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.ActionClicked(TerritoryDetailAction.TRANSFER_OWNERSHIP,
-            row.player().playerId()));
-        return true;
-      }
-      if (controller.state().screenState() == ScreenState.ERROR && layout.retryButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.Retry(System.nanoTime()));
-        return true;
-      }
-      if (layout.previousButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.Scroll(-1)); return true;
-      }
-      if (layout.nextButton().contains(x, y)) {
-        controller.handle(new TerritoryDetailEvent.Scroll(1)); return true;
-      }
+      return true;
+    }
+    for (var row : layout.ruleCards()) if (row.actionButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.RuleClicked(row.row().action(), System.nanoTime()));
+      return true;
+    }
+    for (var row : layout.transferCards()) if (row.actionButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.ActionClicked(TerritoryDetailAction.TRANSFER_OWNERSHIP,
+          row.player().playerId(), System.nanoTime()));
+      return true;
+    }
+    if (controller.state().screenState() == ScreenState.ERROR && layout.retryButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.Retry(System.nanoTime()));
+      return true;
+    }
+    if (controller.state().searchVisible() && controller.state().totalPages() > 1
+        && layout.previousButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.Scroll(-1)); return true;
+    }
+    if (controller.state().searchVisible() && controller.state().totalPages() > 1
+        && layout.nextButton().contains(x, y)) {
+      controller.handle(new TerritoryDetailEvent.Scroll(1)); return true;
     }
     if (layout.backButton().contains(x, y)) {
       controller.handle(new TerritoryDetailEvent.ActionClicked(TerritoryDetailAction.BACK, null));
@@ -165,9 +192,7 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
   }
 
   @Override public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-    if (delta != 0 && controller.state().view()
-        != com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind.MAIN
-        && controller.state().totalPages() > 1) {
+    if (delta != 0 && controller.state().searchVisible() && controller.state().totalPages() > 1) {
       controller.handle(new TerritoryDetailEvent.Scroll(delta < 0 ? 1 : -1));
       return true;
     }
@@ -216,6 +241,15 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     @Override public void resize(UUID territoryId) {
       EconomyServices.platform().network().sendToServer(new ModifyTerritoryModeMessage(territoryId));
       if (minecraft != null) minecraft.setScreen(null);
+    }
+
+    @Override public void copyTerritoryId(UUID territoryId) {
+      if (minecraft == null) return;
+      minecraft.keyboardHandler.setClipboard(territoryId.toString());
+      if (minecraft.player != null) {
+        minecraft.player.displayClientMessage(
+            Component.translatable("message.territory_management.copy_success"), false);
+      }
     }
 
     @Override public void submitAccess(UUID territoryId, UUID playerId, boolean allowed) {

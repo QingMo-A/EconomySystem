@@ -188,7 +188,7 @@ public final class NeoForge1211TerritoryListScreen extends Screen {
             new TeleportToTerritoryMessage(row.summary().territoryId()));
       } else if (action == TerritoryListAction.MANAGE && row.owned()) {
         Minecraft current = Minecraft.getInstance();
-        if (current != null) current.setScreen(new NeoForge1211TerritoryManageScreen(
+        if (current != null) current.setScreen(new NeoForge1211TerritoryDetailScreen(
             row.ownedSnapshot().orElseThrow(), NeoForge1211TerritoryListScreen.this));
       }
     }

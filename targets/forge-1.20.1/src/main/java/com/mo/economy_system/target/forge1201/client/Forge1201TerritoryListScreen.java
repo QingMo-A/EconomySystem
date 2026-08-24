@@ -171,7 +171,7 @@ public final class Forge1201TerritoryListScreen extends Screen {
             new TeleportToTerritoryMessage(row.summary().territoryId()));
       } else if (action == TerritoryListAction.MANAGE && row.owned()) {
         Minecraft current = Minecraft.getInstance();
-        if (current != null) current.setScreen(new Forge1201TerritoryManageScreen(
+        if (current != null) current.setScreen(new Forge1201TerritoryDetailScreen(
             row.ownedSnapshot().orElseThrow(), Forge1201TerritoryListScreen.this));
       }
     }
