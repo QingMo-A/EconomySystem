@@ -6,13 +6,16 @@ import java.util.Objects;
 import java.util.UUID;
 
 public sealed interface DeliveryEvent
-    permits DeliveryEvent.Initialize, DeliveryEvent.Retry, DeliveryEvent.DataLoaded,
+    permits DeliveryEvent.Initialize, DeliveryEvent.Retry, DeliveryEvent.RefreshStarted,
+        DeliveryEvent.RefreshFailed, DeliveryEvent.DataLoaded,
         DeliveryEvent.DataFailed, DeliveryEvent.FilterChanged, DeliveryEvent.CategoryChanged,
         DeliveryEvent.MailSelected, DeliveryEvent.ViewportChanged,
         DeliveryEvent.NextPage, DeliveryEvent.PreviousPage, DeliveryEvent.Scroll,
         DeliveryEvent.ActionClicked, DeliveryEvent.Tick {
   record Initialize(long nowNanos) implements DeliveryEvent {}
   record Retry(long nowNanos) implements DeliveryEvent {}
+  record RefreshStarted(long requestId) implements DeliveryEvent {}
+  record RefreshFailed(long requestId) implements DeliveryEvent {}
   record DataLoaded(long requestId, List<MailSnapshot> mails) implements DeliveryEvent {
     public DataLoaded {
       mails = List.copyOf(Objects.requireNonNull(mails, "mails"));

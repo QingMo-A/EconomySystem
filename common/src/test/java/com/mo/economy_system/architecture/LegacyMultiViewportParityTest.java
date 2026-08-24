@@ -88,7 +88,7 @@ class LegacyMultiViewportParityTest {
       int width = viewport[0], height = viewport[1], virtualWidth = viewport[2], virtualHeight = viewport[3];
       assertScale(ShopLayout.calculate(width, height, shopState()).scale(), virtualWidth, virtualHeight);
       var shop = ShopLayout.calculate(width, height, shopState());
-      assertEquals(12, shop.search().x());
+      assertEquals(24, shop.search().x());
       assertEquals(20, shop.search().y());
       assertEquals(virtualHeight - 35, shop.pageText().y());
 
@@ -99,10 +99,10 @@ class LegacyMultiViewportParityTest {
 
       var market = MarketLayout.calculate(width, height, marketState());
       assertScale(market.scale(), virtualWidth, virtualHeight);
-      assertEquals(12, market.search().x());
+      assertEquals(22, market.search().x());
       assertEquals(20, market.search().y());
-      assertEquals(Math.max(55, virtualHeight - 40), market.previousButton().y());
-      assertEquals(virtualHeight - 35, market.pageText().y());
+      assertEquals(virtualHeight - 48, market.previousButton().y());
+      assertEquals(virtualHeight - 43, market.pageText().y());
 
       var createSales = MarketCreateLayout.calculate(width, height, createState(MarketCreateMode.SALES));
       assertScale(createSales.scale(), virtualWidth, virtualHeight);
@@ -144,9 +144,9 @@ class LegacyMultiViewportParityTest {
       assertEquals(virtualHeight - 12 - 19, list.title().y());
       var detail = TerritoryDetailLayout.calculate(width, height, territoryDetailState());
       assertScale(detail.scale(), virtualWidth, virtualHeight);
-      assertEquals(18, detail.title().y());
-      assertEquals(45, detail.search().y());
-      assertEquals(76, detail.rows().y());
+      assertEquals(14, detail.title().y());
+      assertEquals(56, detail.search().y());
+      assertEquals(58, detail.rows().y());
       var invite = TerritoryInviteLayout.calculate(width, height, inviteState());
       assertScale(invite.scale(), virtualWidth, virtualHeight);
       assertEquals(12, invite.title().y());

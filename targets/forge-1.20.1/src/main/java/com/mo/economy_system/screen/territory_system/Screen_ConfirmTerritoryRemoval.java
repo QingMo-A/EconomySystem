@@ -69,7 +69,7 @@ public final class Screen_ConfirmTerritoryRemoval extends Screen {
         Component.translatable("screen.territory_remove.no_refund"),
         width / 2,
         height / 2 + 5,
-        0xffaa55);
+        0xff5555);
     super.render(g, x, y, tick);
   }
 

@@ -44,6 +44,73 @@ public final class EconomyUiTheme {
     public static final int HOVER_ANIMATION_MILLIS = 120;
     public static final int PAGE_ANIMATION_MILLIS = 180;
 
+    /** UI 2.0 spacing scale. New layouts should prefer these tokens over ad-hoc pixel offsets. */
+    public static final class Spacing {
+        public static final int MICRO = 4;
+        public static final int SMALL = 8;
+        public static final int COMPACT = 12;
+        public static final int MEDIUM = 16;
+        public static final int SECTION = 24;
+        public static final int PAGE = 32;
+
+        private Spacing() {
+        }
+    }
+
+    /** Semantic text hierarchy shared by all screens. */
+    public static final class Text {
+        public static final int PRIMARY = TEXT_PRIMARY;
+        public static final int SECONDARY = 0xB8FFFFFF;
+        public static final int MUTED = 0x80FFFFFF;
+        public static final int DISABLED = 0x607A8492;
+        public static final int ERROR = TEXT_ERROR;
+        public static final int SUCCESS = TEXT_SUCCESS;
+
+        private Text() {
+        }
+    }
+
+    /** Quiet surfaces used by UI 2.0 panels and sections. */
+    public static final class Surface {
+        public static final int PANEL = 0x66121824;
+        public static final int PANEL_HOVER = 0x72161E2A;
+        public static final int SECTION = 0x481A1A2A;
+        public static final int SECTION_HOVER = 0x601F2937;
+        public static final int ITEM_SLOT = 0x501A1A2A;
+        public static final int ITEM_SLOT_HOVER = 0x701F2937;
+        public static final int ITEM_SLOT_DISABLED = 0x30121824;
+        public static final int HAIRLINE = 0x504A5568;
+        public static final int HAIRLINE_HOVER = 0x806A7588;
+        public static final int CLAIMED_MASK = 0x66000000;
+
+        private Surface() {
+        }
+    }
+
+    /** Stable semantic state colors. Page accents should not be repurposed for unrelated states. */
+    public static final class State {
+        public static final int SUCCESS = DELIVERY_ACCENT;
+        public static final int INFO = MARKET_ACCENT;
+        /** Warnings are intentionally red across the UI so caution states are never confused with page accents. */
+        public static final int WARNING = TEXT_ERROR;
+        public static final int DANGER = 0xFFE05D5D;
+        public static final int NEUTRAL = ABOUT_ACCENT;
+
+        private State() {
+        }
+    }
+
+    /** Motion timings; renderers remain free to disable animation without changing semantics. */
+    public static final class Motion {
+        public static final int HOVER_MILLIS = HOVER_ANIMATION_MILLIS;
+        public static final int SELECTION_MILLIS = 150;
+        public static final int PANEL_ENTER_MILLIS = PAGE_ANIMATION_MILLIS;
+        public static final int VALUE_CHANGE_MILLIS = 120;
+
+        private Motion() {
+        }
+    }
+
     public static final UiCardStyle TERRITORY_CARD = new UiCardStyle(
             CARD_BACKGROUND, CARD_BACKGROUND_HOVER, CARD_BORDER, CARD_BORDER_HOVER,
             TERRITORY_ACCENT, 3, 0xCC, 0xFF);
@@ -84,9 +151,16 @@ public final class EconomyUiTheme {
             0xFF4A8ACF, 3, 0xFF, 0xFF);
     public static final UiButtonStyle TERRITORY_BUTTON = actionButton(TERRITORY_ACCENT);
     public static final UiButtonStyle TERRITORY_PRIMARY_BUTTON = TERRITORY_BUTTON;
-    public static final UiButtonStyle TERRITORY_WARN_BUTTON = actionButton(0xFFE2A93B);
+    /** Warm accent used by the buffs entry; it is not a warning semantic. */
+    public static final UiButtonStyle TERRITORY_BUFF_BUTTON = actionButton(0xFFE2A93B);
+    public static final UiButtonStyle TERRITORY_WARN_BUTTON = actionButton(TEXT_ERROR);
     public static final UiButtonStyle TERRITORY_NEUTRAL_BUTTON = actionButton(0xFF4A8ACF);
     public static final UiButtonStyle TERRITORY_DANGER_BUTTON = actionButton(0xFFE05D5D);
+    /** Explicit territory rule-level controls; red is intentionally not used for normal permission choices. */
+    public static final UiButtonStyle TERRITORY_RULE_UNSELECTED_BUTTON = outlineButton(DISABLED_ACCENT, 4);
+    public static final UiButtonStyle TERRITORY_RULE_OWNER_BUTTON = actionButton(DISABLED_ACCENT, 4);
+    public static final UiButtonStyle TERRITORY_RULE_MEMBER_BUTTON = actionButton(TERRITORY_ACCENT, 4);
+    public static final UiButtonStyle TERRITORY_RULE_EVERYONE_BUTTON = actionButton(DELIVERY_ACCENT, 4);
     public static final UiButtonStyle HOME_NAV_SHOP_STYLE = homeNavButton(HOME_NAV_SHOP_ACCENT);
     public static final UiButtonStyle HOME_NAV_MARKET_STYLE = homeNavButton(HOME_NAV_MARKET_ACCENT);
     public static final UiButtonStyle HOME_NAV_DELIVERY_STYLE = homeNavButton(HOME_NAV_DELIVERY_ACCENT);
@@ -100,6 +174,11 @@ public final class EconomyUiTheme {
     public static final UiButtonStyle HOME_ABOUT_BUTTON = HOME_NAV_ABOUT_STYLE;
     public static final UiButtonStyle SHOP_BUTTON = actionButton(SHOP_ACCENT, 8);
     public static final UiButtonStyle MARKET_BUTTON = compactActionButton(MARKET_ACCENT, 8);
+    /** UI 2.0 form controls: quiet dark surface with an accent outline, no legacy side stripe. */
+    public static final UiButtonStyle SHOP_FORM_BUTTON = outlineButton(SHOP_ACCENT, 8);
+    public static final UiButtonStyle MARKET_FORM_BUTTON = outlineButton(MARKET_ACCENT, 8);
+    public static final UiButtonStyle DELIVERY_FORM_BUTTON = outlineButton(DELIVERY_ACCENT, 8);
+    public static final UiButtonStyle NEUTRAL_FORM_BUTTON = outlineButton(DISABLED_ACCENT, 8);
     public static final UiButtonStyle MARKET_TOP_SALES_BUTTON = topButton(DELIVERY_ACCENT);
     public static final UiButtonStyle MARKET_TOP_DEMAND_BUTTON = topButton(SHOP_ACCENT);
     public static final UiButtonStyle MARKET_ACTION_BUY = compactActionButton(MARKET_ACCENT, 6);
@@ -153,6 +232,13 @@ public final class EconomyUiTheme {
     /** Territory list/detail/buff/invite paging uses the legacy purple action chrome. */
     public static final UiButtonStyle TERRITORY_PAGE_BUTTON = pageButton(TERRITORY_ACCENT);
     public static final UiButtonStyle TERRITORY_PAGE_BUTTON_DISABLED = disabledPageButton();
+
+    private static UiButtonStyle outlineButton(int accent, int padding) {
+        return new UiButtonStyle(accent & 0x00FFFFFF, TEXT_PRIMARY, 0x0A0F16,
+                0x58, 0x74, 0, 0, 0, 1, 0, 0,
+                0x66, 0xE0, padding, false,
+                com.mo.economy_system.ui.renderer.UiTextAlignment.CENTER);
+    }
 
     private static UiButtonStyle actionButton(int accent) {
         return actionButton(accent, 8);

@@ -65,8 +65,27 @@ class ShopControllerTest {
     controller.handle(new ShopEvent.Retry(300));
     controller.handle(new ShopEvent.DataLoaded(2, List.of()));
     assertEquals(ScreenState.EMPTY, controller.state().screenState());
+    // A later cache revision is a live catalog refresh, not a duplicate initialization response.
     controller.handle(new ShopEvent.DataLoaded(2, ShopTestFixtures.items(1)));
-    assertEquals(ScreenState.EMPTY, controller.state().screenState());
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(1, controller.state().rows().size());
+  }
+
+  @Test
+  void liveCatalogRefreshPreservesFilterAndCurrentPageWhenStillValid() {
+    FakePort port = new FakePort();
+    ShopController controller = new ShopController(port);
+    controller.handle(new ShopEvent.Initialize(10));
+    controller.handle(new ShopEvent.DataLoaded(0, ShopTestFixtures.items(20)));
+    controller.handle(new ShopEvent.ViewportChanged(5));
+    controller.handle(new ShopEvent.NextPage());
+    assertEquals(1, controller.state().page());
+
+    controller.handle(new ShopEvent.DataLoaded(0, ShopTestFixtures.items(20)));
+
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(1, controller.state().page());
+    assertEquals("", controller.state().filter());
   }
 
   @Test

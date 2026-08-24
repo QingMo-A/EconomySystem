@@ -45,7 +45,8 @@ public final class MailboxLedger {
       throw new IllegalArgumentException("announcement must use global storage");
     }
     List<MailRecord> values = personal.computeIfAbsent(ownerId, ignored -> new ArrayList<>());
-    if (values.size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
+    if (!MailboxCapacityPolicy.canAddPersonal(record.type(), values.size())) {
+      if (values.isEmpty()) personal.remove(ownerId);
       throw new IllegalStateException("mailbox is full");
     }
     if (findPersonal(ownerId, record.mailId()) != null) {
@@ -59,6 +60,38 @@ public final class MailboxLedger {
       if (values.isEmpty()) personal.remove(ownerId);
       throw failure;
     }
+  }
+
+  /**
+   * Removes one personal mail only when its current persisted value still equals the expected
+   * record. This is intentionally stricter than normal delete and is used by cross-ledger
+   * transaction rollback so a rollback can never erase a mail that was concurrently read, claimed
+   * or otherwise changed.
+   */
+  public synchronized boolean removePersonalIfUnchanged(
+      UUID ownerId, MailRecord expected, DirtyMarker dirty) {
+    Objects.requireNonNull(ownerId, "ownerId");
+    Objects.requireNonNull(expected, "expected");
+    Objects.requireNonNull(dirty, "dirty");
+    List<MailRecord> values = personal.get(ownerId);
+    if (values == null) return false;
+    for (int index = 0; index < values.size(); index++) {
+      MailRecord current = values.get(index);
+      if (!current.mailId().equals(expected.mailId())) continue;
+      if (!current.equals(expected)) return false;
+      values.remove(index);
+      boolean removedOwner = values.isEmpty();
+      if (removedOwner) personal.remove(ownerId);
+      try {
+        dirty.markDirty();
+        return true;
+      } catch (RuntimeException failure) {
+        List<MailRecord> restored = personal.computeIfAbsent(ownerId, ignored -> new ArrayList<>());
+        restored.add(Math.min(index, restored.size()), current);
+        throw failure;
+      }
+    }
+    return false;
   }
 
   public synchronized void addAnnouncement(MailRecord record, DirtyMarker dirty) {

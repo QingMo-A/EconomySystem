@@ -295,7 +295,7 @@ class MultiversionArchitectureGateTest {
             Pattern.compile("\\b0x[0-9A-Fa-f]{6,8}\\b").matcher(source).find(),
             file + " must not own theme color literals");
       }
-      assertEquals(19, screenClassCount, relative + " active Screen inventory changed");
+      assertEquals(20, screenClassCount, relative + " active Screen inventory changed");
     }
   }
 

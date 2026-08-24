@@ -31,7 +31,7 @@ public final class MarketConfirmView {
     renderer.translatedTextWithSuffix(ownerKey, List.of(), ": " + state.row().order().ownerName(),
         new UiRect(layout.details().x(), layout.details().y() + 32, layout.details().width(), 16),
         EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.CENTER);
-    renderer.translatedTextInRect(state.row().order().type() == MarketOrderType.SALES ? "screen.market.confirm.sales_warning" : "screen.market.confirm.demand_warning", List.of(), new UiRect(layout.card().x() + 18, layout.card().y() + 128, layout.card().width() - 36, 20), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.CENTER);
+    renderer.translatedTextInRect(state.row().order().type() == MarketOrderType.SALES ? "screen.market.confirm.sales_warning" : "screen.market.confirm.demand_warning", List.of(), new UiRect(layout.card().x() + 18, layout.card().y() + 128, layout.card().width() - 36, 20), EconomyUiTheme.TEXT_ERROR, UiTextAlignment.CENTER);
     renderer.translatedButton(layout.confirm(), EconomyUiTheme.MARKET_BUTTON, "screen.market.confirm.confirm", List.of(), layout.confirm().contains(mouseX, mouseY), state.can(MarketConfirmAction.CONFIRM));
     renderer.translatedButton(layout.cancel(), EconomyUiTheme.DISABLED_BUTTON, "screen.market.confirm.cancel", List.of(), layout.cancel().contains(mouseX, mouseY), state.can(MarketConfirmAction.CANCEL));
   }

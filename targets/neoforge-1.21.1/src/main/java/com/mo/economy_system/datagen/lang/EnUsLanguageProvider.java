@@ -155,11 +155,14 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.shop.purchase.title", "Confirm purchase");
     add("screen.shop.purchase.quantity", "Quantity");
     add("screen.shop.purchase.unit_price", "Unit price: %s");
+    add("screen.shop.purchase.balance", "Balance: %s");
+    add("screen.shop.purchase.capacity", "Inventory room: %s");
     add("screen.shop.purchase.total", "Total: %s");
     add("screen.shop.purchase.confirm", "Buy");
     add("screen.shop.purchase.back", "Back");
     add("screen.shop.purchase.invalid_quantity", "Enter a positive quantity");
     add("screen.shop.purchase.inventory_full", "Your inventory does not have enough space");
+    add("screen.shop.purchase.insufficient_balance", "Not enough DreamingFish Coins");
     add("screen.shop.purchase.price_overflow", "Purchase total is too large");
     add(Util_MessageKeys.SHOP_HINT_TEXT_KEY, "Shop Hint");
     add(Util_MessageKeys.SHOP_ITEM_PRICE_KEY, "Shop Item Price: %s");
@@ -215,6 +218,35 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.market.filter.mine", "Mine");
     add("screen.market.filter.sales", "Sales");
     add("screen.market.filter.demand", "Demand");
+    add("screen.market.sort.default", "Default");
+    add("screen.market.sort.unit_asc", "Unit ↑");
+    add("screen.market.sort.unit_desc", "Unit ↓");
+    add("screen.market.sort.newest", "Newest");
+    add("screen.market.sort.expiring", "Expiring");
+    add("screen.market.card.unit_price", "Unit %s");
+    add("screen.market.card.summary", "×%s · Total %s");
+    add("screen.market.admin_remove", "Admin remove");
+    add("screen.market.detail.title", "Order details");
+    add("screen.market.detail.remaining", "Remaining: %s");
+    add("screen.market.detail.unit_price", "Unit price: %s");
+    add("screen.market.detail.order_total", "Remaining total: %s");
+    add("screen.market.detail.seller", "Seller: %s");
+    add("screen.market.detail.requester", "Requester: %s");
+    add("screen.market.detail.buy_facts", "Balance %s · Room %s");
+    add("screen.market.detail.deliver_facts", "Owned %s · Receivable %s");
+    add("screen.market.detail.trade_id", "Order: %s");
+    add("screen.market.detail.quantity", "Trade quantity");
+    add("screen.market.detail.all", "All");
+    add("screen.market.detail.trade_total", "Trade total: %s");
+    add("screen.market.detail.expected_income", "Expected income: %s");
+    add("screen.market.detail.invalid_quantity", "Enter a valid quantity");
+    add("screen.market.detail.whole_order_only", "Legacy order: whole-order trade only");
+    add("screen.market.detail.order_invalidated", "This order is no longer available");
+    add("screen.market.detail.price_overflow", "Trade amount is too large");
+    add("screen.market.detail.insufficient_balance", "Not enough DreamingFish Coins");
+    add("screen.market.detail.inventory_full", "Not enough inventory space");
+    add("screen.market.detail.insufficient_items", "Not enough matching items");
+    add("screen.market.detail.balance_limit", "Balance limit prevents receiving this payment");
     add("screen.market.empty", "No market orders found");
     add("screen.market.sync_failed", "Market data could not be loaded");
     add("screen.market.sync_timeout", "Market data request timed out");
@@ -225,14 +257,16 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.market.create.selected", "Listing settings");
     add("screen.market.create.item_id", "Item ID");
     add("screen.market.create.quantity", "Quantity");
-    add("screen.market.create.price", "Total price");
+    add("screen.market.create.price", "Unit price");
+    add("screen.market.create.total_preview", "Total: %s");
     add("screen.market.create.all", "All");
     add("screen.market.create.submit", "Publish order");
     add("screen.market.create.back", "Back");
     add("screen.market.create.no_item", "Choose an item to list");
     add("screen.market.create.unknown_item", "Unknown item ID");
     add("screen.market.create.invalid_quantity", "Quantity is not valid for this item");
-    add("screen.market.create.invalid_price", "Enter a positive total price");
+    add("screen.market.create.invalid_price", "Enter a positive integer unit price");
+    add("screen.market.create.price_overflow", "Order total is too large");
     add("screen.market.confirm.title", "Confirm market action");
     add("screen.market.confirm.buy_title", "Confirm purchase");
     add("screen.market.confirm.remove_sales_title", "Confirm order removal");
@@ -351,6 +385,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.delivery_box.esc", "Press ESC to return");
     add("screen.delivery_box.loading", "Loading mailbox...");
     add("screen.delivery_box.empty", "Mailbox is empty");
+    add("screen.delivery_box.empty_hint", "Player mail, system notices, and market returns will appear here");
     add("screen.delivery_box.sync_failed", "Mailbox could not be loaded");
     add("screen.delivery_box.sync_timeout", "Mailbox request timed out");
     add("screen.delivery_box.retry", "Retry");
@@ -361,17 +396,20 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.mailbox.category.player", "Players");
     add("screen.mailbox.category.announcement", "Announcements");
     add("screen.mailbox.category_empty", "No mail in this category");
+    add("screen.mailbox.category_empty_hint", "Switch categories or wait for new mail to arrive");
     add("screen.mailbox.sender.market", "From: Market System");
     add("screen.mailbox.sender.system", "From: System");
     add("screen.mailbox.sender.player", "From: Player");
     add("screen.mailbox.sender.compensation", "From: System Compensation");
     add("screen.mailbox.sender.announcement", "From: System Announcement");
     add("screen.mailbox.subject.market_return", "Market order return");
+    add("screen.mailbox.subject.market_demand_fulfilled", "Demand order fulfilled");
     add("screen.mailbox.subject.system_delivery", "System item mail");
     add("screen.mailbox.subject.player_delivery", "Player item mail");
     add("screen.mailbox.subject.compensation", "System compensation");
     add("screen.mailbox.subject.announcement", "System announcement");
     add("screen.mailbox.body.market_return", "Your market order has ended. Unhandled items were returned as an attachment.");
+    add("screen.mailbox.body.market_demand_fulfilled", "The fulfilled demand items were delivered as mail attachments.");
     add("screen.mailbox.body.system_delivery", "The system sent you an item attachment.");
     add("screen.mailbox.body.player_delivery", "Another player sent you an item attachment.");
     add("screen.mailbox.body.compensation", "You received system compensation.");
@@ -646,6 +684,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.MARKET_REMOVE_SALES_NOT_OWNER, "You cannot remove this order");
     add(Util_MessageKeys.MARKET_REMOVE_SALES_OWNER_OFFLINE, "The original owner must be online");
     add(Util_MessageKeys.MARKET_REMOVE_SALES_INVENTORY_FULL, "The owner's main inventory is full");
+    add(Util_MessageKeys.MARKET_REMOVE_SALES_MAILBOX_FULL, "The owner's mailbox attachment storage is full");
+    add(Util_MessageKeys.MARKET_REMOVE_SALES_MAILBOX_FAILED, "Failed to return the item by mail; the order was not removed");
+    add(Util_MessageKeys.MARKET_REMOVE_SALES_MAILBOX_STATE_UNKNOWN, "Mailbox write state is uncertain; refresh and verify before retrying");
     add(Util_MessageKeys.MARKET_REMOVE_SALES_ORDER_CHANGED, "The order changed; please retry");
     add(Util_MessageKeys.MARKET_REMOVE_SALES_PERSIST_FAILED, "Could not persist the market change");
     add(Util_MessageKeys.MARKET_REMOVE_SALES_ITEM_FAILED, "Could not restore the listed item");
@@ -689,6 +730,8 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(
         Util_MessageKeys.MARKET_PURCHASE_INVENTORY_FULL,
         "Your main inventory does not have enough space");
+    add("message.market.purchase.whole_only",
+        "This legacy order cannot be split exactly and must be purchased as a whole");
     add(
         Util_MessageKeys.MARKET_PURCHASE_ORDER_CHANGED,
         "The order changed; please refresh and try again");
@@ -713,6 +756,12 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("message.market.deliver_demand.item_failed", "The requested item could not be restored");
     add("message.market.deliver_demand.insufficient_items", "Not enough matching items");
     add("message.market.deliver_demand.balance_limit", "Your balance cannot receive the full payment");
+    add("message.market.deliver_demand.whole_only",
+        "This legacy demand order cannot be split exactly and must be fulfilled as a whole");
+    add("message.market.deliver_demand.mailbox_full",
+        "The requester's mailbox or attachment storage is full");
+    add("message.market.deliver_demand.mailbox_failed",
+        "Failed to deliver the requested items to mailbox; the trade was rolled back");
     add("message.market.deliver_demand.inventory_failed", "Inventory update failed");
     add("message.market.deliver_demand.payment_failed", "Payment failed");
     add("message.market.deliver_demand.order_changed", "Demand order changed; refresh and try again");

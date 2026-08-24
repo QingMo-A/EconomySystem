@@ -9,5 +9,9 @@ public interface ShopPurchasePort {
    * delivery capacity and must not be included.
    */
   int availableQuantity(ShopRow row);
+
+  /** Latest client-known balance used only for immediate UI preflight; the server re-validates. */
+  default int currentBalance() { return Integer.MAX_VALUE; }
+
   void submit(ShopRow row, int quantity);
 }

@@ -316,7 +316,7 @@ public class Screen_MarketConfirmDialog extends Screen {
         poseStack.pushPose();
         float warnScale = 0.95f;
         poseStack.scale(warnScale, warnScale, 1.0f);
-        String warnText = "§7" + getWarningText();
+        String warnText = "§c" + getWarningText();
         int warnX = (int) ((centerX) / warnScale - mc.font.width(warnText) / 2.0f);
         int warnY = (int) ((panelY + Y_WARNING) / warnScale);
         guiGraphics.drawString(mc.font, warnText, warnX, warnY, 0xFFFFFFFF, false);

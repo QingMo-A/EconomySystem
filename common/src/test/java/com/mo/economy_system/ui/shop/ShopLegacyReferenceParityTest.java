@@ -23,17 +23,16 @@ class ShopLegacyReferenceParityTest {
         0, 15, "", ScreenState.READY, null, -1, Set.of(ShopAction.values()));
     ShopLayout.Layout layout = ShopLayout.calculate(640, 360, state);
 
-    assertEquals(5, layout.columns());
+    assertEquals(4, layout.columns());
     assertEquals(3, layout.rows());
-    assertEquals(15, layout.pageSize());
-    assertEquals(54, layout.cards().get(0).card().x());
-    assertEquals(162, layout.cards().get(1).card().x());
-    assertEquals(270, layout.cards().get(2).card().x());
-    assertEquals(378, layout.cards().get(3).card().x());
-    assertEquals(486, layout.cards().get(4).card().x());
+    assertEquals(12, layout.pageSize());
+    assertEquals(28, layout.cards().get(0).card().x());
+    assertEquals(136, layout.cards().get(1).card().x());
+    assertEquals(244, layout.cards().get(2).card().x());
+    assertEquals(352, layout.cards().get(3).card().x());
     assertEquals(55, layout.cards().get(0).card().y());
-    assertEquals(143, layout.cards().get(5).card().y());
-    assertEquals(231, layout.cards().get(10).card().y());
+    assertEquals(143, layout.cards().get(4).card().y());
+    assertEquals(231, layout.cards().get(8).card().y());
     assertEquals(26, layout.cards().get(0).itemIcon().y() - layout.cards().get(0).card().y());
     assertTrue(layout.cards().get(0).card().contains(layout.cards().get(0).itemIcon()));
   }

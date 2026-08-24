@@ -142,8 +142,8 @@ public class Screen_CreateDemandOrder extends Screen {
         addRenderableWidget(countInput);
 
         priceInput = new EditBox(this.font, scaleX(priceX), scaleY(priceY), scaleX(priceWidth), scaleY(INPUT_HEIGHT),
-                Component.translatable(Util_MessageKeys.REQUEST_PRICE_HINT_TEXT_KEY));
-        priceInput.setHint(Component.translatable(Util_MessageKeys.REQUEST_PRICE_HINT_TEXT_KEY));
+                Component.translatable("screen.market.create.invalid_price"));
+        priceInput.setHint(Component.translatable("screen.market.create.invalid_price"));
         priceInput.setMaxLength(9);
         addRenderableWidget(priceInput);
 
@@ -242,7 +242,7 @@ public class Screen_CreateDemandOrder extends Screen {
 
         drawLabel(guiGraphics, Util_MessageKeys.REQUEST_ITEM_ID_TEXT_KEY, panelX + PANEL_PADDING, itemIdY + 6);
         drawLabel(guiGraphics, Util_MessageKeys.REQUEST_ITEM_COUNT_TEXT_KEY, panelX + PANEL_PADDING, countY + 6);
-        drawLabel(guiGraphics, Util_MessageKeys.REQUEST_PRICE_TEXT_KEY, panelX + PANEL_PADDING, priceY + 6);
+        drawLabel(guiGraphics, "screen.market.create.price", panelX + PANEL_PADDING, priceY + 6);
 
         Validation validation = validateInputs();
         if (validation.message() != null) {
@@ -350,7 +350,7 @@ public class Screen_CreateDemandOrder extends Screen {
         }
 
         OptionalInt price = parsePositiveInt(priceInput == null ? "" : priceInput.getValue());
-        if (price.isEmpty()) {
+        if (price.isEmpty() || (long) price.getAsInt() * count.getAsInt() > Integer.MAX_VALUE) {
             return Validation.invalid(Component.translatable(Util_MessageKeys.REQUEST_INVALID_PRICE_KEY));
         }
 

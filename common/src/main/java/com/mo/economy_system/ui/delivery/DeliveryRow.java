@@ -38,10 +38,16 @@ public record DeliveryRow(MailSnapshot mail, String displayName) {
   }
 
   public String subjectKey() {
+    if (mail.type() == MailType.MARKET && "market.demand.fulfilled".equals(mail.source())) {
+      return "screen.mailbox.subject.market_demand_fulfilled";
+    }
     return MailboxDisplayKeys.subjectKey(mail.type());
   }
 
   public String bodyKey() {
+    if (mail.type() == MailType.MARKET && "market.demand.fulfilled".equals(mail.source())) {
+      return "screen.mailbox.body.market_demand_fulfilled";
+    }
     return switch (mail.type()) {
       case MARKET -> "screen.mailbox.body.market_return";
       case PLAYER -> "screen.mailbox.body.player_delivery";

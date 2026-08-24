@@ -34,10 +34,13 @@ class ShopLayoutTest {
       assertNoOverlap(layout.cards().stream().map(ShopLayout.Card::card).toList());
     }
 
-    ShopLayout.Layout baseline = ShopLayout.calculate(640, 360, state(40, 15));
-    assertEquals(5, baseline.columns());
+    ShopLayout.Layout baseline = ShopLayout.calculate(640, 360, state(40, 12));
+    assertEquals(4, baseline.columns());
     assertEquals(3, baseline.rows());
-    assertEquals(15, baseline.pageSize());
+    assertEquals(12, baseline.pageSize());
+    assertEquals(baseline.catalogArea().width(), baseline.purchasePanel().width() * 3);
+    assertTrue(baseline.catalogArea().right() < baseline.purchasePanel().x());
+    assertTrue(baseline.purchasePanel().width() >= 120);
   }
 
   private static ShopState state(int count, int pageSize) {

@@ -27,7 +27,10 @@ public final class DemandOrderDeliveryOutcome {
   }
 
   public static DemandOrderDeliveryOutcome success(MarketOrder o) {
-    requireDemand(o, true);
+    // New demand settlement is delivered directly into mailbox attachments, so the fulfilled
+    // slice itself is not persisted as delivered=true. Legacy persisted delivered orders are
+    // still handled by ConfirmDemandOrderService.
+    requireDemand(o, false);
     return new DemandOrderDeliveryOutcome(
         DemandOrderDeliveryResult.SUCCESS,
         Optional.of(Objects.requireNonNull(o)),

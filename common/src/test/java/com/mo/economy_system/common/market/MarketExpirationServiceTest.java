@@ -31,6 +31,30 @@ class MarketExpirationServiceTest {
   }
 
   @Test
+  void partiallyFilledDemandExpirationRefundsOnlyRemainingEscrow() {
+    MarketOrder order = new MarketOrder(
+        MarketOrderType.DEMAND,
+        UUID.randomUUID(),
+        item(),
+        54,
+        1_080,
+        "owner",
+        UUID.randomUUID(),
+        10L,
+        40L,
+        false);
+    MarketLedger market = ledger(order);
+    Accounts accounts = new Accounts();
+
+    List<MarketExpirationOutcome> outcomes =
+        MarketExpirationService.expire(40L, context(market, accounts, new Delivery(true)));
+
+    assertEquals(MarketExpirationResult.REFUNDED, outcomes.get(0).result());
+    assertEquals(1_080, accounts.credited);
+    assertTrue(market.orders().isEmpty());
+  }
+
+  @Test
   void returnsSalesAndDeliveredDemandToTheDeliveryPort() {
     MarketOrder sales = order(MarketOrderType.SALES, false, 40L);
     MarketOrder deliveredDemand = order(MarketOrderType.DEMAND, true, 40L);

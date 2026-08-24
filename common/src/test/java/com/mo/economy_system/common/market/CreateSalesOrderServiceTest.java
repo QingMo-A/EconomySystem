@@ -9,12 +9,13 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CreateSalesOrderServiceTest {
-    @Test void successSeparatesQuantityAndTotalPriceAndMutatesOnce() {
+    @Test void successDerivesTotalFromUnitPriceAndMutatesOnce() {
         Fixture f = new Fixture(); f.inventory.count = 20;
-        assertEquals(CreateSalesOrderResult.SUCCESS, f.execute(12, 101));
-        assertEquals(8, f.inventory.count); assertEquals(989, f.account.balance); assertEquals(1, f.account.debits);
+        assertEquals(CreateSalesOrderResult.SUCCESS, f.execute(12, 10));
+        assertEquals(8, f.inventory.count); assertEquals(988, f.account.balance); assertEquals(1, f.account.debits);
         assertEquals(1, f.repository.orders.size()); MarketOrder order = f.repository.orders.get(0);
-        assertEquals(1, order.item().count()); assertEquals(12, order.quantity()); assertEquals(101, order.totalPrice());
+        assertEquals(1, order.item().count()); assertEquals(12, order.quantity()); assertEquals(120, order.totalPrice());
+        assertEquals(10, MarketOrderPricing.exactUnitPrice(order).orElseThrow());
     }
 
     @Test void allPreconditionsLeaveEveryStateUnchanged() {
@@ -36,6 +37,13 @@ class CreateSalesOrderServiceTest {
         assertEquals(CreateSalesOrderResult.ORDER_PERSIST_FAILED, nullId.execute(1,1)); assertUnchanged(nullId,20,1000);
         Fixture overflow = new Fixture(); overflow.now = Long.MAX_VALUE;
         assertEquals(CreateSalesOrderResult.ORDER_PERSIST_FAILED, overflow.execute(1,1)); assertUnchanged(overflow,20,1000);
+    }
+
+    @Test void unitPriceOverflowIsRejectedBeforeAnyMutation() {
+        Fixture f = new Fixture(); f.inventory.count = 20;
+        assertEquals(CreateSalesOrderResult.INVALID_PRICE,
+                f.execute(new CreateSalesOrderMessage(0, 2, Integer.MAX_VALUE)));
+        assertUnchanged(f, 20, 1000);
     }
 
     @Test void taxUsesIntegerCeilingAtAllBoundaries() {
@@ -75,7 +83,7 @@ class CreateSalesOrderServiceTest {
         assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, returnedNull.execute(5,10)); assertUnchanged(returnedNull,20,1000);
         Fixture mutatedThenThrew = new Fixture(); mutatedThenThrew.account.debitMutatesThenThrows = true;
         assertEquals(CreateSalesOrderResult.STATE_UNKNOWN, mutatedThenThrew.execute(5,10));
-        assertEquals(20, mutatedThenThrew.inventory.count); assertEquals(999, mutatedThenThrew.account.balance);
+        assertEquals(20, mutatedThenThrew.inventory.count); assertEquals(995, mutatedThenThrew.account.balance);
         assertEquals(0, mutatedThenThrew.account.creditCalls);
     }
 

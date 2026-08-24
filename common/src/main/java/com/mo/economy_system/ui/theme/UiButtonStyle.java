@@ -74,11 +74,16 @@ public record UiButtonStyle(
         return withAlpha(accent, alpha);
     }
 
-    /** Packed border colour used by the standalone pagination primitive as well as actions. */
+    /** Packed border colour used by standalone outline controls as well as striped actions. */
     public int borderColor(boolean hovered, boolean enabled) {
         if (stripeWidth == 0 && glowHeight == 0) {
             if (!enabled) return 0xFF3A3A4A;
             return hovered ? 0xFF6AB8FF : 0xFF4A8ACF;
+        }
+        if (stripeWidth == 0) {
+            int alpha = hovered && enabled ? borderAlphaHover : borderAlpha;
+            if (!enabled) alpha = Math.min(alpha, 0x40);
+            return withAlpha(accent, alpha);
         }
         return hovered && enabled ? borderHover() : border();
     }

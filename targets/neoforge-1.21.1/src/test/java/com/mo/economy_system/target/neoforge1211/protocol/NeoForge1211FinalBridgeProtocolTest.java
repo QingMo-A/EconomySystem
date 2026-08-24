@@ -26,9 +26,9 @@ class NeoForge1211FinalBridgeProtocolTest {
       UUID.fromString("ffeeddcc-bbaa-9988-7766-554433221100");
 
   @Test
-  void allFortyFourBindingsUseLoaderNeutralMessagesAndHaveCodecs() {
+  void allRegisteredBindingsUseLoaderNeutralMessagesAndHaveCodecs() {
     var values = NeoForge1211MessageBindings.registry().values();
-    assertEquals(44, values.size());
+    assertEquals(com.mo.economy_system.protocol.EconomyProtocol.ALL.size(), values.size());
     for (EconomyMessageType<?> value : values) {
       assertTrue(
           value.messageClass().getPackageName().equals("com.mo.economy_system.common.network"),

@@ -11,6 +11,7 @@ import com.mo.economy_system.commands.territory_system.Command_TerritoryClaim;
 import com.mo.economy_system.commands.tpa_system.Command_Tpa;
 import com.mo.economy_system.common.economy.ShopPriceRefreshSchedule;
 import com.mo.economy_system.common.market.MarketExpirationSchedule;
+import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.common.reward.RewardFeedback;
 import com.mo.economy_system.common.reward.RewardService;
 import com.mo.economy_system.platform.EconomyServices;
@@ -110,7 +111,15 @@ public class EconomySystem_EventHandler {
         long dayTime = overworld.getDayTime();
         if (SHOP_REFRESH_SCHEDULE.shouldRefresh(dayTime)
                 && EconomyServices.platform().shopCatalog().refreshPrices()) {
+            ShopDataResponseMessage refreshedCatalog = new ShopDataResponseMessage(
+                EconomyServices.platform().shopCatalog().snapshot());
             for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                try {
+                    EconomyServices.platform().network().sendToPlayer(player.getUUID(), refreshedCatalog);
+                } catch (RuntimeException syncFailure) {
+                    EconomySystem.LOGGER.warn("Shop live catalog sync failed player={}",
+                        player.getUUID(), syncFailure);
+                }
                 player.sendSystemMessage(Component.translatable(ShopPriceRefreshSchedule.REFRESH_MESSAGE_KEY));
             }
         }

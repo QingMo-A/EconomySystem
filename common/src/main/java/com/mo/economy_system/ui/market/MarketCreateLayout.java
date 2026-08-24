@@ -65,14 +65,19 @@ public final class MarketCreateLayout {
         : new UiRect(0, 0, 0, 0);
 
     List<Slot> slots = new ArrayList<>();
-    if (mode == MarketCreateMode.SALES && state != null) {
+    if (mode == MarketCreateMode.SALES) {
       int slotSize = 22, gap = 3, cols = 9;
       int gridWidth = cols * slotSize + (cols - 1) * gap;
       int gridX = inventoryPanel.x() + Math.max(pad, (inventoryPanel.width() - gridWidth) / 2);
       int gridY = inventoryPanel.y() + 23;
-      for (MarketInventoryItem item : state.inventory()) {
-        int index = slots.size(), col = index % cols, row = index / cols;
-        slots.add(new Slot(item, new UiRect(gridX + col * (slotSize + gap),
+      for (int slotIndex = 0; slotIndex < 36; slotIndex++) {
+        int currentSlot = slotIndex;
+        int col = currentSlot % cols, row = currentSlot / cols;
+        MarketInventoryItem item = state == null ? null : state.inventory().stream()
+            .filter(candidate -> candidate.slot() == currentSlot)
+            .findFirst()
+            .orElse(null);
+        slots.add(new Slot(currentSlot, item, new UiRect(gridX + col * (slotSize + gap),
             gridY + row * (slotSize + gap), slotSize, slotSize)));
       }
     }
@@ -155,5 +160,7 @@ public final class MarketCreateLayout {
     }
   }
 
-  public record Slot(MarketInventoryItem item, UiRect rect) {}
+  public record Slot(int slot, MarketInventoryItem item, UiRect rect) {
+    public boolean hasItem() { return item != null; }
+  }
 }

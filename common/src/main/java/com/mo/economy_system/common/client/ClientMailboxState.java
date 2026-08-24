@@ -5,16 +5,28 @@ import com.mo.economy_system.common.network.MailboxDataResponseMessage;
 import com.mo.economy_system.common.network.MailboxResponseKind;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Client cache for the newest mailbox response. */
 public final class ClientMailboxState {
   private static final AtomicReference<Snapshot> CURRENT =
       new AtomicReference<>(new Snapshot(0, -1, MailboxResponseKind.ERROR, List.of()));
+  private static final AtomicLong INVALIDATION_REVISION = new AtomicLong();
 
   private ClientMailboxState() {}
 
   public static Snapshot snapshot() { return CURRENT.get(); }
+
+  /** Monotonic signal that the authoritative mailbox changed outside this client's current request flow. */
+  public static long invalidationRevision() { return INVALIDATION_REVISION.get(); }
+
+  public static long invalidate() {
+    return INVALIDATION_REVISION.updateAndGet(value -> {
+      if (value == Long.MAX_VALUE) throw new IllegalStateException("mailbox invalidation revision exhausted");
+      return value + 1;
+    });
+  }
 
   public static boolean update(MailboxDataResponseMessage message) {
     Objects.requireNonNull(message, "message");

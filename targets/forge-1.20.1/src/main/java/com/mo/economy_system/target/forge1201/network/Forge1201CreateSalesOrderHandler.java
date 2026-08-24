@@ -35,7 +35,7 @@ final class Forge1201CreateSalesOrderHandler {
             CreateSalesOrderResult result = CreateSalesOrderService.execute(message, new CreateSalesOrderService.Context(
                     new InventoryAdapter(inventory, player), new AccountAdapter(accounts, player), new RepositoryAdapter(market),
                     player.getUUID(), player.getName().getString(), UUID::randomUUID, System::currentTimeMillis, reporter(player)));
-            player.sendSystemMessage(messageFor(result, message.totalPrice()));
+            player.sendSystemMessage(messageFor(result, derivedTotalPrice(message)));
             if (result == CreateSalesOrderResult.SUCCESS) Forge1201MarketInvalidation.broadcast(player);
             if (CreateSalesOrderFeedback.internalFailure(result)) {
                 LOGGER.error("Sales order creation failed player={} name={} result={}",
@@ -49,6 +49,11 @@ final class Forge1201CreateSalesOrderHandler {
         String key = CreateSalesOrderFeedback.messageKey(result);
         return result == CreateSalesOrderResult.INSUFFICIENT_FUNDS
                 ? Component.translatable(key, CreateSalesOrderService.taxFor(totalPrice)) : Component.translatable(key);
+    }
+
+    private static int derivedTotalPrice(CreateSalesOrderMessage message) {
+        try { return Math.multiplyExact(message.quantity(), message.unitPrice()); }
+        catch (ArithmeticException ignored) { return 0; }
     }
 
     private static CreateSalesOrderService.FailureReporter reporter(ServerPlayer player) {

@@ -19,7 +19,13 @@ public final class CreateDemandOrderService {
                 || message.itemId().length() > EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH)
             return CreateDemandOrderResult.INVALID_ITEM_ID;
         if (message.quantity() <= 0) return CreateDemandOrderResult.INVALID_QUANTITY;
-        if (message.totalPrice() <= 0) return CreateDemandOrderResult.INVALID_PRICE;
+        if (message.unitPrice() <= 0) return CreateDemandOrderResult.INVALID_PRICE;
+        final int totalPrice;
+        try {
+            totalPrice = Math.multiplyExact(message.quantity(), message.unitPrice());
+        } catch (ArithmeticException exception) {
+            return CreateDemandOrderResult.INVALID_PRICE;
+        }
 
         DemandItemResolveResult resolved;
         try { resolved = context.items().resolve(message.itemId()); }
@@ -33,7 +39,7 @@ public final class CreateDemandOrderService {
         if (message.quantity() > item.maxQuantity()) return CreateDemandOrderResult.QUANTITY_EXCEEDS_LIMIT;
         try {
             if (context.repository().isFull()) return CreateDemandOrderResult.REPOSITORY_FULL;
-            if (!context.account().canDebit(message.totalPrice())) return CreateDemandOrderResult.INSUFFICIENT_FUNDS;
+            if (!context.account().canDebit(totalPrice)) return CreateDemandOrderResult.INSUFFICIENT_FUNDS;
         } catch (RuntimeException exception) {
             report(context, null, "precondition", CreateDemandOrderResult.PAYMENT_FAILED, exception, false);
             return CreateDemandOrderResult.PAYMENT_FAILED;
@@ -48,13 +54,13 @@ public final class CreateDemandOrderService {
         if (tradeId == null) return CreateDemandOrderResult.ID_GENERATION_FAILED;
         MarketOrder order;
         try { order = new MarketOrder(MarketOrderType.DEMAND, tradeId, item.template(), message.quantity(),
-                message.totalPrice(), context.buyerName(), context.buyerId(), now, expiration, false); }
+                totalPrice, context.buyerName(), context.buyerId(), now, expiration, false); }
         catch (RuntimeException exception) { return CreateDemandOrderResult.SNAPSHOT_REJECTED; }
 
         BalanceMutationResult debitResult;
         try {
             debitResult = Objects.requireNonNull(
-                    context.account().debitExact(message.totalPrice()), "debit result");
+                    context.account().debitExact(totalPrice), "debit result");
         } catch (RuntimeException exception) {
             report(context, tradeId, "payment-debit", CreateDemandOrderResult.STATE_UNKNOWN,
                     exception, false);
@@ -75,7 +81,7 @@ public final class CreateDemandOrderService {
         BalanceMutationResult refundResult;
         try {
             refundResult = Objects.requireNonNull(
-                    context.account().creditExact(message.totalPrice()), "refund result");
+                    context.account().creditExact(totalPrice), "refund result");
         } catch (RuntimeException exception) {
             report(context, tradeId, "payment-refund", CreateDemandOrderResult.STATE_UNKNOWN,
                     exception, false);

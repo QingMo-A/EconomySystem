@@ -38,6 +38,23 @@ public record MarketCreateState(
         .mapToInt(MarketInventoryItem::count).sum();
   }
 
+  /**
+   * Market v2 reinterprets the existing price-input field as unit price while keeping the record
+   * component name for source compatibility with the current target screens/protocol adapters.
+   */
+  public int unitPrice() {
+    return totalPrice;
+  }
+
+  public long computedOrderTotalPrice() {
+    return (long) quantity * unitPrice();
+  }
+
+  public boolean computedOrderTotalFitsInt() {
+    long total = computedOrderTotalPrice();
+    return total > 0 && total <= Integer.MAX_VALUE;
+  }
+
   public boolean can(MarketCreateAction action) {
     return actions.contains(action);
   }

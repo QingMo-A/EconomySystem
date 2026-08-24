@@ -14,6 +14,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,12 +25,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -106,13 +106,20 @@ public final class EventHandler_Player {
   @SubscribeEvent(priority = EventPriority.HIGH)
   public static void onBlockRightClick(PlayerInteractEvent.RightClickBlock event) {
     if (!(event.getEntity() instanceof ServerPlayer player)) return;
-    RuleAction action = isContainerBlock(player, event.getPos())
+    BlockPos position = event.getPos();
+    RuleAction blockAction = isContainerBlock(player, position)
         ? RuleAction.OPEN_CONTAINER
         : RuleAction.INTERACT_BLOCK;
-    if (!hasPermission(player, event.getPos(), action)) {
-      deny(player, action);
-      event.setCanceled(true);
-    }
+    boolean blockAllowed = hasPermission(player, position, blockAction);
+    boolean itemAllowed = player.getItemInHand(event.getHand()).isEmpty()
+        || hasPermission(player, position, RuleAction.USE_ITEM);
+
+    // Keep block interaction and Item#useOn independent. Cancelling the whole event would make the
+    // OPEN_CONTAINER / INTERACT_BLOCK and USE_ITEM rules unexpectedly depend on each other.
+    if (!blockAllowed) event.setUseBlock(TriState.FALSE);
+    if (!itemAllowed) event.setUseItem(TriState.FALSE);
+    if (!blockAllowed) deny(player, blockAction);
+    else if (!itemAllowed) deny(player, RuleAction.USE_ITEM);
   }
 
   public static void showSelectionBoundary(
@@ -159,12 +166,17 @@ public final class EventHandler_Player {
   }
 
   private static boolean isContainerBlock(ServerPlayer player, BlockPos position) {
-    Block block = player.serverLevel().getBlockState(position).getBlock();
-    return block instanceof BaseEntityBlock || player.serverLevel().getBlockEntity(position) != null;
+    // A block entity does not imply a container (signs, beehives, enchanting tables, etc.).
+    // Use the vanilla menu-provider contract so OPEN_CONTAINER is reserved for interactions that
+    // actually open a server-backed menu; ordinary block interactions stay under INTERACT_BLOCK.
+    return player.serverLevel().getBlockState(position)
+        .getMenuProvider(player.serverLevel(), position) != null;
   }
 
   private static void deny(ServerPlayer player, RuleAction action) {
-    player.sendSystemMessage(Component.translatable(TerritoryRuntimePolicy.denialMessageKey(action)));
+    player.sendSystemMessage(
+        Component.translatable(TerritoryRuntimePolicy.denialMessageKey(action))
+            .withStyle(ChatFormatting.RED));
   }
 
   private static void postEnter(ServerPlayer player, Owned snapshot) {

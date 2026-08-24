@@ -137,7 +137,7 @@ public class Screen_CreateSalesOrder extends Screen {
     private void initInputs(String oldPrice, String oldCount) {
         priceInput = new EditBox(this.font, Math.round(priceInputX * uiScale), Math.round(priceInputY * uiScale),
                 Math.round(150 * uiScale), Math.round(INPUT_HEIGHT * uiScale), Component.translatable(Util_MessageKeys.LIST_PRICE_TEXT_KEY));
-        priceInput.setHint(Component.literal("价格"));
+        priceInput.setHint(Component.literal("单价"));
         priceInput.setMaxLength(9);
         priceInput.setValue(oldPrice);
         addRenderableWidget(priceInput);
@@ -259,17 +259,21 @@ public class Screen_CreateSalesOrder extends Screen {
         guiGraphics.drawString(font, "上架数量", rightX + PADDING, countInputY + 6, CardRenderer.TEXT_DESC);
         renderAdjustButtons(guiGraphics, mouseX, mouseY, ownedCount);
 
-        guiGraphics.drawString(font, "出售价格", rightX + PADDING, priceInputY + 6, CardRenderer.TEXT_DESC);
+        guiGraphics.drawString(font, "出售单价", rightX + PADDING, priceInputY + 6, CardRenderer.TEXT_DESC);
 
-        int price = parsePrice().orElse(0);
-        int tax = price > 0 ? calculateTax(price) : 0;
-        int income = Math.max(0, price - tax);
+        int unitPrice = parsePrice().orElse(0);
+        long derivedTotal = (long) unitPrice * selectedCount;
+        boolean totalValid = unitPrice > 0 && selectedCount > 0 && derivedTotal <= Integer.MAX_VALUE;
+        int totalPrice = totalValid ? (int) derivedTotal : 0;
+        int tax = totalValid ? calculateTax(totalPrice) : 0;
+        int income = totalValid ? Math.max(0, totalPrice - tax) : 0;
         int infoY = rightY + 142;
-        guiGraphics.drawString(font, "商品税: " + (tax > 0 ? tax + " 梦鱼币" : "-"), rightX + PADDING, infoY, tax > 0 ? 0xFFFFD166 : 0x80FFFFFF);
-        guiGraphics.drawString(font, "预计到账: " + (price > 0 ? income + " 梦鱼币" : "-"), rightX + PADDING, infoY + 14, 0xFF7CFFB2);
-        guiGraphics.drawString(font, "价格单位: 梦鱼币", rightX + PADDING, infoY + 28, CardRenderer.TEXT_DESC);
+        guiGraphics.drawString(font, "订单总价: " + (totalValid ? totalPrice + " 梦鱼币" : "-"), rightX + PADDING, infoY, 0xFFFFFFFF);
+        guiGraphics.drawString(font, "商品税: " + (tax > 0 ? tax + " 梦鱼币" : "-"), rightX + PADDING, infoY + 14, tax > 0 ? 0xFFFFD166 : 0x80FFFFFF);
+        guiGraphics.drawString(font, "预计到账: " + (totalValid ? income + " 梦鱼币" : "-"), rightX + PADDING, infoY + 28, 0xFF7CFFB2);
 
-        drawListButton(guiGraphics, mouseX, mouseY, price > 0 && selectedCount > 0 && selectedCount <= ownedCount);
+        drawListButton(guiGraphics, mouseX, mouseY,
+                totalValid && selectedCount <= ownedCount);
     }
 
     private void renderAdjustButtons(GuiGraphics guiGraphics, float mouseX, float mouseY, int ownedCount) {
@@ -436,6 +440,10 @@ public class Screen_CreateSalesOrder extends Screen {
             return;
         }
         clampSelectedCount();
+        if ((long) price.get() * selectedCount > Integer.MAX_VALUE) {
+            player.sendSystemMessage(Component.translatable(Util_MessageKeys.LIST_INVALID_PRICE_MESSAGE_KEY));
+            return;
+        }
         if (selectedCount <= 0 || selectedCount > countMatchingItems(selected)) {
             player.sendSystemMessage(Component.translatable(Util_MessageKeys.LIST_INSUFFICIENT_ITEM_MESSAGE_KEY));
             return;

@@ -11,6 +11,9 @@ public final class RemoveSalesOrderFeedback {
       case NOT_OWNER -> "message.market.remove_sales.not_owner";
       case OWNER_OFFLINE -> "message.market.remove_sales.owner_offline";
       case INVENTORY_FULL -> "message.market.remove_sales.inventory_full";
+      case MAILBOX_FULL -> "message.market.remove_sales.mailbox_full";
+      case MAILBOX_DELIVERY_FAILED -> "message.market.remove_sales.mailbox_failed";
+      case MAILBOX_STATE_UNKNOWN -> "message.market.remove_sales.mailbox_state_unknown";
       case ORDER_CHANGED -> "message.market.remove_sales.order_changed";
       case ORDER_REMOVE_FAILED -> "message.market.remove_sales.persist_failed";
       case ITEM_RESTORE_FAILED, INVALID_SNAPSHOT -> "message.market.remove_sales.item_failed";

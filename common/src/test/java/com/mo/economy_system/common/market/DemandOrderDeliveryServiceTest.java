@@ -4,300 +4,372 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DemandOrderDeliveryServiceTest {
   @Test
-  void successPaysAndDeliversOnce() {
-    F f = new F();
-    DemandOrderDeliveryOutcome o = f.run();
-    assertEquals(DemandOrderDeliveryResult.SUCCESS, o.result());
-    assertEquals(MarketMutationState.CHANGED, o.mutationState());
-    assertEquals(17, f.balance);
+  void wholeFulfillmentStagesMailboxPaysSupplierCommitsNotificationAndRemovesOrder() {
+    Fixture f = new Fixture();
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.SUCCESS, outcome.result());
+    assertEquals(MarketMutationState.CHANGED, outcome.mutationState());
+    assertFalse(outcome.deliveredOrder().orElseThrow().delivered());
+    assertEquals(5, outcome.deliveredOrder().orElseThrow().quantity());
+    assertEquals(20, outcome.deliveredOrder().orElseThrow().totalPrice());
     assertEquals(15, f.items);
-    assertTrue(f.order.delivered());
-    assertEquals(DemandOrderDeliveryResult.ALREADY_DELIVERED, f.run().result());
-    assertEquals(17, f.balance);
+    assertEquals(20, f.balance);
+    assertNull(f.order);
+    assertEquals(1, f.mailboxStageCalls);
+    assertEquals(1, f.mailboxCommitCalls);
+    assertEquals(0, f.mailboxRollbackCalls);
+    assertEquals(5, f.mailboxQuantity);
+    assertEquals(0, f.mailboxRemaining);
+    assertEquals(DemandOrderDeliveryResult.NOT_FOUND, f.run(0).result());
   }
 
   @Test
-  void staleTransitionCompensates() {
-    F f = new F();
-    f.status = DemandDeliveryTransitionStatus.ORDER_CHANGED;
-    DemandOrderDeliveryOutcome o = f.run();
-    assertEquals(DemandOrderDeliveryResult.ORDER_CHANGED, o.result());
-    assertEquals(MarketMutationState.CHANGED, o.mutationState());
-    assertEquals(0, f.balance);
+  void partialFulfillmentPaysOnlySliceAndKeepsSameTradeIdRemainder() {
+    Fixture f = new Fixture();
+    f.order = f.order(64, 1_280, false);
+
+    DemandOrderDeliveryOutcome outcome = f.run(10);
+
+    assertEquals(DemandOrderDeliveryResult.SUCCESS, outcome.result());
+    assertEquals(10, outcome.deliveredOrder().orElseThrow().quantity());
+    assertEquals(200, outcome.deliveredOrder().orElseThrow().totalPrice());
+    assertEquals(10, f.mailboxQuantity);
+    assertEquals(200, f.mailboxAmount);
+    assertEquals(54, f.mailboxRemaining);
+    assertEquals(200, f.balance);
+    assertEquals(10, 20 - f.items);
+    assertNotNull(f.order);
+    assertEquals(f.tradeId, f.order.tradeId());
+    assertEquals(54, f.order.quantity());
+    assertEquals(1_080, f.order.totalPrice());
+  }
+
+  @Test
+  void nonDivisibleLegacyOrderRejectsPartialButAllowsWholeFulfillment() {
+    Fixture partial = new Fixture();
+    partial.order = partial.order(5, 17, false);
+    assertEquals(DemandOrderDeliveryResult.PARTIAL_FILL_UNSUPPORTED, partial.run(1).result());
+    assertEquals(20, partial.items);
+    assertEquals(0, partial.balance);
+    assertNotNull(partial.order);
+    assertEquals(0, partial.mailboxStageCalls);
+
+    Fixture whole = new Fixture();
+    whole.order = whole.order(5, 17, false);
+    DemandOrderDeliveryOutcome outcome = whole.run(0);
+    assertEquals(DemandOrderDeliveryResult.SUCCESS, outcome.result());
+    assertEquals(17, whole.balance);
+    assertNull(whole.order);
+  }
+
+  @Test
+  void mailboxFullFailsBeforeOrderInventoryOrPaymentMutation() {
+    Fixture f = new Fixture();
+    f.mailboxPreflight = DemandMailboxResult.FULL;
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.MAILBOX_FULL, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
     assertEquals(20, f.items);
+    assertEquals(0, f.balance);
+    assertNotNull(f.order);
+    assertEquals(0, f.fillCalls);
+    assertEquals(0, f.removeCalls);
+    assertEquals(0, f.creditCalls);
   }
 
   @Test
-  void unknownTransitionLeavesPriorMutationsUntouched() {
-    F f = new F();
-    f.nullTransition = true;
-    DemandOrderDeliveryOutcome o = f.run();
-    assertEquals(DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN, o.result());
-    assertEquals(MarketMutationState.UNKNOWN, o.mutationState());
-    assertEquals(17, f.balance);
-    assertEquals(15, f.items);
-    assertEquals(0, f.debitCalls);
-    assertEquals(0, f.rollbackCalls);
+  void mailboxStageFailureRestoresInventoryAndExactOrderBeforePayment() {
+    Fixture f = new Fixture();
+    MarketOrder original = f.order;
+    f.mailboxStageResult = DemandMailboxResult.FAILED;
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.MAILBOX_DELIVERY_FAILED, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertEquals(original, f.order);
+    assertEquals(20, f.items);
+    assertEquals(0, f.balance);
+    assertEquals(0, f.creditCalls);
+    assertEquals(1, f.inventoryRollbackCalls);
+    assertEquals(1, f.orderRollbackCalls);
   }
 
   @Test
-  void transitionMutationThenExceptionIsNotBlindlyCompensated() {
-    F f = new F();
-    f.transitionMutatesThenThrows = true;
+  void unknownMailboxStageDoesNotBlindlyRestorePotentiallyPersistedAttachment() {
+    Fixture f = new Fixture();
+    f.mailboxStageResult = DemandMailboxResult.UNKNOWN;
 
-    DemandOrderDeliveryOutcome outcome = f.run();
+    DemandOrderDeliveryOutcome outcome = f.run(0);
 
-    assertEquals(DemandOrderDeliveryResult.LEDGER_STATE_UNKNOWN, outcome.result());
+    assertEquals(DemandOrderDeliveryResult.MAILBOX_STATE_UNKNOWN, outcome.result());
     assertEquals(MarketMutationState.UNKNOWN, outcome.mutationState());
-    assertTrue(f.order.delivered());
-    assertEquals(17, f.balance);
+    assertNull(f.order);
     assertEquals(15, f.items);
-    assertEquals(0, f.debitCalls);
-    assertEquals(0, f.rollbackCalls);
+    assertEquals(0, f.balance);
+    assertEquals(0, f.creditCalls);
+    assertEquals(0, f.inventoryRollbackCalls);
+    assertEquals(0, f.orderRollbackCalls);
   }
 
-  @Test void nullMessageAndMissingOrderFailWithoutMutation() {
-    F f = new F(); assertEquals(DemandOrderDeliveryResult.INVALID_CONTEXT,
-        DemandOrderDeliveryService.execute(null, f.context()).result());
-    f.order = null; assertEquals(DemandOrderDeliveryResult.NOT_FOUND,
-        DemandOrderDeliveryService.execute(new DeliverDemandOrderMessage(UUID.randomUUID()), f.context()).result());
-    assertEquals(0, f.creditCalls); assertEquals(0, f.removeCalls);
+  @Test
+  void staleOrderCasFailsBeforeSupplierInventoryOrPaymentMutation() {
+    Fixture f = new Fixture();
+    f.fillStatus = MarketPartialFillStatus.ORDER_CHANGED;
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.ORDER_CHANGED, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertNotNull(f.order);
+    assertEquals(20, f.items);
+    assertEquals(0, f.balance);
+    assertEquals(0, f.removeCalls);
+    assertEquals(0, f.creditCalls);
+    assertEquals(0, f.mailboxStageCalls);
   }
 
-  @Test void invalidOrderStatesFailBeforeExternalMutation() {
-    F f = new F(); f.order = f.copy(MarketOrderType.SALES, false, 5, 17); assertEquals(DemandOrderDeliveryResult.WRONG_ORDER_TYPE, f.run().result());
-    f = new F(); f.order = f.copy(MarketOrderType.DEMAND, true, 5, 17); assertEquals(DemandOrderDeliveryResult.ALREADY_DELIVERED, f.run().result());
-    f = new F(); f.supplier = f.order.sellerId(); assertEquals(DemandOrderDeliveryResult.SELF_DELIVERY, f.run().result());
+  @Test
+  void knownCreditFailureRollsBackStagedMailboxInventoryAndOrder() {
+    Fixture f = new Fixture();
+    MarketOrder original = f.order;
+    f.creditResult = BalanceMutationResult.PERSIST_FAILED;
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, outcome.result());
+    assertEquals(MarketMutationState.UNCHANGED, outcome.mutationState());
+    assertEquals(original, f.order);
+    assertEquals(20, f.items);
+    assertEquals(0, f.balance);
+    assertEquals(1, f.mailboxStageCalls);
+    assertEquals(1, f.mailboxRollbackCalls);
+    assertEquals(0, f.mailboxCommitCalls);
+    assertEquals(1, f.inventoryRollbackCalls);
+    assertEquals(1, f.orderRollbackCalls);
   }
 
-  @Test void invalidPriceAndQuantityFailClosed() {
-    F valid = new F(); assertThrows(IllegalArgumentException.class,
-        () -> valid.copy(MarketOrderType.DEMAND, false, 5, 0));
-    assertThrows(IllegalArgumentException.class,
-        () -> valid.copy(MarketOrderType.DEMAND, false, 0, 17));
+  @Test
+  void mailboxRollbackUnknownAfterCreditFailureDoesNotDuplicateByRestoringOtherState() {
+    Fixture f = new Fixture();
+    f.creditResult = BalanceMutationResult.PERSIST_FAILED;
+    f.mailboxRollbackResult = DemandMailboxResult.UNKNOWN;
+
+    DemandOrderDeliveryOutcome outcome = f.run(0);
+
+    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, outcome.result());
+    assertEquals(MarketMutationState.UNKNOWN, outcome.mutationState());
+    assertNull(f.order);
+    assertEquals(15, f.items);
+    assertEquals(0, f.balance);
+    assertEquals(0, f.inventoryRollbackCalls);
+    assertEquals(0, f.orderRollbackCalls);
   }
 
-  @Test void snapshotRestoreNullAndExceptionAreReported() {
-    F f = new F(); f.restoreNull = true; assertEquals(DemandOrderDeliveryResult.ITEM_RESTORE_FAILED, f.run().result()); assertEquals("snapshot-restore", f.reports.get(0).stage());
-    f = new F(); f.restoreThrows = true; assertEquals(DemandOrderDeliveryResult.ITEM_RESTORE_FAILED, f.run().result()); assertNotNull(f.reports.get(0).primaryError());
+  @Test
+  void legacyDeliveredOrderRemainsOutsideNewSettlementPath() {
+    Fixture f = new Fixture();
+    f.order = f.order(5, 20, true);
+
+    assertEquals(DemandOrderDeliveryResult.ALREADY_DELIVERED, f.run(0).result());
+    assertEquals(20, f.items);
+    assertEquals(0, f.balance);
+    assertEquals(0, f.mailboxStageCalls);
   }
 
-  @Test void inventoryOwnerMismatchAndExceptionFailClosed() {
-    F f = new F(); f.ownerMismatch = true; assertEquals(DemandOrderDeliveryResult.INVENTORY_CONTEXT_FAILED, f.run().result());
-    f = new F(); f.ownerThrows = true; assertEquals(DemandOrderDeliveryResult.INVENTORY_CONTEXT_FAILED, f.run().result()); assertEquals("inventory-owner", f.reports.get(0).stage());
+  @Test
+  void reporterFailureDoesNotChangeBusinessOutcome() {
+    Fixture f = new Fixture();
+    f.reporterThrows = true;
+    f.mailboxPreflight = DemandMailboxResult.FULL;
+    assertEquals(DemandOrderDeliveryResult.MAILBOX_FULL, f.run(0).result());
   }
 
-  @Test void previewFailuresAndBalanceLimitDoNotRemoveItems() {
-    F f = new F(); f.preview = null; assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, f.run().result());
-    f = new F(); f.previewThrows = true; assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, f.run().result());
-    f = new F(); f.preview = BalanceMutationResult.BALANCE_LIMIT; assertEquals(DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT, f.run().result()); assertEquals(0, f.removeCalls);
-  }
-
-  @Test void inventoryCountExceptionAndInsufficientItemsFailBeforeRemoval() {
-    F f = new F(); f.countThrows = true; assertEquals(DemandOrderDeliveryResult.INVENTORY_MUTATION_FAILED, f.run().result());
-    f = new F(); f.items = 4; assertEquals(DemandOrderDeliveryResult.INSUFFICIENT_ITEMS, f.run().result()); assertEquals(0, f.removeCalls);
-  }
-
-  @Test void removalNullExceptionAndExplicitFailuresAreFailClosed() {
-    F f = new F(); f.removeNull = true; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
-    f = new F(); f.removeThrows = true; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
-    f = new F(); f.removalFailure = true; f.failureRestored = true; assertEquals(DemandOrderDeliveryResult.INVENTORY_MUTATION_FAILED, f.run().result());
-    f = new F(); f.removalFailure = true; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
-  }
-
-  @Test void knownCreditFailuresRollbackInventory() {
-    F f = new F(); f.credit = BalanceMutationResult.BALANCE_LIMIT; assertEquals(DemandOrderDeliveryResult.RECIPIENT_BALANCE_LIMIT, f.run().result()); assertEquals(1, f.rollbackCalls);
-    f = new F(); f.credit = BalanceMutationResult.PERSIST_FAILED; f.rollbackSucceeds = false; assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, f.run().result());
-  }
-
-  @Test void unknownCreditStateDoesNotBlindlyRestoreInventory() {
-    F returnedNull = new F(); returnedNull.credit = null;
-    DemandOrderDeliveryOutcome nullOutcome = returnedNull.run();
-    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, nullOutcome.result());
-    assertEquals(MarketMutationState.UNKNOWN, nullOutcome.mutationState());
-    assertEquals(15, returnedNull.items); assertEquals(0, returnedNull.rollbackCalls);
-
-    F thrown = new F(); thrown.creditThrows = true;
-    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, thrown.run().result());
-    assertEquals(15, thrown.items); assertEquals(0, thrown.rollbackCalls);
-
-    F mutatedThenThrew = new F(); mutatedThenThrew.creditMutatesThenThrows = true;
-    assertEquals(DemandOrderDeliveryResult.PAYMENT_STATE_UNKNOWN, mutatedThenThrew.run().result());
-    assertEquals(17, mutatedThenThrew.balance); assertEquals(15, mutatedThenThrew.items);
-    assertEquals(0, mutatedThenThrew.debitCalls); assertEquals(0, mutatedThenThrew.rollbackCalls);
-  }
-
-  @Test void creditFailureTelemetryDistinguishesActiveRollbackFromRemovalFailureRestore() {
-    F restored = new F();
-    restored.credit = BalanceMutationResult.PERSIST_FAILED;
-    assertEquals(DemandOrderDeliveryResult.PAYMENT_FAILED, restored.run().result());
-    DemandOrderDeliveryFailure restoredFailure = restored.reports.get(restored.reports.size() - 1);
-    assertNull(restoredFailure.inventoryRemovalFailureRestored());
-    assertTrue(restoredFailure.inventoryRollbackSucceeded());
-    assertFalse(restoredFailure.paymentCreditSucceeded());
-
-    F failed = new F();
-    failed.credit = BalanceMutationResult.PERSIST_FAILED;
-    failed.rollbackSucceeds = false;
-    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, failed.run().result());
-    DemandOrderDeliveryFailure failedFailure = failed.reports.get(failed.reports.size() - 1);
-    assertNull(failedFailure.inventoryRemovalFailureRestored());
-    assertFalse(failedFailure.inventoryRollbackSucceeded());
-    assertFalse(failedFailure.paymentCreditSucceeded());
-  }
-
-  @Test void failedOrUnknownPaymentReversalNeverRestoresInventory() {
-    F rejected = new F(); rejected.status = DemandDeliveryTransitionStatus.PERSIST_FAILED;
-    rejected.debit = BalanceMutationResult.PERSIST_FAILED;
-    DemandOrderDeliveryOutcome rejectedOutcome = rejected.run();
-    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, rejectedOutcome.result());
-    assertEquals(MarketMutationState.UNKNOWN, rejectedOutcome.mutationState());
-    assertEquals(17, rejected.balance); assertEquals(15, rejected.items);
-    assertEquals(1, rejected.debitCalls); assertEquals(0, rejected.rollbackCalls);
-    assertEquals(MarketMutationState.UNKNOWN,
-        rejected.reports.get(rejected.reports.size() - 1).mutationState());
-
-    F unknown = new F(); unknown.status = DemandDeliveryTransitionStatus.PERSIST_FAILED;
-    unknown.debitMutatesThenThrows = true; unknown.rollbackThrows = true;
-    DemandOrderDeliveryOutcome unknownOutcome = unknown.run();
-    assertEquals(DemandOrderDeliveryResult.ROLLBACK_FAILED, unknownOutcome.result());
-    assertEquals(MarketMutationState.UNKNOWN, unknownOutcome.mutationState());
-    assertEquals(0, unknown.balance); assertEquals(15, unknown.items);
-    assertEquals(1, unknown.debitCalls); assertEquals(0, unknown.rollbackCalls);
-    DemandOrderDeliveryFailure report = unknown.reports.get(unknown.reports.size() - 1);
-    assertEquals(unknown.order.sellerId(), report.requesterId());
-    assertNotNull(report.paymentError()); assertNull(report.inventoryError());
-  }
-
-  @Test void reporterExceptionDoesNotChangeSuccessfulOrFailedOutcome() {
-    F f = new F(); f.reporterThrows = true; f.items = 0; assertEquals(DemandOrderDeliveryResult.INSUFFICIENT_ITEMS, f.run().result());
-    f = new F(); f.reporterThrows = true; assertEquals(DemandOrderDeliveryResult.SUCCESS, f.run().result());
-  }
-
-  static final class F
+  private static final class Fixture
       implements MarketItemMaterializer,
           TransactionalInventoryRemoval,
           DemandOrderDeliveryService.Account,
-          DemandOrderDeliveryService.Repository {
-    UUID supplier = UUID.randomUUID();
-    MarketOrder order =
-        new MarketOrder(
-            MarketOrderType.DEMAND,
-            UUID.randomUUID(),
-            MarketOrderCodecTest.item(),
-            5,
-            17,
-            "buyer",
-            UUID.randomUUID(),
-            1,
-            2,
-            false);
-    int items = 20, balance, removeCalls, rollbackCalls, creditCalls, debitCalls;
-    DemandDeliveryTransitionStatus status = DemandDeliveryTransitionStatus.UPDATED;
-    BalanceMutationResult preview = BalanceMutationResult.SUCCESS;
-    BalanceMutationResult credit = BalanceMutationResult.SUCCESS, debit = BalanceMutationResult.SUCCESS;
-    boolean nullTransition, restoreNull, restoreThrows, ownerMismatch, ownerThrows, previewThrows,
-        countThrows, removeNull, removeThrows, removalFailure, failureRestored, creditThrows,
-        creditMutatesThenThrows, rollbackSucceeds = true, rollbackThrows, debitThrows,
-        debitMutatesThenThrows, transitionMutatesThenThrows, reporterThrows;
-    List<DemandOrderDeliveryFailure> reports = new ArrayList<>();
+          DemandOrderDeliveryService.Repository,
+          DemandOrderDeliveryService.Mailbox {
+    final UUID supplierId = UUID.randomUUID();
+    final UUID requesterId = UUID.randomUUID();
+    final UUID tradeId = UUID.randomUUID();
+    MarketOrder order = order(5, 20, false);
+    int items = 20;
+    int balance;
+    int removeCalls;
+    int inventoryRollbackCalls;
+    int creditCalls;
+    int debitCalls;
+    int fillCalls;
+    int orderRollbackCalls;
+    int mailboxStageCalls;
+    int mailboxCommitCalls;
+    int mailboxRollbackCalls;
+    int mailboxQuantity;
+    int mailboxAmount;
+    int mailboxRemaining;
+    BalanceMutationResult previewResult = BalanceMutationResult.SUCCESS;
+    BalanceMutationResult creditResult = BalanceMutationResult.SUCCESS;
+    BalanceMutationResult debitResult = BalanceMutationResult.SUCCESS;
+    MarketPartialFillStatus fillStatus;
+    DemandMailboxResult mailboxPreflight = DemandMailboxResult.SUCCESS;
+    DemandMailboxResult mailboxStageResult = DemandMailboxResult.SUCCESS;
+    DemandMailboxResult mailboxRollbackResult = DemandMailboxResult.SUCCESS;
+    boolean reporterThrows;
+    final List<DemandOrderDeliveryFailure> reports = new ArrayList<>();
 
-    public Object restore(MarketOrder o) {
-      if (restoreThrows) throw new IllegalStateException("restore");
-      if (restoreNull) return null;
+    MarketOrder order(int quantity, int totalPrice, boolean delivered) {
+      return new MarketOrder(MarketOrderType.DEMAND, tradeId, MarketOrderCodecTest.item(),
+          quantity, totalPrice, "requester", requesterId, 1, 2, delivered);
+    }
+
+    DemandOrderDeliveryOutcome run(int quantity) {
+      UUID id = order == null ? tradeId : order.tradeId();
+      return DemandOrderDeliveryService.execute(
+          new DeliverDemandOrderMessage(id, quantity),
+          new DemandOrderDeliveryService.Context(
+              supplierId,
+              this,
+              this,
+              this,
+              this,
+              this,
+              failure -> {
+                reports.add(failure);
+                if (reporterThrows) throw new IllegalStateException("reporter");
+              }));
+    }
+
+    @Override
+    public Object restore(MarketOrder ignored) {
       return new Object();
     }
 
+    @Override
     public UUID ownerId() {
-      if (ownerThrows) throw new IllegalStateException("owner");
-      if (ownerMismatch) return UUID.randomUUID();
-      return supplier;
+      return supplierId;
     }
 
-    public long countMatching(Object o) {
-      if (countThrows) throw new IllegalStateException("count");
+    @Override
+    public long countMatching(Object ignored) {
       return items;
     }
 
-    public InventoryRemovalResult removeMatching(Object o, int q) {
+    @Override
+    public InventoryRemovalResult removeMatching(Object ignored, int quantity) {
       removeCalls++;
-      if (removeThrows) throw new IllegalStateException("remove");
-      if (removeNull) return null;
-      if (removalFailure) return InventoryRemovalResult.failure(failureRestored);
+      if (items < quantity) return InventoryRemovalResult.failure(true);
       int before = items;
-      items -= q;
-      return InventoryRemovalResult.success(
-          () -> {
-            rollbackCalls++;
-            if (rollbackThrows) throw new IllegalStateException("rollback");
-            if (!rollbackSucceeds) return false;
-            items = before;
-            return true;
-          });
-    }
-
-    public BalanceMutationResult previewCreditExact(int a) {
-      if (previewThrows) throw new IllegalStateException("preview");
-      return preview;
-    }
-
-    public BalanceMutationResult creditExact(int a) {
-      creditCalls++;
-      if (creditMutatesThenThrows) {
-        balance += a;
-        throw new IllegalStateException("credit");
-      }
-      if (creditThrows) throw new IllegalStateException("credit");
-      if (credit != BalanceMutationResult.SUCCESS) return credit;
-      balance += a;
-      return BalanceMutationResult.SUCCESS;
-    }
-
-    public BalanceMutationResult debitExact(int a) {
-      debitCalls++;
-      if (debitMutatesThenThrows) {
-        balance -= a;
-        throw new IllegalStateException("debit");
-      }
-      if (debitThrows) throw new IllegalStateException("debit");
-      if (debit != BalanceMutationResult.SUCCESS) return debit;
-      balance -= a;
-      return BalanceMutationResult.SUCCESS;
-    }
-
-    public MarketOrder find(UUID id) {
-      return order;
-    }
-
-    public DemandDeliveryTransition markDemandDeliveredIfUnchanged(UUID id, MarketOrder expected) {
-      if (nullTransition) return null;
-      if (status != DemandDeliveryTransitionStatus.UPDATED)
-        return DemandDeliveryTransition.failure(status);
-      MarketOrder updated = copy(MarketOrderType.DEMAND, true, order.quantity(), order.totalPrice());
-      DemandDeliveryTransition t = DemandDeliveryTransition.updated(order, updated);
-      order = updated;
-      if (transitionMutatesThenThrows) throw new IllegalStateException("transition");
-      return t;
-    }
-
-    DemandOrderDeliveryOutcome run() {
-      return DemandOrderDeliveryService.execute(new DeliverDemandOrderMessage(order.tradeId()), context());
-    }
-
-    DemandOrderDeliveryService.Context context() {
-      return new DemandOrderDeliveryService.Context(supplier, this, this, this, this, failure -> {
-        reports.add(failure); if (reporterThrows) throw new IllegalStateException("reporter");
+      items -= quantity;
+      return InventoryRemovalResult.success(() -> {
+        inventoryRollbackCalls++;
+        items = before;
+        return true;
       });
     }
 
-    MarketOrder copy(MarketOrderType type, boolean delivered, int quantity, int price) {
-      return new MarketOrder(type, order.tradeId(), order.item(), quantity, price, order.sellerName(),
-          order.sellerId(), order.listingTime(), order.expirationTime(), delivered);
+    @Override
+    public BalanceMutationResult previewCreditExact(int amount) {
+      return previewResult;
+    }
+
+    @Override
+    public BalanceMutationResult creditExact(int amount) {
+      creditCalls++;
+      if (creditResult == BalanceMutationResult.SUCCESS) balance += amount;
+      return creditResult;
+    }
+
+    @Override
+    public BalanceMutationResult debitExact(int amount) {
+      debitCalls++;
+      if (debitResult == BalanceMutationResult.SUCCESS) balance -= amount;
+      return debitResult;
+    }
+
+    @Override
+    public MarketOrder find(UUID id) {
+      return order != null && order.tradeId().equals(id) ? order : null;
+    }
+
+    @Override
+    public MarketPartialFillTransition fillIfUnchanged(
+        UUID id, MarketOrderType expectedType, MarketOrder expected, int quantity) {
+      fillCalls++;
+      if (fillStatus != null) return MarketPartialFillTransition.failure(fillStatus);
+      if (order == null) return MarketPartialFillTransition.failure(MarketPartialFillStatus.NOT_FOUND);
+      if (order.type() != expectedType) {
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.WRONG_ORDER_TYPE);
+      }
+      if (!order.equals(expected)) {
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.ORDER_CHANGED);
+      }
+      int amount = MarketOrderPricing.fillAmount(order, quantity);
+      MarketOrder previous = order;
+      MarketOrder remaining = quantity == previous.quantity() ? null
+          : new MarketOrder(previous.type(), previous.tradeId(), previous.item(),
+              previous.quantity() - quantity, previous.totalPrice() - amount,
+              previous.sellerName(), previous.sellerId(), previous.listingTime(),
+              previous.expirationTime(), false);
+      order = remaining;
+      return MarketPartialFillTransition.applied(previous, remaining, quantity, amount, () -> {
+        orderRollbackCalls++;
+        order = previous;
+        return MarketPartialFillRollbackResult.RESTORED;
+      });
+    }
+
+    @Override
+    public DemandMailboxResult preflight(UUID requesterId, Object template, int quantity) {
+      return mailboxPreflight;
+    }
+
+    @Override
+    public DemandOrderDeliveryService.MailboxStage stage(
+        UUID requesterId,
+        MarketOrder fulfilledSlice,
+        Object template,
+        int quantity,
+        int amount,
+        int remainingQuantity) {
+      mailboxStageCalls++;
+      mailboxQuantity = quantity;
+      mailboxAmount = amount;
+      mailboxRemaining = remainingQuantity;
+      if (mailboxStageResult != DemandMailboxResult.SUCCESS) {
+        return DemandOrderDeliveryService.MailboxStage.failure(mailboxStageResult);
+      }
+      return DemandOrderDeliveryService.MailboxStage.success(
+          new DemandOrderDeliveryService.StagedMailboxDelivery() {
+            private boolean closed;
+
+            @Override
+            public void commit() {
+              if (closed) return;
+              closed = true;
+              mailboxCommitCalls++;
+            }
+
+            @Override
+            public DemandMailboxResult rollback() {
+              if (closed) return DemandMailboxResult.UNKNOWN;
+              mailboxRollbackCalls++;
+              if (mailboxRollbackResult == DemandMailboxResult.SUCCESS) closed = true;
+              return mailboxRollbackResult;
+            }
+          });
     }
   }
 }

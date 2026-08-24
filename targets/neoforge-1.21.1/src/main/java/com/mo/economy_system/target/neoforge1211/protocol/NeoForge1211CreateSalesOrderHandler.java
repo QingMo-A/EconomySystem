@@ -35,7 +35,7 @@ public final class NeoForge1211CreateSalesOrderHandler {
                     new CreateSalesOrderService.Context(new InventoryAdapter(inventory, player), new AccountAdapter(accounts, player),
                             new RepositoryAdapter(market), player.getUUID(), player.getName().getString(), UUID::randomUUID,
                             System::currentTimeMillis, reporter(player)));
-            player.sendSystemMessage(messageFor(result, message.totalPrice()));
+            player.sendSystemMessage(messageFor(result, derivedTotalPrice(message)));
             if (result == CreateSalesOrderResult.SUCCESS) {
                 MarketInvalidationBroadcaster.broadcast(player);
             } else if (CreateSalesOrderFeedback.internalFailure(result)) {
@@ -49,6 +49,11 @@ public final class NeoForge1211CreateSalesOrderHandler {
         String key = CreateSalesOrderFeedback.messageKey(result);
         return result == CreateSalesOrderResult.INSUFFICIENT_FUNDS
                 ? Component.translatable(key, CreateSalesOrderService.taxFor(totalPrice)) : Component.translatable(key);
+    }
+
+    private static int derivedTotalPrice(CreateSalesOrderMessage message) {
+        try { return Math.multiplyExact(message.quantity(), message.unitPrice()); }
+        catch (ArithmeticException ignored) { return 0; }
     }
 
     private static CreateSalesOrderService.FailureReporter reporter(ServerPlayer player) {

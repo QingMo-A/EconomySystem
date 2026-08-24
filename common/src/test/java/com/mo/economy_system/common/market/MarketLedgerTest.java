@@ -209,6 +209,96 @@ class MarketLedgerTest {
     assertEquals(5, ledger.revision());
   }
 
+  @Test
+  void partialFillKeepsTradeIdReducesQuantityAndCanRollbackExactly() {
+    MarketOrder base = order(MarketOrderType.SALES, false);
+    MarketOrder sale = new MarketOrder(base.type(), base.tradeId(), base.item(), 64, 1_280,
+        base.sellerName(), base.sellerId(), base.listingTime(), base.expirationTime(), false);
+    MarketLedger ledger = new MarketLedger(() -> {});
+    ledger.loadFromPersistence(List.of(sale), 10);
+
+    MarketPartialFillTransition transition =
+        ledger.fillIfUnchanged(sale.tradeId(), MarketOrderType.SALES, sale, 10);
+
+    assertEquals(MarketPartialFillStatus.UPDATED, transition.status());
+    assertEquals(10, transition.filledQuantity());
+    assertEquals(200, transition.amount());
+    MarketOrder remaining = ledger.find(sale.tradeId());
+    assertNotNull(remaining);
+    assertEquals(sale.tradeId(), remaining.tradeId());
+    assertEquals(54, remaining.quantity());
+    assertEquals(1_080, remaining.totalPrice());
+    assertEquals(11, ledger.revision());
+
+    assertEquals(MarketPartialFillRollbackResult.RESTORED,
+        transition.rollback().orElseThrow().rollback());
+    assertEquals(sale, ledger.find(sale.tradeId()));
+    assertEquals(12, ledger.revision());
+  }
+
+  @Test
+  void fullFillRemovesOrderAndRollbackRestoresOriginalIndex() {
+    MarketOrder first = order(MarketOrderType.DEMAND, false);
+    MarketOrder sale = order(MarketOrderType.SALES, false);
+    MarketOrder last = order(MarketOrderType.DEMAND, false);
+    MarketLedger ledger = new MarketLedger(() -> {});
+    ledger.loadFromPersistence(List.of(first, sale, last), 3);
+
+    MarketPartialFillTransition transition =
+        ledger.fillIfUnchanged(sale.tradeId(), MarketOrderType.SALES, sale, sale.quantity());
+
+    assertEquals(MarketPartialFillStatus.REMOVED, transition.status());
+    assertEquals(List.of(first, last), ledger.orders());
+    assertEquals(MarketPartialFillRollbackResult.RESTORED,
+        transition.rollback().orElseThrow().rollback());
+    assertEquals(List.of(first, sale, last), ledger.orders());
+  }
+
+  @Test
+  void partialFillRejectsStaleExpectedAndNonDivisibleLegacySliceWithoutMutation() {
+    MarketOrder base = order(MarketOrderType.SALES, false);
+    MarketOrder legacy = new MarketOrder(base.type(), base.tradeId(), base.item(), 3, 10,
+        base.sellerName(), base.sellerId(), base.listingTime(), base.expirationTime(), false);
+    MarketLedger ledger = new MarketLedger(() -> {});
+    ledger.loadFromPersistence(List.of(legacy), 8);
+
+    MarketOrder stale = new MarketOrder(legacy.type(), legacy.tradeId(), legacy.item(), 4,
+        legacy.totalPrice(), legacy.sellerName(), legacy.sellerId(), legacy.listingTime(),
+        legacy.expirationTime(), false);
+    assertEquals(MarketPartialFillStatus.ORDER_CHANGED,
+        ledger.fillIfUnchanged(legacy.tradeId(), MarketOrderType.SALES, stale, 1).status());
+    assertEquals(MarketPartialFillStatus.NON_DIVISIBLE_PRICE,
+        ledger.fillIfUnchanged(legacy.tradeId(), MarketOrderType.SALES, legacy, 1).status());
+    assertEquals(List.of(legacy), ledger.orders());
+    assertEquals(8, ledger.revision());
+
+    MarketPartialFillTransition whole =
+        ledger.fillIfUnchanged(legacy.tradeId(), MarketOrderType.SALES, legacy, 3);
+    assertEquals(MarketPartialFillStatus.REMOVED, whole.status());
+    assertEquals(10, whole.amount());
+  }
+
+  @Test
+  void rollbackCannotOverwriteASecondCommittedFill() {
+    MarketOrder base = order(MarketOrderType.SALES, false);
+    MarketOrder sale = new MarketOrder(base.type(), base.tradeId(), base.item(), 10, 100,
+        base.sellerName(), base.sellerId(), base.listingTime(), base.expirationTime(), false);
+    MarketLedger ledger = new MarketLedger(() -> {});
+    ledger.loadFromPersistence(List.of(sale), 0);
+
+    MarketPartialFillTransition first =
+        ledger.fillIfUnchanged(sale.tradeId(), MarketOrderType.SALES, sale, 2);
+    MarketOrder afterFirst = first.remainingOrder().orElseThrow();
+    MarketPartialFillTransition second =
+        ledger.fillIfUnchanged(sale.tradeId(), MarketOrderType.SALES, afterFirst, 3);
+
+    assertEquals(MarketPartialFillStatus.UPDATED, second.status());
+    assertEquals(MarketPartialFillRollbackResult.ORDER_CHANGED,
+        first.rollback().orElseThrow().rollback());
+    assertEquals(5, ledger.find(sale.tradeId()).quantity());
+    assertEquals(50, ledger.find(sale.tradeId()).totalPrice());
+  }
+
   private static MarketOrder order() {
     return new MarketOrder(
         MarketOrderType.DEMAND,

@@ -1,6 +1,8 @@
 package com.mo.economy_system.ui.delivery;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
@@ -50,6 +52,64 @@ class DeliveryControllerTest {
 
     controller.handle(new DeliveryEvent.DataLoaded(1, List.of()));
     assertEquals(ScreenState.EMPTY, controller.state().screenState());
+  }
+
+  @Test
+  void silentRefreshAdoptsNewRequestIdWithoutSwitchingToLoading() {
+    FakePort port = new FakePort();
+    DeliveryController controller = new DeliveryController(port);
+    UUID mailId = UUID.randomUUID();
+    controller.handle(new DeliveryEvent.Initialize(10));
+    controller.handle(new DeliveryEvent.DataLoaded(1,
+        List.of(mail(mailId, UUID.randomUUID(), 1, true))));
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertTrue(controller.state().can(DeliveryAction.CLAIM));
+
+    controller.handle(new DeliveryEvent.RefreshStarted(2));
+
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(2, controller.state().requestId());
+    assertFalse(controller.state().can(DeliveryAction.CLAIM));
+    assertTrue(controller.state().can(DeliveryAction.BACK));
+
+    controller.handle(new DeliveryEvent.DataLoaded(1, List.of()));
+    assertEquals(1, controller.state().rows().size(), "stale pre-refresh response must be ignored");
+    assertEquals(2, controller.state().requestId());
+
+    controller.handle(new DeliveryEvent.RefreshFailed(2));
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertTrue(controller.state().can(DeliveryAction.CLAIM));
+  }
+
+  @Test
+  void liveRefreshKeepsSelectedMailVisibleWhenNewMailShiftsPages() {
+    FakePort port = new FakePort();
+    DeliveryController controller = new DeliveryController(port);
+    UUID firstMail = UUID.randomUUID();
+    UUID secondMail = UUID.randomUUID();
+    UUID newMail = UUID.randomUUID();
+
+    controller.handle(new DeliveryEvent.Initialize(10));
+    controller.handle(new DeliveryEvent.DataLoaded(1, List.of(
+        mail(firstMail, UUID.randomUUID(), 1, true),
+        mail(secondMail, UUID.randomUUID(), 1, true))));
+    controller.handle(new DeliveryEvent.ViewportChanged(1));
+    controller.handle(new DeliveryEvent.NextPage());
+    controller.handle(new DeliveryEvent.MailSelected(secondMail));
+    assertEquals(1, controller.state().page());
+    assertEquals(secondMail, controller.state().selectedEntryId());
+
+    controller.handle(new DeliveryEvent.RefreshStarted(2));
+    controller.handle(new DeliveryEvent.DataLoaded(2, List.of(
+        mail(newMail, UUID.randomUUID(), 1, false),
+        mail(firstMail, UUID.randomUUID(), 1, true),
+        mail(secondMail, UUID.randomUUID(), 1, true))));
+
+    assertEquals(2, controller.state().requestId());
+    assertEquals(secondMail, controller.state().selectedEntryId());
+    assertEquals(2, controller.state().page());
+    assertEquals(secondMail, controller.state().visibleRows().get(0).mailId());
+    assertTrue(controller.state().can(DeliveryAction.CLAIM));
   }
 
   @Test

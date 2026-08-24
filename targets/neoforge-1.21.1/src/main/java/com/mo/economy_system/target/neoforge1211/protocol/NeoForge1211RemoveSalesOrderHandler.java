@@ -35,6 +35,7 @@ public final class NeoForge1211RemoveSalesOrderHandler {
                   materializer,
                   id -> resolve(actor, id),
                   new Repository(data),
+                  new NeoForge1211DemandMailboxBridge(actor),
                   reporter()));
     } catch (RuntimeException exception) {
       EconomySystem.LOGGER.error(

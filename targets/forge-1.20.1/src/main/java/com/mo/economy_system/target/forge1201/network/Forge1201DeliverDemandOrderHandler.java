@@ -37,6 +37,7 @@ final class Forge1201DeliverDemandOrderHandler {
                   i,
                   new Account(a, p),
                   new Repo(d),
+                  new Forge1201DemandMailboxBridge(p),
                   Forge1201DeliverDemandOrderHandler::reportFailure));
     } catch (RuntimeException e) {
       LOGGER.error("Demand delivery infrastructure failed", e);
@@ -51,10 +52,10 @@ final class Forge1201DeliverDemandOrderHandler {
         MarketActionPostPlan.build(
             o.mutationState(),
             o.result() == DemandOrderDeliveryResult.SUCCESS,
-            o.result() == DemandOrderDeliveryResult.SUCCESS,
+            false,
             () -> Forge1201MarketInvalidation.broadcast(p),
             () -> feedback(p, o),
-            () -> notify(p, a, o.deliveredOrder().orElseThrow())),
+            () -> {}),
         (stage, e) -> LOGGER.error("Demand delivery post action failed stage={}", stage, e));
   }
 
@@ -118,9 +119,9 @@ final class Forge1201DeliverDemandOrderHandler {
       return d.getOrder(id);
     }
 
-    public DemandDeliveryTransition markDemandDeliveredIfUnchanged(
-        java.util.UUID id, MarketOrder e) {
-      return d.markDemandDeliveredIfUnchanged(id, e);
+    public MarketPartialFillTransition fillIfUnchanged(
+        java.util.UUID id, MarketOrderType expectedType, MarketOrder expected, int quantity) {
+      return d.fillIfUnchanged(id, expectedType, expected, quantity);
     }
   }
 

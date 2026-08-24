@@ -73,6 +73,14 @@ public final class MarketSavedData extends SavedData {
     return ledger.removeSalesTransactional(id);
   }
 
+  public com.mo.economy_system.common.market.MarketPartialFillTransition fillIfUnchanged(
+      java.util.UUID id,
+      com.mo.economy_system.common.market.MarketOrderType expectedType,
+      com.mo.economy_system.common.market.MarketOrder expected,
+      int quantity) {
+    return ledger.fillIfUnchanged(id, expectedType, expected, quantity);
+  }
+
   public com.mo.economy_system.common.market.DeliveredDemandRemovalResult
       removeDeliveredDemandTransactional(java.util.UUID id) {
     return ledger.removeDeliveredDemandTransactional(id);

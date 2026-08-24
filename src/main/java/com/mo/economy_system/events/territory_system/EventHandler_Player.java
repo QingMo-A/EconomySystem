@@ -16,9 +16,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -197,10 +196,20 @@ public class EventHandler_Player {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
         BlockPos pos = event.getPos(); // 获取右键点击的方块位置
-        TerritoryPermissionAction action = isContainerBlock(serverPlayer, pos) ? TerritoryPermissionAction.OPEN_CONTAINER : TerritoryPermissionAction.INTERACT_BLOCK;
-        if (!hasPermission(serverPlayer, pos, action)) {
-            event.setCanceled(true);
-            serverPlayer.sendSystemMessage(Component.literal(action == TerritoryPermissionAction.OPEN_CONTAINER ? "§c你没有权限在此领地打开容器！" : "§c你没有权限在此领地右键操作方块！"));
+        TerritoryPermissionAction blockAction = isContainerBlock(serverPlayer, pos)
+                ? TerritoryPermissionAction.OPEN_CONTAINER
+                : TerritoryPermissionAction.INTERACT_BLOCK;
+        boolean blockAllowed = hasPermission(serverPlayer, pos, blockAction);
+        boolean itemAllowed = serverPlayer.getItemInHand(event.getHand()).isEmpty()
+                || hasPermission(serverPlayer, pos, TerritoryPermissionAction.USE_ITEM);
+        if (!blockAllowed) event.setUseBlock(TriState.FALSE);
+        if (!itemAllowed) event.setUseItem(TriState.FALSE);
+        if (!blockAllowed) {
+            serverPlayer.sendSystemMessage(Component.literal(blockAction == TerritoryPermissionAction.OPEN_CONTAINER
+                    ? "§c你没有权限在此领地打开容器！"
+                    : "§c你没有权限在此领地右键操作方块！"));
+        } else if (!itemAllowed) {
+            serverPlayer.sendSystemMessage(Component.literal("§c你没有权限在此领地使用物品！"));
         }
     }
 
@@ -219,8 +228,10 @@ public class EventHandler_Player {
     }
 
     private static boolean isContainerBlock(ServerPlayer player, BlockPos pos) {
-        Block block = player.serverLevel().getBlockState(pos).getBlock();
-        return block instanceof BaseEntityBlock || player.serverLevel().getBlockEntity(pos) != null;
+        // Block entities also back many non-container interactions (signs, beehives, etc.).
+        // Treat only blocks exposing a vanilla menu provider as OPEN_CONTAINER.
+        return player.serverLevel().getBlockState(pos)
+                .getMenuProvider(player.serverLevel(), pos) != null;
     }
 
     /**

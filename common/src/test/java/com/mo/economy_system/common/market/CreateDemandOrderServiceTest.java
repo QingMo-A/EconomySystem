@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 class CreateDemandOrderServiceTest {
   @Test
-  void successFreezesTotalOnceWithoutTaxOrQuantityMultiplication() {
+  void successDerivesTotalFromUnitPriceAndFreezesItExactlyOnce() {
     Fixture f = new Fixture();
     assertEquals(CreateDemandOrderResult.SUCCESS, f.execute());
     assertEquals(900, f.account.balance);
@@ -22,6 +22,7 @@ class CreateDemandOrderServiceTest {
     assertEquals(MarketOrderType.DEMAND, order.type());
     assertEquals(5, order.quantity());
     assertEquals(100, order.totalPrice());
+    assertEquals(20, MarketOrderPricing.exactUnitPrice(order).orElseThrow());
     assertEquals(1, order.item().count());
     assertFalse(order.delivered());
     assertEquals(f.buyer, order.sellerId());
@@ -78,6 +79,16 @@ class CreateDemandOrderServiceTest {
       assertTrue(f.repository.orders.isEmpty());
       assertEquals(0, f.account.debits);
     }
+  }
+
+  @Test
+  void unitPriceOverflowIsRejectedBeforeFundsAreFrozen() {
+    Fixture f = new Fixture();
+    f.message = new CreateDemandOrderMessage("minecraft:stone", 2, Integer.MAX_VALUE);
+    assertEquals(CreateDemandOrderResult.INVALID_PRICE, f.execute());
+    assertEquals(1000, f.account.balance);
+    assertEquals(0, f.account.debits);
+    assertTrue(f.repository.orders.isEmpty());
   }
 
   @Test
@@ -163,7 +174,7 @@ class CreateDemandOrderServiceTest {
   private static final class Fixture {
     UUID buyer = UUID.randomUUID(), id = UUID.randomUUID();
     long now = 10;
-    CreateDemandOrderMessage message = new CreateDemandOrderMessage("minecraft:stone", 5, 100);
+    CreateDemandOrderMessage message = new CreateDemandOrderMessage("minecraft:stone", 5, 20);
     DemandItemResolveResult resolve =
         DemandItemResolveResult.success(new ResolvedDemandItem("minecraft:stone", item(), 64));
     FakeAccount account = new FakeAccount();

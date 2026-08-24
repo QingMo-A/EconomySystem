@@ -7,10 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.common.market.MarketOrderType;
 import com.mo.economy_system.common.network.MarketOrderFilter;
+import com.mo.economy_system.common.network.MarketOrderSort;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.core.UiNavigation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class MarketControllerTest {
@@ -132,6 +134,64 @@ class MarketControllerTest {
   }
 
   @Test
+  void sortingIsServerSideQueryStateAndResetsToFirstPage() {
+    FakePort port = new FakePort();
+    MarketController controller = new MarketController(MarketTestFixtures.VIEWER, port);
+    controller.handle(new MarketEvent.Initialize(0));
+    controller.handle(new MarketEvent.DataLoaded(0, 1, 0, 20, 10, 10,
+        MarketTestFixtures.orders(9)));
+    controller.handle(new MarketEvent.NextPage());
+    controller.handle(new MarketEvent.DataLoaded(1, 1, 9, 20, 10, 10,
+        MarketTestFixtures.orders(9)));
+    assertEquals(1, controller.state().page());
+
+    controller.handle(new MarketEvent.SortChanged(MarketOrderSort.UNIT_PRICE_ASC));
+
+    assertEquals(MarketOrderSort.UNIT_PRICE_ASC, controller.state().sort());
+    assertEquals(0, controller.state().page());
+    assertEquals(new Request(2, 0, MarketOrderFilter.ALL, MarketOrderSort.UNIT_PRICE_ASC, ""),
+        port.requests.get(2));
+  }
+
+  @Test
+  void silentRefreshKeepsVisibleRowsAndDoesNotFlashLoadingOrError() {
+    FakePort port = new FakePort();
+    MarketController controller = new MarketController(MarketTestFixtures.VIEWER, port);
+    controller.handle(new MarketEvent.Initialize(0));
+    controller.handle(new MarketEvent.DataLoaded(0, 1, 0, 9, 9, 0,
+        MarketTestFixtures.orders(9)));
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(9, controller.state().rows().size());
+
+    controller.handle(new MarketEvent.Refresh(100));
+
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(9, controller.state().rows().size());
+    assertEquals(new Request(1, 0, MarketOrderFilter.ALL, MarketOrderSort.DEFAULT, ""),
+        port.requests.get(1));
+
+    controller.handle(new MarketEvent.DataFailed(1, "ignored-live-refresh-error"));
+    assertEquals(ScreenState.READY, controller.state().screenState());
+    assertEquals(9, controller.state().rows().size());
+  }
+
+  @Test
+  void silentRefreshCarriesSelectedTradeFocusWithoutChangingQueryOrSort() {
+    FakePort port = new FakePort();
+    MarketController controller = new MarketController(MarketTestFixtures.VIEWER, port);
+    controller.handle(new MarketEvent.Initialize(0));
+    controller.handle(new MarketEvent.DataLoaded(0, 1, 9, 20, 10, 10,
+        MarketTestFixtures.orders(9)));
+    UUID focused = UUID.randomUUID();
+
+    controller.handle(new MarketEvent.Refresh(100, focused));
+
+    assertEquals(new Request(1, 9, MarketOrderFilter.ALL, MarketOrderSort.DEFAULT, "", focused),
+        port.requests.get(1));
+    assertEquals(ScreenState.READY, controller.state().screenState());
+  }
+
+  @Test
   void initializeCanBeRepeatedToRefreshAnExistingMarketScreen() {
     FakePort port = new FakePort();
     MarketController controller = new MarketController(MarketTestFixtures.VIEWER, port);
@@ -151,12 +211,29 @@ class MarketControllerTest {
 
     @Override public long nextRequestId() { return nextId++; }
     @Override public void requestPage(long requestId, int offset, MarketOrderFilter filter, String query) {
-      requests.add(new Request(requestId, offset, filter, query));
+      requests.add(new Request(requestId, offset, filter, MarketOrderSort.DEFAULT, query));
+    }
+    @Override public void requestPage(long requestId, int offset, MarketOrderFilter filter,
+                                      MarketOrderSort sort, String query) {
+      requests.add(new Request(requestId, offset, filter, sort, query, null));
+    }
+    @Override public void requestPage(long requestId, int offset, MarketOrderFilter filter,
+                                      MarketOrderSort sort, String query, UUID focusTradeId) {
+      requests.add(new Request(requestId, offset, filter, sort, query, focusTradeId));
     }
     @Override public void submit(MarketAction action, MarketRow row) {}
     @Override public void confirm(MarketAction action, MarketRow row) { confirmed.add(action); }
     @Override public void create(MarketAction action) { created.add(action); }
   }
 
-  private record Request(long requestId, int offset, MarketOrderFilter filter, String query) {}
+  private record Request(long requestId, int offset, MarketOrderFilter filter,
+                         MarketOrderSort sort, String query, UUID focusTradeId) {
+    private Request(long requestId, int offset, MarketOrderFilter filter, String query) {
+      this(requestId, offset, filter, MarketOrderSort.DEFAULT, query, null);
+    }
+    private Request(long requestId, int offset, MarketOrderFilter filter,
+                    MarketOrderSort sort, String query) {
+      this(requestId, offset, filter, sort, query, null);
+    }
+  }
 }

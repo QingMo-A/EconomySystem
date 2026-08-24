@@ -24,13 +24,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -107,13 +106,18 @@ public final class Forge1201TerritoryEvents {
   @SubscribeEvent(priority = EventPriority.HIGH)
   public static void onBlockRightClick(PlayerInteractEvent.RightClickBlock event) {
     if (!(event.getEntity() instanceof ServerPlayer player)) return;
-    RuleAction action = isContainerBlock(player, event.getPos())
+    BlockPos position = event.getPos();
+    RuleAction blockAction = isContainerBlock(player, position)
         ? RuleAction.OPEN_CONTAINER
         : RuleAction.INTERACT_BLOCK;
-    if (!hasPermission(player, event.getPos(), action)) {
-      deny(player, action);
-      event.setCanceled(true);
-    }
+    boolean blockAllowed = hasPermission(player, position, blockAction);
+    boolean itemAllowed = player.getItemInHand(event.getHand()).isEmpty()
+        || hasPermission(player, position, RuleAction.USE_ITEM);
+
+    if (!blockAllowed) event.setUseBlock(Event.Result.DENY);
+    if (!itemAllowed) event.setUseItem(Event.Result.DENY);
+    if (!blockAllowed) deny(player, blockAction);
+    else if (!itemAllowed) deny(player, RuleAction.USE_ITEM);
   }
 
   @SubscribeEvent
@@ -155,12 +159,17 @@ public final class Forge1201TerritoryEvents {
   }
 
   private static boolean isContainerBlock(ServerPlayer player, BlockPos position) {
-    Block block = player.serverLevel().getBlockState(position).getBlock();
-    return block instanceof BaseEntityBlock || player.serverLevel().getBlockEntity(position) != null;
+    // A block entity does not imply a container (signs, beehives, enchanting tables, etc.).
+    // Use the vanilla menu-provider contract so OPEN_CONTAINER is reserved for interactions that
+    // actually open a server-backed menu; ordinary block interactions stay under INTERACT_BLOCK.
+    return player.serverLevel().getBlockState(position)
+        .getMenuProvider(player.serverLevel(), position) != null;
   }
 
   private static void deny(ServerPlayer player, RuleAction action) {
-    player.sendSystemMessage(Component.translatable(TerritoryRuntimePolicy.denialMessageKey(action)));
+    player.sendSystemMessage(
+        Component.translatable(TerritoryRuntimePolicy.denialMessageKey(action))
+            .withStyle(ChatFormatting.RED));
   }
 
   private static void notifyEnter(ServerPlayer player, Owned territory) {

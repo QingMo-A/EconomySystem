@@ -99,7 +99,7 @@ public final class CheckResultView {
           "screen.check_result.incomplete",
           List.of(),
           new UiRect(status.x() + 8, status.y() + 50, status.width() - 16, 14),
-          EconomyUiTheme.TEXT_MUTED,
+          EconomyUiTheme.TEXT_ERROR,
           UiTextAlignment.LEFT);
     }
     if (state.localIncomplete()) {
@@ -107,7 +107,7 @@ public final class CheckResultView {
           "screen.check_result.local_comparison_warning",
           List.of(),
           new UiRect(status.x() + 8, status.y() + 64, status.width() - 16, 14),
-          EconomyUiTheme.TEXT_MUTED,
+          EconomyUiTheme.TEXT_ERROR,
           UiTextAlignment.LEFT);
     }
   }

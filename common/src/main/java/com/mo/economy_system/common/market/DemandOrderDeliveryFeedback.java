@@ -21,6 +21,10 @@ public final class DemandOrderDeliveryFeedback {
           "message.market.deliver_demand.inventory_failed";
       case INSUFFICIENT_ITEMS -> "message.market.deliver_demand.insufficient_items";
       case RECIPIENT_BALANCE_LIMIT -> "message.market.deliver_demand.balance_limit";
+      case PARTIAL_FILL_UNSUPPORTED -> "message.market.deliver_demand.whole_only";
+      case MAILBOX_FULL -> "message.market.deliver_demand.mailbox_full";
+      case MAILBOX_DELIVERY_FAILED -> "message.market.deliver_demand.mailbox_failed";
+      case MAILBOX_STATE_UNKNOWN -> "message.market.deliver_demand.state_unknown";
       case PAYMENT_FAILED -> "message.market.deliver_demand.payment_failed";
       case PAYMENT_STATE_UNKNOWN -> "message.market.deliver_demand.state_unknown";
       case ORDER_CHANGED -> "message.market.deliver_demand.order_changed";

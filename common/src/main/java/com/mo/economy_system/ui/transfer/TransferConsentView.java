@@ -39,7 +39,7 @@ public final class TransferConsentView {
         "screen.transfer_consent.hash", List.of(state.sha256()), rows.get(4),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
     renderer.translatedTextInRect(
-        "screen.transfer_consent.warning", List.of(), layout.warning(), EconomyUiTheme.TEXT_MUTED,
+        "screen.transfer_consent.warning", List.of(), layout.warning(), EconomyUiTheme.TEXT_ERROR,
         UiTextAlignment.LEFT);
     renderer.translatedButton(
         layout.allow(), EconomyUiTheme.HOME_DELIVERY_BUTTON, "button.transfer.allow", List.of(),

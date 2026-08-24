@@ -49,9 +49,8 @@ class DeliveryLegacyReferenceParityTest {
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")
         && op.value().startsWith("screen.mailbox.attachments")));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemWithCount")));
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
-        && op.rect().equals(layout.attachmentCard())
-        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("fill")
+        && op.rect().equals(layout.attachmentCard())));
   }
 
   @Test
@@ -65,12 +64,11 @@ class DeliveryLegacyReferenceParityTest {
     DeliveryView.render(renderer, state, layout, 0, 0);
 
     UiRect selectedRect = layout.cards().get(1).card();
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
-        && op.rect().equals(selectedRect)
-        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
-    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
-        && op.rect().equals(layout.attachmentCard())
-        && op.value().contains("accent=" + EconomyUiTheme.DELIVERY_ACCENT)));
+    assertTrue(renderer.paints().stream().anyMatch(op -> op.kind().equals("fill")
+        && op.rect().equals(new UiRect(selectedRect.x(), selectedRect.y(), 2, selectedRect.height()))
+        && op.argb() == EconomyUiTheme.DELIVERY_ACCENT));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("itemWithCount")
+        && op.rect().equals(layout.detailItemIcon())));
   }
 
   @Test

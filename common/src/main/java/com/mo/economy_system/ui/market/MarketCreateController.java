@@ -151,9 +151,9 @@ public final class MarketCreateController
       return;
     }
     if (state().mode() == MarketCreateMode.SALES) {
-      port.submitSales(state().selectedSlot(), state().quantity(), state().totalPrice());
+      port.submitSales(state().selectedSlot(), state().quantity(), state().unitPrice());
     } else {
-      port.submitDemand(state().itemId(), state().quantity(), state().totalPrice());
+      port.submitDemand(state().itemId(), state().quantity(), state().unitPrice());
     }
     navigate(new UiNavigation.Back());
   }
@@ -167,7 +167,8 @@ public final class MarketCreateController
       int max = Math.max(1, port.maxStackSize(state().itemId()));
       if (state().quantity() < 1 || state().quantity() > max) return "screen.market.create.invalid_quantity";
     }
-    return state().totalPrice() < 1 ? "screen.market.create.invalid_price" : null;
+    if (state().unitPrice() < 1) return "screen.market.create.invalid_price";
+    return state().computedOrderTotalFitsInt() ? null : "screen.market.create.price_overflow";
   }
 
   private int maxQuantity() {

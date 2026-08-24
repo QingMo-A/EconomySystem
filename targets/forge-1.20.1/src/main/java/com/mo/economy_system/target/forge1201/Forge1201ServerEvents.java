@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201;
 import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.economy.ShopPriceRefreshSchedule;
 import com.mo.economy_system.common.market.MarketExpirationSchedule;
+import com.mo.economy_system.common.network.ShopDataResponseMessage;
 import com.mo.economy_system.core.territory_system.TerritoryBuffManager;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.market.MarketSavedData;
@@ -89,8 +90,16 @@ public final class Forge1201ServerEvents {
     ServerLevel overworld = event.getServer().overworld();
     if (!SHOP_REFRESH_SCHEDULE.shouldRefresh(overworld.getDayTime())) return;
     if (!EconomyServices.platform().shopCatalog().refreshPrices()) return;
-    event.getServer().getPlayerList().getPlayers().forEach(player ->
-        player.sendSystemMessage(Component.translatable(ShopPriceRefreshSchedule.REFRESH_MESSAGE_KEY)));
+    ShopDataResponseMessage refreshedCatalog = new ShopDataResponseMessage(
+        EconomyServices.platform().shopCatalog().snapshot());
+    event.getServer().getPlayerList().getPlayers().forEach(player -> {
+      try {
+        EconomyServices.platform().network().sendToPlayer(player.getUUID(), refreshedCatalog);
+      } catch (RuntimeException syncFailure) {
+        LOGGER.warn("Shop live catalog sync failed player={}", player.getUUID(), syncFailure);
+      }
+      player.sendSystemMessage(Component.translatable(ShopPriceRefreshSchedule.REFRESH_MESSAGE_KEY));
+    });
   }
 
   @SubscribeEvent

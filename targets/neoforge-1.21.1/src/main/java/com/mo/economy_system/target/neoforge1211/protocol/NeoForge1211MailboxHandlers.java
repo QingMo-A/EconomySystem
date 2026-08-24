@@ -8,6 +8,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxClaimService;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.mail.MailRecord;
 import com.mo.economy_system.common.mail.MailType;
+import com.mo.economy_system.common.mail.MailboxCapacityPolicy;
 import com.mo.economy_system.common.mail.MailboxLedger;
 import com.mo.economy_system.common.mail.MailboxQueryService;
 import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
@@ -133,7 +134,10 @@ public final class NeoForge1211MailboxHandlers {
   }
 
   public static void notification(MailboxNotificationMessage message, IPayloadContext context) {
-    context.enqueueWork(() -> NeoForge1211MailboxNotifications.show(message));
+    context.enqueueWork(() -> {
+      ClientMailboxState.invalidate();
+      NeoForge1211MailboxNotifications.show(message);
+    });
   }
 
   public static void notifyNewMail(ServerPlayer recipient, MailType type, String senderName, String subject) {
@@ -193,11 +197,12 @@ public final class NeoForge1211MailboxHandlers {
 
     MailboxSavedData mailbox = MailboxSavedData.getInstance(sender.serverLevel());
     DeliveryBoxSavedData delivery = DeliveryBoxSavedData.getInstance(sender.serverLevel());
-    if (mailbox.ledger().listPersonal(recipientId).size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
+    if (!MailboxCapacityPolicy.canAddPersonal(
+        MailType.PLAYER, mailbox.ledger().listPersonal(recipientId).size())) {
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     }
-    if (delivery.ledger().list(recipientId).size() + message.inventorySlots().size()
-        > EconomyNetworkLimits.MAX_DELIVERY_BOX_ENTRIES) {
+    if (!MailboxCapacityPolicy.canAddPlayerDeliveries(
+        delivery.ledger().list(recipientId).size(), message.inventorySlots().size())) {
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     }
 

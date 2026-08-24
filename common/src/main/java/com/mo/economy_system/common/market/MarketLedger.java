@@ -195,6 +195,88 @@ public final class MarketLedger {
     return DeliveredDemandRemovalResult.failure(DeliveredDemandRemovalStatus.NOT_FOUND);
   }
 
+  /**
+   * Atomically reserves a partial/full fill against an exact expected order snapshot.
+   * Partial fills preserve the same trade id and reduce both remaining quantity and value.
+   * Full fills remove the order. The rollback token only restores when no later mutation has
+   * changed the same trade id, so it cannot overwrite a newer fill.
+   */
+  public synchronized MarketPartialFillTransition fillIfUnchanged(
+      UUID tradeId,
+      MarketOrderType expectedType,
+      MarketOrder expectedOrder,
+      int fillQuantity) {
+    Objects.requireNonNull(tradeId, "tradeId");
+    Objects.requireNonNull(expectedType, "expectedType");
+    Objects.requireNonNull(expectedOrder, "expectedOrder");
+
+    for (int index = 0; index < orders.size(); index++) {
+      MarketOrder current = orders.get(index);
+      if (!current.tradeId().equals(tradeId)) continue;
+      if (current.type() != expectedType)
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.WRONG_ORDER_TYPE);
+      if (current.type() == MarketOrderType.DEMAND && current.delivered())
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.ALREADY_DELIVERED);
+      if (!current.equals(expectedOrder))
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.ORDER_CHANGED);
+      if (fillQuantity <= 0 || fillQuantity > current.quantity())
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.INVALID_QUANTITY);
+      if (fillQuantity < current.quantity() && !MarketOrderPricing.supportsPartialFill(current))
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.NON_DIVISIBLE_PRICE);
+
+      int amount;
+      try {
+        amount = MarketOrderPricing.fillAmount(current, fillQuantity);
+      } catch (ArithmeticException error) {
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.PRICE_OVERFLOW);
+      } catch (IllegalArgumentException error) {
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.INVALID_QUANTITY);
+      }
+      if (revision == Long.MAX_VALUE)
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.PERSIST_FAILED);
+
+      int originalIndex = index;
+      if (fillQuantity == current.quantity()) {
+        orders.remove(index);
+        try {
+          dirtyCallback.run();
+        } catch (RuntimeException exception) {
+          orders.add(index, current);
+          return MarketPartialFillTransition.failure(MarketPartialFillStatus.PERSIST_FAILED);
+        }
+        revision++;
+        return MarketPartialFillTransition.applied(
+            current, null, fillQuantity, amount,
+            () -> rollbackRemovedFill(current, originalIndex));
+      }
+
+      MarketOrder updated =
+          new MarketOrder(
+              current.type(),
+              current.tradeId(),
+              current.item(),
+              current.quantity() - fillQuantity,
+              current.totalPrice() - amount,
+              current.sellerName(),
+              current.sellerId(),
+              current.listingTime(),
+              current.expirationTime(),
+              false);
+      orders.set(index, updated);
+      try {
+        dirtyCallback.run();
+      } catch (RuntimeException exception) {
+        orders.set(index, current);
+        return MarketPartialFillTransition.failure(MarketPartialFillStatus.PERSIST_FAILED);
+      }
+      revision++;
+      return MarketPartialFillTransition.applied(
+          current, updated, fillQuantity, amount,
+          () -> rollbackUpdatedFill(updated, current, originalIndex));
+    }
+    return MarketPartialFillTransition.failure(MarketPartialFillStatus.NOT_FOUND);
+  }
+
   private RemovalAttempt removeMatching(UUID tradeId, MarketOrderType expectedType) {
     for (int index = 0; index < orders.size(); index++) {
       MarketOrder order = orders.get(index);
@@ -231,6 +313,43 @@ public final class MarketLedger {
     }
     revision++;
     return MarketOrderRestoreResult.RESTORED;
+  }
+
+  private synchronized MarketPartialFillRollbackResult rollbackRemovedFill(
+      MarketOrder previous, int originalIndex) {
+    if (orders.stream().anyMatch(existing -> existing.tradeId().equals(previous.tradeId())))
+      return MarketPartialFillRollbackResult.ORDER_CHANGED;
+    if (revision == Long.MAX_VALUE) return MarketPartialFillRollbackResult.PERSIST_FAILED;
+    int restoredIndex = Math.min(originalIndex, orders.size());
+    orders.add(restoredIndex, previous);
+    try {
+      dirtyCallback.run();
+    } catch (RuntimeException exception) {
+      orders.remove(restoredIndex);
+      return MarketPartialFillRollbackResult.PERSIST_FAILED;
+    }
+    revision++;
+    return MarketPartialFillRollbackResult.RESTORED;
+  }
+
+  private synchronized MarketPartialFillRollbackResult rollbackUpdatedFill(
+      MarketOrder expectedCurrent, MarketOrder previous, int originalIndex) {
+    for (int index = 0; index < orders.size(); index++) {
+      MarketOrder current = orders.get(index);
+      if (!current.tradeId().equals(previous.tradeId())) continue;
+      if (!current.equals(expectedCurrent)) return MarketPartialFillRollbackResult.ORDER_CHANGED;
+      if (revision == Long.MAX_VALUE) return MarketPartialFillRollbackResult.PERSIST_FAILED;
+      orders.set(index, previous);
+      try {
+        dirtyCallback.run();
+      } catch (RuntimeException exception) {
+        orders.set(index, current);
+        return MarketPartialFillRollbackResult.PERSIST_FAILED;
+      }
+      revision++;
+      return MarketPartialFillRollbackResult.RESTORED;
+    }
+    return MarketPartialFillRollbackResult.ORDER_CHANGED;
   }
 
   public synchronized void replaceAll(List<MarketOrder> restored) {

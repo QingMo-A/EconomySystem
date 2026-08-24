@@ -71,7 +71,7 @@ public final class UiChromePlan {
                     new UiRect(rect.x(), rect.y(), 1, rect.height()), border));
             commands.add(new UiFillCommand(
                     new UiRect(rect.right() - 1, rect.y(), 1, rect.height()), border));
-            if (enabled && rect.width() > 4 && rect.height() > 1) {
+            if (style.glowHeight() == 0 && enabled && rect.width() > 4 && rect.height() > 1) {
                 commands.add(new UiFillCommand(
                         new UiRect(rect.x() + 2, rect.y() + 1, rect.width() - 4, 1),
                         0x60FFFFFF));

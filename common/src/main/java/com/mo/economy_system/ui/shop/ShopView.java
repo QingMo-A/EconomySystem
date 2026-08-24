@@ -1,5 +1,7 @@
 package com.mo.economy_system.ui.shop;
 
+import com.mo.economy_system.ui.component.UiPanel;
+import com.mo.economy_system.ui.component.UiSection;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
@@ -31,6 +33,11 @@ public final class ShopView {
 
   public static void render(EconomyUiRenderer renderer, ShopState state, ShopLayout.Layout layout,
                             int mouseX, int mouseY) {
+    render(renderer, state, layout, null, mouseX, mouseY);
+  }
+
+  public static void render(EconomyUiRenderer renderer, ShopState state, ShopLayout.Layout layout,
+                            ShopPurchaseState purchaseState, int mouseX, int mouseY) {
     renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.SHOP, "screen.shop.title", List.of(),
         layout.title().x() + 8, layout.title().y() + 5,
@@ -38,6 +45,9 @@ public final class ShopView {
         EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.shop.esc", List.of(), layout.esc(), EconomyUiTheme.TEXT_MUTED,
         UiTextAlignment.RIGHT);
+
+    UiPanel.render(renderer, layout.catalogArea(), false);
+    ShopInlinePurchaseView.render(renderer, purchaseState, layout, mouseX, mouseY);
 
     if (state.screenState() == ScreenState.LOADING) {
       renderer.translatedTextInRect("screen.shop.loading", List.of(), layout.message(), EconomyUiTheme.TEXT_PRIMARY,
@@ -62,6 +72,10 @@ public final class ShopView {
       String formattedPrice = "\uffe5" + UiNumbers.formatInteger(item.currentPrice());
       renderer.textInRect(formattedPrice, new UiRect(card.card().x() + 6, card.card().y() + 6,
           card.card().width() - 12, lineHeight), EconomyUiTheme.BALANCE_ACCENT, UiTextAlignment.RIGHT);
+      if (purchaseState != null
+          && purchaseState.row().item().shopItemId().equals(card.row().item().shopItemId())) {
+        UiSection.selectionGlow(renderer, card.card(), EconomyUiTheme.SHOP_ACCENT);
+      }
     }
     if (state.totalPages() > 1) {
       boolean previousEnabled = state.page() > 0;

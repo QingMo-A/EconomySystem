@@ -17,6 +17,11 @@ public final class UiNumbers {
         return String.format(Locale.ROOT, "%,d", value);
     }
 
+    /** Formats a long with the same locale-stable thousands separators. */
+    public static String formatInteger(long value) {
+        return String.format(Locale.ROOT, "%,d", value);
+    }
+
     /** Legacy market compact formatter (implemented in the strict UI closure). */
     public static String formatLegacyMarketNumber(int value) {
         if (value >= 10_000) {

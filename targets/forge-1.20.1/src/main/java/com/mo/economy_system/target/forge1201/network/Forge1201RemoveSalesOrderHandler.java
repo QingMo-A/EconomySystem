@@ -38,6 +38,7 @@ final class Forge1201RemoveSalesOrderHandler {
                   materializer,
                   id -> resolve(actor, id),
                   new Repository(data),
+                  new Forge1201DemandMailboxBridge(actor),
                   reporter()));
     } catch (RuntimeException exception) {
       LOGGER.error(

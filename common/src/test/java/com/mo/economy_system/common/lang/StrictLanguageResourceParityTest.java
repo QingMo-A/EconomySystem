@@ -44,6 +44,7 @@ class StrictLanguageResourceParityTest {
           "itemGroup.economy_system.tab",
           "screen.home.version",
           "button.territory.delete_short",
+          "screen.territory.detail.settings.copy_id.description",
           "screen.territory.buff.tooltip.cost.item_unknown");
 
   @Test

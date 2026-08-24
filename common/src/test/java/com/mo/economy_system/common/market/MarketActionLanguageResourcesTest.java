@@ -46,6 +46,9 @@ class MarketActionLanguageResourcesTest {
           "message.market.remove_sales.not_owner",
           "message.market.remove_sales.owner_offline",
           "message.market.remove_sales.inventory_full",
+          "message.market.remove_sales.mailbox_full",
+          "message.market.remove_sales.mailbox_failed",
+          "message.market.remove_sales.mailbox_state_unknown",
           "message.market.remove_sales.order_changed",
           "message.market.remove_sales.persist_failed",
           "message.market.remove_sales.item_failed",
@@ -61,6 +64,9 @@ class MarketActionLanguageResourcesTest {
           "message.market.deliver_demand.item_failed",
           "message.market.deliver_demand.insufficient_items",
           "message.market.deliver_demand.balance_limit",
+          "message.market.deliver_demand.whole_only",
+          "message.market.deliver_demand.mailbox_full",
+          "message.market.deliver_demand.mailbox_failed",
           "message.market.deliver_demand.inventory_failed",
           "message.market.deliver_demand.payment_failed",
           "message.market.deliver_demand.order_changed",
@@ -105,6 +111,8 @@ class MarketActionLanguageResourcesTest {
     }
     for (DemandOrderDeliveryResult result : DemandOrderDeliveryResult.values())
       assertTrue(KEYS.contains(DemandOrderDeliveryFeedback.translationKey(result)));
+    for (RemoveSalesOrderResult result : RemoveSalesOrderResult.values())
+      assertTrue(KEYS.contains(RemoveSalesOrderFeedback.key(result)));
   }
 
   private static Set<String> marketKeys(JsonObject json) {

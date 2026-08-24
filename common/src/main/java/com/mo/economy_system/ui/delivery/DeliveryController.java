@@ -31,6 +31,8 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
   @Override public void handle(DeliveryEvent event) {
     if (event instanceof DeliveryEvent.Initialize value) request(value.nowNanos());
     else if (event instanceof DeliveryEvent.Retry value) request(value.nowNanos());
+    else if (event instanceof DeliveryEvent.RefreshStarted value) refreshStarted(value.requestId());
+    else if (event instanceof DeliveryEvent.RefreshFailed value) refreshFailed(value.requestId());
     else if (event instanceof DeliveryEvent.DataLoaded value) loaded(value);
     else if (event instanceof DeliveryEvent.DataFailed value) failed(value);
     else if (event instanceof DeliveryEvent.FilterChanged value) filter(value.value());
@@ -55,16 +57,32 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
     port.requestData(id);
   }
 
+  private void refreshStarted(long requestId) {
+    if (requestId < 0 || state().screenState() == ScreenState.LOADING) return;
+    replaceState(new DeliveryState(state().rows(), state().page(), state().pageSize(), state().filter(),
+        state().category(), state().selectedEntryId(), state().screenState(), null, requestId,
+        Set.of(DeliveryAction.BACK, DeliveryAction.COMPOSE)));
+  }
+
+  private void refreshFailed(long requestId) {
+    if (requestId != state().requestId() || state().screenState() == ScreenState.LOADING) return;
+    replaceState(new DeliveryState(state().rows(), state().page(), state().pageSize(), state().filter(),
+        state().category(), state().selectedEntryId(), state().screenState(), null, requestId,
+        Set.of(DeliveryAction.CLAIM, DeliveryAction.CLAIM_ALL, DeliveryAction.DELETE,
+            DeliveryAction.COMPOSE, DeliveryAction.BACK)));
+  }
+
   private void loaded(DeliveryEvent.DataLoaded event) {
     if (event.requestId() != state().requestId()) return;
     List<DeliveryRow> rows = event.mails().stream()
         .map(mail -> new DeliveryRow(mail, displayNameResolver.apply(mail))).toList();
     requestInFlight = false;
-    UUID selected = selectionFor(rows, state().filter(), state().category(), state().selectedEntryId());
-    replaceState(new DeliveryState(rows, 0, state().pageSize(), state().filter(), state().category(), selected,
-        rows.isEmpty() ? ScreenState.EMPTY : ScreenState.READY, null, event.requestId(),
-        Set.of(DeliveryAction.CLAIM, DeliveryAction.CLAIM_ALL, DeliveryAction.DELETE,
-            DeliveryAction.COMPOSE, DeliveryAction.BACK)));
+    RefreshPosition position = refreshedPosition(rows, state().filter(), state().category(),
+        state().selectedEntryId(), state().page(), state().pageSize());
+    replaceState(new DeliveryState(rows, position.page(), state().pageSize(), state().filter(),
+        state().category(), position.selected(), rows.isEmpty() ? ScreenState.EMPTY : ScreenState.READY,
+        null, event.requestId(), Set.of(DeliveryAction.CLAIM, DeliveryAction.CLAIM_ALL,
+            DeliveryAction.DELETE, DeliveryAction.COMPOSE, DeliveryAction.BACK)));
     DeliveryRow selectedRow = state().selectedRow();
     if (selectedRow != null && !selectedRow.mail().read()) {
       port.markRead(selectedRow.mailId(), event.requestId());
@@ -168,6 +186,24 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
     }
   }
 
+  private static RefreshPosition refreshedPosition(
+      List<DeliveryRow> rows, String filter, DeliveryCategory category, UUID preferred,
+      int currentPage, int pageSize) {
+    String needle = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
+    List<DeliveryRow> matching = rows.stream().filter(row -> matches(row, needle, category)).toList();
+    if (matching.isEmpty()) return new RefreshPosition(0, null);
+    if (preferred != null) {
+      for (int index = 0; index < matching.size(); index++) {
+        if (matching.get(index).mailId().equals(preferred)) {
+          return new RefreshPosition(index / pageSize, preferred);
+        }
+      }
+    }
+    int totalPages = Math.max(1, (matching.size() + pageSize - 1) / pageSize);
+    int page = Math.max(0, Math.min(currentPage, totalPages - 1));
+    return new RefreshPosition(page, matching.get(Math.min(page * pageSize, matching.size() - 1)).mailId());
+  }
+
   private static UUID selectionFor(List<DeliveryRow> rows, String filter, DeliveryCategory category, UUID preferred) {
     String needle = filter == null ? "" : filter.trim().toLowerCase(Locale.ROOT);
     List<DeliveryRow> matching = rows.stream().filter(row -> matches(row, needle, category)).toList();
@@ -196,4 +232,6 @@ public final class DeliveryController extends AbstractEconomyScreenController<De
     }
     return filtered.get(start).mailId();
   }
+
+  private record RefreshPosition(int page, UUID selected) {}
 }

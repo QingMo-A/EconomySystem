@@ -3,6 +3,7 @@ package com.mo.economy_system.ui.market;
 import com.mo.economy_system.common.client.ui.EconomyUiRoute;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
 import com.mo.economy_system.common.network.MarketOrderFilter;
+import com.mo.economy_system.common.network.MarketOrderSort;
 import com.mo.economy_system.common.network.MarketOrderSnapshot;
 import com.mo.economy_system.common.market.MarketOrderType;
 import com.mo.economy_system.ui.core.AbstractEconomyScreenController;
@@ -24,6 +25,7 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
   private final boolean viewerCanModerate;
   private long startedAt;
   private boolean requestInFlight;
+  private boolean silentRequestInFlight;
 
   public MarketController(UUID viewerId, MarketPort port) {
     this(viewerId, false, ignored -> "", port);
@@ -62,42 +64,56 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
   }
 
   @Override public void handle(MarketEvent event) {
-    if (event instanceof MarketEvent.Initialize value) request(0, value.nowNanos());
-    else if (event instanceof MarketEvent.Retry value) request(state().page(), value.nowNanos());
+    if (event instanceof MarketEvent.Initialize value) request(0, value.nowNanos(), false, null);
+    else if (event instanceof MarketEvent.Refresh value) request(
+        state().page(), value.nowNanos(), true, value.focusTradeId());
+    else if (event instanceof MarketEvent.Retry value) request(state().page(), value.nowNanos(), false, null);
     else if (event instanceof MarketEvent.DataLoaded value) loaded(value);
     else if (event instanceof MarketEvent.DataFailed value) failed(value);
     else if (event instanceof MarketEvent.FilterChanged value) filter(value.filter());
+    else if (event instanceof MarketEvent.SortChanged value) sort(value.sort());
     else if (event instanceof MarketEvent.QueryChanged value) query(value.query());
     else if (event instanceof MarketEvent.ViewportChanged value) viewport(value.pageSize());
-    else if (event instanceof MarketEvent.NextPage) request(state().page() + 1, System.nanoTime());
-    else if (event instanceof MarketEvent.PreviousPage) request(state().page() - 1, System.nanoTime());
-    else if (event instanceof MarketEvent.Scroll value) request(state().page() + Integer.signum(value.steps()), System.nanoTime());
+    else if (event instanceof MarketEvent.NextPage) request(
+        state().page() + 1, System.nanoTime(), false, null);
+    else if (event instanceof MarketEvent.PreviousPage) request(
+        state().page() - 1, System.nanoTime(), false, null);
+    else if (event instanceof MarketEvent.Scroll value) request(
+        state().page() + Integer.signum(value.steps()), System.nanoTime(), false, null);
     else if (event instanceof MarketEvent.ActionClicked value) action(value);
     else if (event instanceof MarketEvent.Tick value) tick(value.nowNanos());
   }
 
-  private void request(int page, long nowNanos) {
+  private void request(int page, long nowNanos, boolean silent, UUID focusTradeId) {
     int nextPage = Math.max(0, page);
-    if (state().screenState() != ScreenState.IDLE && nextPage >= state().totalPages()) return;
+    if (!silent && state().screenState() != ScreenState.IDLE && nextPage >= state().totalPages()) return;
+    if (silent && (requestInFlight || (state().screenState() != ScreenState.READY
+        && state().screenState() != ScreenState.EMPTY))) return;
     long id = port.nextRequestId();
     if (id < 0) throw new IllegalStateException("market request id must be non-negative");
-    startedAt = nowNanos; requestInFlight = true;
-    replaceState(copy(nextPage, ScreenState.LOADING, null, id, state().rows(), navigationActions(viewerCanModerate)));
-    port.requestPage(id, nextPage * NETWORK_PAGE_SIZE, state().filter(), state().query());
+    startedAt = nowNanos;
+    requestInFlight = true;
+    silentRequestInFlight = silent;
+    ScreenState nextState = silent ? state().screenState() : ScreenState.LOADING;
+    Set<MarketAction> actions = silent ? state().actions() : navigationActions(viewerCanModerate);
+    replaceState(copy(nextPage, nextState, null, id, state().rows(), actions));
+    port.requestPage(id, nextPage * NETWORK_PAGE_SIZE, state().filter(), state().sort(),
+        state().query(), silent ? focusTradeId : null);
   }
 
   private void loaded(MarketEvent.DataLoaded event) {
     if (!requestInFlight || event.requestId() != state().requestId()
-        || state().screenState() != ScreenState.LOADING || event.revision() < state().revision()) return;
+        || event.revision() < state().revision()) return;
     List<MarketRow> rows = event.orders().stream()
         .map(order -> new MarketRow(order, resolveDisplayName(order.item().itemId()))).toList();
     requestInFlight = false;
+    silentRequestInFlight = false;
     Set<MarketAction> actions = EnumSet.of(MarketAction.BUY, MarketAction.REMOVE_SALES,
         MarketAction.DELIVER_DEMAND, MarketAction.CONFIRM_DEMAND, MarketAction.REMOVE_DEMAND,
         MarketAction.BACK, MarketAction.CREATE_SALES, MarketAction.CREATE_DEMAND);
     if (viewerCanModerate) actions.add(MarketAction.ADMIN_REMOVE_SALES);
     replaceState(new MarketState(rows, Math.max(0, event.offset() / NETWORK_PAGE_SIZE), state().pageSize(),
-        event.totalMatched(), event.totalSales(), event.totalDemand(), state().filter(), state().query(),
+        event.totalMatched(), event.totalSales(), event.totalDemand(), state().filter(), state().sort(), state().query(),
         rows.isEmpty() && event.totalMatched() == 0 ? ScreenState.EMPTY : ScreenState.READY,
         null, -1, event.revision(), actions));
   }
@@ -113,22 +129,36 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
 
   private void failed(MarketEvent.DataFailed event) {
     if (!requestInFlight || event.requestId() != state().requestId()) return;
+    boolean silent = silentRequestInFlight;
     requestInFlight = false;
+    silentRequestInFlight = false;
+    if (silent) {
+      replaceState(copy(state().page(), state().rows().isEmpty() ? ScreenState.EMPTY : ScreenState.READY,
+          null, -1, state().rows(), state().actions()));
+      return;
+    }
     replaceState(copy(state().page(), ScreenState.ERROR, event.errorKey(), -1, state().rows(),
         Set.of(MarketAction.RETRY, MarketAction.BACK)));
   }
 
   private void filter(MarketOrderFilter value) {
-    replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, value, state().query(),
+    replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, value, state().sort(), state().query(),
         ScreenState.IDLE, null, -1, state().revision(), navigationActions(viewerCanModerate)));
-    request(0, System.nanoTime());
+    request(0, System.nanoTime(), false, null);
+  }
+
+  private void sort(MarketOrderSort value) {
+    if (value == null || value == state().sort()) return;
+    replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, state().filter(), value,
+        state().query(), ScreenState.IDLE, null, -1, state().revision(), navigationActions(viewerCanModerate)));
+    request(0, System.nanoTime(), false, null);
   }
 
   private void query(String value) {
     String next = value == null ? "" : value.trim();
-    replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, state().filter(), next,
+    replaceState(new MarketState(List.of(), 0, state().pageSize(), 0, 0, 0, state().filter(), state().sort(), next,
         ScreenState.IDLE, null, -1, state().revision(), navigationActions(viewerCanModerate)));
-    request(0, System.nanoTime());
+    request(0, System.nanoTime(), false, null);
   }
 
   private void viewport(int value) {
@@ -163,16 +193,24 @@ public final class MarketController extends AbstractEconomyScreenController<Mark
 
   private void tick(long nowNanos) {
     if (requestInFlight && nowNanos - startedAt >= TIMEOUT_NANOS) {
+      boolean silent = silentRequestInFlight;
       requestInFlight = false;
-      replaceState(copy(state().page(), ScreenState.ERROR, "screen.market.sync_timeout", -1, state().rows(),
-          Set.of(MarketAction.RETRY, MarketAction.BACK)));
+      silentRequestInFlight = false;
+      if (silent) {
+        replaceState(copy(state().page(), state().rows().isEmpty() ? ScreenState.EMPTY : ScreenState.READY,
+            null, -1, state().rows(), state().actions()));
+      } else {
+        replaceState(copy(state().page(), ScreenState.ERROR, "screen.market.sync_timeout", -1, state().rows(),
+            Set.of(MarketAction.RETRY, MarketAction.BACK)));
+      }
     }
   }
 
   private MarketState copy(int page, ScreenState screenState, String error, long requestId,
                            List<MarketRow> rows, Set<MarketAction> actions) {
     return new MarketState(rows, Math.max(0, page), state().pageSize(), state().totalMatched(), state().totalSales(),
-        state().totalDemand(), state().filter(), state().query(), screenState, error, requestId, state().revision(), actions);
+        state().totalDemand(), state().filter(), state().sort(), state().query(), screenState, error, requestId,
+        state().revision(), actions);
   }
 
   private static Set<MarketAction> navigationActions(boolean viewerCanModerate) {

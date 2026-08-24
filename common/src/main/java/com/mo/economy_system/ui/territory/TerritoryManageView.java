@@ -130,7 +130,7 @@ public final class TerritoryManageView {
 
     private static UiButtonStyle style(TerritoryManageAction action) {
         return switch (action) {
-            case BUFFS -> EconomyUiTheme.TERRITORY_WARN_BUTTON;
+            case BUFFS -> EconomyUiTheme.TERRITORY_BUFF_BUTTON;
             case DELETE, KICK -> EconomyUiTheme.TERRITORY_DANGER_BUTTON;
             case COPY_ID, ACCESS, PERMISSIONS, TRANSFER -> EconomyUiTheme.TERRITORY_NEUTRAL_BUTTON;
             default -> EconomyUiTheme.TERRITORY_PRIMARY_BUTTON;

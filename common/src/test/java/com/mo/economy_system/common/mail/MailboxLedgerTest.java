@@ -2,6 +2,7 @@ package com.mo.economy_system.common.mail;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
@@ -78,6 +79,64 @@ class MailboxLedgerTest {
     assertEquals(MailType.MARKET, adopted.type());
     assertEquals(List.of(entry.entryId()), adopted.attachmentIds());
     assertTrue(adopted.protectedMail());
+  }
+
+  @Test
+  void playerMailStopsAtSoftCapWhileCriticalMailUsesReservedTail() {
+    UUID owner = UUID.randomUUID();
+    MailboxLedger ledger = new MailboxLedger();
+    for (int i = 0; i < MailboxCapacityPolicy.PLAYER_MAIL_LIMIT; i++) {
+      ledger.addPersonal(owner,
+          mail(UUID.randomUUID(), MailType.PLAYER, i + 1L, 0, List.of(), false), () -> {});
+    }
+
+    assertThrows(IllegalStateException.class, () -> ledger.addPersonal(owner,
+        mail(UUID.randomUUID(), MailType.PLAYER, 1_000, 0, List.of(), false), () -> {}));
+
+    ledger.addPersonal(owner,
+        mail(UUID.randomUUID(), MailType.MARKET, 1_001, 0, List.of(), true), () -> {});
+    ledger.addPersonal(owner,
+        mail(UUID.randomUUID(), MailType.COMPENSATION, 1_002, 0, List.of(), true), () -> {});
+    ledger.addPersonal(owner,
+        mail(UUID.randomUUID(), MailType.SYSTEM, 1_003, 0, List.of(), true), () -> {});
+    assertEquals(MailboxCapacityPolicy.PLAYER_MAIL_LIMIT + 3, ledger.listPersonal(owner).size());
+  }
+
+  @Test
+  void criticalMailStillStopsAtPhysicalHardLimit() {
+    UUID owner = UUID.randomUUID();
+    MailboxLedger ledger = new MailboxLedger();
+    for (int i = 0; i < com.mo.economy_system.common.network.EconomyNetworkLimits.MAX_MAILS_PER_PLAYER; i++) {
+      ledger.addPersonal(owner,
+          mail(UUID.randomUUID(), MailType.MARKET, i + 1L, 0, List.of(), true), () -> {});
+    }
+    assertThrows(IllegalStateException.class, () -> ledger.addPersonal(owner,
+        mail(UUID.randomUUID(), MailType.MARKET, 10_000, 0, List.of(), true), () -> {}));
+  }
+
+  @Test
+  void exactRollbackRefusesToDeleteMailThatChanged() {
+    UUID owner = UUID.randomUUID();
+    MailboxLedger ledger = new MailboxLedger();
+    MailRecord original = mail(UUID.randomUUID(), MailType.MARKET, 10, 0, List.of(), true);
+    ledger.addPersonal(owner, original, () -> {});
+    ledger.markRead(owner, original.mailId(), () -> {});
+
+    assertFalse(ledger.removePersonalIfUnchanged(owner, original, () -> {}));
+    assertEquals(1, ledger.listPersonal(owner).size());
+  }
+
+  @Test
+  void exactRollbackDeletesOnlyTheExpectedUnchangedMail() {
+    UUID owner = UUID.randomUUID();
+    MailboxLedger ledger = new MailboxLedger();
+    MailRecord first = mail(UUID.randomUUID(), MailType.MARKET, 10, 0, List.of(), true);
+    MailRecord second = mail(UUID.randomUUID(), MailType.SYSTEM, 11, 0, List.of(), true);
+    ledger.addPersonal(owner, first, () -> {});
+    ledger.addPersonal(owner, second, () -> {});
+
+    assertTrue(ledger.removePersonalIfUnchanged(owner, first, () -> {}));
+    assertEquals(List.of(second), ledger.listPersonal(owner));
   }
 
   private static MailRecord mail(

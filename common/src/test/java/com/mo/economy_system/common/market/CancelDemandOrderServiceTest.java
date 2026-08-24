@@ -24,6 +24,26 @@ class CancelDemandOrderServiceTest {
   }
 
   @Test
+  void partiallyFilledDemandRefundsOnlyRemainingEscrowValue() {
+    Fixture fixture = new Fixture();
+    fixture.repository.order = new MarketOrder(
+        MarketOrderType.DEMAND,
+        UUID.randomUUID(),
+        MarketOrderCodecTest.item(),
+        54,
+        1_080,
+        "buyer",
+        fixture.owner,
+        1,
+        2,
+        false);
+
+    assertEquals(CancelDemandOrderResult.SUCCESS, fixture.execute().result());
+    assertEquals(1_180, fixture.account.balance);
+    assertEquals(1, fixture.account.credits);
+  }
+
+  @Test
   void validationNeverMutates() {
     Fixture fixture = new Fixture();
     fixture.actor = UUID.randomUUID();

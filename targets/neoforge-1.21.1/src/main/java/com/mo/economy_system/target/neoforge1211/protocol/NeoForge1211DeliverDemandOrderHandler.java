@@ -33,6 +33,7 @@ final class NeoForge1211DeliverDemandOrderHandler {
                   i,
                   new Account(a, p),
                   new Repo(d),
+                  new NeoForge1211DemandMailboxBridge(p),
                   NeoForge1211DeliverDemandOrderHandler::reportFailure));
     } catch (RuntimeException e) {
       EconomySystem.LOGGER.error("Demand delivery infrastructure failed", e);
@@ -47,10 +48,10 @@ final class NeoForge1211DeliverDemandOrderHandler {
         MarketActionPostPlan.build(
             o.mutationState(),
             o.result() == DemandOrderDeliveryResult.SUCCESS,
-            o.result() == DemandOrderDeliveryResult.SUCCESS,
+            false,
             () -> MarketInvalidationBroadcaster.broadcast(p),
             () -> feedback(p, o),
-            () -> notify(p, a, o.deliveredOrder().orElseThrow())),
+            () -> {}),
         (s, e) -> EconomySystem.LOGGER.error("Demand delivery post action failed stage={}", s, e));
   }
 
@@ -114,9 +115,9 @@ final class NeoForge1211DeliverDemandOrderHandler {
       return d.getOrder(id);
     }
 
-    public DemandDeliveryTransition markDemandDeliveredIfUnchanged(
-        java.util.UUID id, MarketOrder e) {
-      return d.markDemandDeliveredIfUnchanged(id, e);
+    public MarketPartialFillTransition fillIfUnchanged(
+        java.util.UUID id, MarketOrderType expectedType, MarketOrder expected, int quantity) {
+      return d.fillIfUnchanged(id, expectedType, expected, quantity);
     }
   }
 

@@ -24,6 +24,9 @@ class NeoForge1211MarketDataProtocolTest {
         assertRequestRoundTrip(MarketDataRequestMessage.summary(10));
         assertRequestRoundTrip(new MarketDataRequestMessage(11, MarketDataRequestPurpose.PAGE, 9, 9,
                 MarketOrderFilter.MINE, "stone"));
+        UUID focused = UUID.randomUUID();
+        assertRequestRoundTrip(new MarketDataRequestMessage(12, MarketDataRequestPurpose.PAGE, 0, 9,
+                MarketOrderFilter.ALL, MarketOrderSort.NEWEST, "diamond", focused));
     }
 
     @Test

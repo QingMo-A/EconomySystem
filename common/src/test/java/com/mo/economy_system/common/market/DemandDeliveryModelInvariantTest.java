@@ -18,8 +18,8 @@ class DemandDeliveryModelInvariantTest {
 
   @Test void outcomeFactoriesEnforceOrderState() {
     MarketOrder pending = order(false), delivered = delivered(pending);
-    assertEquals(MarketMutationState.CHANGED, DemandOrderDeliveryOutcome.success(delivered).mutationState());
-    assertThrows(IllegalArgumentException.class, () -> DemandOrderDeliveryOutcome.success(pending));
+    assertEquals(MarketMutationState.CHANGED, DemandOrderDeliveryOutcome.success(pending).mutationState());
+    assertThrows(IllegalArgumentException.class, () -> DemandOrderDeliveryOutcome.success(delivered));
     assertThrows(IllegalArgumentException.class, () -> DemandOrderDeliveryOutcome.rolledBackFailure(DemandOrderDeliveryResult.PAYMENT_FAILED, delivered));
     assertThrows(IllegalArgumentException.class, () -> DemandOrderDeliveryOutcome.changedFailure(DemandOrderDeliveryResult.ORDER_CHANGED, delivered));
     assertThrows(IllegalArgumentException.class, () -> DemandOrderDeliveryOutcome.validationFailure(DemandOrderDeliveryResult.SUCCESS));

@@ -3,54 +3,57 @@ package com.mo.economy_system.target.neoforge1211.client;
 import com.mo.economy_system.common.client.ClientMailboxSendState;
 import com.mo.economy_system.common.client.ClientPlayerListState;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
-import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
-import com.mo.economy_system.common.network.MailboxSendStatus;
 import com.mo.economy_system.common.network.PlayerSummary;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.platform.EconomyServices;
+import com.mo.economy_system.ui.core.UiNavigation;
+import com.mo.economy_system.ui.delivery.MailboxComposeAction;
+import com.mo.economy_system.ui.delivery.MailboxComposeController;
+import com.mo.economy_system.ui.delivery.MailboxComposeEvent;
+import com.mo.economy_system.ui.delivery.MailboxComposeInventoryItem;
 import com.mo.economy_system.ui.delivery.MailboxComposeLayout;
+import com.mo.economy_system.ui.delivery.MailboxComposePort;
 import com.mo.economy_system.ui.delivery.MailboxComposeView;
 import com.mo.economy_system.ui.delivery.MailboxRecipientCompletion;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.geometry.UiScale;
 import com.mo.economy_system.ui.renderer.UiNativeInputFrame;
 import com.mo.economy_system.ui.theme.EconomyUiTheme;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 
 /** NeoForge player-to-player mailbox composer using the shared Economy UI language. */
 public final class NeoForge1211MailboxComposeScreen extends Screen {
   private static final AtomicLong IDS = new AtomicLong(1_000_000);
   private final Screen parent;
-  private final Set<Integer> selectedSlots = new LinkedHashSet<>();
+  private final MailboxComposeController controller;
   private final MailboxRecipientCompletion recipientCompletion = new MailboxRecipientCompletion();
   private String acceptedRecipientName = "";
   private EditBox recipient;
   private EditBox subject;
   private EditBox body;
-  private boolean sending;
-  private long sentRequestId = -1;
-  private long appliedSendRevision = -1;
-  private MailboxSendStatus status;
 
   public NeoForge1211MailboxComposeScreen(Screen parent) {
     super(Component.translatable("screen.mailbox.compose.title"));
     this.parent = parent;
+    this.controller = new MailboxComposeController(List.of(), new MailboxComposePort() {
+      @Override public long nextRequestId() { return IDS.getAndIncrement(); }
+      @Override public void send(com.mo.economy_system.common.network.MailboxSendPlayerMessage message) {
+        EconomyServices.platform().network().sendToServer(message);
+      }
+    });
   }
 
   @Override protected void init() {
-    String recipientValue = recipient == null ? "" : recipient.getValue();
-    String subjectValue = subject == null ? "" : subject.getValue();
-    String bodyValue = body == null ? "" : body.getValue();
+    String recipientValue = controller.state().recipient();
+    String subjectValue = controller.state().subject();
+    String bodyValue = controller.state().body();
     MailboxComposeLayout.Layout layout = layout();
     recipient = input(layout.recipient(), "screen.mailbox.compose.recipient",
         EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH, recipientValue, layout.scale());
@@ -61,7 +64,10 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
     recipient.setResponder(value -> {
       recipientCompletion.reset();
       if (!value.equals(acceptedRecipientName)) acceptedRecipientName = "";
+      controller.handle(new MailboxComposeEvent.RecipientChanged(value));
     });
+    subject.setResponder(value -> controller.handle(new MailboxComposeEvent.SubjectChanged(value)));
+    body.setResponder(value -> controller.handle(new MailboxComposeEvent.BodyChanged(value)));
     addRenderableWidget(recipient);
     addRenderableWidget(subject);
     addRenderableWidget(body);
@@ -82,30 +88,15 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
 
   @Override public void tick() {
     super.tick();
+    controller.handle(new MailboxComposeEvent.InventoryChanged(inventory()));
     ClientMailboxSendState.Snapshot snapshot = ClientMailboxSendState.snapshot();
-    if (sentRequestId >= 0 && snapshot.requestId() == sentRequestId
-        && snapshot.revision() != appliedSendRevision) {
-      appliedSendRevision = snapshot.revision();
-      status = snapshot.status();
-      if (status == MailboxSendStatus.SUCCESS) onClose();
-      else sending = false;
-    }
+    controller.handle(new MailboxComposeEvent.SendResult(
+        snapshot.revision(), snapshot.requestId(), snapshot.status()));
+    controller.pollNavigation().ifPresent(this::navigate);
   }
 
   private void sendMail() {
-    if (sending) return;
-    long id = IDS.getAndIncrement();
-    try {
-      MailboxSendPlayerMessage message = new MailboxSendPlayerMessage(
-          recipient.getValue(), subject.getValue(), body.getValue(), new ArrayList<>(selectedSlots), id);
-      sentRequestId = id;
-      status = null;
-      sending = true;
-      EconomyServices.platform().network().sendToServer(message);
-    } catch (IllegalArgumentException invalid) {
-      status = MailboxSendStatus.INVALID_CONTENT;
-      sending = false;
-    }
+    controller.handle(new MailboxComposeEvent.ActionClicked(MailboxComposeAction.SEND));
   }
 
   @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -118,8 +109,7 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
     int vx = scale.toVirtualX(mouseX), vy = scale.toVirtualY(mouseY);
     graphics.pose().pushPose();
     graphics.pose().scale(scale.value(), scale.value(), 1.0f);
-    MailboxComposeView.render(renderer, layout, selectedSlots, sending, status, vx, vy);
-    renderInventoryItems(graphics, layout);
+    MailboxComposeView.render(renderer, layout, controller.state(), vx, vy);
     graphics.pose().popPose();
     renderInputFrame(renderer, recipient, mouseX, mouseY);
     renderInputFrame(renderer, subject, mouseX, mouseY);
@@ -145,16 +135,16 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
         box.isFocused(), rect.contains(mouseX, mouseY));
   }
 
-  private void renderInventoryItems(GuiGraphics graphics, MailboxComposeLayout.Layout layout) {
+  private List<MailboxComposeInventoryItem> inventory() {
     Player player = minecraft == null ? null : minecraft.player;
-    if (player == null) return;
-    for (MailboxComposeLayout.Slot slot : layout.slots()) {
-      ItemStack stack = player.getInventory().items.get(slot.slot());
-      if (stack.isEmpty()) continue;
-      int x = slot.rect().x() + 3, y = slot.rect().y() + 3;
-      graphics.renderItem(stack, x, y);
-      graphics.renderItemDecorations(font, stack, x, y);
+    if (player == null) return List.of();
+    List<MailboxComposeInventoryItem> result = new java.util.ArrayList<>();
+    for (int slot = 0; slot < 36; slot++) {
+      var stack = player.getInventory().items.get(slot);
+      if (!stack.isEmpty()) result.add(new MailboxComposeInventoryItem(slot,
+          BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), stack.getCount()));
     }
+    return result;
   }
 
   @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -175,14 +165,16 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
     if (player != null) {
       for (MailboxComposeLayout.Slot slot : layout.slots()) {
         if (!slot.rect().contains(x, y)) continue;
-        if (player.getInventory().items.get(slot.slot()).isEmpty()) return true;
-        if (selectedSlots.contains(slot.slot())) selectedSlots.remove(slot.slot());
-        else if (selectedSlots.size() < EconomyNetworkLimits.MAX_PLAYER_MAIL_ATTACHMENTS) selectedSlots.add(slot.slot());
+        controller.handle(new MailboxComposeEvent.SlotToggled(slot.slot()));
         return true;
       }
     }
     if (layout.sendButton().contains(x, y)) { sendMail(); return true; }
-    if (layout.backButton().contains(x, y) || layout.esc().contains(x, y)) { onClose(); return true; }
+    if (layout.backButton().contains(x, y) || layout.esc().contains(x, y)) {
+      controller.handle(new MailboxComposeEvent.ActionClicked(MailboxComposeAction.BACK));
+      controller.pollNavigation().ifPresent(this::navigate);
+      return true;
+    }
     return super.mouseClicked(mouseX, mouseY, button);
   }
 
@@ -193,7 +185,11 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
       if (keyCode == 264) { recipientCompletion.move(1, suggestions.size()); return true; }
       if (keyCode == 258 || keyCode == 257) { acceptRecipientSuggestion(suggestions); return true; }
     }
-    if (keyCode == 256) { onClose(); return true; }
+    if (keyCode == 256) {
+      controller.handle(new MailboxComposeEvent.ActionClicked(MailboxComposeAction.BACK));
+      controller.pollNavigation().ifPresent(this::navigate);
+      return true;
+    }
     return super.keyPressed(keyCode, scanCode, modifiers);
   }
 
@@ -256,6 +252,10 @@ public final class NeoForge1211MailboxComposeScreen extends Screen {
 
   @Override public void onClose() {
     if (minecraft != null) minecraft.setScreen(parent == null ? new NeoForge1211DeliveryBoxScreen() : parent);
+  }
+
+  private void navigate(UiNavigation navigation) {
+    if (navigation instanceof UiNavigation.Back) onClose();
   }
 
   @Override public boolean isPauseScreen() { return false; }

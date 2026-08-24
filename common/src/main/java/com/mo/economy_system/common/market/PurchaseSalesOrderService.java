@@ -6,7 +6,7 @@ import com.mo.economy_system.platform.item.ItemStackSnapshotValidator;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Server-authoritative protocol 12 transaction. */
+/** Server-authoritative SALES fill transaction supporting whole and partial purchases. */
 public final class PurchaseSalesOrderService {
   private PurchaseSalesOrderService() {}
 
@@ -14,187 +14,108 @@ public final class PurchaseSalesOrderService {
       PurchaseSalesOrderMessage message, Context context) {
     if (message == null || context == null)
       return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVALID_CONTEXT);
+
     MarketOrder preview;
     try {
       preview = context.repository().find(message.tradeId());
     } catch (RuntimeException exception) {
-      report(
-          context,
-          message.tradeId(),
-          null,
-          "lookup",
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED,
-          null,
-          null,
-          exception);
-      return PurchaseSalesOrderOutcome.validationFailure(
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
+      report(context, message.tradeId(), null, "lookup",
+          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, null, null, exception);
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
     }
+
     PurchaseSalesOrderResult validation = validate(preview, context);
     if (validation != PurchaseSalesOrderResult.SUCCESS)
       return PurchaseSalesOrderOutcome.validationFailure(validation);
+
+    int quantity = message.quantity() == 0 ? preview.quantity() : message.quantity();
+    if (quantity <= 0 || quantity > preview.quantity())
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVALID_QUANTITY);
+    if (quantity < preview.quantity() && !MarketOrderPricing.supportsPartialFill(preview))
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.PARTIAL_FILL_UNSUPPORTED);
+
+    int amount;
+    try {
+      amount = MarketOrderPricing.fillAmount(preview, quantity);
+    } catch (ArithmeticException | IllegalArgumentException exception) {
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVALID_PRICE);
+    }
 
     Object template;
     try {
       template = context.materializer().restore(preview);
     } catch (RuntimeException exception) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "snapshot-restore",
-          PurchaseSalesOrderResult.ITEM_RESTORE_FAILED,
-          null,
-          null,
-          exception);
-      return PurchaseSalesOrderOutcome.validationFailure(
-          PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
+      report(context, message.tradeId(), preview.sellerId(), "snapshot-restore",
+          PurchaseSalesOrderResult.ITEM_RESTORE_FAILED, null, null, exception);
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
     }
     if (template == null)
-      return PurchaseSalesOrderOutcome.validationFailure(
-          PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED);
 
     BalanceTransferResult balancePreview;
     try {
-      balancePreview = context.accounts().preview(preview.sellerId(), preview.totalPrice());
+      balancePreview = context.accounts().preview(preview.sellerId(), amount);
     } catch (RuntimeException exception) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "payment-preview",
-          PurchaseSalesOrderResult.PAYMENT_FAILED,
-          null,
-          null,
-          exception);
+      report(context, message.tradeId(), preview.sellerId(), "payment-preview",
+          PurchaseSalesOrderResult.PAYMENT_FAILED, null, null, exception);
       return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.PAYMENT_FAILED);
     }
-    if (balancePreview == null) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "payment-preview",
-          PurchaseSalesOrderResult.PAYMENT_FAILED,
-          null,
-          null,
-          null);
+    if (balancePreview == null)
       return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.PAYMENT_FAILED);
-    }
     PurchaseSalesOrderResult balanceFailure = mapBalanceFailure(balancePreview);
     if (balanceFailure != PurchaseSalesOrderResult.SUCCESS)
       return PurchaseSalesOrderOutcome.validationFailure(balanceFailure);
+
     boolean accepts;
     try {
-      accepts = context.inventory().canAccept(template, preview.quantity());
+      accepts = context.inventory().canAccept(template, quantity);
     } catch (RuntimeException exception) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "inventory-capacity",
-          PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED,
-          null,
-          null,
-          exception);
-      return PurchaseSalesOrderOutcome.validationFailure(
-          PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED);
+      report(context, message.tradeId(), preview.sellerId(), "inventory-capacity",
+          PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED, null, null, exception);
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED);
     }
-    if (!accepts) {
+    if (!accepts)
       return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.INVENTORY_FULL);
-    }
 
-    SalesOrderRemovalResult removalResult;
+    MarketPartialFillTransition transition;
     try {
-      removalResult = context.repository().removeSalesTransactional(message.tradeId());
+      transition = context.repository().fillIfUnchanged(
+          message.tradeId(), MarketOrderType.SALES, preview, quantity);
     } catch (RuntimeException exception) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "order-remove",
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED,
-          null,
-          null,
-          exception);
-      return PurchaseSalesOrderOutcome.validationFailure(
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
+      report(context, message.tradeId(), preview.sellerId(), "order-fill",
+          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, null, null, exception);
+      return PurchaseSalesOrderOutcome.validationFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
     }
-    if (removalResult == null) {
-      report(
-          context,
-          message.tradeId(),
-          preview.sellerId(),
-          "order-remove-null",
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED,
-          null,
-          null,
-          null);
-      return PurchaseSalesOrderOutcome.uncertainFailure(
-          PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
-    }
-    if (removalResult.status() != SalesOrderRemovalStatus.REMOVED) {
-      return PurchaseSalesOrderOutcome.validationFailure(mapRemovalFailure(removalResult.status()));
-    }
-    MarketOrder authoritative = removalResult.removal().order();
-    if (!preview.equals(authoritative)) {
-      boolean restored = restoreOrder(removalResult.removal());
-      PurchaseSalesOrderResult result =
-          restored
-              ? PurchaseSalesOrderResult.ORDER_CHANGED
-              : PurchaseSalesOrderResult.ROLLBACK_FAILED;
-      report(
-          context,
-          message.tradeId(),
-          authoritative.sellerId(),
-          "order-changed",
-          result,
-          null,
-          restored,
-          null);
-      return restored
-          ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
-          : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
-    }
+    if (transition == null)
+      return PurchaseSalesOrderOutcome.uncertainFailure(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED);
+    if (!transition.applied())
+      return PurchaseSalesOrderOutcome.validationFailure(mapTransitionFailure(transition.status()));
+
+    MarketOrder authoritative = transition.previousOrder().orElse(preview);
 
     InventoryInsertionResult insertion;
     try {
-      insertion = context.inventory().insert(template, authoritative.quantity());
+      insertion = context.inventory().insert(template, quantity);
     } catch (RuntimeException exception) {
-      boolean orderRestored = restoreOrder(removalResult.removal());
-      PurchaseSalesOrderResult result =
-          orderRestored
-              ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED
-              : PurchaseSalesOrderResult.ROLLBACK_FAILED;
-      report(
-          context,
-          message.tradeId(),
-          authoritative.sellerId(),
-          "inventory-insert",
-          result,
-          null,
-          orderRestored,
-          exception);
+      boolean orderRestored = rollbackOrder(transition);
+      PurchaseSalesOrderResult result = orderRestored
+          ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED
+          : PurchaseSalesOrderResult.ROLLBACK_FAILED;
+      report(context, message.tradeId(), authoritative.sellerId(), "inventory-insert",
+          result, false, orderRestored, exception);
       return orderRestored
           ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
           : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
     }
+
     if (insertion == null || !insertion.succeeded() || insertion.rollback() == null) {
-      boolean orderRestored = restoreOrder(removalResult.removal());
       boolean inventoryRestored = insertion != null && insertion.failureRestored();
-      PurchaseSalesOrderResult result =
-          orderRestored && inventoryRestored
-              ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED
-              : PurchaseSalesOrderResult.ROLLBACK_FAILED;
-      report(
-          context,
-          message.tradeId(),
-          authoritative.sellerId(),
-          "inventory-insert",
-          result,
-          inventoryRestored,
-          orderRestored,
-          null);
+      boolean orderRestored = rollbackOrder(transition);
+      PurchaseSalesOrderResult result = inventoryRestored && orderRestored
+          ? PurchaseSalesOrderResult.INVENTORY_MUTATION_FAILED
+          : PurchaseSalesOrderResult.ROLLBACK_FAILED;
+      report(context, message.tradeId(), authoritative.sellerId(), "inventory-insert",
+          result, inventoryRestored, orderRestored, null);
       return orderRestored
           ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
           : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
@@ -203,7 +124,7 @@ public final class PurchaseSalesOrderService {
     BalanceTransferResult transfer;
     RuntimeException transferException = null;
     try {
-      transfer = context.accounts().transfer(authoritative.sellerId(), authoritative.totalPrice());
+      transfer = context.accounts().transfer(authoritative.sellerId(), amount);
     } catch (RuntimeException exception) {
       transfer = BalanceTransferResult.PERSIST_FAILED;
       transferException = exception;
@@ -211,25 +132,18 @@ public final class PurchaseSalesOrderService {
     if (transfer == null) transfer = BalanceTransferResult.PERSIST_FAILED;
     if (transfer != BalanceTransferResult.SUCCESS) {
       boolean inventoryRestored = rollbackInventory(insertion.rollback());
-      boolean orderRestored = restoreOrder(removalResult.removal());
-      PurchaseSalesOrderResult result =
-          inventoryRestored && orderRestored
-              ? mapCommittedTransferFailure(transfer)
-              : PurchaseSalesOrderResult.ROLLBACK_FAILED;
-      report(
-          context,
-          message.tradeId(),
-          authoritative.sellerId(),
-          "payment",
-          result,
-          inventoryRestored,
-          orderRestored,
-          transferException);
+      boolean orderRestored = rollbackOrder(transition);
+      PurchaseSalesOrderResult result = inventoryRestored && orderRestored
+          ? mapCommittedTransferFailure(transfer)
+          : PurchaseSalesOrderResult.ROLLBACK_FAILED;
+      report(context, message.tradeId(), authoritative.sellerId(), "payment",
+          result, inventoryRestored, orderRestored, transferException);
       return orderRestored
           ? PurchaseSalesOrderOutcome.rolledBackFailure(result, authoritative)
           : PurchaseSalesOrderOutcome.changedFailure(result, authoritative);
     }
-    return PurchaseSalesOrderOutcome.success(authoritative);
+
+    return PurchaseSalesOrderOutcome.success(filledSlice(authoritative, quantity, amount));
   }
 
   private static PurchaseSalesOrderResult validate(MarketOrder order, Context context) {
@@ -239,18 +153,26 @@ public final class PurchaseSalesOrderService {
     if (order.totalPrice() <= 0) return PurchaseSalesOrderResult.INVALID_PRICE;
     if (order.quantity() <= 0) return PurchaseSalesOrderResult.INVALID_QUANTITY;
     if (order.item().count() != 1
-        || !ItemStackSnapshotValidator.validate(order.item()).isSuccess()) {
+        || !ItemStackSnapshotValidator.validate(order.item()).isSuccess())
       return PurchaseSalesOrderResult.INVALID_SNAPSHOT;
-    }
     return PurchaseSalesOrderResult.SUCCESS;
   }
 
-  private static PurchaseSalesOrderResult mapRemovalFailure(SalesOrderRemovalStatus status) {
+  private static MarketOrder filledSlice(MarketOrder order, int quantity, int amount) {
+    return new MarketOrder(order.type(), order.tradeId(), order.item(), quantity, amount,
+        order.sellerName(), order.sellerId(), order.listingTime(), order.expirationTime(), false);
+  }
+
+  private static PurchaseSalesOrderResult mapTransitionFailure(MarketPartialFillStatus status) {
     return switch (status) {
       case NOT_FOUND -> PurchaseSalesOrderResult.NOT_FOUND;
       case WRONG_ORDER_TYPE -> PurchaseSalesOrderResult.WRONG_ORDER_TYPE;
+      case ORDER_CHANGED, ALREADY_DELIVERED -> PurchaseSalesOrderResult.ORDER_CHANGED;
+      case INVALID_QUANTITY -> PurchaseSalesOrderResult.INVALID_QUANTITY;
+      case NON_DIVISIBLE_PRICE -> PurchaseSalesOrderResult.PARTIAL_FILL_UNSUPPORTED;
+      case PRICE_OVERFLOW -> PurchaseSalesOrderResult.INVALID_PRICE;
       case PERSIST_FAILED -> PurchaseSalesOrderResult.ORDER_REMOVE_FAILED;
-      case REMOVED -> PurchaseSalesOrderResult.ORDER_REMOVE_FAILED;
+      case UPDATED, REMOVED -> throw new IllegalArgumentException("success transition mapped as failure");
     };
   }
 
@@ -263,17 +185,16 @@ public final class PurchaseSalesOrderService {
     };
   }
 
-  private static PurchaseSalesOrderResult mapCommittedTransferFailure(
-      BalanceTransferResult result) {
+  private static PurchaseSalesOrderResult mapCommittedTransferFailure(BalanceTransferResult result) {
     PurchaseSalesOrderResult mapped = mapBalanceFailure(result);
     return mapped == PurchaseSalesOrderResult.SUCCESS
-        ? PurchaseSalesOrderResult.PAYMENT_FAILED
-        : mapped;
+        ? PurchaseSalesOrderResult.PAYMENT_FAILED : mapped;
   }
 
-  private static boolean restoreOrder(MarketOrderRemoval removal) {
+  private static boolean rollbackOrder(MarketPartialFillTransition transition) {
     try {
-      return removal.restore().restore() == MarketOrderRestoreResult.RESTORED;
+      return transition.rollback().isPresent()
+          && transition.rollback().orElseThrow().rollback() == MarketPartialFillRollbackResult.RESTORED;
     } catch (RuntimeException exception) {
       return false;
     }
@@ -297,17 +218,8 @@ public final class PurchaseSalesOrderService {
       Boolean orderRestore,
       RuntimeException exception) {
     try {
-      context
-          .reporter()
-          .report(
-              tradeId,
-              context.buyerId(),
-              sellerId,
-              stage,
-              result,
-              inventoryRollback,
-              orderRestore,
-              exception);
+      context.reporter().report(tradeId, context.buyerId(), sellerId, stage, result,
+          inventoryRollback, orderRestore, exception);
     } catch (RuntimeException ignored) {
     }
   }
@@ -331,14 +243,13 @@ public final class PurchaseSalesOrderService {
 
   public interface Accounts {
     BalanceTransferResult preview(UUID sellerId, int amount);
-
     BalanceTransferResult transfer(UUID sellerId, int amount);
   }
 
   public interface Repository {
     MarketOrder find(UUID tradeId);
-
-    SalesOrderRemovalResult removeSalesTransactional(UUID tradeId);
+    MarketPartialFillTransition fillIfUnchanged(
+        UUID tradeId, MarketOrderType expectedType, MarketOrder expected, int quantity);
   }
 
   public interface FailureReporter {
@@ -353,14 +264,7 @@ public final class PurchaseSalesOrderService {
         RuntimeException exception);
 
     static FailureReporter noop() {
-      return (tradeId,
-          buyerId,
-          sellerId,
-          stage,
-          result,
-          inventoryRollback,
-          orderRestore,
-          exception) -> {};
+      return (tradeId, buyerId, sellerId, stage, result, inventoryRollback, orderRestore, exception) -> {};
     }
   }
 }

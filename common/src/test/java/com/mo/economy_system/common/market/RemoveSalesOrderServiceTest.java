@@ -18,12 +18,42 @@ class RemoveSalesOrderServiceTest {
   }
 
   @Test
-  void operatorUsesOwnersInventory() {
+  void operatorReturnsItemsByMailboxEvenWhenOwnerIsOffline() {
     Fixture f = new Fixture();
     f.actor = UUID.randomUUID();
     f.operator = true;
+    f.resolveMode = 1;
     assertState(f.run(), RemoveSalesOrderResult.SUCCESS, MarketMutationState.CHANGED);
-    assertEquals(f.owner, f.inventory.ownerId());
+    assertEquals(0, f.inventory.count);
+    assertEquals(f.owner, f.mailbox.ownerId);
+    assertEquals(3, f.mailbox.quantity);
+    assertNull(f.repository.current);
+  }
+
+  @Test
+  void operatorMailboxFailuresDoNotCreateAnInfiniteReturnPath() {
+    Fixture f = new Fixture();
+    f.actor = UUID.randomUUID();
+    f.operator = true;
+    f.mailbox.preflight = DemandMailboxResult.FULL;
+    assertState(f.run(), RemoveSalesOrderResult.MAILBOX_FULL, MarketMutationState.UNCHANGED);
+    assertNotNull(f.repository.current);
+
+    f = new Fixture();
+    f.actor = UUID.randomUUID();
+    f.operator = true;
+    f.mailbox.delivery = DemandMailboxResult.FAILED;
+    assertState(
+        f.run(), RemoveSalesOrderResult.MAILBOX_DELIVERY_FAILED, MarketMutationState.UNCHANGED);
+    assertNotNull(f.repository.current);
+
+    f = new Fixture();
+    f.actor = UUID.randomUUID();
+    f.operator = true;
+    f.mailbox.delivery = DemandMailboxResult.UNKNOWN;
+    assertState(
+        f.run(), RemoveSalesOrderResult.MAILBOX_STATE_UNKNOWN, MarketMutationState.UNKNOWN);
+    assertNull(f.repository.current);
   }
 
   @Test
@@ -165,6 +195,7 @@ class RemoveSalesOrderServiceTest {
     int resolveMode;
     final FakeInventory inventory = new FakeInventory();
     final FakeRepository repository = new FakeRepository();
+    final FakeMailbox mailbox = new FakeMailbox();
 
     Fixture() {
       repository.current = order(MarketOrderType.SALES);
@@ -191,6 +222,7 @@ class RemoveSalesOrderServiceTest {
                 return resolveMode == 1 ? Optional.empty() : Optional.of(inventory);
               },
               repository,
+              mailbox,
               (a, b, c, d, e, f, g, h, i) -> {
                 if (reporterThrows) throw new IllegalStateException();
               }));
@@ -220,6 +252,28 @@ class RemoveSalesOrderServiceTest {
               count -= quantity;
               return true;
             });
+      }
+    }
+
+    final class FakeMailbox implements RemoveSalesOrderService.Mailbox {
+      DemandMailboxResult preflight = DemandMailboxResult.SUCCESS;
+      DemandMailboxResult delivery = DemandMailboxResult.SUCCESS;
+      UUID ownerId;
+      int quantity;
+
+      @Override
+      public DemandMailboxResult preflight(UUID ownerId, Object template, int quantity) {
+        return preflight;
+      }
+
+      @Override
+      public DemandMailboxResult deliver(
+          UUID ownerId, MarketOrder order, Object template, int quantity) {
+        if (delivery == DemandMailboxResult.SUCCESS) {
+          this.ownerId = ownerId;
+          this.quantity = quantity;
+        }
+        return delivery;
       }
     }
 

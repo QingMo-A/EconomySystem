@@ -52,12 +52,15 @@ public final class ShopController extends AbstractEconomyScreenController<ShopSt
   }
 
   private void loaded(ShopEvent.DataLoaded event) {
-    if (!requestInFlight || event.requestId() != state().requestId()
-        || state().screenState() != ScreenState.LOADING) return;
+    // While a foreground request is active, keep rejecting stale responses. Once the page is
+    // ready, however, later client-cache revisions are live catalog updates and must be applied.
+    if (requestInFlight && event.requestId() != state().requestId()) return;
     List<ShopRow> rows = event.items().stream()
         .map(item -> new ShopRow(item, displayNameResolver.apply(item))).toList();
     requestInFlight = false;
-    replaceState(new ShopState(rows, 0, state().pageSize(), state().filter(),
+    int page = Math.min(state().page(), Math.max(0,
+        (filteredCount(rows, state().filter()) + state().pageSize() - 1) / state().pageSize() - 1));
+    replaceState(new ShopState(rows, page, state().pageSize(), state().filter(),
         rows.isEmpty() ? ScreenState.EMPTY : ScreenState.READY, null, -1,
         Set.of(ShopAction.BUY, ShopAction.BACK)));
   }
@@ -108,14 +111,18 @@ public final class ShopController extends AbstractEconomyScreenController<ShopSt
   }
 
   private int totalPages(String value, int pageSize) {
+    int count = filteredCount(state().rows(), value);
+    return Math.max(1, (count + pageSize - 1) / pageSize);
+  }
+
+  private static int filteredCount(List<ShopRow> rows, String value) {
     String needle = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
-    int count = (int) state().rows().stream().filter(row -> {
+    return (int) rows.stream().filter(row -> {
       var item = row.item();
       return needle.isEmpty() || item.shopItemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
           || item.itemId().toLowerCase(java.util.Locale.ROOT).contains(needle)
           || item.description().toLowerCase(java.util.Locale.ROOT).contains(needle)
           || row.displayName().toLowerCase(java.util.Locale.ROOT).contains(needle);
     }).count();
-    return Math.max(1, (count + pageSize - 1) / pageSize);
   }
 }

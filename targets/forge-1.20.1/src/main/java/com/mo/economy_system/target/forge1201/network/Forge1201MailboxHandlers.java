@@ -8,6 +8,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxClaimService;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.mail.MailRecord;
 import com.mo.economy_system.common.mail.MailType;
+import com.mo.economy_system.common.mail.MailboxCapacityPolicy;
 import com.mo.economy_system.common.mail.MailboxLedger;
 import com.mo.economy_system.common.mail.MailboxQueryService;
 import com.mo.economy_system.common.network.DeliveryBoxClaimMessage;
@@ -154,7 +155,10 @@ final class Forge1201MailboxHandlers {
 
   static void notification(MailboxNotificationMessage message, Supplier<NetworkEvent.Context> supplier) {
     NetworkEvent.Context context = supplier.get();
-    DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> Forge1201MailboxNotifications.show(message));
+    DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+      ClientMailboxState.invalidate();
+      Forge1201MailboxNotifications.show(message);
+    });
     context.setPacketHandled(true);
   }
 
@@ -215,11 +219,12 @@ final class Forge1201MailboxHandlers {
 
     Forge1201MailboxSavedData mailbox = Forge1201MailboxSavedData.get(sender.serverLevel());
     Forge1201DeliveryBoxSavedData delivery = Forge1201DeliveryBoxSavedData.get(sender.serverLevel());
-    if (mailbox.ledger().listPersonal(recipientId).size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
+    if (!MailboxCapacityPolicy.canAddPersonal(
+        MailType.PLAYER, mailbox.ledger().listPersonal(recipientId).size())) {
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     }
-    if (delivery.ledger().list(recipientId).size() + message.inventorySlots().size()
-        > EconomyNetworkLimits.MAX_DELIVERY_BOX_ENTRIES) {
+    if (!MailboxCapacityPolicy.canAddPlayerDeliveries(
+        delivery.ledger().list(recipientId).size(), message.inventorySlots().size())) {
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     }
 

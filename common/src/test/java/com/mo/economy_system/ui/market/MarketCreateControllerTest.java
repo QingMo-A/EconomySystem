@@ -32,10 +32,28 @@ class MarketCreateControllerTest {
     controller.handle(new MarketCreateEvent.PriceChanged(3));
     controller.handle(new MarketCreateEvent.ActionClicked(MarketCreateAction.SUBMIT));
     assertEquals(null, controller.state().errorKey());
+    assertEquals(64, port.quantity);
+    assertEquals(3, port.price, "v2 create intent must send the unit price, not a client-derived total");
     controller.handle(new MarketCreateEvent.QuantityChanged(4));
     controller.handle(new MarketCreateEvent.ActionClicked(MarketCreateAction.SUBMIT));
     assertEquals("minecraft:diamond", port.demandItem);
     assertEquals(4, port.quantity);
+    assertEquals(3, port.price);
+    assertEquals(12L, controller.state().computedOrderTotalPrice());
+  }
+
+  @Test void rejectsUnitPriceWhenDerivedOrderTotalWouldOverflow() {
+    FakePort port = new FakePort();
+    MarketCreateController controller = new MarketCreateController(MarketCreateMode.SALES,
+        List.of(new MarketInventoryItem(4, "minecraft:stone", 8, 64)), port);
+    controller.handle(new MarketCreateEvent.QuantityChanged(8));
+    controller.handle(new MarketCreateEvent.PriceChanged(Integer.MAX_VALUE));
+
+    controller.handle(new MarketCreateEvent.ActionClicked(MarketCreateAction.SUBMIT));
+
+    assertEquals(ScreenState.ERROR, controller.state().screenState());
+    assertEquals("screen.market.create.price_overflow", controller.state().errorKey());
+    assertEquals(-1, port.salesSlot);
   }
 
   @Test void salesQuantityInputAndButtonsShareOneToAvailableBounds() {

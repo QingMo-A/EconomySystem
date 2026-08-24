@@ -47,6 +47,9 @@ public final class RemoveSalesOrderService {
     }
     if (template == null)
       return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.ITEM_RESTORE_FAILED);
+    if (context.operator && !context.actorId.equals(preview.sellerId())) {
+      return removeToMailbox(message, context, preview, template);
+    }
     TransactionalInventory receiver;
     try {
       Optional<TransactionalInventory> resolved = context.receivers.resolve(preview.sellerId());
@@ -185,6 +188,113 @@ public final class RemoveSalesOrderService {
     return RemoveSalesOrderOutcome.success(authoritative);
   }
 
+  private static RemoveSalesOrderOutcome removeToMailbox(
+      RemoveSalesOrderMessage message, Context context, MarketOrder preview, Object template) {
+    DemandMailboxResult preflight;
+    try {
+      preflight = context.mailbox.preflight(preview.sellerId(), template, preview.quantity());
+    } catch (RuntimeException ex) {
+      report(
+          context,
+          message.tradeId(),
+          preview.sellerId(),
+          "mailbox-preflight",
+          RemoveSalesOrderResult.MAILBOX_DELIVERY_FAILED,
+          null,
+          null,
+          ex);
+      return RemoveSalesOrderOutcome.validationFailure(
+          RemoveSalesOrderResult.MAILBOX_DELIVERY_FAILED);
+    }
+    RemoveSalesOrderResult preflightFailure = mailboxFailure(preflight);
+    if (preflightFailure != null) {
+      return RemoveSalesOrderOutcome.validationFailure(preflightFailure);
+    }
+
+    SalesOrderRemovalResult removed;
+    try {
+      removed = context.repository.removeSalesTransactional(message.tradeId());
+    } catch (RuntimeException ex) {
+      report(
+          context,
+          message.tradeId(),
+          preview.sellerId(),
+          "remove",
+          RemoveSalesOrderResult.ORDER_REMOVE_FAILED,
+          null,
+          null,
+          ex);
+      return RemoveSalesOrderOutcome.validationFailure(RemoveSalesOrderResult.ORDER_REMOVE_FAILED);
+    }
+    if (removed == null)
+      return RemoveSalesOrderOutcome.uncertainFailure(RemoveSalesOrderResult.ORDER_REMOVE_FAILED);
+    if (removed.status() != SalesOrderRemovalStatus.REMOVED)
+      return RemoveSalesOrderOutcome.validationFailure(map(removed.status()));
+
+    MarketOrderRemoval removal = removed.removal();
+    MarketOrder authoritative = removal.order();
+    if (!preview.equals(authoritative)) {
+      boolean order = restore(removal);
+      return order
+          ? RemoveSalesOrderOutcome.rolledBackFailure(
+              RemoveSalesOrderResult.ORDER_CHANGED, authoritative)
+          : RemoveSalesOrderOutcome.changedFailure(
+              RemoveSalesOrderResult.ROLLBACK_FAILED, authoritative);
+    }
+
+    DemandMailboxResult delivery;
+    RuntimeException deliveryError = null;
+    try {
+      delivery = context.mailbox.deliver(
+          authoritative.sellerId(), authoritative, template, authoritative.quantity());
+    } catch (RuntimeException ex) {
+      delivery = DemandMailboxResult.UNKNOWN;
+      deliveryError = ex;
+    }
+    if (delivery == DemandMailboxResult.SUCCESS) {
+      return RemoveSalesOrderOutcome.success(authoritative);
+    }
+    if (delivery == DemandMailboxResult.UNKNOWN || delivery == null) {
+      report(
+          context,
+          message.tradeId(),
+          authoritative.sellerId(),
+          "mailbox-delivery",
+          RemoveSalesOrderResult.MAILBOX_STATE_UNKNOWN,
+          null,
+          false,
+          deliveryError);
+      return RemoveSalesOrderOutcome.uncertainFailure(
+          RemoveSalesOrderResult.MAILBOX_STATE_UNKNOWN);
+    }
+
+    boolean orderRestored = restore(removal);
+    RemoveSalesOrderResult result = mailboxFailure(delivery);
+    report(
+        context,
+        message.tradeId(),
+        authoritative.sellerId(),
+        "mailbox-delivery",
+        orderRestored ? result : RemoveSalesOrderResult.ROLLBACK_FAILED,
+        null,
+        orderRestored,
+        deliveryError);
+    return orderRestored
+        ? RemoveSalesOrderOutcome.rolledBackFailure(result, authoritative)
+        : RemoveSalesOrderOutcome.changedFailure(
+            RemoveSalesOrderResult.ROLLBACK_FAILED, authoritative);
+  }
+
+  private static RemoveSalesOrderResult mailboxFailure(DemandMailboxResult result) {
+    if (result == null) return RemoveSalesOrderResult.MAILBOX_STATE_UNKNOWN;
+    return switch (result) {
+      case SUCCESS -> null;
+      case FULL -> RemoveSalesOrderResult.MAILBOX_FULL;
+      case FAILED -> RemoveSalesOrderResult.MAILBOX_DELIVERY_FAILED;
+      case UNKNOWN -> RemoveSalesOrderResult.MAILBOX_STATE_UNKNOWN;
+    };
+  }
+
   private static RemoveSalesOrderResult validate(MarketOrder o, Context c) {
     if (o == null) return RemoveSalesOrderResult.NOT_FOUND;
     if (o.type() != MarketOrderType.SALES) return RemoveSalesOrderResult.WRONG_ORDER_TYPE;
@@ -233,14 +343,27 @@ public final class RemoveSalesOrderService {
       MarketItemMaterializer materializer,
       TransactionalInventoryResolver receivers,
       Repository repository,
+      Mailbox mailbox,
       FailureReporter reporter) {
     public Context {
       Objects.requireNonNull(actorId);
       Objects.requireNonNull(materializer);
       Objects.requireNonNull(receivers);
       Objects.requireNonNull(repository);
+      Objects.requireNonNull(mailbox);
       Objects.requireNonNull(reporter);
     }
+  }
+
+  public interface Mailbox {
+    DemandMailboxResult preflight(UUID ownerId, Object template, int quantity);
+
+    /**
+     * Delivers the removed order remainder to the owner's mailbox. FAILED/FULL guarantee that no
+     * mailbox mutation survived. UNKNOWN must not be followed by an order restore because an
+     * attachment may already have persisted.
+     */
+    DemandMailboxResult deliver(UUID ownerId, MarketOrder order, Object template, int quantity);
   }
 
   public interface Repository {

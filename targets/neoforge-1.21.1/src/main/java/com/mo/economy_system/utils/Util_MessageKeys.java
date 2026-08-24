@@ -402,6 +402,12 @@ public class Util_MessageKeys {
       "message.market.remove_sales.owner_offline";
   public static final String MARKET_REMOVE_SALES_INVENTORY_FULL =
       "message.market.remove_sales.inventory_full";
+  public static final String MARKET_REMOVE_SALES_MAILBOX_FULL =
+      "message.market.remove_sales.mailbox_full";
+  public static final String MARKET_REMOVE_SALES_MAILBOX_FAILED =
+      "message.market.remove_sales.mailbox_failed";
+  public static final String MARKET_REMOVE_SALES_MAILBOX_STATE_UNKNOWN =
+      "message.market.remove_sales.mailbox_state_unknown";
   public static final String MARKET_REMOVE_SALES_ORDER_CHANGED =
       "message.market.remove_sales.order_changed";
   public static final String MARKET_REMOVE_SALES_PERSIST_FAILED =

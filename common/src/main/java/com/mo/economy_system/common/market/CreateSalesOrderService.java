@@ -18,7 +18,13 @@ public final class CreateSalesOrderService {
         if (message == null || context == null) return CreateSalesOrderResult.INVALID_CONTEXT;
         if (message.slot() < 0 || message.slot() >= context.inventory().slotCount()) return CreateSalesOrderResult.INVALID_SLOT;
         if (message.quantity() <= 0) return CreateSalesOrderResult.INVALID_QUANTITY;
-        if (message.totalPrice() <= 0) return CreateSalesOrderResult.INVALID_PRICE;
+        if (message.unitPrice() <= 0) return CreateSalesOrderResult.INVALID_PRICE;
+        final int totalPrice;
+        try {
+            totalPrice = Math.multiplyExact(message.quantity(), message.unitPrice());
+        } catch (ArithmeticException exception) {
+            return CreateSalesOrderResult.INVALID_PRICE;
+        }
         Object selected = context.inventory().copySlot(message.slot());
         if (selected == null) return CreateSalesOrderResult.EMPTY_SLOT;
         Object template = context.inventory().unitTemplate(selected);
@@ -26,7 +32,7 @@ public final class CreateSalesOrderService {
         if (!captured.isSuccess()) return CreateSalesOrderResult.SNAPSHOT_REJECTED;
         long available = context.inventory().countMatching(template);
         if (available < message.quantity()) return CreateSalesOrderResult.INSUFFICIENT_ITEMS;
-        int tax = taxFor(message.totalPrice());
+        int tax = taxFor(totalPrice);
         if (tax < 1) return CreateSalesOrderResult.TAX_OVERFLOW;
         if (!context.account().canDebit(tax)) return CreateSalesOrderResult.INSUFFICIENT_FUNDS;
         if (context.repository().isFull()) return CreateSalesOrderResult.REPOSITORY_FULL;
@@ -42,7 +48,7 @@ public final class CreateSalesOrderService {
         UUID tradeId = context.ids().get();
         if (tradeId == null) return CreateSalesOrderResult.ORDER_PERSIST_FAILED;
         MarketOrder order = new MarketOrder(MarketOrderType.SALES, tradeId, captured.orElseThrow(),
-                message.quantity(), message.totalPrice(), context.sellerName(), context.sellerId(), now, expiration, false);
+                message.quantity(), totalPrice, context.sellerName(), context.sellerId(), now, expiration, false);
 
         RemovalResult removal;
         try {

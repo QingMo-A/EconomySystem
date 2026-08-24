@@ -1,5 +1,9 @@
 package com.mo.economy_system.ui.delivery;
 
+import com.mo.economy_system.ui.component.UiEmptyState;
+import com.mo.economy_system.ui.component.UiItemSlot;
+import com.mo.economy_system.ui.component.UiPanel;
+import com.mo.economy_system.ui.component.UiSection;
 import com.mo.economy_system.ui.core.ScreenState;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
@@ -41,12 +45,12 @@ public final class DeliveryView {
     renderer.translatedTextInRect("screen.delivery_box.esc", List.of(), layout.esc(),
         EconomyUiTheme.TEXT_MUTED, UiTextAlignment.RIGHT);
 
-    renderer.card(layout.categoryPanel(), EconomyUiTheme.ABOUT_CARD, false);
-    renderer.card(layout.detailPanel(), EconomyUiTheme.ABOUT_CARD, false);
+    UiPanel.render(renderer, layout.categoryPanel(), false);
+    UiPanel.render(renderer, layout.detailPanel(), false);
 
     for (DeliveryLayout.CategoryTab tab : layout.categoryTabs()) {
       boolean active = tab.category() == state.category();
-      renderer.card(tab.rect(), active ? EconomyUiTheme.DELIVERY_CARD : EconomyUiTheme.ABOUT_CARD,
+      UiSection.render(renderer, tab.rect(), active ? EconomyUiTheme.DELIVERY_ACCENT : 0,
           tab.rect().contains(mouseX, mouseY));
       String count = "  " + state.count(tab.category());
       renderer.translatedTextWithSuffix(tab.category().labelKey(), List.of(), count,
@@ -64,18 +68,18 @@ public final class DeliveryView {
       renderer.translatedTextInRect(state.errorKey() == null ? "screen.delivery_box.sync_failed" : state.errorKey(),
           List.of(), layout.message(), EconomyUiTheme.TEXT_ERROR, UiTextAlignment.CENTER);
     } else if (state.screenState() == ScreenState.EMPTY) {
-      renderer.translatedTextInRect("screen.delivery_box.empty", List.of(), layout.message(),
-          EconomyUiTheme.TEXT_MUTED, UiTextAlignment.CENTER);
+      UiEmptyState.render(renderer, layout.message(),
+          "screen.delivery_box.empty", "screen.delivery_box.empty_hint");
     } else if (state.filteredRows().isEmpty()) {
-      renderer.translatedTextInRect("screen.mailbox.category_empty", List.of(), layout.message(),
-          EconomyUiTheme.TEXT_MUTED, UiTextAlignment.CENTER);
+      UiEmptyState.render(renderer, layout.message(),
+          "screen.mailbox.category_empty", "screen.mailbox.category_empty_hint");
     }
 
     DeliveryRow selected = state.selectedRow();
     for (DeliveryLayout.Card card : layout.cards()) {
       DeliveryRow row = card.row();
       boolean selectedCard = selected != null && row.mailId().equals(selected.mailId());
-      renderer.card(card.card(), selectedCard ? EconomyUiTheme.DELIVERY_CARD : EconomyUiTheme.SHOP_CARD,
+      UiSection.render(renderer, card.card(), selectedCard ? EconomyUiTheme.DELIVERY_ACCENT : 0,
           card.card().contains(mouseX, mouseY));
       var first = row.firstAttachment();
       if (first != null) renderer.itemWithCount(first.item().itemId(), first.item().count(), card.itemIcon());
@@ -132,18 +136,15 @@ public final class DeliveryView {
     if (!row.mail().attachments().isEmpty()) {
       renderer.translatedTextInRect("screen.mailbox.attachments", List.of(Integer.toString(row.mail().attachments().size())),
           layout.attachmentLabel(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
-      renderer.card(layout.attachmentStrip(), EconomyUiTheme.ABOUT_CARD,
-          layout.attachmentStrip().contains(mouseX, mouseY));
+      UiPanel.render(renderer, layout.attachmentStrip(), layout.attachmentStrip().contains(mouseX, mouseY));
       for (DeliveryLayout.AttachmentCard card : layout.attachmentCards()) {
         boolean claimed = card.attachment().claimed();
-        renderer.card(card.card(), claimed ? EconomyUiTheme.ABOUT_CARD : EconomyUiTheme.DELIVERY_CARD,
-            !claimed && card.card().contains(mouseX, mouseY));
-        renderer.itemWithCount(card.attachment().item().itemId(), card.attachment().item().count(), card.itemIcon());
-        if (claimed) {
-          renderer.claimedItemOverlay(new UiRect(
-              card.card().x() + 3, card.card().y() + 3,
-              Math.max(1, card.card().width() - 6), Math.max(1, card.card().height() - 6)));
-        }
+        UiItemSlot.State slotState = claimed
+            ? UiItemSlot.State.CLAIMED
+            : (card.card().contains(mouseX, mouseY) ? UiItemSlot.State.HOVERED : UiItemSlot.State.NORMAL);
+        UiItemSlot.renderItem(renderer, card.card(), card.itemIcon(),
+            card.attachment().item().itemId(), card.attachment().item().count(),
+            slotState, EconomyUiTheme.DELIVERY_ACCENT);
       }
       if (layout.attachmentMaxFirstIndex() > 0) {
         renderer.fill(layout.attachmentScrollTrack(), 0x704A5568);

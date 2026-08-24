@@ -15,7 +15,9 @@ public interface MarketCreatePort {
 
   int maxStackSize(String itemId);
 
-  void submitSales(int slot, int quantity, int totalPrice);
+  /** Sends the integer unit price. The server derives and validates the authoritative total. */
+  void submitSales(int slot, int quantity, int unitPrice);
 
-  void submitDemand(String itemId, int quantity, int totalPrice);
+  /** Sends the integer unit price. The server derives and validates the authoritative total. */
+  void submitDemand(String itemId, int quantity, int unitPrice);
 }

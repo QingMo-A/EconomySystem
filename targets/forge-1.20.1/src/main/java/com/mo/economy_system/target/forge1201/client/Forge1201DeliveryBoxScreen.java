@@ -39,6 +39,10 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
   private final DeliveryAttachmentScroller attachmentScroller = new DeliveryAttachmentScroller();
   private EditBox search;
   private long appliedRevision = -1;
+  private long observedInvalidationRevision = -1;
+  private boolean silentRefreshInFlight;
+  private long silentRefreshTargetRevision = -1;
+  private long silentRefreshStartedAt;
 
   public Forge1201DeliveryBoxScreen() { this(null); }
   public Forge1201DeliveryBoxScreen(Screen parent) {
@@ -60,17 +64,57 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
     search.setValue(value);
     search.setResponder(text -> controller.handle(new DeliveryEvent.FilterChanged(text)));
     addRenderableWidget(search);
-    if (controller.state().screenState() == ScreenState.IDLE) controller.handle(new DeliveryEvent.Initialize(System.nanoTime()));
+    if (controller.state().screenState() == ScreenState.IDLE) {
+      observedInvalidationRevision = ClientMailboxState.invalidationRevision();
+      controller.handle(new DeliveryEvent.Initialize(System.nanoTime()));
+    }
   }
 
   @Override public void tick() {
     super.tick();
-    controller.handle(new DeliveryEvent.Tick(System.nanoTime()));
+    long now = System.nanoTime();
+    controller.handle(new DeliveryEvent.Tick(now));
+
+    long invalidationRevision = ClientMailboxState.invalidationRevision();
+    if (!silentRefreshInFlight && invalidationRevision != observedInvalidationRevision) {
+      if (controller.state().requestId() >= 0
+          && controller.state().screenState() != ScreenState.LOADING) {
+        long refreshRequestId = port.nextRequestId();
+        controller.handle(new DeliveryEvent.RefreshStarted(refreshRequestId));
+        silentRefreshInFlight = true;
+        silentRefreshTargetRevision = invalidationRevision;
+        silentRefreshStartedAt = now;
+        port.requestData(refreshRequestId);
+      } else if (controller.state().screenState() == ScreenState.ERROR) {
+        observedInvalidationRevision = invalidationRevision;
+        controller.handle(new DeliveryEvent.Retry(now));
+      }
+    }
+
     ClientMailboxState.Snapshot snapshot = ClientMailboxState.snapshot();
     if (snapshot.revision() != appliedRevision && snapshot.requestId() == port.requestId) {
       appliedRevision = snapshot.revision();
-      if (snapshot.failed()) controller.handle(new DeliveryEvent.DataFailed(snapshot.requestId(), "screen.delivery_box.sync_failed"));
-      else controller.handle(new DeliveryEvent.DataLoaded(snapshot.requestId(), snapshot.mails()));
+      if (snapshot.failed()) {
+        if (silentRefreshInFlight) {
+          controller.handle(new DeliveryEvent.RefreshFailed(snapshot.requestId()));
+          observedInvalidationRevision = silentRefreshTargetRevision;
+          silentRefreshInFlight = false;
+        } else if (controller.state().screenState() == ScreenState.LOADING) {
+          controller.handle(new DeliveryEvent.DataFailed(snapshot.requestId(), "screen.delivery_box.sync_failed"));
+        }
+      } else {
+        controller.handle(new DeliveryEvent.DataLoaded(snapshot.requestId(), snapshot.mails()));
+        if (silentRefreshInFlight) {
+          observedInvalidationRevision = silentRefreshTargetRevision;
+          silentRefreshInFlight = false;
+        }
+      }
+    }
+
+    if (silentRefreshInFlight && now - silentRefreshStartedAt >= DeliveryController.TIMEOUT_NANOS) {
+      controller.handle(new DeliveryEvent.RefreshFailed(port.requestId));
+      observedInvalidationRevision = silentRefreshTargetRevision;
+      silentRefreshInFlight = false;
     }
     controller.pollNavigation().ifPresent(this::navigate);
   }
@@ -107,15 +151,18 @@ public final class Forge1201DeliveryBoxScreen extends Screen {
     int attachmentTotal = selected == null ? 0 : selected.mail().attachments().size();
     if (attachmentScroller.press(x, y, layout.attachmentScrollTrack(), layout.attachmentScrollThumb(),
         attachmentTotal, layout.attachmentVisibleCapacity())) return true;
-    for (DeliveryLayout.AttachmentCard card : layout.attachmentCards()) if (!card.attachment().claimed() && card.card().contains(x, y)) {
+    for (DeliveryLayout.AttachmentCard card : layout.attachmentCards()) if (controller.state().can(DeliveryAction.CLAIM)
+        && !card.attachment().claimed() && card.card().contains(x, y)) {
       controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.CLAIM, card.attachment().entryId(), System.nanoTime()));
       return true;
     }
-    if (layout.claimAllButton().contains(x, y) && controller.state().selectedRow() != null
+    if (controller.state().can(DeliveryAction.CLAIM_ALL) && layout.claimAllButton().contains(x, y)
+        && controller.state().selectedRow() != null
         && controller.state().selectedRow().mail().hasUnclaimedAttachments()) {
       controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.CLAIM_ALL, null, System.nanoTime())); return true;
     }
-    if (layout.deleteButton().contains(x, y) && controller.state().selectedRow() != null
+    if (controller.state().can(DeliveryAction.DELETE) && layout.deleteButton().contains(x, y)
+        && controller.state().selectedRow() != null
         && !controller.state().selectedRow().mail().hasUnclaimedAttachments()) {
       controller.handle(new DeliveryEvent.ActionClicked(DeliveryAction.DELETE, null, System.nanoTime())); return true;
     }

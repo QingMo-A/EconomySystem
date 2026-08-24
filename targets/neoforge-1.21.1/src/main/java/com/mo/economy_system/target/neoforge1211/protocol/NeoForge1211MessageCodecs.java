@@ -556,17 +556,17 @@ public final class NeoForge1211MessageCodecs {
           public void encode(CreateSalesOrderMessage message, RegistryFriendlyByteBuf buffer) {
             buffer.writeInt(message.slot());
             buffer.writeInt(message.quantity());
-            buffer.writeInt(message.totalPrice());
+            buffer.writeInt(message.unitPrice());
           }
 
           @Override
           public CreateSalesOrderMessage decode(RegistryFriendlyByteBuf buffer) {
             int slot = buffer.readInt();
             int quantity = buffer.readInt();
-            int totalPrice = buffer.readInt();
-            if (slot < 0 || quantity <= 0 || totalPrice <= 0)
+            int unitPrice = buffer.readInt();
+            if (slot < 0 || quantity <= 0 || unitPrice <= 0)
               throw new DecoderException("Invalid create sales order request");
-            return new CreateSalesOrderMessage(slot, quantity, totalPrice);
+            return new CreateSalesOrderMessage(slot, quantity, unitPrice);
           }
         });
     register(
@@ -575,19 +575,19 @@ public final class NeoForge1211MessageCodecs {
         new NeoForge1211MessageCodec<>() {
           @Override
           public void encode(CreateDemandOrderMessage message, RegistryFriendlyByteBuf buffer) {
-            validateDemand(message.itemId(), message.quantity(), message.totalPrice());
+            validateDemand(message.itemId(), message.quantity(), message.unitPrice());
             buffer.writeUtf(message.itemId(), EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
             buffer.writeInt(message.quantity());
-            buffer.writeInt(message.totalPrice());
+            buffer.writeInt(message.unitPrice());
           }
 
           @Override
           public CreateDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
             String itemId = buffer.readUtf(EconomyNetworkLimits.MAX_ITEM_RESOURCE_ID_LENGTH);
             int quantity = buffer.readInt();
-            int totalPrice = buffer.readInt();
-            validateDemand(itemId, quantity, totalPrice);
-            return new CreateDemandOrderMessage(itemId, quantity, totalPrice);
+            int unitPrice = buffer.readInt();
+            validateDemand(itemId, quantity, unitPrice);
+            return new CreateDemandOrderMessage(itemId, quantity, unitPrice);
           }
         });
     register(codecs, EconomyMessages.MARKET_DATA_REQUEST, NeoForge1211MarketDataCodec.REQUEST);
@@ -599,11 +599,12 @@ public final class NeoForge1211MessageCodecs {
           @Override
           public void encode(PurchaseSalesOrderMessage message, RegistryFriendlyByteBuf buffer) {
             buffer.writeUUID(message.tradeId());
+            buffer.writeVarInt(message.quantity());
           }
 
           @Override
           public PurchaseSalesOrderMessage decode(RegistryFriendlyByteBuf buffer) {
-            return new PurchaseSalesOrderMessage(buffer.readUUID());
+            return new PurchaseSalesOrderMessage(buffer.readUUID(), buffer.readVarInt());
           }
         });
     register(
@@ -641,11 +642,12 @@ public final class NeoForge1211MessageCodecs {
           @Override
           public void encode(DeliverDemandOrderMessage message, RegistryFriendlyByteBuf buffer) {
             buffer.writeUUID(message.tradeId());
+            buffer.writeVarInt(message.quantity());
           }
 
           @Override
           public DeliverDemandOrderMessage decode(RegistryFriendlyByteBuf buffer) {
-            return new DeliverDemandOrderMessage(buffer.readUUID());
+            return new DeliverDemandOrderMessage(buffer.readUUID(), buffer.readVarInt());
           }
         });
     register(

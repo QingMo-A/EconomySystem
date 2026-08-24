@@ -168,7 +168,8 @@ public final class Forge1201MarketCreateScreen extends Screen {
       controller.handle(new MarketCreateEvent.CompletionDismissed());
     }
     for (MarketCreateLayout.Slot slot : layout.slots()) if (slot.rect().contains(x, y)) {
-      controller.handle(new MarketCreateEvent.SlotSelected(slot.item().slot())); return true;
+      if (slot.hasItem()) controller.handle(new MarketCreateEvent.SlotSelected(slot.slot()));
+      return true;
     }
     if (layout.decrement().contains(x, y)) { controller.handle(new MarketCreateEvent.ActionClicked(MarketCreateAction.DECREMENT)); syncInputs(layout); return true; }
     if (layout.increment().contains(x, y)) { controller.handle(new MarketCreateEvent.ActionClicked(MarketCreateAction.INCREMENT)); syncInputs(layout); return true; }
@@ -266,11 +267,11 @@ public final class Forge1201MarketCreateScreen extends Screen {
       if (location == null || !BuiltInRegistries.ITEM.containsKey(location)) return 64;
       Item item = BuiltInRegistries.ITEM.get(location); return item == null ? 64 : item.getMaxStackSize();
     }
-    @Override public void submitSales(int slot, int quantity, int totalPrice) {
-      EconomyServices.platform().network().sendToServer(new CreateSalesOrderMessage(slot, quantity, totalPrice));
+    @Override public void submitSales(int slot, int quantity, int unitPrice) {
+      EconomyServices.platform().network().sendToServer(new CreateSalesOrderMessage(slot, quantity, unitPrice));
     }
-    @Override public void submitDemand(String id, int quantity, int totalPrice) {
-      EconomyServices.platform().network().sendToServer(new CreateDemandOrderMessage(id, quantity, totalPrice));
+    @Override public void submitDemand(String id, int quantity, int unitPrice) {
+      EconomyServices.platform().network().sendToServer(new CreateDemandOrderMessage(id, quantity, unitPrice));
     }
   }
 }

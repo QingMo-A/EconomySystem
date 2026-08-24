@@ -13,6 +13,7 @@ public final class PurchaseSalesOrderFeedback {
             case INSUFFICIENT_FUNDS -> "message.market.purchase.insufficient_funds";
             case SELLER_BALANCE_LIMIT -> "message.market.purchase.seller_balance_limit";
             case INVENTORY_FULL -> "message.market.purchase.inventory_full";
+            case PARTIAL_FILL_UNSUPPORTED -> "message.market.purchase.whole_only";
             case ORDER_CHANGED -> "message.market.purchase.order_changed";
             case ORDER_REMOVE_FAILED -> "message.market.purchase.persist_failed";
             case ITEM_RESTORE_FAILED, INVALID_SNAPSHOT, INVENTORY_MUTATION_FAILED -> "message.market.purchase.item_failed";

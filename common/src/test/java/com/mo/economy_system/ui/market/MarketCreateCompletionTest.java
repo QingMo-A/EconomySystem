@@ -78,7 +78,9 @@ class MarketCreateCompletionTest {
 
     RecordingEconomyUiRenderer overlay = new RecordingEconomyUiRenderer();
     MarketCreateView.renderCompletionOverlay(overlay, state, layout, 0, 0, suggestions, 0);
-    assertTrue(overlay.operations().stream().anyMatch(operation -> operation.kind().equals("card")));
+    assertTrue(overlay.operations().stream().anyMatch(operation -> operation.kind().equals("fill")
+        && operation.rect().x() == layout.completionDropdown().x()
+        && operation.rect().y() == layout.completionDropdown().y()));
     assertTrue(overlay.operations().stream().anyMatch(operation ->
         operation.value().contains("minecraft:diamond")));
   }

@@ -20,8 +20,14 @@ class MarketCreateLayoutTest {
     assertEquals((640 - layout.formPanel().width()) / 2, layout.formPanel().x());
     assertEquals(layout.formPanel().x(), layout.inventoryPanel().x());
     assertEquals(layout.formPanel().width(), layout.inventoryPanel().width());
+    assertEquals(36, layout.slots().size());
+    assertEquals(0, layout.slots().get(0).slot());
+    assertEquals(35, layout.slots().get(35).slot());
+    assertTrue(layout.slots().get(0).hasItem());
+    assertTrue(layout.slots().get(1).hasItem());
+    assertFalse(layout.slots().get(2).hasItem());
     assertTrue(layout.inventoryPanel().contains(layout.slots().get(0).rect()));
-    assertTrue(layout.inventoryPanel().contains(layout.slots().get(1).rect()));
+    assertTrue(layout.inventoryPanel().contains(layout.slots().get(35).rect()));
     assertTrue(layout.inventoryPanel().y() > layout.formPanel().bottom(),
         "sales settings must be above the inventory chooser");
     assertTrue(layout.submit().y() >= layout.inventoryPanel().bottom(),

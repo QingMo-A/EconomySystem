@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.mail.MailRecord;
 import com.mo.economy_system.common.mail.MailType;
+import com.mo.economy_system.common.mail.MailboxCapacityPolicy;
 import com.mo.economy_system.common.market.MarketExpirationFeedback;
 import com.mo.economy_system.common.market.MarketExpirationOutcome;
 import com.mo.economy_system.common.market.MarketExpirationResult;
@@ -91,7 +92,8 @@ public final class Forge1201MarketExpirationRuntime {
       String source) {
     try {
       Forge1201MailboxSavedData mailbox = Forge1201MailboxSavedData.get(level);
-      if (mailbox.ledger().listPersonal(ownerId).size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
+      if (!MailboxCapacityPolicy.canAddPersonal(
+          MailType.MARKET, mailbox.ledger().listPersonal(ownerId).size())) {
         LOGGER.warn("Expired market delivery deferred because mailbox is full owner={}", ownerId);
         return false;
       }
@@ -110,30 +112,50 @@ public final class Forge1201MarketExpirationRuntime {
         entries.add(new DeliveryBoxEntrySnapshot(UUID.randomUUID(), snapshot, source));
         remaining -= count;
       }
-      delivery.ledger().addAll(ownerId, entries, delivery::markDirty);
-      boolean mailAdded = false;
-      try {
-        long now = System.currentTimeMillis();
-        mailbox.ledger().addPersonal(ownerId,
-            new MailRecord(UUID.randomUUID(), MailType.MARKET, null, "", "", "", source,
-                now, 0, entries.stream().map(DeliveryBoxEntrySnapshot::entryId).toList(), false, true),
-            mailbox::markDirty);
-        mailAdded = true;
-      } catch (RuntimeException metadataFailure) {
-        // The attachment delivery is authoritative. If mailbox metadata cannot be created,
-        // MailboxQueryService will safely adopt these legacy-style entries on the next refresh.
-        LOGGER.warn("Expired market delivery metadata fallback owner={}", ownerId, metadataFailure);
+      if (entries.size() > EconomyNetworkLimits.MAX_MAIL_ATTACHMENTS
+          || !MailboxCapacityPolicy.canAddCriticalDeliveries(
+              delivery.ledger().list(ownerId).size(), entries.size())) {
+        LOGGER.warn("Expired market delivery deferred because critical delivery capacity is full owner={}", ownerId);
+        return false;
       }
-      if (mailAdded) {
+      List<UUID> attachmentIds = entries.stream().map(DeliveryBoxEntrySnapshot::entryId).toList();
+      delivery.ledger().addAll(ownerId, entries, delivery::markDirty);
+      MailRecord mail = new MailRecord(UUID.randomUUID(), MailType.MARKET, null, "",
+          "市场订单已退回", "过期或已完成兼容流程的市场物品已退回至附件。", source,
+          System.currentTimeMillis(), 0, attachmentIds, false, true);
+      try {
+        mailbox.ledger().addPersonal(ownerId, mail, mailbox::markDirty);
+      } catch (RuntimeException metadataFailure) {
+        boolean rolledBack;
+        try {
+          rolledBack = delivery.ledger().removeUnclaimedBatch(
+              ownerId, new java.util.LinkedHashSet<>(attachmentIds), delivery::markDirty);
+        } catch (RuntimeException rollbackFailure) {
+          metadataFailure.addSuppressed(rollbackFailure);
+          rolledBack = false;
+        }
+        LOGGER.warn("Expired market delivery metadata failed owner={} attachmentRollback={}",
+            ownerId, rolledBack, metadataFailure);
+        if (!rolledBack) throw new UnknownDeliveryStateException(metadataFailure);
+        return false;
+      }
+      try {
         Forge1201MailboxHandlers.notifyNewMail(
-            level.getServer().getPlayerList().getPlayer(ownerId), MailType.MARKET, "", "");
+            level.getServer().getPlayerList().getPlayer(ownerId), MailType.MARKET, "", mail.subject());
+      } catch (RuntimeException notificationFailure) {
+        LOGGER.warn("Expired market mail notification failed owner={}", ownerId, notificationFailure);
       }
       return true;
     } catch (RuntimeException failure) {
+      if (failure instanceof UnknownDeliveryStateException) throw failure;
       // Snapshot conversion happens before mutation and DeliveryBoxLedger.addAll is atomic.
       LOGGER.error("Unable to enqueue expired market order owner={}", ownerId, failure);
       return false;
     }
+  }
+
+  private static final class UnknownDeliveryStateException extends RuntimeException {
+    private UnknownDeliveryStateException(Throwable cause) { super(cause); }
   }
 
   private static void notifyOwner(

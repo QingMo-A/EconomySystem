@@ -77,14 +77,14 @@ class PurchaseSalesOrderServiceTest {
     restore.inventory.restoreFails = true;
     assertEquals(PurchaseSalesOrderResult.ITEM_RESTORE_FAILED, restore.execute().result());
     Fixture remove = new Fixture();
-    remove.repository.removeStatus = SalesOrderRemovalStatus.PERSIST_FAILED;
+    remove.repository.fillStatus = MarketPartialFillStatus.PERSIST_FAILED;
     assertEquals(PurchaseSalesOrderResult.ORDER_REMOVE_FAILED, remove.execute().result());
   }
 
   @Test
-  void changedOrderIsRestoredWithoutPayment() {
+  void changedOrderIsRejectedWithoutPayment() {
     Fixture f = new Fixture();
-    f.repository.removedOverride = f.order(MarketOrderType.SALES, UUID.randomUUID());
+    f.repository.fillStatus = MarketPartialFillStatus.ORDER_CHANGED;
     PurchaseSalesOrderOutcome out = f.execute();
     assertEquals(PurchaseSalesOrderResult.ORDER_CHANGED, out.result());
     assertEquals(MarketMutationState.UNCHANGED, out.mutationState());
@@ -137,6 +137,38 @@ class PurchaseSalesOrderServiceTest {
     assertEquals(3, f.inventory.count);
   }
 
+  @Test
+  void partialPurchaseChargesOnlySliceAndKeepsRemainderOnSameTradeId() {
+    Fixture f = new Fixture();
+    f.repository.current = new MarketOrder(MarketOrderType.SALES, f.trade,
+        MarketOrderCodecTest.item(), 64, 1_280, "seller", f.seller, 1, 2, false);
+    f.accounts.buyer = 10_000;
+
+    PurchaseSalesOrderOutcome out = f.execute(10);
+
+    assertEquals(PurchaseSalesOrderResult.SUCCESS, out.result());
+    assertEquals(10, out.purchasedOrder().orElseThrow().quantity());
+    assertEquals(200, out.purchasedOrder().orElseThrow().totalPrice());
+    assertEquals(10, f.inventory.count);
+    assertEquals(9_800, f.accounts.buyer);
+    assertEquals(200, f.accounts.seller);
+    assertNotNull(f.repository.current);
+    assertEquals(f.trade, f.repository.current.tradeId());
+    assertEquals(54, f.repository.current.quantity());
+    assertEquals(1_080, f.repository.current.totalPrice());
+  }
+
+  @Test
+  void nonDivisibleLegacyOrderRejectsPartialButStillAllowsWholeFill() {
+    Fixture partial = new Fixture();
+    assertEquals(PurchaseSalesOrderResult.PARTIAL_FILL_UNSUPPORTED, partial.execute(1).result());
+    assertNotNull(partial.repository.current);
+
+    Fixture whole = new Fixture();
+    assertEquals(PurchaseSalesOrderResult.SUCCESS, whole.execute().result());
+    assertNull(whole.repository.current);
+  }
+
   private static final class Fixture {
     final UUID buyer = UUID.randomUUID(), seller = UUID.randomUUID(), trade = UUID.randomUUID();
     final FakeInventory inventory = new FakeInventory();
@@ -154,8 +186,12 @@ class PurchaseSalesOrderServiceTest {
     }
 
     PurchaseSalesOrderOutcome execute() {
+      return execute(0);
+    }
+
+    PurchaseSalesOrderOutcome execute(int quantity) {
       return PurchaseSalesOrderService.execute(
-          new PurchaseSalesOrderMessage(trade),
+          new PurchaseSalesOrderMessage(trade, quantity),
           new PurchaseSalesOrderService.Context(
               buyer,
               inventory,
@@ -217,27 +253,35 @@ class PurchaseSalesOrderServiceTest {
     }
 
     final class FakeRepository implements PurchaseSalesOrderService.Repository {
-      MarketOrder current, removedOverride;
-      SalesOrderRemovalStatus removeStatus = SalesOrderRemovalStatus.REMOVED;
+      MarketOrder current;
+      MarketPartialFillStatus fillStatus;
       boolean restoreSuccess = true;
 
       public MarketOrder find(UUID id) {
         return current;
       }
 
-      public SalesOrderRemovalResult removeSalesTransactional(UUID id) {
-        if (removeStatus != SalesOrderRemovalStatus.REMOVED)
-          return SalesOrderRemovalResult.failure(removeStatus);
-        MarketOrder removed = removedOverride == null ? current : removedOverride;
-        current = null;
-        return SalesOrderRemovalResult.removed(
-            new MarketOrderRemoval(
-                removed,
-                () -> {
-                  if (!restoreSuccess) return MarketOrderRestoreResult.PERSIST_FAILED;
-                  current = removed;
-                  return MarketOrderRestoreResult.RESTORED;
-                }));
+      public MarketPartialFillTransition fillIfUnchanged(
+          UUID id, MarketOrderType expectedType, MarketOrder expected, int quantity) {
+        if (fillStatus != null) return MarketPartialFillTransition.failure(fillStatus);
+        if (current == null) return MarketPartialFillTransition.failure(MarketPartialFillStatus.NOT_FOUND);
+        if (current.type() != expectedType)
+          return MarketPartialFillTransition.failure(MarketPartialFillStatus.WRONG_ORDER_TYPE);
+        if (!current.equals(expected))
+          return MarketPartialFillTransition.failure(MarketPartialFillStatus.ORDER_CHANGED);
+        int amount = MarketOrderPricing.fillAmount(current, quantity);
+        MarketOrder previous = current;
+        MarketOrder remaining = quantity == previous.quantity() ? null
+            : new MarketOrder(previous.type(), previous.tradeId(), previous.item(),
+                previous.quantity() - quantity, previous.totalPrice() - amount,
+                previous.sellerName(), previous.sellerId(), previous.listingTime(),
+                previous.expirationTime(), false);
+        current = remaining;
+        return MarketPartialFillTransition.applied(previous, remaining, quantity, amount, () -> {
+          if (!restoreSuccess) return MarketPartialFillRollbackResult.PERSIST_FAILED;
+          current = previous;
+          return MarketPartialFillRollbackResult.RESTORED;
+        });
       }
     }
   }

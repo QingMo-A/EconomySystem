@@ -118,8 +118,9 @@ public final class NeoForge1211PurchaseSalesOrderHandler {
       return d.getOrder(id);
     }
 
-    public SalesOrderRemovalResult removeSalesTransactional(UUID id) {
-      return d.removeSalesTransactional(id);
+    public MarketPartialFillTransition fillIfUnchanged(
+        UUID id, MarketOrderType expectedType, MarketOrder expected, int quantity) {
+      return d.fillIfUnchanged(id, expectedType, expected, quantity);
     }
   }
 
