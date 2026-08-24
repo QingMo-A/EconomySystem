@@ -64,6 +64,22 @@ class Forge1201UiBridgeTest {
   }
 
   @Test
+  void singleTerritoryScreensShareOneRequestSequence() throws Exception {
+    Path client = repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client");
+    for (String file : new String[]{"Forge1201TerritoryManageScreen.java",
+        "Forge1201TerritoryDetailScreen.java", "Forge1201BuffManageScreen.java"}) {
+      String source = read(client.resolve(file));
+      assertTrue(source.contains("TerritoryRequestIds.nextSingleTerritory()"), file);
+      assertFalse(source.contains("AtomicLong IDS"), file);
+    }
+    String legacyManage = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/screen/territory_system/Screen_ManageTerritory.java"));
+    assertTrue(legacyManage.contains("TerritoryRequestIds.nextSingleTerritory()"));
+    assertFalse(legacyManage.contains("AtomicLong NEXT_REQUEST_ID"));
+  }
+
+  @Test
   void aboutAndPurchaseShellsConsumeNavigationAndDisableVanillaBlur() throws Exception {
     assertTrue(Forge1201AboutScreen.class.getDeclaredMethod("tick") != null);
     assertTrue(Forge1201ShopPurchaseScreen.class.getDeclaredMethod("renderBackground",

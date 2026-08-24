@@ -1,5 +1,6 @@
 package com.mo.economy_system.target.forge1201.client;
 
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.SingleTerritoryDataResponseKind;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
@@ -20,7 +21,6 @@ import com.mo.economy_system.ui.territory.buff.BuffManageView;
 import com.mo.economy_system.ui.territory.buff.BuffResourceSnapshot;
 import java.util.LinkedHashMap;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -30,7 +30,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Forge shell for the loader-neutral territory Buff page. */
 public final class Forge1201BuffManageScreen extends Screen {
-  private static final AtomicLong IDS = new AtomicLong(1);
   private final Screen parent;
   private final Port port = new Port();
   private final BuffManageController controller;
@@ -130,7 +129,7 @@ public final class Forge1201BuffManageScreen extends Screen {
 
   private final class Port implements BuffManagePort {
     private long requestId = -1;
-    @Override public long nextRequestId() { long value = IDS.getAndIncrement(); if (value < 0) throw new IllegalStateException("buff request id exhausted"); return value; }
+    @Override public long nextRequestId() { return TerritoryRequestIds.nextSingleTerritory(); }
     @Override public void request(UUID territoryId, long id) { requestId = id; EconomyServices.platform().network().sendToServer(new SingleTerritoryDataRequestMessage(territoryId, id)); }
     @Override public void submit(UUID territoryId, BuffAction action, String buffId) {
       if (action == BuffAction.UNLOCK) EconomyServices.platform().network().sendToServer(new UnlockTerritoryBuffMessage(territoryId, buffId));

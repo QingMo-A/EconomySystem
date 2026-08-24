@@ -12,6 +12,12 @@ class TerritoryRequestIdsTest {
     assertEquals(1, TerritoryRequestIds.next(sequence));
   }
 
+  @Test void singleTerritoryIdsAreSharedAndMonotonicAcrossCallers() {
+    long firstScreen = TerritoryRequestIds.nextSingleTerritory();
+    long nextScreen = TerritoryRequestIds.nextSingleTerritory();
+    assertEquals(firstScreen + 1, nextScreen);
+  }
+
   @Test void maximumAndCorruptNegativeStateFailExplicitly() {
     assertThrows(IllegalStateException.class,
         () -> TerritoryRequestIds.next(new AtomicLong(Long.MAX_VALUE)));

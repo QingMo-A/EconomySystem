@@ -1,5 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.SingleTerritoryDataResponseKind;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
@@ -19,7 +20,6 @@ import com.mo.economy_system.ui.territory.buff.BuffManageView;
 import com.mo.economy_system.ui.territory.buff.BuffResourceSnapshot;
 import java.util.LinkedHashMap;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -29,7 +29,6 @@ import net.minecraft.network.chat.Component;
 
 /** NeoForge shell for the loader-neutral territory Buff page. */
 public final class NeoForge1211BuffManageScreen extends Screen {
-  private static final AtomicLong IDS = new AtomicLong(1);
   private final Screen parent;
   private final Port port = new Port();
   private final BuffManageController controller;
@@ -166,9 +165,7 @@ public final class NeoForge1211BuffManageScreen extends Screen {
     private long requestId = -1;
 
     @Override public long nextRequestId() {
-      long value = IDS.getAndIncrement();
-      if (value < 0) throw new IllegalStateException("buff request id exhausted");
-      return value;
+      return TerritoryRequestIds.nextSingleTerritory();
     }
 
     @Override public void request(UUID territoryId, long id) {

@@ -6,6 +6,7 @@ import com.mo.economy_system.core.territory_system.Territory;
 import com.mo.economy_system.core.territory_system.TerritoryBuff;
 import com.mo.economy_system.core.territory_system.TerritoryBuffConfig;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
 import com.mo.economy_system.common.network.UpgradeTerritoryBuffMessage;
@@ -29,14 +30,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 领地增益界面 - 现代卡片风格
  */
 public class Screen_TerritoryBuff extends Screen {
-    private static final AtomicLong REQUEST_IDS = new AtomicLong();
-
     // ==================== 布局常量 ====================
     private static final int BASE_WIDTH = 640;
     private static final int BASE_HEIGHT = 360;
@@ -518,7 +516,7 @@ public class Screen_TerritoryBuff extends Screen {
                 if (canAffordUpgrade(buff, player)) {
                     EconomySystem_NetworkManager.sendToServer(
                         new UnlockTerritoryBuffMessage(territory.getTerritoryID(), buff.getId()));
-                    latestRequestId = REQUEST_IDS.incrementAndGet();
+                    latestRequestId = TerritoryRequestIds.nextSingleTerritory();
                     EconomySystem_NetworkManager.sendToServer(
                         new SingleTerritoryDataRequestMessage(territory.getTerritoryID(), latestRequestId));
                 }
@@ -527,7 +525,7 @@ public class Screen_TerritoryBuff extends Screen {
                 if (canAffordUpgrade(buff, player)) {
                     EconomySystem_NetworkManager.sendToServer(
                         new UpgradeTerritoryBuffMessage(territory.getTerritoryID(), buff.getId()));
-                    latestRequestId = REQUEST_IDS.incrementAndGet();
+                    latestRequestId = TerritoryRequestIds.nextSingleTerritory();
                     EconomySystem_NetworkManager.sendToServer(
                         new SingleTerritoryDataRequestMessage(territory.getTerritoryID(), latestRequestId));
                 }

@@ -1,5 +1,6 @@
 package com.mo.economy_system.target.neoforge1211.client;
 
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.RemoveTerritoryMemberMessage;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
@@ -20,14 +21,12 @@ import com.mo.economy_system.ui.territory.TerritoryManageView;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind;
 import com.mo.economy_system.ui.territory.confirm.TerritoryConfirmationKind;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** Thin NeoForge 1.21.1 Screen shell for the common territory-management view. */
 public final class NeoForge1211TerritoryManageScreen extends Screen {
-  private static final AtomicLong IDS = new AtomicLong(1);
   private final Owned initial;
   private final Screen parent;
   private final Port port = new Port();
@@ -141,9 +140,7 @@ public final class NeoForge1211TerritoryManageScreen extends Screen {
   private final class Port implements TerritoryManagePort {
     private long requestId = -1;
     @Override public long nextRequestId() {
-      long value = IDS.getAndIncrement();
-      if (value < 0) throw new IllegalStateException("territory UI request id exhausted");
-      return value;
+      return TerritoryRequestIds.nextSingleTerritory();
     }
     @Override public void requestMembers(UUID territoryId, long id) {
       requestId = id;

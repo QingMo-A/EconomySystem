@@ -1,6 +1,7 @@
 package com.mo.economy_system.screen.territory_system;
 
 import com.mo.economy_system.common.client.ClientPlayerListState;
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
@@ -23,7 +24,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -32,7 +32,6 @@ import net.minecraft.network.chat.Component;
 
 /** Forge 1.20.1 management UI for canonical protocols 36-43. */
 public final class Screen_ManageTerritory extends Screen {
-  private static final AtomicLong NEXT_REQUEST_ID = new AtomicLong(1);
   private static final int ROW_HEIGHT = 28;
 
   private final Screen parent;
@@ -97,8 +96,7 @@ public final class Screen_ManageTerritory extends Screen {
   }
 
   private void requestTerritory() {
-    long next = NEXT_REQUEST_ID.getAndIncrement();
-    if (next < 0) throw new IllegalStateException("territory request id exhausted");
+    long next = TerritoryRequestIds.nextSingleTerritory();
     requestId = next;
     EconomyServices.platform()
         .network()

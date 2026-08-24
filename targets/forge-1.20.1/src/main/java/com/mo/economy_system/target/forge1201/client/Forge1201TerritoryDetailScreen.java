@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.client;
 
 import com.mo.economy_system.common.client.ClientPlayerListState;
+import com.mo.economy_system.common.client.TerritoryRequestIds;
 import com.mo.economy_system.common.network.ModifyTerritoryModeMessage;
 import com.mo.economy_system.common.network.ServerPlayerListRequestMessage;
 import com.mo.economy_system.common.network.SingleTerritoryDataRequestMessage;
@@ -25,7 +26,6 @@ import com.mo.economy_system.ui.territory.detail.TerritoryDetailPort;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailView;
 import com.mo.economy_system.ui.territory.detail.TerritoryDetailViewKind;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -33,8 +33,6 @@ import net.minecraft.network.chat.Component;
 
 /** Forge 1.20.1 shell for the unified common territory management center. */
 public final class Forge1201TerritoryDetailScreen extends Screen {
-  private static final AtomicLong IDS = new AtomicLong(1);
-
   private final Screen parent;
   private final Port port = new Port();
   private final TerritoryDetailController controller;
@@ -224,9 +222,7 @@ public final class Forge1201TerritoryDetailScreen extends Screen {
     private long requestId = -1;
 
     @Override public long nextRequestId() {
-      long value = IDS.getAndIncrement();
-      if (value < 0) throw new IllegalStateException("territory detail request id exhausted");
-      return value;
+      return TerritoryRequestIds.nextSingleTerritory();
     }
 
     @Override public void requestTerritory(UUID territoryId, long id) {

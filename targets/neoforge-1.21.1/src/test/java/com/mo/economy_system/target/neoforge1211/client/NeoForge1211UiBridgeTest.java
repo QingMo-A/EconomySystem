@@ -53,6 +53,22 @@ class NeoForge1211UiBridgeTest {
     }
 
     @Test
+    void singleTerritoryScreensShareOneRequestSequence() throws Exception {
+        Path client = repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client");
+        for (String file : new String[]{"NeoForge1211TerritoryManageScreen.java",
+            "NeoForge1211TerritoryDetailScreen.java", "NeoForge1211BuffManageScreen.java"}) {
+            String source = read(client.resolve(file));
+            assertTrue(source.contains("TerritoryRequestIds.nextSingleTerritory()"), file);
+            assertFalse(source.contains("AtomicLong IDS"), file);
+        }
+        String legacyBuff = read(repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/screen/territory_system/Screen_TerritoryBuff.java"));
+        assertTrue(legacyBuff.contains("TerritoryRequestIds.nextSingleTerritory()"));
+        assertFalse(legacyBuff.contains("AtomicLong REQUEST_IDS"));
+    }
+
+    @Test
     void aboutAndPurchaseShellsConsumeNavigationAndDisableVanillaBlur() throws Exception {
         assertTrue(NeoForge1211AboutScreen.class.getDeclaredMethod("tick") != null);
         assertTrue(NeoForge1211ShopPurchaseScreen.class.getDeclaredMethod("renderBackground",
