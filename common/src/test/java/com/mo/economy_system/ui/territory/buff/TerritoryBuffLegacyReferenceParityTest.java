@@ -28,9 +28,12 @@ class TerritoryBuffLegacyReferenceParityTest {
             layout.search().x() - 4, layout.search().y() - 2,
             layout.search().width() + 8, layout.search().height() + 4))),
         "legacy buff search uses four-edge territory chrome");
-    assertTrue(renderer.operations().stream().anyMatch(operation -> operation.kind().equals("card")
-        && operation.value().contains("accent=" + EconomyUiTheme.TERRITORY_ACCENT)),
-        "unlocked buff cards use territory accent");
+    var firstCard = layout.cards().get(0).card();
+    assertTrue(renderer.operations().stream().anyMatch(operation -> operation.kind().equals("fill")
+        && operation.rect().equals(new com.mo.economy_system.ui.geometry.UiRect(
+            firstCard.x(), firstCard.y(), 2, firstCard.height()))
+        && operation.value().equals(Integer.toString(EconomyUiTheme.TERRITORY_ACCENT))),
+        "unlocked buff panels use the restrained territory accent stripe");
     assertTrue(renderer.operations().stream().anyMatch(operation -> operation.kind().equals("icon")
         && operation.value().equals(UiIcon.BUFF.name())));
     assertTrue(renderer.operations().stream().anyMatch(operation -> operation.kind().equals("translatedButton")

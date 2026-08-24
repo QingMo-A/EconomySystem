@@ -30,7 +30,7 @@ class TerritoryDetailLayoutTest {
         TerritoryDetailLayout.Layout layout = TerritoryDetailLayout.calculate(size[0], size[1], state);
         UiRect viewport = new UiRect(0, 0, layout.scale().virtualWidth(), layout.scale().virtualHeight());
         for (UiRect rect : List.of(layout.title(), layout.subtitle(), layout.navigationPanel(), layout.content(),
-            layout.search(), layout.rows(), layout.previousButton(), layout.pageText(), layout.nextButton(),
+            layout.search(), layout.settingsTitle(), layout.rows(), layout.previousButton(), layout.pageText(), layout.nextButton(),
             layout.retryButton(), layout.backButton())) {
           assertTrue(viewport.contains(rect), view + " " + size[0] + "x" + size[1] + " " + rect);
         }
@@ -98,5 +98,11 @@ class TerritoryDetailLayoutTest {
     assertEquals(List.of(TerritoryDetailAction.COPY_ID, TerritoryDetailAction.RESIZE,
             TerritoryDetailAction.TRANSFER, TerritoryDetailAction.DELETE),
         settingsLayout.settingsActions().stream().map(TerritoryDetailLayout.SettingAction::action).toList());
+    assertTrue(settingsLayout.settingsActions().get(0).row().y()
+        >= settingsLayout.settingsTitle().bottom() + 12);
+    for (int index = 1; index < settingsLayout.settingsActions().size(); index++) {
+      assertFalse(settingsLayout.settingsActions().get(index - 1).row()
+          .overlaps(settingsLayout.settingsActions().get(index).row()));
+    }
   }
 }

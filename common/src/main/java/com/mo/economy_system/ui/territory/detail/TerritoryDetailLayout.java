@@ -45,6 +45,8 @@ public final class TerritoryDetailLayout {
         Math.min(160, Math.max(1, content.width() - 16)), 20);
     UiRect invite = new UiRect(Math.max(content.x() + 8, content.right() - 110),
         content.y() + 8, 102, 20);
+    UiRect settingsTitle = new UiRect(content.x() + 12, content.y() + 5,
+        Math.max(1, content.width() - 24), 14);
 
     int rowsY = state.searchVisible() ? content.y() + 38 : content.y() + 10;
     int fullRowsHeight = Math.max(1, content.bottom() - rowsY);
@@ -60,7 +62,7 @@ public final class TerritoryDetailLayout {
     List<QuickAction> quickActions = state.view() == TerritoryDetailViewKind.MAIN
         ? quickActions(content) : List.of();
     List<SettingAction> settingsActions = state.view() == TerritoryDetailViewKind.SETTINGS
-        ? settingsActions(content) : List.of();
+        ? settingsActions(content, settingsTitle) : List.of();
     List<AccessCard> accessCards = new ArrayList<>();
     List<RuleCard> ruleCards = new ArrayList<>();
     List<TransferCard> transferCards = new ArrayList<>();
@@ -82,7 +84,7 @@ public final class TerritoryDetailLayout {
         rows.y() + Math.max(0, (rows.height() - 22) / 2), Math.min(96, content.width()), 22);
 
     return new Layout(scale, title, subtitle, navigationPanel, List.copyOf(navigationButtons), content,
-        search, invite, rows, List.copyOf(quickActions), List.copyOf(settingsActions),
+        search, invite, settingsTitle, rows, List.copyOf(quickActions), List.copyOf(settingsActions),
         List.of(), List.copyOf(accessCards), List.copyOf(ruleCards),
         List.copyOf(transferCards), previous, pageText, next, retry, back, pageSize);
   }
@@ -123,7 +125,7 @@ public final class TerritoryDetailLayout {
             new UiRect(content.x() + 12 + width + gap, y, width, ACTION_HEIGHT)));
   }
 
-  private static List<SettingAction> settingsActions(UiRect content) {
+  private static List<SettingAction> settingsActions(UiRect content, UiRect title) {
     TerritoryDetailAction[] actions = {
         TerritoryDetailAction.COPY_ID,
         TerritoryDetailAction.RESIZE,
@@ -131,7 +133,8 @@ public final class TerritoryDetailLayout {
         TerritoryDetailAction.DELETE
     };
     List<SettingAction> result = new ArrayList<>();
-    int startY = content.y() + 14;
+    // Keep the first settings row clear of the section title and its text baseline.
+    int startY = title.bottom() + 13;
     for (int index = 0; index < actions.length; index++) {
       UiRect row = new UiRect(content.x() + 8, startY + index * 54,
           Math.max(1, content.width() - 16), 46);
@@ -192,6 +195,7 @@ public final class TerritoryDetailLayout {
       UiRect content,
       UiRect search,
       UiRect inviteButton,
+      UiRect settingsTitle,
       UiRect rows,
       List<QuickAction> quickActions,
       List<SettingAction> settingsActions,

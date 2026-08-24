@@ -171,7 +171,7 @@ public final class TerritoryDetailView {
                                      TerritoryDetailLayout.Layout layout, int mouseX, int mouseY) {
     UiRect content = layout.content();
     renderer.translatedTextInRect("screen.territory.detail.settings.title", List.of(),
-        new UiRect(content.x() + 12, content.y() + 5, content.width() - 24, 14),
+        layout.settingsTitle(),
         EconomyUiTheme.TEXT_PRIMARY, UiTextAlignment.LEFT);
     for (TerritoryDetailLayout.SettingAction setting : layout.settingsActions()) {
       boolean dangerous = setting.action() == TerritoryDetailAction.TRANSFER

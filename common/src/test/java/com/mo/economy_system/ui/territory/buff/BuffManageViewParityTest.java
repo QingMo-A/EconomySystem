@@ -50,9 +50,14 @@ class BuffManageViewParityTest {
             && operation.key.equals("button.territory.buff.unlock")
             && operation.buttonStyle.equals(EconomyUiTheme.DISABLED_BUTTON)
             && !operation.enabled));
+    UiRect lockedCard = layout.cards().get(1).card();
     assertTrue(forge.operations.stream().anyMatch(operation ->
-        operation.kind.equals("card")
-            && operation.cardStyle.equals(EconomyUiTheme.TERRITORY_LOCKED_CARD)));
+        operation.kind.equals("fill")
+            && operation.rect.equals(new UiRect(lockedCard.x(), lockedCard.y(), 2,
+                lockedCard.height()))));
+    assertTrue(forge.operations.stream().anyMatch(operation ->
+        operation.kind.equals("fill")
+            && operation.rect.equals(layout.cards().get(0).levelTrack())));
   }
 
   @Test

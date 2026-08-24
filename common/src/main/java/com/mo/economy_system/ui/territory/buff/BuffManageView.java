@@ -1,6 +1,7 @@
 package com.mo.economy_system.ui.territory.buff;
 
 import com.mo.economy_system.ui.core.ScreenState;
+import com.mo.economy_system.ui.component.UiPanel;
 import com.mo.economy_system.ui.geometry.UiRect;
 import com.mo.economy_system.ui.renderer.EconomyUiRenderer;
 import com.mo.economy_system.ui.renderer.TooltipLine;
@@ -38,8 +39,9 @@ public final class BuffManageView {
 
         for (BuffManageLayout.Card card : layout.cards()) {
             BuffRow row = card.buff();
-            renderer.card(card.card(), row.buff().unlocked()
-                            ? EconomyUiTheme.TERRITORY_CARD : EconomyUiTheme.TERRITORY_LOCKED_CARD,
+            int accent = row.buff().unlocked()
+                    ? EconomyUiTheme.TERRITORY_ACCENT : EconomyUiTheme.TEXT_LOCKED;
+            UiPanel.render(renderer, card.card(), accent, 2,
                     card.card().contains(mouseX, mouseY));
             renderer.icon(UiIcon.BUFF, card.icon());
             renderer.textInRect(row.buff().displayText(), card.name(), EconomyUiTheme.TEXT_PRIMARY,
@@ -48,11 +50,18 @@ public final class BuffManageView {
                     List.of(Integer.toString(row.buff().level()),
                             Integer.toString(row.buff().maxLevel())),
                     card.level(), EconomyUiTheme.TEXT_SECONDARY, UiTextAlignment.RIGHT);
+            renderer.fill(card.levelTrack(), EconomyUiTheme.Surface.HAIRLINE);
+            if (row.buff().level() > 0 && row.buff().maxLevel() > 0) {
+                int progressWidth = Math.max(1, Math.min(card.levelTrack().width(),
+                        card.levelTrack().width() * row.buff().level() / row.buff().maxLevel()));
+                renderer.fill(new UiRect(card.levelTrack().x(), card.levelTrack().y(),
+                        progressWidth, card.levelTrack().height()), accent);
+            }
             renderer.translatedTextInRect(row.buff().unlocked()
                             ? "screen.territory.buff.status.unlocked"
                             : "screen.territory.buff.status.locked",
                     List.of(), card.status(), row.buff().unlocked()
-                            ? EconomyUiTheme.TEXT_SUCCESS : EconomyUiTheme.TEXT_LOCKED,
+                            ? EconomyUiTheme.TEXT_SUCCESS : EconomyUiTheme.TEXT_MUTED,
                     UiTextAlignment.LEFT);
             renderer.translatedTextInRect("screen.territory.buff.cost", List.of(), card.cost(),
                     row.availability() == BuffAvailability.AVAILABLE
