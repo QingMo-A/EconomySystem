@@ -20,7 +20,7 @@ class BuffManageLayoutTest {
     var state = new BuffManageState(UUID.randomUUID(), "territory", rows, 0, 6, 0, "",
         ScreenState.READY, null, -1);
     for (int[] size : new int[][]{{320, 180}, {640, 360}, {854, 480}, {1280, 720},
-        {1920, 1080}, {180, 120}}) {
+        {1920, 1080}, {180, 120}, {160, 90}, {640, 80}}) {
       var layout = BuffManageLayout.calculate(size[0], size[1], state);
       int width = layout.scale().virtualWidth();
       int height = layout.scale().virtualHeight();

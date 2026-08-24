@@ -88,6 +88,7 @@ public final class BuffManageController
     private void action(BuffManageEvent.ActionClicked e) {
         if (e.action() == BuffAction.BACK) { navigate(new UiNavigation.Back()); return; }
         if (e.action() == BuffAction.RETRY) { request(e.nowNanos()); return; }
+        if (state().screenState() != ScreenState.READY || inFlight) return;
         BuffRow row = state().filteredBuffs().stream()
                 .filter(v -> v.buff().id().equals(e.buffId())).findFirst().orElse(null);
         if (row == null || row.action() != e.action()) return;

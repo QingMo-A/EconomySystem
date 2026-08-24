@@ -28,11 +28,32 @@ class BuffManageControllerTest {
     controller.handle(new BuffManageEvent.DataLoaded(2L, List.of(
         BuffManageTestFixtures.buff("stale", true, 1, 2, 0, 0, 0))));
     assertEquals(ScreenState.LOADING, controller.state().screenState());
+    controller.handle(new BuffManageEvent.DataFailed(99L, "unknown"));
+    assertEquals(ScreenState.LOADING, controller.state().screenState());
     controller.handle(new BuffManageEvent.DataLoaded(1L, List.of(
         BuffManageTestFixtures.buff("speed", true, 1, 3, 2, 1, 2))));
     assertEquals(ScreenState.READY, controller.state().screenState());
     controller.handle(new BuffManageEvent.DataFailed(1L, "duplicate"));
     assertEquals(ScreenState.READY, controller.state().screenState());
+  }
+
+  @Test
+  void emptyExplicitErrorAndRetryHaveDistinctLifecycleStates() {
+    FakePort emptyPort = new FakePort(BuffManageTestFixtures.resources(10, 10));
+    BuffManageController empty = controller(emptyPort, List.of());
+    empty.handle(new BuffManageEvent.Initialize(10L));
+    empty.handle(new BuffManageEvent.DataLoaded(1L, List.of()));
+    assertEquals(ScreenState.EMPTY, empty.state().screenState());
+
+    FakePort errorPort = new FakePort(BuffManageTestFixtures.resources(10, 10));
+    BuffManageController error = controller(errorPort, List.of());
+    error.handle(new BuffManageEvent.Initialize(20L));
+    error.handle(new BuffManageEvent.DataFailed(1L, "screen.territory.buff.sync_failed"));
+    assertEquals(ScreenState.ERROR, error.state().screenState());
+    assertEquals("screen.territory.buff.sync_failed", error.state().errorKey());
+    error.handle(new BuffManageEvent.Retry(30L));
+    assertEquals(ScreenState.LOADING, error.state().screenState());
+    assertEquals(2L, errorPort.requestId);
   }
 
   @Test
@@ -76,6 +97,37 @@ class BuffManageControllerTest {
     assertTrue(port.submissions.isEmpty());
     controller.handle(new BuffManageEvent.ActionClicked(BuffAction.BACK, "", 3L));
     assertInstanceOf(UiNavigation.Back.class, controller.pollNavigation().orElseThrow());
+  }
+
+  @Test
+  void maxLevelAndUnknownResourcesRemainFailSafeCommonModels() {
+    FakePort port = new FakePort(BuffResourceSnapshot.unknown());
+    Buff max = BuffManageTestFixtures.buff("max", true, 3, 3, 2, 4, 5);
+    Buff unknown = BuffManageTestFixtures.buff("unknown", false, 0, 3, 2, 4, 5);
+    BuffManageController controller = controller(port, List.of(max, unknown));
+    controller.handle(new BuffManageEvent.Initialize(1L));
+    controller.handle(new BuffManageEvent.DataLoaded(1L, List.of(max, unknown)));
+
+    assertEquals(BuffAvailability.MAX_LEVEL, controller.state().buffs().get(0).availability());
+    assertEquals(BuffAction.MAX, controller.state().buffs().get(0).action());
+    assertEquals(BuffAvailability.AVAILABLE, controller.state().buffs().get(1).availability());
+    assertTrue(!controller.state().buffs().get(1).resources().known());
+  }
+
+  @Test
+  void unlockOrUpgradeSubmitsOnceThenRefreshesBeforeAnotherActionIsAllowed() {
+    FakePort port = new FakePort(BuffManageTestFixtures.resources(10, 10));
+    Buff locked = BuffManageTestFixtures.buff("speed", false, 0, 3, 1, 1, 0);
+    BuffManageController controller = controller(port, List.of(locked));
+    controller.handle(new BuffManageEvent.Initialize(1L));
+    controller.handle(new BuffManageEvent.DataLoaded(1L, List.of(locked)));
+
+    controller.handle(new BuffManageEvent.ActionClicked(BuffAction.UNLOCK, "speed", 2L));
+    controller.handle(new BuffManageEvent.ActionClicked(BuffAction.UNLOCK, "speed", 3L));
+
+    assertEquals(List.of("UNLOCK:speed"), port.submissions);
+    assertEquals(ScreenState.LOADING, controller.state().screenState());
+    assertEquals(2L, port.requestId);
   }
 
   private static BuffManageController controller(FakePort port, List<Buff> buffs) {
