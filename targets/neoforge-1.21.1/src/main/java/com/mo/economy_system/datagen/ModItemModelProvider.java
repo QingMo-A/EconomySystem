@@ -47,6 +47,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         builtinEntityItem(EconomySystem_Items.POXIAOJIN_DOLL_HAT);
         builtinEntityItem(EconomySystem_Items.HANHANYU_DOLL_HAT);
         builtinEntityItem(EconomySystem_Items.PLAYER_351987654321_DOLL_HAT);
+        builtinEntityItem(EconomySystem_Items.BIANNUALCLAMP68_DOLL_HAT);
         trimmedArmorItem(EconomySystem_Items.SUPPORTER_HAT);
     }
 

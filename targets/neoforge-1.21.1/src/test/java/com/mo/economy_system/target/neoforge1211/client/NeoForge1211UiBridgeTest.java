@@ -53,6 +53,17 @@ class NeoForge1211UiBridgeTest {
     }
 
     @Test
+    void biannualClampDollUsesOfficialUuidAndIsRegisteredInCreativeTab() throws Exception {
+        String items = read(repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/item/EconomySystem_Items.java"));
+        assertTrue(items.contains("BIANNUALCLAMP68_DOLL_HAT"));
+        assertTrue(items.contains("c5823541-7fa4-428a-acf8-8c627a469859"));
+        String tab = read(repositoryRoot().resolve(
+            "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/item/EconomySystem_CreativeTabs.java"));
+        assertTrue(tab.contains("BIANNUALCLAMP68_DOLL_HAT.get()"));
+    }
+
+    @Test
     void singleTerritoryScreensShareOneRequestSequence() throws Exception {
         Path client = repositoryRoot().resolve(
             "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/client");

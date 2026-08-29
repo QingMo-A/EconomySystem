@@ -24,6 +24,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add("item.economy_system.poxiaojin_doll_hat", "poxiaojin");
     add("item.economy_system.hanhanyu_doll_hat", "__HanHanYu__");
     add("item.economy_system.player_351987654321_doll_hat", "351987654321");
+    add("item.economy_system.biannualclamp68_doll_hat", "BiannualClamp68");
     add("tooltip.economy_system.supporter_hat.unbound", "未绑定赞助者身份");
     add("message.supporter_hat.hold_hat", "请将赞助者帽子拿在主手中。");
     add("message.supporter_hat.invalid_identity", "赞助者身份无效。");

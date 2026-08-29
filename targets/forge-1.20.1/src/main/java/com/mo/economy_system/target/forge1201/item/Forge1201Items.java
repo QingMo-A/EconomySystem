@@ -47,6 +47,8 @@ public final class Forge1201Items {
       "hanhanyu_doll_hat", "5c728c19-aed5-4143-af08-bc40f5069f98", "__HanHanYu__");
   public static final RegistryObject<Item> PLAYER_351987654321_DOLL_HAT = registerDollHat(
       "player_351987654321_doll_hat", "e453107e-a998-47b9-a55f-d3aeded19a96", "351987654321");
+  public static final RegistryObject<Item> BIANNUALCLAMP68_DOLL_HAT = registerDollHat(
+      "biannualclamp68_doll_hat", "c5823541-7fa4-428a-acf8-8c627a469859", "BiannualClamp68");
 
   public static final RegistryObject<SoundEvent> NOTE_C = registerSound("note.c");
   public static final RegistryObject<SoundEvent> NOTE_DM = registerSound("note.dm");
@@ -70,6 +72,7 @@ public final class Forge1201Items {
             output.accept(POXIAOJIN_DOLL_HAT.get());
             output.accept(HANHANYU_DOLL_HAT.get());
             output.accept(PLAYER_351987654321_DOLL_HAT.get());
+            output.accept(BIANNUALCLAMP68_DOLL_HAT.get());
           })
           .build());
 

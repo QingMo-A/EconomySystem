@@ -27,6 +27,7 @@ public class EconomySystem_CreativeTabs {
                         output.accept(EconomySystem_Items.POXIAOJIN_DOLL_HAT.get());
                         output.accept(EconomySystem_Items.HANHANYU_DOLL_HAT.get());
                         output.accept(EconomySystem_Items.PLAYER_351987654321_DOLL_HAT.get());
+                        output.accept(EconomySystem_Items.BIANNUALCLAMP68_DOLL_HAT.get());
                     })
                     .build()
     );

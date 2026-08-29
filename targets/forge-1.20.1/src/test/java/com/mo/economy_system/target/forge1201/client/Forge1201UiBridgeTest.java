@@ -64,6 +64,15 @@ class Forge1201UiBridgeTest {
   }
 
   @Test
+  void biannualClampDollUsesOfficialUuidAndIsRegisteredInCreativeTab() throws Exception {
+    String items = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/item/Forge1201Items.java"));
+    assertTrue(items.contains("BIANNUALCLAMP68_DOLL_HAT"));
+    assertTrue(items.contains("c5823541-7fa4-428a-acf8-8c627a469859"));
+    assertTrue(items.contains("BIANNUALCLAMP68_DOLL_HAT.get()"));
+  }
+
+  @Test
   void singleTerritoryScreensShareOneRequestSequence() throws Exception {
     Path client = repositoryRoot().resolve(
         "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/client");

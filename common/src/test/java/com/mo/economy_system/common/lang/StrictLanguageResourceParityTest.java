@@ -40,6 +40,7 @@ class StrictLanguageResourceParityTest {
       Set.of(
           "item.economy_system.hanhanyu_doll_hat",
           "item.economy_system.player_351987654321_doll_hat",
+          "item.economy_system.biannualclamp68_doll_hat",
           "item.economy_system.poxiaojin_doll_hat",
           "itemGroup.economy_system.tab",
           "screen.home.version",
