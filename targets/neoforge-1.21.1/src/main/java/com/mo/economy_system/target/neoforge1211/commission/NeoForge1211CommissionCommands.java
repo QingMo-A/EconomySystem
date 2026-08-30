@@ -42,10 +42,10 @@ public final class NeoForge1211CommissionCommands {
         .executes(c -> NeoForge1211CommissionRuntime.reloadCommand(c.getSource())));
     commission.then(Commands.literal("template")
         .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> {
-          for (String id : NeoForge1211CommissionRuntime.templateIds()) {
+          for (String id : NeoForge1211CommissionRuntime.templateIds(c.getSource().getServer())) {
             c.getSource().sendSuccess(() -> Component.literal(id), false);
           }
-          return NeoForge1211CommissionRuntime.templateIds().size();
+          return NeoForge1211CommissionRuntime.templateIds(c.getSource().getServer()).size();
         })));
     var submit = Commands.literal("submit").then(Commands.argument("commissionId", UuidArgument.uuid())
         .then(Commands.argument("amount", IntegerArgumentType.integer(1))

@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.commission;
 
 import com.mo.economy_system.common.commission.CommissionCatalog;
+import com.mo.economy_system.common.commission.CommissionCatalogConfigLoader;
 import com.mo.economy_system.common.commission.CommissionCatalogDefaults;
 import com.mo.economy_system.common.commission.CommissionGenerator;
 import com.mo.economy_system.common.commission.CommissionInstance;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.nio.file.Path;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -32,17 +34,20 @@ import org.slf4j.LoggerFactory;
 /** Forge 1.20.1 server-authoritative personal commission adapter. */
 public final class Forge1201CommissionRuntime {
   private static final Logger LOGGER = LoggerFactory.getLogger(Forge1201CommissionRuntime.class);
-  private static final CommissionCatalog DEFAULT_CATALOG = CommissionCatalogDefaults.create();
+  private static final CommissionCatalog BUILTIN_CATALOG = CommissionCatalogDefaults.create();
+  private static volatile CommissionCatalog activeCatalog = BUILTIN_CATALOG;
 
   private Forge1201CommissionRuntime() {}
 
   /** Ensures the SavedData is registered in the overworld during server startup. */
   public static void initialize(ServerLevel level) {
+    activeCatalog = loadCatalog(level.getServer());
     Forge1201CommissionSavedData.get(level);
   }
 
   public static void shutdown(MinecraftServer server) {
     // The state is owned by DimensionDataStorage; no process-global cache needs clearing.
+    activeCatalog = BUILTIN_CATALOG;
   }
 
   /** Refreshes overdue work for a player.  The clock is server wall time, not client time. */
@@ -52,15 +57,19 @@ public final class Forge1201CommissionRuntime {
   }
 
   public static List<String> templateIds() {
-    return DEFAULT_CATALOG.templates().stream().map(value -> value.id()).toList();
+    return activeCatalog.templates().stream().map(value -> value.id()).toList();
   }
 
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
-    // The built-in catalog is immutable; clearing server-scoped state makes the next access
-    // reconstruct its service and is the safe fallback until external catalog files are present.
-    shutdown(source.getServer());
-    source.sendSuccess(() -> Component.literal("个人委托库已重载。"), true);
-    return 1;
+    try {
+      activeCatalog = loadCatalog(source.getServer());
+      source.sendSuccess(() -> Component.literal("个人委托库已重载。"), true);
+      return 1;
+    } catch (RuntimeException failure) {
+      LOGGER.error("Unable to reload personal commission catalog", failure);
+      source.sendFailure(Component.literal("个人委托库重载失败: " + safeMessage(failure)));
+      return 0;
+    }
   }
 
   /** Called from the login hook and periodically from the server tick hook. */
@@ -304,7 +313,7 @@ public final class Forge1201CommissionRuntime {
 
   private static CommissionService service(ServerLevel level, Forge1201CommissionSavedData data) {
     return new CommissionService(
-        new CommissionGenerator(DEFAULT_CATALOG, random()),
+        new CommissionGenerator(activeCatalog, random()),
         data,
         data,
         new Forge1201CommissionMailBridge(level, data));
@@ -324,6 +333,14 @@ public final class Forge1201CommissionRuntime {
 
   private static Forge1201CommissionSavedData data(ServerLevel level) {
     return Forge1201CommissionSavedData.get(level);
+  }
+
+  private static CommissionCatalog loadCatalog(MinecraftServer server) {
+    Path path = server.getServerDirectory().toPath()
+        .resolve("config").resolve("economysystem").resolve("commissions").resolve("catalog.json");
+    CommissionCatalog catalog = CommissionCatalogConfigLoader.loadOrCreate(path);
+    LOGGER.info("Loaded personal commission catalog {} ({} templates)", path, catalog.templates().size());
+    return catalog;
   }
 
   private static CommissionRandom random() {

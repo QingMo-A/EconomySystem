@@ -17,12 +17,17 @@ import java.util.*;
 public final class NeoForge1211CommissionRuntime {
   private static final Map<MinecraftServer, CommissionService> SERVICES = new WeakHashMap<>();
   private static final Map<MinecraftServer, PublicCommissionService> PUBLIC_SERVICES = new WeakHashMap<>();
+  private static final Map<MinecraftServer, CommissionCatalog> CATALOGS = new WeakHashMap<>();
   private NeoForge1211CommissionRuntime() {}
+
+  public static synchronized void initialize(MinecraftServer server) {
+    CATALOGS.put(server, loadCatalog(server));
+  }
 
   public static synchronized CommissionService service(MinecraftServer server) {
     return SERVICES.computeIfAbsent(server, s -> {
       NeoForge1211CommissionSavedData data = NeoForge1211CommissionSavedData.getInstance(s.overworld());
-      return new CommissionService(new CommissionGenerator(defaultCatalog(), new CommissionRandom() {
+      return new CommissionService(new CommissionGenerator(catalog(s), new CommissionRandom() {
             private final java.util.Random random = new java.util.Random();
             public double nextDouble() { return random.nextDouble(); }
             public int nextInt(int bound) { return random.nextInt(bound); }
@@ -35,11 +40,20 @@ public final class NeoForge1211CommissionRuntime {
 
   public static CommissionService.RefreshView refresh(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()); }
   public static CommissionPlayerState state(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()).state(); }
-  public static List<String> templateIds() { return defaultCatalog().templates().stream().map(CommissionTemplate::id).toList(); }
+  public static List<String> templateIds(MinecraftServer server) { return catalog(server).templates().stream().map(CommissionTemplate::id).toList(); }
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
-    clear(source.getServer());
-    source.sendSuccess(() -> net.minecraft.network.chat.Component.literal("个人委托库已重载。"), true);
-    return 1;
+    try {
+      MinecraftServer server = source.getServer();
+      CATALOGS.put(server, loadCatalog(server));
+      SERVICES.remove(server);
+      PUBLIC_SERVICES.remove(server);
+      source.sendSuccess(() -> net.minecraft.network.chat.Component.literal("个人委托库已重载。"), true);
+      return 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(net.minecraft.network.chat.Component.literal("个人委托库重载失败: "
+          + (failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage())));
+      return 0;
+    }
   }
 
   public static synchronized PublicCommissionService publicService(MinecraftServer server) {
@@ -146,7 +160,7 @@ public final class NeoForge1211CommissionRuntime {
     }
   }
 
-  public static void clear(MinecraftServer server) { SERVICES.remove(server); PUBLIC_SERVICES.remove(server); }
+  public static void clear(MinecraftServer server) { SERVICES.remove(server); PUBLIC_SERVICES.remove(server); CATALOGS.remove(server); }
 
   private static CommissionRewardRepository rewardRepository(NeoForge1211CommissionSavedData data) {
     return new CommissionRewardRepository() {
@@ -158,8 +172,17 @@ public final class NeoForge1211CommissionRuntime {
     };
   }
 
-  private static CommissionCatalog defaultCatalog() {
-    return CommissionCatalogDefaults.create();
+  private static CommissionCatalog catalog(MinecraftServer server) {
+    return CATALOGS.computeIfAbsent(server, NeoForge1211CommissionRuntime::loadCatalog);
+  }
+
+  private static CommissionCatalog loadCatalog(MinecraftServer server) {
+    java.nio.file.Path path = server.getServerDirectory()
+        .resolve("config").resolve("economysystem").resolve("commissions").resolve("catalog.json");
+    CommissionCatalog catalog = CommissionCatalogConfigLoader.loadOrCreate(path);
+    com.mo.economy_system.EconomySystem.LOGGER.info("Loaded personal commission catalog {} ({} templates)",
+        path, catalog.templates().size());
+    return catalog;
   }
 
   private static final class Delivery implements CommissionRewardDeliveryPort {

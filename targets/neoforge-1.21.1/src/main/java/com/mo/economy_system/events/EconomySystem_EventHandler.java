@@ -73,6 +73,7 @@ public class EconomySystem_EventHandler {
 
         // 初始化 经济系统
         EconomySavedData.getInstance(overworld);
+        NeoForge1211CommissionRuntime.initialize(event.getServer());
         NeoForge1211RedPacketRuntime.service(event.getServer());
         NeoForge1211RewardRuntime.start(event.getServer());
         NeoForge1211StarterKitRuntime.start(event.getServer());
