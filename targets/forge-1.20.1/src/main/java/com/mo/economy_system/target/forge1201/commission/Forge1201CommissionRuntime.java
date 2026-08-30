@@ -1,0 +1,337 @@
+package com.mo.economy_system.target.forge1201.commission;
+
+import com.mo.economy_system.common.commission.CommissionCatalog;
+import com.mo.economy_system.common.commission.CommissionCatalogDefaults;
+import com.mo.economy_system.common.commission.CommissionGenerator;
+import com.mo.economy_system.common.commission.CommissionInstance;
+import com.mo.economy_system.common.commission.CommissionRandom;
+import com.mo.economy_system.common.commission.CommissionService;
+import com.mo.economy_system.common.commission.CommissionStatus;
+import com.mo.economy_system.common.commission.CommissionType;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/** Forge 1.20.1 server-authoritative personal commission adapter. */
+public final class Forge1201CommissionRuntime {
+  private static final Logger LOGGER = LoggerFactory.getLogger(Forge1201CommissionRuntime.class);
+  private static final CommissionCatalog DEFAULT_CATALOG = CommissionCatalogDefaults.create();
+
+  private Forge1201CommissionRuntime() {}
+
+  /** Ensures the SavedData is registered in the overworld during server startup. */
+  public static void initialize(ServerLevel level) {
+    Forge1201CommissionSavedData.get(level);
+  }
+
+  public static void shutdown(MinecraftServer server) {
+    // The state is owned by DimensionDataStorage; no process-global cache needs clearing.
+  }
+
+  /** Refreshes overdue work for a player.  The clock is server wall time, not client time. */
+  public static CommissionService.RefreshView refresh(ServerPlayer player) {
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    return service(player.serverLevel(), data).refresh(player.getUUID(), now());
+  }
+
+  /** Called from the login hook and periodically from the server tick hook. */
+  public static void refreshOnlinePlayers(MinecraftServer server) {
+    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+      try {
+        refresh(player);
+      } catch (RuntimeException failure) {
+        LOGGER.error("Personal commission refresh failed player={}", player.getUUID(), failure);
+      }
+    }
+  }
+
+  public static void onLogin(ServerPlayer player) {
+    try {
+      CommissionService.RefreshView view = refresh(player);
+      if (view.generation().generated()) {
+        player.sendSystemMessage(Component.literal(
+            "个人委托已刷新，新增 " + view.generation().added().size() + " 条委托。"));
+      }
+    } catch (RuntimeException failure) {
+      LOGGER.error("Personal commission login refresh failed player={}", player.getUUID(), failure);
+      player.sendSystemMessage(Component.literal("个人委托刷新失败，请稍后重试。"));
+    }
+  }
+
+  /**
+   * Handles a player command and prints a compact state summary.  Listing also performs a due
+   * refresh so a player never sees a stale schedule after a long offline period.
+   */
+  public static int listCommand(net.minecraft.commands.CommandSourceStack source) {
+    ServerPlayer player;
+    try {
+      player = source.getPlayerOrException();
+    } catch (Exception failure) {
+      source.sendFailure(Component.literal("个人委托命令只能由玩家执行。"));
+      return 0;
+    }
+    try {
+      CommissionService.RefreshView view = refresh(player);
+      var state = view.state();
+      source.sendSuccess(() -> Component.literal("个人委托（" + state.commissions().size() + " 条）"), false);
+      if (state.schedule() != null) {
+        long remaining = Math.max(0L, state.schedule().nextRefreshAt() - now());
+        source.sendSuccess(() -> Component.literal("下次刷新: " + formatDuration(remaining)), false);
+      }
+      if (state.commissions().isEmpty()) {
+        source.sendSuccess(() -> Component.literal("当前没有可用个人委托。"), false);
+        return 1;
+      }
+      for (CommissionInstance commission : state.commissions()) {
+        source.sendSuccess(() -> Component.literal(formatCommission(commission)), false);
+      }
+      return 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(Component.literal("读取个人委托失败: " + safeMessage(failure)));
+      return 0;
+    }
+  }
+
+  public static int refreshCommand(net.minecraft.commands.CommandSourceStack source) {
+    ServerPlayer player;
+    try {
+      player = source.getPlayerOrException();
+    } catch (Exception failure) {
+      source.sendFailure(Component.literal("个人委托命令只能由玩家执行。"));
+      return 0;
+    }
+    try {
+      CommissionService.RefreshView view = refresh(player);
+      String result = view.generation().generated()
+          ? "已刷新个人委托，新增 " + view.generation().added().size() + " 条。"
+          : switch (view.generation().outcome()) {
+            case NOT_DUE -> "个人委托尚未到刷新时间。";
+            case AT_CAPACITY -> "个人委托已达到同时存在上限。";
+            case NO_LEGAL_TEMPLATES -> "当前没有合法的个人委托模板。";
+            case FAILED -> "个人委托刷新失败: " + String.join("; ", view.generation().issues());
+            case GENERATED -> "个人委托刷新完成。";
+          };
+      source.sendSuccess(() -> Component.literal(result), false);
+      return view.generation().outcome() == CommissionGenerator.RefreshOutcome.FAILED ? 0 : 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(Component.literal("刷新个人委托失败: " + safeMessage(failure)));
+      return 0;
+    }
+  }
+
+  /**
+   * Validates and consumes only the accepted amount of an ITEM_DELIVERY commission before common
+   * progress is persisted.  Item removal is server-side and is restored if orchestration throws.
+   */
+  public static SubmitFeedback submitItem(ServerPlayer player, UUID commissionId, int requestedAmount) {
+    if (requestedAmount <= 0) return SubmitFeedback.failure("提交数量必须大于 0。");
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    CommissionService service = service(player.serverLevel(), data);
+    try {
+      CommissionService.RefreshView refreshed = service.refresh(player.getUUID(), now());
+      CommissionInstance commission = refreshed.state().commissions().stream()
+          .filter(value -> value.commissionId().equals(commissionId)).findFirst().orElse(null);
+      if (commission == null) return SubmitFeedback.failure("找不到该委托。");
+      if (commission.type() != CommissionType.ITEM_DELIVERY) {
+        return SubmitFeedback.failure("该委托不是物资提交委托。");
+      }
+      if (commission.status().terminal()) {
+        return SubmitFeedback.failure(statusMessage(commission.status()));
+      }
+      int acceptedAmount = Math.min(requestedAmount,
+          Math.max(0, commission.requiredAmount() - commission.progress()));
+      if (acceptedAmount <= 0) return SubmitFeedback.failure("该委托已经达到完成数量。");
+      ResourceLocation targetId = ResourceLocation.tryParse(commission.targetSnapshot());
+      if (targetId == null || !BuiltInRegistries.ITEM.containsKey(targetId)) {
+        return SubmitFeedback.failure("委托目标物品不可用: " + commission.targetSnapshot());
+      }
+      Item target = BuiltInRegistries.ITEM.get(targetId);
+      Map<Integer, ItemStack> originals = matchingStacks(player, target, acceptedAmount);
+      if (originals == null) {
+        return SubmitFeedback.failure("背包中没有足够的 " + commission.targetSnapshot() + "。");
+      }
+      consume(player, originals, acceptedAmount);
+      try {
+        CommissionService.SubmitResult result = service.submitProgress(
+            player.getUUID(), commissionId, acceptedAmount, now());
+        if (!result.accepted()) {
+          restore(player, originals);
+          return SubmitFeedback.failure(outcomeMessage(result));
+        }
+        player.containerMenu.broadcastChanges();
+        return SubmitFeedback.success(outcomeMessage(result));
+      } catch (RuntimeException failure) {
+        restore(player, originals);
+        throw failure;
+      }
+    } catch (RuntimeException failure) {
+      LOGGER.error("Item commission submission failed player={} commission={}",
+          player.getUUID(), commissionId, failure);
+      return SubmitFeedback.failure("提交委托失败: " + safeMessage(failure));
+    }
+  }
+
+  /** ENTITY_KILL progress is derived exclusively from the server death event. */
+  public static void handleEntityKill(ServerPlayer player, String entityId) {
+    if (entityId == null || entityId.isBlank()) return;
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    CommissionService service = service(player.serverLevel(), data);
+    try {
+      CommissionService.RefreshView refreshed = service.refresh(player.getUUID(), now());
+      List<UUID> matching = refreshed.state().commissions().stream()
+          .filter(value -> value.type() == CommissionType.ENTITY_KILL)
+          .filter(value -> value.targetSnapshot().equals(entityId))
+          .filter(value -> !value.status().terminal())
+          .map(CommissionInstance::commissionId)
+          .toList();
+      for (UUID commissionId : matching) {
+        CommissionService.SubmitResult result = service.submitProgress(
+            player.getUUID(), commissionId, 1, now());
+        if (result.outcome() == CommissionService.SubmitOutcome.COMPLETED
+            || result.outcome() == CommissionService.SubmitOutcome.REWARD_PENDING_MAIL) {
+          player.sendSystemMessage(Component.literal("委托完成，奖励已发送至邮箱。"));
+        } else if (result.outcome() == CommissionService.SubmitOutcome.REWARD_DELIVERY_RETRY) {
+          player.sendSystemMessage(Component.literal("委托已完成，但奖励邮件暂未投递成功，将自动重试。"));
+        }
+      }
+    } catch (RuntimeException failure) {
+      LOGGER.error("Entity-kill commission progress failed player={} target={}",
+          player.getUUID(), entityId, failure);
+    }
+  }
+
+  private static CommissionService service(ServerLevel level, Forge1201CommissionSavedData data) {
+    return new CommissionService(
+        new CommissionGenerator(DEFAULT_CATALOG, random()),
+        data,
+        data,
+        new Forge1201CommissionMailBridge(level, data));
+  }
+
+  private static Forge1201CommissionSavedData data(ServerLevel level) {
+    return Forge1201CommissionSavedData.get(level);
+  }
+
+  private static CommissionRandom random() {
+    Random random = ThreadLocalRandom.current();
+    return new CommissionRandom() {
+      @Override
+      public double nextDouble() {
+        return random.nextDouble();
+      }
+
+      @Override
+      public int nextInt(int bound) {
+        return random.nextInt(bound);
+      }
+    };
+  }
+
+  private static long now() {
+    return Math.max(1L, System.currentTimeMillis());
+  }
+
+  private static Map<Integer, ItemStack> matchingStacks(
+      ServerPlayer player, Item target, int required) {
+    int available = 0;
+    Map<Integer, ItemStack> originals = new LinkedHashMap<>();
+    for (int slot = 0; slot < player.getInventory().items.size(); slot++) {
+      ItemStack stack = player.getInventory().items.get(slot);
+      if (stack.isEmpty() || !stack.is(target)) continue;
+      available += stack.getCount();
+      originals.put(slot, stack.copy());
+      if (available >= required) return originals;
+    }
+    return null;
+  }
+
+  private static void consume(ServerPlayer player, Map<Integer, ItemStack> originals, int amount) {
+    int remaining = amount;
+    for (Map.Entry<Integer, ItemStack> entry : originals.entrySet()) {
+      if (remaining <= 0) break;
+      ItemStack current = player.getInventory().items.get(entry.getKey());
+      int removed = Math.min(remaining, current.getCount());
+      current.shrink(removed);
+      remaining -= removed;
+    }
+    if (remaining != 0) throw new IllegalStateException("inventory changed during commission submission");
+  }
+
+  private static void restore(ServerPlayer player, Map<Integer, ItemStack> originals) {
+    originals.forEach((slot, stack) -> player.getInventory().items.set(slot, stack.copy()));
+    try {
+      player.containerMenu.broadcastChanges();
+    } catch (RuntimeException ignored) {
+      // The authoritative inventory was restored; a UI refresh is best effort.
+    }
+  }
+
+  private static String formatCommission(CommissionInstance value) {
+    String status = value.status().name();
+    return value.commissionId() + " | " + value.type().id() + " | " + value.targetSnapshot()
+        + " | " + value.progress() + "/" + value.requiredAmount()
+        + " | reward=" + value.rewardSnapshot().amount() + " | " + status;
+  }
+
+  private static String formatDuration(long millis) {
+    long seconds = millis / 1000L;
+    long hours = seconds / 3600L;
+    long minutes = (seconds % 3600L) / 60L;
+    return hours + "h " + minutes + "m " + (seconds % 60L) + "s";
+  }
+
+  private static String statusMessage(CommissionStatus status) {
+    return switch (status) {
+      case COMPLETED -> "该委托已经完成，奖励请前往邮箱领取。";
+      case EXPIRED -> "该委托已经过期。";
+      case DISABLED -> "该委托已被禁用。";
+      case AVAILABLE, ACTIVE, LOCKED -> "该委托当前不可提交。";
+    };
+  }
+
+  private static String outcomeMessage(CommissionService.SubmitResult result) {
+    return switch (result.outcome()) {
+      case PROGRESSED -> "已提交 " + (result.commission().progress()) + "/"
+          + result.commission().requiredAmount() + "。";
+      case COMPLETED, REWARD_PENDING_MAIL -> "委托完成，奖励已发送至邮箱。";
+      case REWARD_DELIVERY_RETRY -> "委托完成，但奖励邮件暂未投递成功，将自动重试。";
+      case ALREADY_COMPLETED -> "该委托已经完成，奖励请前往邮箱领取。";
+      case EXPIRED -> "该委托已经过期。";
+      case DISABLED -> "该委托已被禁用。";
+      case NOT_FOUND -> "找不到该委托。";
+      case INVALID_AMOUNT -> "提交数量必须大于 0。";
+    };
+  }
+
+  private static String safeMessage(RuntimeException failure) {
+    return failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
+  }
+
+  public record SubmitFeedback(boolean accepted, String message) {
+    public SubmitFeedback {
+      message = message == null ? "" : message;
+    }
+
+    static SubmitFeedback success(String message) {
+      return new SubmitFeedback(true, message);
+    }
+
+    static SubmitFeedback failure(String message) {
+      return new SubmitFeedback(false, message);
+    }
+  }
+}

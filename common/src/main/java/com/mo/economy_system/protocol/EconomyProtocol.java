@@ -15,8 +15,8 @@ import java.util.Set;
  * never be reordered, renumbered, or reused. New messages are appended only.</p>
  */
 public final class EconomyProtocol {
-    /** Bumped for the monetary mailbox fields appended to player-mail and mail responses. */
-    public static final String VERSION = "bridge-3";
+    /** Bumped for deferred currency-reward fields appended to mailbox responses. */
+    public static final String VERSION = "bridge-4";
 
     private static final List<EconomyMessageSpec> DECLARATIONS = new ArrayList<>();
 

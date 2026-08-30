@@ -32,10 +32,10 @@ class RecycleServiceTest {
     assertEquals(12, first.payout());
     assertEquals(1, first.highQuotaRemaining());
     RecycleResult second = service.recycle(PLAYER, KELP, 4, UUID.randomUUID(), 0);
-    assertEquals(1, second.acceptedAmount());
-    assertEquals(6, second.payout()); // 1 high-price item + 3 base-price items
+    assertEquals(4, second.acceptedAmount());
+    assertEquals(6, second.payout()); // one remaining high-price slot, then base price
     assertEquals(0, second.highQuotaRemaining());
-    assertEquals(10, economy.balance);
+    assertEquals(18, economy.balance);
     assertEquals(12, inventory.count);
   }
 
@@ -48,7 +48,7 @@ class RecycleServiceTest {
     assertTrue(service.recycle(PLAYER, KELP, 3, submission, 0).success());
     RecycleResult duplicate = service.recycle(PLAYER, KELP, 3, submission, 0);
     assertEquals(RecycleResult.Status.DUPLICATE_SUBMISSION, duplicate.status());
-    assertEquals(4, inventory.count);
+    assertEquals(7, inventory.count);
     assertEquals(6, economy.balance);
   }
 
@@ -62,6 +62,22 @@ class RecycleServiceTest {
     assertEquals(RecycleResult.Status.BALANCE_LIMIT, result.status());
     assertEquals(10, inventory.count);
     assertEquals(0, economy.balance);
+  }
+
+  @Test
+  void stopPolicyNeverDowngradesExcessToBasePrice() {
+    FakeInventory inventory = new FakeInventory(10);
+    FakeEconomy economy = new FakeEconomy();
+    RecycleService service = new RecycleService(
+        new RecycleConfig(Duration.ofHours(1), new RecycleOffer("minecraft:kelp", 1, 4, 2, false)),
+        inventory, economy);
+    RecycleResult partial = service.recycle(PLAYER, KELP, 3, UUID.randomUUID(), 0);
+    assertTrue(partial.success());
+    assertEquals(2, partial.acceptedAmount());
+    assertEquals(8, partial.payout());
+    RecycleResult exhausted = service.recycle(PLAYER, KELP, 1, UUID.randomUUID(), 0);
+    assertEquals(RecycleResult.Status.HIGH_QUOTA_EXHAUSTED, exhausted.status());
+    assertEquals(8, inventory.count);
   }
 
   private static ItemStackSnapshot item(String id) {

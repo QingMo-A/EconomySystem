@@ -12,6 +12,7 @@ import com.mo.economy_system.target.forge1201.redpacket.Forge1201RedPacketRuntim
 import com.mo.economy_system.target.forge1201.reward.Forge1201RewardRuntime;
 import com.mo.economy_system.target.forge1201.starter.Forge1201StarterKitRuntime;
 import com.mo.economy_system.target.forge1201.update.Forge1201UpdateRuntime;
+import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
 import com.mo.economy_system.target.forge1201.network.Forge1201MarketExpirationRuntime;
 import com.mo.economy_system.target.forge1201.network.Forge1201ClientFileCheckRuntime;
 import com.mo.economy_system.target.forge1201.network.Forge1201TerritoryInviteRuntime;
@@ -43,6 +44,7 @@ public final class Forge1201ServerEvents {
     ServerLevel overworld = event.getServer().overworld();
     EconomySavedData.getInstance(overworld);
     MarketSavedData.getInstance(overworld);
+    Forge1201CommissionRuntime.initialize(overworld);
     if (TerritoryBuffManager.initConfig()) {
       var buffCatalog = TerritoryBuffManager.catalog();
       Forge1201TerritorySnapshotStore.configureBuffCatalog(buffCatalog);
@@ -73,6 +75,7 @@ public final class Forge1201ServerEvents {
     Forge1201UpdateRuntime.shutdown(event.getServer());
     Forge1201TpaRuntime.shutdown(event.getServer());
     Forge1201ClientFileCheckRuntime.stop(event.getServer());
+    Forge1201CommissionRuntime.shutdown(event.getServer());
   }
 
   @SubscribeEvent
@@ -83,6 +86,7 @@ public final class Forge1201ServerEvents {
     }
     if (event.getServer().getTickCount() % 20 == 0) {
       Forge1201TpaCommands.expire(event.getServer());
+      Forge1201CommissionRuntime.refreshOnlinePlayers(event.getServer());
     }
     if (MarketExpirationSchedule.shouldRun(event.getServer().getTickCount())) {
       Forge1201MarketExpirationRuntime.expire(event.getServer());
@@ -115,6 +119,7 @@ public final class Forge1201ServerEvents {
       for (String message : economy.getOfflineMessages(player.getUUID())) {
         player.sendSystemMessage(Component.literal(message));
       }
+      Forge1201CommissionRuntime.onLogin(player);
     }
   }
 

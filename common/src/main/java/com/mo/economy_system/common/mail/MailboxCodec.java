@@ -12,8 +12,8 @@ import java.util.UUID;
 
 /** Loader-neutral NBT codec for mailbox metadata. */
 public final class MailboxCodec {
-  /** Schema 3 adds the optional, already-transferred monetary amount to each mail. */
-  private static final int SCHEMA = 3;
+  /** Schema 4 adds an idempotent, claim-on-open currency reward, separate from {@code money}. */
+  public static final int SCHEMA_VERSION = 4;
 
   private MailboxCodec() {}
 
@@ -29,7 +29,7 @@ public final class MailboxCodec {
     List<NbtData> announcements = state.announcements().stream()
         .map(MailboxCodec::encodeMail).map(v -> (NbtData) v).toList();
     return NbtData.compoundBuilder()
-        .putInt("schema", SCHEMA)
+        .putInt("schema", SCHEMA_VERSION)
         .put("personal", NbtData.list(personal))
         .put("announcements", NbtData.list(announcements))
         .put("announcement_reads", encodeSetMap(state.announcementReads()))
@@ -39,7 +39,7 @@ public final class MailboxCodec {
 
   public static MailboxLedger.State decode(NbtData.Compound root) {
     int schema = intValue(root, "schema", 1);
-    if (schema < 1 || schema > SCHEMA) {
+    if (schema < 1 || schema > SCHEMA_VERSION) {
       throw new IllegalArgumentException("unsupported mailbox schema: " + schema);
     }
 
@@ -76,6 +76,11 @@ public final class MailboxCodec {
         .putBoolean("protected", mail.protectedMail());
     if (mail.senderId() != null) builder.putUuid("sender_id", mail.senderId());
     if (mail.moneyAmount() > 0) builder.putInt("money", mail.moneyAmount());
+    if (mail.rewardRecordId() != null) {
+      builder.putUuid("reward_record_id", mail.rewardRecordId())
+          .putInt("currency_reward_amount", mail.currencyRewardAmount())
+          .putBoolean("currency_reward_claimed", mail.currencyRewardClaimed());
+    }
     List<NbtData> attachments = mail.attachmentIds().stream().map(NbtData::uuid).map(v -> (NbtData) v).toList();
     List<NbtData> claimed = mail.claimedAttachments().stream().map(attachment -> (NbtData) NbtData.compoundBuilder()
         .putUuid("id", attachment.entryId())
@@ -114,7 +119,10 @@ public final class MailboxCodec {
         List.copyOf(claimed),
         booleanValue(tag, "read", false),
         booleanValue(tag, "protected", false),
-        intValue(tag, "money", 0));
+        intValue(tag, "money", 0),
+        tag.contains("reward_record_id") ? uuidValue(tag, "reward_record_id") : null,
+        intValue(tag, "currency_reward_amount", 0),
+        booleanValue(tag, "currency_reward_claimed", false));
   }
 
   private static NbtData.ListValue encodeSetMap(Map<UUID, Set<UUID>> source) {

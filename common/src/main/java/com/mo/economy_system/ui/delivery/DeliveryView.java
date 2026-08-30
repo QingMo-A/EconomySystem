@@ -129,6 +129,13 @@ public final class DeliveryView {
       renderer.translatedTextInRect("screen.mailbox.money", List.of(Integer.toString(row.mail().moneyAmount())),
           layout.detailMeta(), EconomyUiTheme.TEXT_SUCCESS, UiTextAlignment.RIGHT);
     }
+    if (row.mail().hasCurrencyReward()) {
+      String rewardKey = row.mail().currencyRewardClaimed()
+          ? "screen.mailbox.currency_reward_claimed" : "screen.mailbox.currency_reward";
+      renderer.translatedTextInRect(rewardKey,
+          List.of(Integer.toString(row.mail().currencyRewardAmount())),
+          layout.detailReward(), EconomyUiTheme.TEXT_SUCCESS, UiTextAlignment.RIGHT);
+    }
     if (!row.mail().body().isBlank()) {
       renderWrappedText(renderer, row.mail().body(), layout.detailBody(), layout,
           EconomyUiTheme.TEXT_SECONDARY);
@@ -154,11 +161,11 @@ public final class DeliveryView {
         renderer.fill(layout.attachmentScrollTrack(), 0x704A5568);
         renderer.fill(layout.attachmentScrollThumb(), EconomyUiTheme.DELIVERY_ACCENT);
       }
-      if (row.mail().hasUnclaimedAttachments()) {
-        renderer.translatedButton(layout.claimAllButton(), EconomyUiTheme.DELIVERY_CLAIM_BUTTON,
-            "screen.mailbox.claim_all", List.of(), layout.claimAllButton().contains(mouseX, mouseY),
-            state.can(DeliveryAction.CLAIM_ALL) && state.screenState() == ScreenState.READY);
-      }
+    }
+    if (row.mail().hasUnclaimedAttachments()) {
+      renderer.translatedButton(layout.claimAllButton(), EconomyUiTheme.DELIVERY_CLAIM_BUTTON,
+          "screen.mailbox.claim_all", List.of(), layout.claimAllButton().contains(mouseX, mouseY),
+          state.can(DeliveryAction.CLAIM_ALL) && state.screenState() == ScreenState.READY);
     }
 
     boolean canDelete = !row.mail().hasUnclaimedAttachments() && state.can(DeliveryAction.DELETE)

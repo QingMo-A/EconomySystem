@@ -22,7 +22,10 @@ public record MailRecord(
     List<MailAttachmentSnapshot> claimedAttachments,
     boolean read,
     boolean protectedMail,
-    int moneyAmount) {
+    int moneyAmount,
+    UUID rewardRecordId,
+    int currencyRewardAmount,
+    boolean currencyRewardClaimed) {
 
   /** Backward-compatible constructor for callers that only create unclaimed attachments. */
   public MailRecord(
@@ -39,7 +42,8 @@ public record MailRecord(
       boolean read,
       boolean protectedMail) {
     this(mailId, type, senderId, senderName, subject, body, source,
-        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read, protectedMail, 0);
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read, protectedMail,
+        0, null, 0, false);
   }
 
   /** Backward-compatible canonical-shape constructor for callers that include claim history. */
@@ -59,7 +63,7 @@ public record MailRecord(
       boolean protectedMail) {
     this(mailId, type, senderId, senderName, subject, body, source,
         createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments,
-        read, protectedMail, 0);
+        read, protectedMail, 0, null, 0, false);
   }
 
   /** Convenience constructor for a mail carrying an immediately transferred money amount. */
@@ -79,7 +83,29 @@ public record MailRecord(
       boolean protectedMail) {
     this(mailId, type, senderId, senderName, subject, body, source,
         createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read,
-        protectedMail, moneyAmount);
+        protectedMail, moneyAmount, null, 0, false);
+  }
+
+  /** Convenience constructor for a claim-on-open currency reward attachment. */
+  public MailRecord(
+      UUID mailId,
+      MailType type,
+      UUID senderId,
+      String senderName,
+      String subject,
+      String body,
+      String source,
+      long createdAtEpochMillis,
+      long expiresAtEpochMillis,
+      List<UUID> attachmentIds,
+      UUID rewardRecordId,
+      int currencyRewardAmount,
+      boolean currencyRewardClaimed,
+      boolean read,
+      boolean protectedMail) {
+    this(mailId, type, senderId, senderName, subject, body, source,
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read,
+        protectedMail, 0, rewardRecordId, currencyRewardAmount, currencyRewardClaimed);
   }
 
   public MailRecord {
@@ -97,6 +123,18 @@ public record MailRecord(
     }
     if (moneyAmount < 0) {
       throw new IllegalArgumentException("mail money amount must be non-negative");
+    }
+    if (currencyRewardAmount < 0) {
+      throw new IllegalArgumentException("currency reward amount must be non-negative");
+    }
+    if (currencyRewardAmount == 0 && rewardRecordId != null) {
+      throw new IllegalArgumentException("currency reward id requires a positive amount");
+    }
+    if (currencyRewardAmount > 0 && rewardRecordId == null) {
+      throw new IllegalArgumentException("currency reward requires a reward record id");
+    }
+    if (currencyRewardClaimed && currencyRewardAmount == 0) {
+      throw new IllegalArgumentException("empty currency reward cannot be claimed");
     }
     attachmentIds = List.copyOf(Objects.requireNonNull(attachmentIds, "attachmentIds"));
     claimedAttachments = List.copyOf(Objects.requireNonNull(claimedAttachments, "claimedAttachments"));
@@ -129,14 +167,14 @@ public record MailRecord(
   }
 
   public boolean hasUnclaimedAttachments() {
-    return !unclaimedAttachmentIds().isEmpty();
+    return !unclaimedAttachmentIds().isEmpty() || hasUnclaimedCurrencyReward();
   }
 
   public MailRecord withRead(boolean value) {
     if (read == value) return this;
     return new MailRecord(mailId, type, senderId, senderName, subject, body, source,
         createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments, value,
-        protectedMail, moneyAmount);
+        protectedMail, moneyAmount, rewardRecordId, currencyRewardAmount, currencyRewardClaimed);
   }
 
   /** Removes an attachment reference without adding claim history (used only for reconciliation/migration cleanup). */
@@ -146,7 +184,7 @@ public record MailRecord(
         createdAtEpochMillis, expiresAtEpochMillis,
         attachmentIds.stream().filter(id -> !id.equals(entryId)).toList(),
         claimedAttachments.stream().filter(attachment -> !attachment.entryId().equals(entryId)).toList(),
-        read, protectedMail, moneyAmount);
+        read, protectedMail, moneyAmount, rewardRecordId, currencyRewardAmount, currencyRewardClaimed);
   }
 
   /** Marks one authoritative delivery attachment claimed while preserving its original slot order. */
@@ -158,11 +196,29 @@ public record MailRecord(
     history.add(attachment.asClaimed());
     return new MailRecord(mailId, type, senderId, senderName, subject, body, source,
         createdAtEpochMillis, expiresAtEpochMillis,
-        attachmentIds, List.copyOf(history), true, protectedMail, moneyAmount);
+        attachmentIds, List.copyOf(history), true, protectedMail, moneyAmount,
+        rewardRecordId, currencyRewardAmount, currencyRewardClaimed);
   }
 
   public boolean hasMoney() {
     return moneyAmount > 0;
+  }
+
+  /** Whether this mail carries a deferred, claim-on-open currency reward. */
+  public boolean hasCurrencyReward() {
+    return currencyRewardAmount > 0;
+  }
+
+  public boolean hasUnclaimedCurrencyReward() {
+    return hasCurrencyReward() && !currencyRewardClaimed;
+  }
+
+  /** Idempotently marks the deferred currency reward as claimed. */
+  public MailRecord withCurrencyRewardClaimed() {
+    if (!hasCurrencyReward() || currencyRewardClaimed) return this;
+    return new MailRecord(mailId, type, senderId, senderName, subject, body, source,
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments, true,
+        protectedMail, moneyAmount, rewardRecordId, currencyRewardAmount, true);
   }
 
   private static String validateText(String value, int max, String field) {

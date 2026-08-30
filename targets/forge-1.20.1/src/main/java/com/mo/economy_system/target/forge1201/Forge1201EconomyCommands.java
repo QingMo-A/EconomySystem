@@ -6,6 +6,7 @@ import com.mo.economy_system.common.settings.EconomySettings;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.target.forge1201.item.Forge1201SupporterHat;
 import com.mo.economy_system.target.forge1201.recycle.Forge1201RecyclerCommands;
+import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -96,6 +97,20 @@ public final class Forge1201EconomyCommands {
         .then(Commands.argument("target", EntityArgument.player()).then(transferAmount)));
     event.getDispatcher().register(coin);
 
+    var commission = Commands.literal("commission")
+        .then(Commands.literal("refresh")
+            .executes(c -> Forge1201CommissionRuntime.refreshCommand(c.getSource())))
+        .then(Commands.literal("list")
+            .executes(c -> Forge1201CommissionRuntime.listCommand(c.getSource())))
+        .then(Commands.literal("submit")
+            .then(Commands.argument("commissionId", UuidArgument.uuid())
+                .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+                    .executes(c -> submitCommission(
+                        c.getSource(),
+                        UuidArgument.getUuid(c, "commissionId"),
+                        IntegerArgumentType.getInteger(c, "amount"))))));
+    event.getDispatcher().register(Commands.literal("economy_system").then(commission));
+
     event.getDispatcher().register(
         Commands.literal("economy_system")
             .then(Commands.literal("settings").requires(s -> s.hasPermission(2))
@@ -115,6 +130,25 @@ public final class Forge1201EconomyCommands {
                   c.getSource().sendSuccess(() -> Component.literal("已重载 EconomySystem 设置"), false);
                   return 1;
                 }))));
+  }
+
+  private static int submitCommission(
+      net.minecraft.commands.CommandSourceStack source, java.util.UUID commissionId, int amount) {
+    ServerPlayer player;
+    try {
+      player = source.getPlayerOrException();
+    } catch (Exception failure) {
+      source.sendFailure(Component.literal("个人委托命令只能由玩家执行。"));
+      return 0;
+    }
+    Forge1201CommissionRuntime.SubmitFeedback feedback =
+        Forge1201CommissionRuntime.submitItem(player, commissionId, amount);
+    if (feedback.accepted()) {
+      source.sendSuccess(() -> Component.literal(feedback.message()), false);
+      return 1;
+    }
+    source.sendFailure(Component.literal(feedback.message()));
+    return 0;
   }
 
   private static int addHand(

@@ -100,7 +100,7 @@ public final class MailboxLedger {
     if (record.type() != MailType.ANNOUNCEMENT) {
       throw new IllegalArgumentException("global mail must be an announcement");
     }
-    if (!record.attachmentIds().isEmpty() || record.moneyAmount() > 0) {
+    if (!record.attachmentIds().isEmpty() || record.moneyAmount() > 0 || record.hasCurrencyReward()) {
       throw new IllegalArgumentException("global announcements cannot carry economic attachments");
     }
     if (announcements.size() >= EconomyNetworkLimits.MAX_MAIL_ANNOUNCEMENTS) {
@@ -227,6 +227,35 @@ public final class MailboxLedger {
       if (!record.mailId().equals(mailId)) continue;
       if (!record.unclaimedAttachmentIds().contains(attachment.entryId())) return MutationResult.NOT_FOUND;
       MailRecord updated = record.withClaimedAttachment(attachment);
+      values.set(i, updated);
+      try {
+        dirty.markDirty();
+        return MutationResult.UPDATED;
+      } catch (RuntimeException failure) {
+        values.set(i, record);
+        throw failure;
+      }
+    }
+    return MutationResult.NOT_FOUND;
+  }
+
+  /**
+   * Atomically marks a deferred currency reward as claimed. Replays are harmless: an already
+   * claimed reward returns {@link MutationResult#NO_CHANGE} and never invokes the dirty marker.
+   */
+  public synchronized MutationResult markCurrencyRewardClaimed(
+      UUID ownerId, UUID mailId, DirtyMarker dirty) {
+    Objects.requireNonNull(ownerId, "ownerId");
+    Objects.requireNonNull(mailId, "mailId");
+    Objects.requireNonNull(dirty, "dirty");
+    List<MailRecord> values = personal.get(ownerId);
+    if (values == null) return MutationResult.NOT_FOUND;
+    for (int i = 0; i < values.size(); i++) {
+      MailRecord record = values.get(i);
+      if (!record.mailId().equals(mailId)) continue;
+      if (!record.hasCurrencyReward()) return MutationResult.NOT_FOUND;
+      if (record.currencyRewardClaimed()) return MutationResult.NO_CHANGE;
+      MailRecord updated = record.withCurrencyRewardClaimed();
       values.set(i, updated);
       try {
         dirty.markDirty();
@@ -376,7 +405,8 @@ public final class MailboxLedger {
     ensureUnique(state.announcements());
     for (MailRecord record : state.announcements()) {
       if (record.type() != MailType.ANNOUNCEMENT
-          || !record.attachmentIds().isEmpty() || record.moneyAmount() > 0) {
+          || !record.attachmentIds().isEmpty() || record.moneyAmount() > 0
+          || record.hasCurrencyReward()) {
         throw new IllegalArgumentException("invalid global announcement");
       }
       announcements.add(record.withRead(false));

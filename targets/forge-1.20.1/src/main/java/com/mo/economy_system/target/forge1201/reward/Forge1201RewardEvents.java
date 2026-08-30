@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201.reward;
 import com.mo.economy_system.common.reward.RewardFeedback;
 import com.mo.economy_system.common.reward.RewardService;
 import com.mo.economy_system.target.forge1201.EconomySystemForge1201;
+import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,6 +29,7 @@ public final class Forge1201RewardEvents {
 
     ResourceLocation entityId = ForgeRegistries.ENTITY_TYPES.getKey(mob.getType());
     if (entityId == null || player.getServer() == null) return;
+    Forge1201CommissionRuntime.handleEntityKill(player, entityId.toString());
     ItemStack weapon = player.getMainHandItem();
     int carefully =
         EnchantmentHelper.getItemEnchantmentLevel(

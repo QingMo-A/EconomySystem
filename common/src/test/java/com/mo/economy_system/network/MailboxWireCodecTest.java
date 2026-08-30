@@ -38,6 +38,20 @@ class MailboxWireCodecTest {
   }
 
   @Test
+  void mailboxResponseDeferredCurrencyRewardRoundTripsSeparately() {
+    UUID rewardRecordId = UUID.randomUUID();
+    MailSnapshot mail = new MailSnapshot(
+        UUID.randomUUID(), MailType.SYSTEM, null, "", "Reward", "Body", "mail.commission",
+        10L, 0L, false, false, true, List.of(), 250, rewardRecordId, 375, false);
+    MailboxDataResponseMessage response = MailboxDataResponseMessage.data(5L, List.of(mail));
+    TestWireBuffer buffer = new TestWireBuffer();
+
+    MailboxWireCodec.encodeResponse(response, buffer);
+
+    assertEquals(response, MailboxWireCodec.decodeResponse(buffer));
+  }
+
+  @Test
   void playerMailPayloadWithoutNewMoneyFieldIsRejected() {
     TestWireBuffer buffer = new TestWireBuffer();
     buffer.writeUtf("Alice", 64);

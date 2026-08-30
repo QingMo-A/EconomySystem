@@ -70,7 +70,7 @@ class EconomyProtocolTest {
 
     @Test
     void manifestIsAppendOnlyAndComplete() {
-        assertEquals("bridge-3", EconomyProtocol.VERSION);
+        assertEquals("bridge-4", EconomyProtocol.VERSION);
         assertEquals(53, EconomyProtocol.ALL.size());
         assertEquals(37, EconomyProtocol.ALL.stream()
                 .filter(spec -> spec.direction() == EconomyMessageDirection.CLIENT_TO_SERVER)

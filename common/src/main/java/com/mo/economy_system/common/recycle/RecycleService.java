@@ -3,7 +3,6 @@ package com.mo.economy_system.common.recycle;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.platform.item.ItemStackSnapshot;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,7 +17,11 @@ import java.util.UUID;
 public final class RecycleService {
   public interface InventoryPort {
     int count(UUID playerId, ItemStackSnapshot item);
+
+    /** Removes exactly {@code amount}, returning false without mutation when it cannot. */
     boolean remove(UUID playerId, ItemStackSnapshot item, int amount);
+
+    /** Restores a previously removed amount during transaction rollback. */
     void restore(UUID playerId, ItemStackSnapshot item, int amount);
   }
 
@@ -61,11 +64,17 @@ public final class RecycleService {
     }
     int accepted = requestedAmount;
     int highAccepted = useHigh ? Math.min(requestedAmount, high) : 0;
+    if (useHigh && high < requestedAmount && !offer.fallbackToBaseWhenHighQuotaExhausted()) {
+      // A stop-policy quote accepts only the remaining high-demand quota; it never silently
+      // downgrades the excess to the normal price.
+      accepted = high;
+    }
     int unitPrice = useHigh ? offer.highUnitPrice() : offer.baseUnitPrice();
     long payoutLong = (long) highAccepted * offer.highUnitPrice()
         + (long) (accepted - highAccepted) * offer.baseUnitPrice();
     if (payoutLong > Integer.MAX_VALUE) return failure(RecycleResult.Status.BALANCE_LIMIT);
     int payout = (int) payoutLong;
+    if (accepted <= 0) return new RecycleResult(RecycleResult.Status.HIGH_QUOTA_EXHAUSTED, 0, 0, 0, high);
     if (!inventory.remove(playerId, item, accepted)) {
       return failure(RecycleResult.Status.INSUFFICIENT_ITEMS);
     }

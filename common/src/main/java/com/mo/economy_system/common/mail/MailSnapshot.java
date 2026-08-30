@@ -19,7 +19,10 @@ public record MailSnapshot(
     boolean globalAnnouncement,
     boolean protectedMail,
     List<MailAttachmentSnapshot> attachments,
-    int moneyAmount) {
+    int moneyAmount,
+    UUID rewardRecordId,
+    int currencyRewardAmount,
+    boolean currencyRewardClaimed) {
 
   /** Backward-compatible constructor for snapshots without a monetary transfer. */
   public MailSnapshot(
@@ -37,7 +40,28 @@ public record MailSnapshot(
       boolean protectedMail,
       List<MailAttachmentSnapshot> attachments) {
     this(mailId, type, senderId, senderName, subject, body, source, createdAtEpochMillis,
-        expiresAtEpochMillis, read, globalAnnouncement, protectedMail, attachments, 0);
+        expiresAtEpochMillis, read, globalAnnouncement, protectedMail, attachments, 0, null, 0, false);
+  }
+
+  /** Backward-compatible snapshot constructor for immediate monetary transfer metadata. */
+  public MailSnapshot(
+      UUID mailId,
+      MailType type,
+      UUID senderId,
+      String senderName,
+      String subject,
+      String body,
+      String source,
+      long createdAtEpochMillis,
+      long expiresAtEpochMillis,
+      boolean read,
+      boolean globalAnnouncement,
+      boolean protectedMail,
+      List<MailAttachmentSnapshot> attachments,
+      int moneyAmount) {
+    this(mailId, type, senderId, senderName, subject, body, source, createdAtEpochMillis,
+        expiresAtEpochMillis, read, globalAnnouncement, protectedMail, attachments, moneyAmount,
+        null, 0, false);
   }
 
   public MailSnapshot {
@@ -49,6 +73,16 @@ public record MailSnapshot(
     source = Objects.requireNonNullElse(source, "");
     attachments = List.copyOf(Objects.requireNonNull(attachments, "attachments"));
     if (moneyAmount < 0) throw new IllegalArgumentException("moneyAmount must be non-negative");
+    if (currencyRewardAmount < 0) throw new IllegalArgumentException("currencyRewardAmount must be non-negative");
+    if (currencyRewardAmount == 0 && rewardRecordId != null) {
+      throw new IllegalArgumentException("currency reward id requires a positive amount");
+    }
+    if (currencyRewardAmount > 0 && rewardRecordId == null) {
+      throw new IllegalArgumentException("currency reward requires a reward record id");
+    }
+    if (currencyRewardClaimed && currencyRewardAmount == 0) {
+      throw new IllegalArgumentException("empty currency reward cannot be claimed");
+    }
   }
 
   public boolean hasAttachments() {
@@ -59,12 +93,22 @@ public record MailSnapshot(
     return moneyAmount > 0;
   }
 
+  public boolean hasCurrencyReward() {
+    return currencyRewardAmount > 0;
+  }
+
+  public boolean hasUnclaimedCurrencyReward() {
+    return hasCurrencyReward() && !currencyRewardClaimed;
+  }
+
   public boolean hasUnclaimedAttachments() {
-    return attachments.stream().anyMatch(attachment -> !attachment.claimed());
+    return attachments.stream().anyMatch(attachment -> !attachment.claimed())
+        || hasUnclaimedCurrencyReward();
   }
 
   public int unclaimedAttachmentCount() {
-    return (int) attachments.stream().filter(attachment -> !attachment.claimed()).count();
+    return (int) attachments.stream().filter(attachment -> !attachment.claimed()).count()
+        + (hasUnclaimedCurrencyReward() ? 1 : 0);
   }
 
   public boolean expired(long nowEpochMillis) {

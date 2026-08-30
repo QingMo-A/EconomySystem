@@ -215,6 +215,12 @@ public final class MailboxWireCodec {
       buffer.writeNbt(ItemStackSnapshotCodec.encode(attachment.item()).orElseThrow());
     }
     buffer.writeInt(mail.moneyAmount());
+    buffer.writeBoolean(mail.rewardRecordId() != null);
+    if (mail.rewardRecordId() != null) {
+      buffer.writeUuid(mail.rewardRecordId());
+      buffer.writeInt(mail.currencyRewardAmount());
+      buffer.writeBoolean(mail.currencyRewardClaimed());
+    }
   }
 
   private static MailSnapshot decodeMail(WireBuffer buffer) {
@@ -244,8 +250,12 @@ public final class MailboxWireCodec {
           entryId, ItemStackSnapshotCodec.decode(nbt).orElseThrow(), claimed));
     }
     int moneyAmount = buffer.readInt();
+    UUID rewardRecordId = buffer.readBoolean() ? buffer.readUuid() : null;
+    int currencyRewardAmount = rewardRecordId == null ? 0 : buffer.readInt();
+    boolean currencyRewardClaimed = rewardRecordId != null && buffer.readBoolean();
     return new MailSnapshot(mailId, type, senderId, senderName, subject, body, source,
-        created, expires, read, global, protectedMail, attachments, moneyAmount);
+        created, expires, read, global, protectedMail, attachments, moneyAmount,
+        rewardRecordId, currencyRewardAmount, currencyRewardClaimed);
   }
 
   private static void requireBytes(WireBuffer buffer, int count) {

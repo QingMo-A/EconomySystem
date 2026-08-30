@@ -9,6 +9,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.delivery.DeliveryBoxTestFixtures;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class MailboxLedgerTest {
@@ -29,6 +30,50 @@ class MailboxLedgerTest {
     assertEquals(MailboxLedger.MutationResult.DELETED,
         ledger.delete(owner, mailId, () -> {}));
     assertTrue(ledger.listPersonal(owner).isEmpty());
+  }
+
+  @Test
+  void deferredCurrencyRewardBlocksDeletionAndClaimIsIdempotent() {
+    UUID owner = UUID.randomUUID();
+    UUID mailId = UUID.randomUUID();
+    UUID rewardRecordId = UUID.randomUUID();
+    MailRecord reward = new MailRecord(
+        mailId, MailType.SYSTEM, null, "", "Reward", "Body", "mail.commission",
+        10, 0, List.of(), rewardRecordId, 200, false, false, true);
+    MailboxLedger ledger = new MailboxLedger();
+    AtomicInteger dirtyCalls = new AtomicInteger();
+    ledger.addPersonal(owner, reward, dirtyCalls::incrementAndGet);
+
+    assertEquals(MailboxLedger.MutationResult.HAS_ATTACHMENTS,
+        ledger.delete(owner, mailId, dirtyCalls::incrementAndGet));
+    assertEquals(MailboxLedger.MutationResult.UPDATED,
+        ledger.markCurrencyRewardClaimed(owner, mailId, dirtyCalls::incrementAndGet));
+    assertEquals(MailboxLedger.MutationResult.NO_CHANGE,
+        ledger.markCurrencyRewardClaimed(owner, mailId, dirtyCalls::incrementAndGet));
+    assertEquals(2, dirtyCalls.get(), "only add and first claim should dirty the ledger");
+    assertTrue(ledger.listPersonal(owner).get(0).currencyRewardClaimed());
+    assertEquals(MailboxLedger.MutationResult.DELETED,
+        ledger.delete(owner, mailId, dirtyCalls::incrementAndGet));
+  }
+
+  @Test
+  void queryProjectionExposesDeferredCurrencyReward() {
+    UUID owner = UUID.randomUUID();
+    UUID rewardRecordId = UUID.randomUUID();
+    MailRecord reward = new MailRecord(
+        UUID.randomUUID(), MailType.SYSTEM, null, "", "Reward", "Body", "mail.commission",
+        10, 0, List.of(), rewardRecordId, 200, false, false, true);
+    MailboxLedger ledger = new MailboxLedger();
+    ledger.addPersonal(owner, reward, () -> {});
+
+    MailSnapshot projected = MailboxQueryService.query(
+        owner, ledger, new com.mo.economy_system.common.delivery.DeliveryBoxLedger(), 20, () -> {})
+        .get(0);
+
+    assertEquals(rewardRecordId, projected.rewardRecordId());
+    assertEquals(200, projected.currencyRewardAmount());
+    assertTrue(projected.hasUnclaimedCurrencyReward());
+    assertTrue(projected.hasUnclaimedAttachments());
   }
 
   @Test
@@ -59,6 +104,17 @@ class MailboxLedgerTest {
     MailRecord announcement = new MailRecord(
         UUID.randomUUID(), MailType.ANNOUNCEMENT, null, "", "subject", "body", "test.mail",
         10, 0, List.of(), 25, false, true);
+
+    assertThrows(IllegalArgumentException.class,
+        () -> ledger.addAnnouncement(announcement, () -> {}));
+  }
+
+  @Test
+  void globalAnnouncementsRejectDeferredCurrencyRewards() {
+    MailboxLedger ledger = new MailboxLedger();
+    MailRecord announcement = new MailRecord(
+        UUID.randomUUID(), MailType.ANNOUNCEMENT, null, "", "subject", "body", "test.mail",
+        10, 0, List.of(), UUID.randomUUID(), 25, false, false, true);
 
     assertThrows(IllegalArgumentException.class,
         () -> ledger.addAnnouncement(announcement, () -> {}));

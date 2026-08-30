@@ -71,6 +71,11 @@ public final class CommissionGenerator {
     this.idSource = Objects.requireNonNull(idSource, "idSource");
   }
 
+  /** Returns the configured base interval for initializing a player's first schedule. */
+  public long refreshIntervalMillis() {
+    return catalog.settings().refreshBaseIntervalMillis();
+  }
+
   /**
    * Generates due work and keeps every old instance, including instances which have just expired.
    * A due schedule is always advanced once; it is never coupled to an instance's expiresAt.

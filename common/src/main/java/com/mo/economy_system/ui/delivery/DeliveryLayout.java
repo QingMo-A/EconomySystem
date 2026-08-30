@@ -86,9 +86,14 @@ public final class DeliveryLayout {
     UiRect detailSender = new UiRect(innerX, CONTENT_START_Y + 12, innerWidth, lineHeight);
     UiRect detailSubject = new UiRect(innerX, CONTENT_START_Y + 31, innerWidth, lineHeight + 2);
     UiRect detailMeta = new UiRect(innerX, CONTENT_START_Y + 49, innerWidth, lineHeight);
-    UiRect detailBody = new UiRect(innerX, CONTENT_START_Y + 67, innerWidth, lineHeight * 4 + 12);
 
     DeliveryRow selected = state.selectedRow();
+    boolean hasCurrencyReward = selected != null && selected.mail().hasCurrencyReward();
+    UiRect detailReward = hasCurrencyReward
+        ? new UiRect(innerX, detailMeta.y() + lineHeight, innerWidth, lineHeight)
+        : new UiRect(0, 0, 0, 0);
+    UiRect detailBody = new UiRect(innerX, CONTENT_START_Y + 67 + (hasCurrencyReward ? lineHeight : 0),
+        innerWidth, lineHeight * 4 + 12);
     List<AttachmentCard> attachmentCards = new ArrayList<>();
     int attachmentTop = CONTENT_START_Y + 157;
     UiRect attachmentLabel = new UiRect(innerX, attachmentTop - 19, innerWidth, lineHeight);
@@ -151,7 +156,7 @@ public final class DeliveryLayout {
 
     return new Layout(scale, title, versionInfo.contentScale(), esc, search, searchBackground,
         categoryPanel, List.copyOf(categoryTabs), composeButton, List.copyOf(cards), detailPanel,
-        detailSender, detailSubject, detailMeta, detailBody, attachmentLabel,
+        detailSender, detailSubject, detailMeta, detailReward, detailBody, attachmentLabel,
         attachmentStrip, attachmentScrollTrack, attachmentScrollThumb,
         List.copyOf(attachmentCards), firstAttachmentCard, firstItemIcon, firstName, source, firstClaim,
         claimAllButton, deleteButton, previous, page, next, message, pageSize, 1, pageSize,
@@ -161,7 +166,8 @@ public final class DeliveryLayout {
   public record Layout(
       UiScale scale, UiRect title, float versionInfoScale, UiRect esc, UiRect search, UiRect searchBackground,
       UiRect categoryPanel, List<CategoryTab> categoryTabs, UiRect composeButton, List<Card> cards,
-      UiRect detailPanel, UiRect detailSender, UiRect detailSubject, UiRect detailMeta, UiRect detailBody,
+      UiRect detailPanel, UiRect detailSender, UiRect detailSubject, UiRect detailMeta, UiRect detailReward,
+      UiRect detailBody,
       UiRect attachmentLabel, UiRect attachmentStrip, UiRect attachmentScrollTrack, UiRect attachmentScrollThumb,
       List<AttachmentCard> attachmentCards,
       UiRect attachmentCard, UiRect detailItemIcon, UiRect detailItemName, UiRect detailSource,

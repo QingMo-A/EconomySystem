@@ -58,6 +58,7 @@ public final class MailboxQueryService {
     }
     return new MailSnapshot(mail.mailId(), mail.type(), mail.senderId(), mail.senderName(), mail.subject(),
         mail.body(), mail.source(), mail.createdAtEpochMillis(), mail.expiresAtEpochMillis(), mail.read(),
-        announcement, mail.protectedMail(), List.copyOf(attachments), mail.moneyAmount());
+        announcement, mail.protectedMail(), List.copyOf(attachments), mail.moneyAmount(),
+        mail.rewardRecordId(), mail.currencyRewardAmount(), mail.currencyRewardClaimed());
   }
 }

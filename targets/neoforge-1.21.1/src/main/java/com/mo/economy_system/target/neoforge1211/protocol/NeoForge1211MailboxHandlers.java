@@ -23,6 +23,7 @@ import com.mo.economy_system.common.network.MailboxNotificationMessage;
 import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
 import com.mo.economy_system.common.network.MailboxSendResultMessage;
 import com.mo.economy_system.common.network.MailboxSendStatus;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.BalanceTransferResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.core.economy_system.delivery_box.DeliveryBoxSavedData;
@@ -107,7 +108,19 @@ public final class NeoForge1211MailboxHandlers {
         claimed++;
       }
       if (claimed > 0) player.sendSystemMessage(Component.translatable("message.mailbox.claim_all.success", claimed));
-      if (last != DeliveryBoxClaimResult.SUCCESS) player.sendSystemMessage(Component.translatable(feedbackKey(last)));
+      if (last != DeliveryBoxClaimResult.SUCCESS) {
+        player.sendSystemMessage(Component.translatable(feedbackKey(last)));
+      } else {
+        CurrencyClaimResult currency = claimCurrencyReward(player, mail.mailId());
+        if (currency.status() == CurrencyClaimStatus.CLAIMED) {
+          player.sendSystemMessage(Component.translatable(
+              "message.mailbox.currency_reward.claimed", currency.amount()));
+        } else if (currency.status() == CurrencyClaimStatus.BALANCE_LIMIT) {
+          player.sendSystemMessage(Component.translatable("message.mailbox.currency_reward.balance_limit"));
+        } else if (currency.status() == CurrencyClaimStatus.FAILED) {
+          player.sendSystemMessage(Component.translatable("message.mailbox.currency_reward.failed"));
+        }
+      }
       refresh(player, message.requestId());
     });
   }
@@ -183,6 +196,58 @@ public final class NeoForge1211MailboxHandlers {
       }
     }
     return result;
+  }
+
+  /** Claims a deferred reward only after all item attachments in the same request succeeded. */
+  private static CurrencyClaimResult claimCurrencyReward(ServerPlayer player, UUID mailId) {
+    MailboxSavedData mailbox = MailboxSavedData.getInstance(player.serverLevel());
+    MailRecord mail = mailbox.ledger().findPersonal(player.getUUID(), mailId);
+    if (mail == null || !mail.hasCurrencyReward() || mail.currencyRewardClaimed()) {
+      return CurrencyClaimResult.SKIPPED;
+    }
+    int amount = mail.currencyRewardAmount();
+    EconomySavedData economy = EconomySavedData.getInstance(player.serverLevel());
+    if (economy.previewCreditExact(player.getUUID(), amount) != BalanceMutationResult.SUCCESS) {
+      return CurrencyClaimResult.BALANCE_LIMIT;
+    }
+    BalanceMutationResult credited = economy.creditExact(
+        player.getUUID(), amount, "委托奖励", "领取委托货币奖励");
+    if (credited != BalanceMutationResult.SUCCESS) {
+      return credited == BalanceMutationResult.BALANCE_LIMIT
+          ? CurrencyClaimResult.BALANCE_LIMIT : CurrencyClaimResult.FAILED;
+    }
+    try {
+      MailboxLedger.MutationResult marked = mailbox.ledger().markCurrencyRewardClaimed(
+          player.getUUID(), mailId, mailbox::markDirty);
+      if (marked == MailboxLedger.MutationResult.UPDATED) {
+        return CurrencyClaimResult.claimed(amount);
+      }
+    } catch (RuntimeException failure) {
+      EconomySystem.LOGGER.error(
+          "Deferred mailbox currency reward marker failed player={} mail={} amount={}",
+          player.getUUID(), mailId, amount, failure);
+    }
+    BalanceMutationResult rollback = economy.debitExact(
+        player.getUUID(), amount, "委托奖励回滚", "委托货币奖励领取失败回滚");
+    if (rollback != BalanceMutationResult.SUCCESS) {
+      EconomySystem.LOGGER.error(
+          "Deferred mailbox currency reward rollback failed player={} mail={} amount={} result={}",
+          player.getUUID(), mailId, amount, rollback);
+    }
+    return CurrencyClaimResult.FAILED;
+  }
+
+  private enum CurrencyClaimStatus { SKIPPED, CLAIMED, BALANCE_LIMIT, FAILED }
+
+  private record CurrencyClaimResult(CurrencyClaimStatus status, int amount) {
+    private static final CurrencyClaimResult SKIPPED = new CurrencyClaimResult(CurrencyClaimStatus.SKIPPED, 0);
+    private static final CurrencyClaimResult BALANCE_LIMIT =
+        new CurrencyClaimResult(CurrencyClaimStatus.BALANCE_LIMIT, 0);
+    private static final CurrencyClaimResult FAILED = new CurrencyClaimResult(CurrencyClaimStatus.FAILED, 0);
+
+    private static CurrencyClaimResult claimed(int amount) {
+      return new CurrencyClaimResult(CurrencyClaimStatus.CLAIMED, amount);
+    }
   }
 
   private static MailboxSendStatus sendPlayerMail(ServerPlayer sender, MailboxSendPlayerMessage message) {
