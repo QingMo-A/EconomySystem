@@ -113,7 +113,10 @@ public class EconomySystem_EventHandler {
         NeoForge1211TerritorySelectionRuntime.expire(event.getServer());
         if (event.getServer().getTickCount() % 100 == 0) {
             for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-                try { NeoForge1211CommissionRuntime.refresh(player); } catch (RuntimeException ignored) { }
+                try {
+                    NeoForge1211CommissionRuntime.refresh(player);
+                    NeoForge1211CommissionRuntime.retryPendingRewards(player);
+                } catch (RuntimeException ignored) { }
             }
         }
         // 确保只在每个 tick 的开始阶段执行
@@ -152,7 +155,10 @@ public class EconomySystem_EventHandler {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             NeoForge1211UpdateRuntime.checkForUpdates(
                 serverPlayer.getServer(), serverPlayer.getUUID());
-            try { NeoForge1211CommissionRuntime.refresh(serverPlayer); } catch (RuntimeException ignored) { }
+            try {
+                NeoForge1211CommissionRuntime.refresh(serverPlayer);
+                NeoForge1211CommissionRuntime.retryPendingRewards(serverPlayer);
+            } catch (RuntimeException ignored) { }
 
 
             ServerLevel serverLevel = serverPlayer.serverLevel();
@@ -186,7 +192,7 @@ public class EconomySystem_EventHandler {
 
         DamageSource source = event.getSource();
         if (!(source.getEntity() instanceof ServerPlayer player)) return;
-        NeoForge1211CommissionRuntime.onKill(player, mob);
+        NeoForge1211CommissionRuntime.onKill(player, mob, mob.getUUID());
 
         ItemStack weapon = player.getMainHandItem();
         int levelCarefully = CarefullyEnchantment.getLevel(player.serverLevel(), weapon);

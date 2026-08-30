@@ -85,6 +85,30 @@ public final class CommissionGenerator {
       long nowMillis,
       Collection<CommissionInstance> existing,
       PersonalCommissionSchedule schedule) {
+    return refresh(playerId, nowMillis, existing, schedule, false);
+  }
+
+  /**
+   * Generates work immediately, regardless of the player's scheduled refresh time.
+   *
+   * <p>The schedule is still advanced from this forced refresh, and existing instances are kept
+   * exactly like a normal refresh.  This is intended for explicit administrator operations; it is
+   * not used by the normal login/tick refresh path.
+   */
+  public RefreshResult forceRefresh(
+      UUID playerId,
+      long nowMillis,
+      Collection<CommissionInstance> existing,
+      PersonalCommissionSchedule schedule) {
+    return refresh(playerId, nowMillis, existing, schedule, true);
+  }
+
+  private RefreshResult refresh(
+      UUID playerId,
+      long nowMillis,
+      Collection<CommissionInstance> existing,
+      PersonalCommissionSchedule schedule,
+      boolean force) {
     Objects.requireNonNull(playerId, "playerId");
     Objects.requireNonNull(existing, "existing");
     Objects.requireNonNull(schedule, "schedule");
@@ -97,7 +121,7 @@ public final class CommissionGenerator {
       if (!playerId.equals(instance.ownerPlayerId())) throw new IllegalArgumentException("commission owner mismatch");
       current.add(instance.expireIfDue(nowMillis));
     }
-    if (!schedule.due(nowMillis)) {
+    if (!force && !schedule.due(nowMillis)) {
       return new RefreshResult(RefreshOutcome.NOT_DUE, current, List.of(), schedule, List.of());
     }
 

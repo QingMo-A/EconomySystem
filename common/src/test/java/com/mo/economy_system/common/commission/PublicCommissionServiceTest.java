@@ -67,6 +67,31 @@ class PublicCommissionServiceTest {
         + rewardRepo.listForPlayer(otherPlayer).size());
   }
 
+  @Test
+  void retryPendingPublicRewardsIsScopedToPublicBatch() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    UUID player = UUID.randomUUID();
+    UUID publicId = UUID.randomUUID();
+    CommissionRewardRecord pending = new CommissionRewardRecord(UUID.randomUUID(), "public:key",
+        player, publicId, "public", "requester", "requester", CommissionRewardSnapshot.coins(4),
+        1, null, CommissionRewardStatus.PENDING_MAIL, 0);
+    repository.createIfAbsent(pending);
+    final boolean[] delivered = {false};
+    PublicCommissionService service = new PublicCommissionService(
+        new InMemoryPublicCommissionRepository(), repository, new CommissionRewardDeliveryPort() {
+          @Override public DeliveryResult deliver(CommissionRewardRecord record) {
+            delivered[0] = true;
+            repository.save(record.mailCreated(UUID.randomUUID()));
+            return DeliveryResult.CREATED;
+          }
+          @Override public ClaimResult claim(UUID rewardRecordId, UUID playerId, long nowMillis) {
+            return ClaimResult.CLAIMED;
+          }
+        });
+    assertEquals(1, service.retryPendingRewards(player));
+    assertTrue(delivered[0]);
+  }
+
   private record Delivery(InMemoryCommissionRepository rewards) implements CommissionRewardDeliveryPort {
     @Override public DeliveryResult deliver(CommissionRewardRecord record) {
       rewards.save(record.mailCreated(UUID.randomUUID()));

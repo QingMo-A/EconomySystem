@@ -105,7 +105,7 @@ public final class Forge1201EconomyCommands {
         .then(Commands.literal("player").requires(s -> s.hasPermission(2))
             .then(Commands.argument("target", EntityArgument.player()).executes(c -> {
               ServerPlayer target = EntityArgument.getPlayer(c, "target");
-              var view = Forge1201CommissionRuntime.refresh(target);
+              var view = Forge1201CommissionRuntime.forceRefresh(target);
               c.getSource().sendSuccess(() -> Component.literal("已刷新 " + target.getName().getString()
                   + "，新增 " + view.generation().added().size() + " 条。"), true);
               return 1;

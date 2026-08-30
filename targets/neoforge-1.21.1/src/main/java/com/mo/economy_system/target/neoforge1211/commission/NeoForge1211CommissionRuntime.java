@@ -3,6 +3,7 @@ package com.mo.economy_system.target.neoforge1211.commission;
 import com.mo.economy_system.common.commission.*;
 import com.mo.economy_system.common.mail.MailRecord;
 import com.mo.economy_system.common.mail.MailType;
+import com.mo.economy_system.common.mail.MailboxCapacityPolicy;
 import com.mo.economy_system.core.economy_system.mailbox.MailboxSavedData;
 import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import net.minecraft.server.MinecraftServer;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.*;
+import java.nio.charset.StandardCharsets;
 
 /** NeoForge lifecycle bridge for the common personal commission service. */
 public final class NeoForge1211CommissionRuntime {
@@ -39,7 +41,20 @@ public final class NeoForge1211CommissionRuntime {
     });
   }
 
-  public static CommissionService.RefreshView refresh(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()); }
+  public static CommissionService.RefreshView refresh(ServerPlayer player) {
+    return service(player.server).refresh(player.getUUID(), System.currentTimeMillis());
+  }
+
+  /** Forces an administrator refresh while retaining all existing personal commissions. */
+  public static CommissionService.RefreshView forceRefresh(ServerPlayer player) {
+    return service(player.server).forceRefresh(player.getUUID(), System.currentTimeMillis());
+  }
+
+  /** Retries personal and public commission mail delivery without requiring another UI packet. */
+  public static void retryPendingRewards(ServerPlayer player) {
+    service(player.server).retryPendingRewards(player.getUUID());
+    publicService(player.server).retryPendingRewards(player.getUUID());
+  }
   public static CommissionPlayerState state(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()).state(); }
   public static synchronized List<String> templateIds(MinecraftServer server) { return catalog(server).templates().stream().map(CommissionTemplate::id).toList(); }
   public static synchronized int maxActivePersonalCommissions(MinecraftServer server) {
@@ -198,13 +213,22 @@ public final class NeoForge1211CommissionRuntime {
     }
   }
 
+  /** Compatibility entry point for callers without an authoritative event identity. */
+  @Deprecated
   public static void onKill(ServerPlayer player, LivingEntity entity) {
+    onKill(player, entity, UUID.randomUUID());
+  }
+
+  /** ENTITY_KILL progress with the killed entity UUID as a stable event identity. */
+  public static void onKill(ServerPlayer player, LivingEntity entity, UUID killedEntityId) {
+    if (player == null || entity == null || killedEntityId == null) return;
     String target = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+    UUID submissionId = CommissionEventIds.entityKill(player.getUUID(), killedEntityId);
     CommissionPlayerState state = state(player);
     for (CommissionInstance c : state.commissions()) {
       if (c.type() == CommissionType.ENTITY_KILL && c.targetSnapshot().equals(target)
           && c.status().countsAsActive()) {
-        service(player.server).submitProgress(player.getUUID(), c.commissionId(), 1,
+        service(player.server).submitProgress(player.getUUID(), c.commissionId(), submissionId, 1,
             System.currentTimeMillis());
       }
     }
@@ -268,7 +292,43 @@ public final class NeoForge1211CommissionRuntime {
   private static final class Delivery implements CommissionRewardDeliveryPort {
     private final NeoForge1211CommissionSavedData data; private final MinecraftServer server;
     Delivery(NeoForge1211CommissionSavedData d, MinecraftServer s) { data=d; server=s; }
-    public DeliveryResult deliver(CommissionRewardRecord r) { var mailbox=MailboxSavedData.getInstance(server.overworld()); for (var m:mailbox.ledger().listPersonal(r.playerId())) if (r.rewardRecordId().equals(m.rewardRecordId())) return DeliveryResult.ALREADY_DELIVERED; UUID mail=UUID.randomUUID(); mailbox.ledger().addPersonal(r.playerId(), new MailRecord(mail, MailType.SYSTEM, null, "", "委托奖励", r.rewardSnapshot().description(), "commission.reward", r.createdAt(), 0, List.of(), r.rewardRecordId(), r.rewardSnapshot().amount(), false, false, true), mailbox::markDirty); data.saveReward(r.mailCreated(mail)); return DeliveryResult.CREATED; }
+    public DeliveryResult deliver(CommissionRewardRecord r) {
+      if (r == null) return DeliveryResult.STATE_UNKNOWN;
+      var mailbox = MailboxSavedData.getInstance(server.overworld());
+      UUID mailId = UUID.nameUUIDFromBytes(("economysystem:commission-mail:" + r.rewardRecordId())
+          .getBytes(StandardCharsets.UTF_8));
+      MailRecord existing = mailbox.ledger().findPersonal(r.playerId(), mailId);
+      if (existing != null) {
+        if (!r.rewardRecordId().equals(existing.rewardRecordId())
+            || existing.currencyRewardAmount() != r.currencyRewardAmount()) {
+          return DeliveryResult.STATE_UNKNOWN;
+        }
+        if (r.status() != CommissionRewardStatus.MAIL_CREATED
+            && r.status() != CommissionRewardStatus.CLAIMED) {
+          data.saveReward(r.mailCreated(mailId));
+        }
+        return DeliveryResult.ALREADY_DELIVERED;
+      }
+      if (r.status() == CommissionRewardStatus.CLAIMED
+          || (r.status() == CommissionRewardStatus.MAIL_CREATED
+              && !mailId.equals(r.mailId()))) return DeliveryResult.STATE_UNKNOWN;
+      if (!MailboxCapacityPolicy.canAddPersonal(
+          MailType.SYSTEM, mailbox.ledger().listPersonal(r.playerId()).size())) {
+        return DeliveryResult.RETRYABLE_FAILURE;
+      }
+      try {
+        mailbox.ledger().addPersonal(r.playerId(), new MailRecord(mailId, MailType.SYSTEM, null,
+            "系统", "委托奖励结算", r.rewardSnapshot().description(), "commission.reward",
+            Math.max(System.currentTimeMillis(), Math.max(1L, r.createdAt())), 0, List.of(),
+            r.rewardRecordId(), r.currencyRewardAmount(), false, false, true), mailbox::markDirty);
+        data.saveReward(r.mailCreated(mailId));
+        return DeliveryResult.CREATED;
+      } catch (IllegalStateException full) {
+        return DeliveryResult.RETRYABLE_FAILURE;
+      } catch (RuntimeException failure) {
+        return DeliveryResult.STATE_UNKNOWN;
+      }
+    }
     public ClaimResult claim(UUID rewardId, UUID playerId, long now) { CommissionRewardRecord r=data.findReward(rewardId).orElse(null); if(r==null)return ClaimResult.NOT_FOUND; if(!r.playerId().equals(playerId))return ClaimResult.WRONG_PLAYER; return r.status()==CommissionRewardStatus.CLAIMED?ClaimResult.ALREADY_CLAIMED:ClaimResult.STATE_UNKNOWN; }
   }
 }

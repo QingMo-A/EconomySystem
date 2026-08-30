@@ -26,7 +26,7 @@ public final class NeoForge1211CommissionCommands {
         .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
             .executes(c -> {
               var target = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "target");
-              var view = NeoForge1211CommissionRuntime.refresh(target);
+              var view = NeoForge1211CommissionRuntime.forceRefresh(target);
               c.getSource().sendSuccess(() -> Component.literal("已刷新 " + target.getName().getString()
                   + "，新增 " + view.generation().added().size() + " 条。"), true);
               return 1;

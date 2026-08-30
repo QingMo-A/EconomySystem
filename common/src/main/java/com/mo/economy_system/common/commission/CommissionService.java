@@ -81,6 +81,21 @@ public final class CommissionService {
 
   /** Refreshes a player if their absolute server-time schedule is due. */
   public synchronized RefreshView refresh(UUID playerId, long nowMillis) {
+    return refreshInternal(playerId, nowMillis, false);
+  }
+
+  /**
+   * Forces an administrator refresh without deleting or replacing existing work.
+   *
+   * <p>The player's next scheduled refresh is advanced from this operation so a forced refresh
+   * cannot be followed immediately by an automatic duplicate refresh.  Capacity and catalog
+   * legality rules still apply.
+   */
+  public synchronized RefreshView forceRefresh(UUID playerId, long nowMillis) {
+    return refreshInternal(playerId, nowMillis, true);
+  }
+
+  private RefreshView refreshInternal(UUID playerId, long nowMillis, boolean force) {
     requireTime(nowMillis);
     CommissionPlayerState before = commissions.loadOrEmpty(playerId);
     PersonalCommissionSchedule schedule = before.schedule();
@@ -92,12 +107,31 @@ public final class CommissionService {
       long firstLastRefresh = Math.max(0L, nowMillis - 1L);
       schedule = new PersonalCommissionSchedule(playerId, nowMillis, firstLastRefresh);
     }
-    CommissionGenerator.RefreshResult result = generator.refresh(
-        playerId, nowMillis, before.commissions(), schedule);
+    CommissionGenerator.RefreshResult result = force
+        ? generator.forceRefresh(playerId, nowMillis, before.commissions(), schedule)
+        : generator.refresh(playerId, nowMillis, before.commissions(), schedule);
     CommissionPlayerState after = new CommissionPlayerState(
         playerId, result.current(), result.schedule());
     if (!after.equals(before)) commissions.save(after);
     return new RefreshView(result, after);
+  }
+
+  /**
+   * Retries pending personal reward-mail delivery for one player.  This is intentionally separate
+   * from progress submission so a completed commission can recover even when the player never
+   * opens the UI or sends another packet.
+   */
+  public synchronized int retryPendingRewards(UUID playerId) {
+    Objects.requireNonNull(playerId, "playerId");
+    int attempted = 0;
+    for (CommissionRewardRecord reward : rewards.listForPlayer(playerId)) {
+      if (!reward.batchId().isBlank()) continue;
+      if (reward.status() != CommissionRewardStatus.PENDING_MAIL
+          && reward.status() != CommissionRewardStatus.FAILED) continue;
+      attempted++;
+      delivery.deliver(reward);
+    }
+    return attempted;
   }
 
   /** Generates administrator-requested preview work without advancing the player's schedule. */

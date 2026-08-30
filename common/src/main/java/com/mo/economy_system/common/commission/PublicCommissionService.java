@@ -95,6 +95,20 @@ public final class PublicCommissionService {
     return true;
   }
 
+  /** Retries pending mail for partial public submissions without changing shared progress. */
+  public synchronized int retryPendingRewards(UUID playerId) {
+    Objects.requireNonNull(playerId, "playerId");
+    int attempted = 0;
+    for (CommissionRewardRecord reward : rewards.listForPlayer(playerId)) {
+      if (!"public".equals(reward.batchId())) continue;
+      if (reward.status() != CommissionRewardStatus.PENDING_MAIL
+          && reward.status() != CommissionRewardStatus.FAILED) continue;
+      attempted++;
+      delivery.deliver(reward);
+    }
+    return attempted;
+  }
+
   /** Removes an administrator-owned public commission from persistence. */
   public synchronized boolean remove(UUID commissionId) {
     Objects.requireNonNull(commissionId, "commissionId");

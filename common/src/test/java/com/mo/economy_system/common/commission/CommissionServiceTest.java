@@ -46,6 +46,29 @@ class CommissionServiceTest {
   }
 
   @Test
+  void forceRefreshGeneratesBeforeScheduleAndKeepsExistingWork() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    UUID existingId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(1, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionService service = new CommissionService(generator, repository, repository,
+        delivery(repository));
+    CommissionInstance existing = new CommissionInstance(
+        existingId, PLAYER, "deliver", CommissionType.ITEM_DELIVERY, "town", "Town",
+        "minecraft:stone", 2, CommissionRewardSnapshot.coins(20), 1, 100);
+    repository.save(new CommissionPlayerState(
+        PLAYER, List.of(existing), PersonalCommissionSchedule.initial(PLAYER, 1, 100)));
+
+    CommissionService.RefreshView forced = service.forceRefresh(PLAYER, 10);
+
+    assertEquals(CommissionGenerator.RefreshOutcome.GENERATED, forced.generation().outcome());
+    assertEquals(1, forced.generation().added().size());
+    assertEquals(List.of(existingId, COMMISSION),
+        forced.state().commissions().stream().map(CommissionInstance::commissionId).toList());
+    assertTrue(forced.state().schedule().nextRefreshAt() > 10);
+  }
+
+  @Test
   void builtInCatalogProducesBothServerSafeWorkKinds() {
     CommissionCatalog catalog = CommissionCatalogDefaults.create();
     assertTrue(catalog.template("vanilla_material_delivery").isPresent());
@@ -139,6 +162,32 @@ class CommissionServiceTest {
   }
 
   @Test
+  void retryPendingRewardsDoesNotRequireAnotherProgressPacket() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(1, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    final boolean[] delivered = {false};
+    CommissionRewardDeliveryPort delivery = new CommissionRewardDeliveryPort() {
+      @Override public DeliveryResult deliver(CommissionRewardRecord record) {
+        delivered[0] = true;
+        repository.save(record.mailCreated(UUID.nameUUIDFromBytes(record.rewardRecordId().toString().getBytes())));
+        return DeliveryResult.CREATED;
+      }
+      @Override public ClaimResult claim(UUID rewardRecordId, UUID playerId, long nowMillis) {
+        return ClaimResult.CLAIMED;
+      }
+    };
+    CommissionService service = new CommissionService(generator, repository, repository, delivery);
+    CommissionRewardRecord pending = new CommissionRewardRecord(UUID.randomUUID(), "commission:retry",
+        PLAYER, COMMISSION, "deliver", "town", CommissionRewardSnapshot.coins(10), 1);
+    repository.createIfAbsent(pending);
+    assertEquals(1, service.retryPendingRewards(PLAYER));
+    assertTrue(delivered[0]);
+    assertEquals(CommissionRewardStatus.MAIL_CREATED,
+        repository.find(pending.rewardRecordId()).orElseThrow().status());
+  }
+
+  @Test
   void duplicatePartialSubmissionIdDoesNotDoubleProgress() {
     InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
     CommissionGenerator generator = new CommissionGenerator(
@@ -155,6 +204,27 @@ class CommissionServiceTest {
         PLAYER, COMMISSION, submission, 2, 11);
     assertEquals(CommissionService.SubmitOutcome.DUPLICATE_SUBMISSION, duplicate.outcome());
     assertEquals(2, repository.load(PLAYER).commissions().get(0).progress());
+  }
+
+  @Test
+  void entityKillEventIdIsStableAndDuplicateDeliveryDoesNotDoubleProgress() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(2, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionService service = new CommissionService(generator, repository, repository,
+        delivery(repository));
+    repository.save(new CommissionPlayerState(PLAYER, List.of(new CommissionInstance(
+        COMMISSION, PLAYER, "hunt", CommissionType.ENTITY_KILL, "hunter", "Hunter",
+        "minecraft:zombie", 2, CommissionRewardSnapshot.coins(20), 1, 100)), null));
+    UUID killedEntity = UUID.fromString("00000000-0000-0000-0000-000000000004");
+    UUID eventId = CommissionEventIds.entityKill(PLAYER, killedEntity);
+
+    assertEquals(eventId, CommissionEventIds.entityKill(PLAYER, killedEntity));
+    assertEquals(CommissionService.SubmitOutcome.PROGRESSED,
+        service.submitProgress(PLAYER, COMMISSION, eventId, 1, 10).outcome());
+    assertEquals(CommissionService.SubmitOutcome.DUPLICATE_SUBMISSION,
+        service.submitProgress(PLAYER, COMMISSION, eventId, 1, 11).outcome());
+    assertEquals(1, repository.load(PLAYER).commissions().get(0).progress());
   }
 
   private static CommissionCatalog catalog(CommissionTemplate template) {

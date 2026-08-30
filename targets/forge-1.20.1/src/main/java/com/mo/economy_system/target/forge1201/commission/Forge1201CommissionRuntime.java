@@ -3,6 +3,7 @@ package com.mo.economy_system.target.forge1201.commission;
 import com.mo.economy_system.common.commission.CommissionCatalog;
 import com.mo.economy_system.common.commission.CommissionCatalogConfigLoader;
 import com.mo.economy_system.common.commission.CommissionCatalogDefaults;
+import com.mo.economy_system.common.commission.CommissionEventIds;
 import com.mo.economy_system.common.commission.CommissionGenerator;
 import com.mo.economy_system.common.commission.CommissionInstance;
 import com.mo.economy_system.common.commission.CommissionRandom;
@@ -68,6 +69,12 @@ public final class Forge1201CommissionRuntime {
     return service(player.serverLevel(), data).refresh(player.getUUID(), now());
   }
 
+  /** Forces an administrator refresh while retaining all existing personal commissions. */
+  public static CommissionService.RefreshView forceRefresh(ServerPlayer player) {
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    return service(player.serverLevel(), data).forceRefresh(player.getUUID(), now());
+  }
+
   public static List<String> templateIds() {
     return activeCatalog.templates().stream().map(value -> value.id()).toList();
   }
@@ -98,15 +105,24 @@ public final class Forge1201CommissionRuntime {
     for (ServerPlayer player : server.getPlayerList().getPlayers()) {
       try {
         refresh(player);
+        retryPendingRewards(player);
       } catch (RuntimeException failure) {
         LOGGER.error("Personal commission refresh failed player={}", player.getUUID(), failure);
       }
     }
   }
 
+  /** Retries personal and public commission mail delivery without requiring another UI packet. */
+  public static void retryPendingRewards(ServerPlayer player) {
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    service(player.serverLevel(), data).retryPendingRewards(player.getUUID());
+    publicService(player.serverLevel(), data).retryPendingRewards(player.getUUID());
+  }
+
   public static void onLogin(ServerPlayer player) {
     try {
       CommissionService.RefreshView view = refresh(player);
+      retryPendingRewards(player);
       if (view.generation().generated()) {
         player.sendSystemMessage(Component.literal(
             "个人委托已刷新，新增 " + view.generation().added().size() + " 条委托。"));
@@ -236,10 +252,20 @@ public final class Forge1201CommissionRuntime {
   }
 
   /** ENTITY_KILL progress is derived exclusively from the server death event. */
+  @Deprecated
   public static void handleEntityKill(ServerPlayer player, String entityId) {
+    // Compatibility callers only have the legacy entity type.  The actual Forge death hook uses
+    // the overload below with the killed entity UUID, which provides a stable event identity.
+    handleEntityKill(player, entityId, UUID.randomUUID());
+  }
+
+  /** ENTITY_KILL progress with a stable killed-entity event identity. */
+  public static void handleEntityKill(ServerPlayer player, String entityId, UUID killedEntityId) {
     if (entityId == null || entityId.isBlank()) return;
+    if (killedEntityId == null) return;
     Forge1201CommissionSavedData data = data(player.serverLevel());
     CommissionService service = service(player.serverLevel(), data);
+    UUID submissionId = CommissionEventIds.entityKill(player.getUUID(), killedEntityId);
     try {
       CommissionService.RefreshView refreshed = service.refresh(player.getUUID(), now());
       List<UUID> matching = refreshed.state().commissions().stream()
@@ -250,7 +276,7 @@ public final class Forge1201CommissionRuntime {
           .toList();
       for (UUID commissionId : matching) {
         CommissionService.SubmitResult result = service.submitProgress(
-            player.getUUID(), commissionId, 1, now());
+            player.getUUID(), commissionId, submissionId, 1, now());
         if (result.outcome() == CommissionService.SubmitOutcome.COMPLETED
             || result.outcome() == CommissionService.SubmitOutcome.REWARD_PENDING_MAIL) {
           player.sendSystemMessage(Component.literal("委托完成，奖励已发送至邮箱。"));

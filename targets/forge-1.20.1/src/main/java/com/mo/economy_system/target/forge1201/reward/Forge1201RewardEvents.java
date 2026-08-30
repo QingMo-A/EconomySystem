@@ -29,7 +29,7 @@ public final class Forge1201RewardEvents {
 
     ResourceLocation entityId = ForgeRegistries.ENTITY_TYPES.getKey(mob.getType());
     if (entityId == null || player.getServer() == null) return;
-    Forge1201CommissionRuntime.handleEntityKill(player, entityId.toString());
+    Forge1201CommissionRuntime.handleEntityKill(player, entityId.toString(), mob.getUUID());
     ItemStack weapon = player.getMainHandItem();
     int carefully =
         EnchantmentHelper.getItemEnchantmentLevel(
