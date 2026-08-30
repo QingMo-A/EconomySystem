@@ -15,6 +15,27 @@ import java.util.UUID;
  * this class owns quote selection, cycle quotas and duplicate-submission protection.
  */
 public final class RecycleService {
+  /** Durable cycle/quota/idempotency state supplied by a target adapter. */
+  public interface StateRepository {
+    State load();
+
+    void save(State state);
+  }
+
+  public record State(long cycleNumber, Map<String, Integer> highRemaining,
+                      Set<UUID> completedSubmissions) {
+    public State {
+      highRemaining = Map.copyOf(Objects.requireNonNull(highRemaining, "highRemaining"));
+      completedSubmissions = Set.copyOf(Objects.requireNonNull(completedSubmissions,
+          "completedSubmissions"));
+      for (Map.Entry<String, Integer> entry : highRemaining.entrySet()) {
+        if (entry.getKey() == null || entry.getKey().isBlank() || entry.getValue() == null
+            || entry.getValue() < 0) throw new IllegalArgumentException("invalid recycle quota state");
+      }
+      for (UUID id : completedSubmissions) Objects.requireNonNull(id, "completed submission");
+    }
+  }
+
   public interface InventoryPort {
     int count(UUID playerId, ItemStackSnapshot item);
 
@@ -32,15 +53,35 @@ public final class RecycleService {
   private final RecycleConfig config;
   private final InventoryPort inventory;
   private final EconomyPort economy;
+  private final StateRepository stateRepository;
   private final Map<String, Integer> highRemaining = new HashMap<>();
   private final Set<UUID> completedSubmissions = new HashSet<>();
   private long cycleNumber = Long.MIN_VALUE;
 
   public RecycleService(RecycleConfig config, InventoryPort inventory, EconomyPort economy) {
+    this(config, inventory, economy, new StateRepository() {
+      @Override public State load() { return null; }
+      @Override public void save(State state) { }
+    });
+  }
+
+  public RecycleService(RecycleConfig config, InventoryPort inventory, EconomyPort economy,
+                        StateRepository stateRepository) {
     this.config = Objects.requireNonNull(config, "config");
     this.inventory = Objects.requireNonNull(inventory, "inventory");
     this.economy = Objects.requireNonNull(economy, "economy");
-    resetCycle(0L);
+    this.stateRepository = Objects.requireNonNull(stateRepository, "stateRepository");
+    State persisted = stateRepository.load();
+    if (persisted == null || persisted.cycleNumber() == Long.MIN_VALUE) {
+      resetCycle(0L);
+    } else {
+      cycleNumber = persisted.cycleNumber();
+      completedSubmissions.addAll(persisted.completedSubmissions());
+      for (RecycleOffer offer : config.offers()) {
+        int saved = persisted.highRemaining().getOrDefault(offer.itemId(), offer.highQuota());
+        highRemaining.put(offer.itemId(), Math.min(Math.max(0, saved), offer.highQuota()));
+      }
+    }
   }
 
   public synchronized RecycleResult recycle(
@@ -86,6 +127,7 @@ public final class RecycleService {
     }
     if (useHigh) highRemaining.put(item.itemId(), high - highAccepted);
     completedSubmissions.add(submissionId);
+    persistState();
     return new RecycleResult(RecycleResult.Status.SUCCESS, accepted, unitPrice, payout,
         highRemaining.getOrDefault(item.itemId(), 0));
   }
@@ -108,6 +150,11 @@ public final class RecycleService {
     highRemaining.clear();
     config.offers().forEach(offer -> highRemaining.put(offer.itemId(), offer.highQuota()));
     completedSubmissions.clear();
+    persistState();
+  }
+
+  private void persistState() {
+    stateRepository.save(new State(cycleNumber, highRemaining, completedSubmissions));
   }
 
   private static RecycleResult failure(RecycleResult.Status status) {

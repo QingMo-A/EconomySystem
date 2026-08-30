@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.neoforge1211.commission;
 
 import com.mo.economy_system.common.commission.*;
+import com.mo.economy_system.common.recycle.RecycleService;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -17,6 +18,7 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
   private final Map<UUID, CommissionPlayerState> players = new LinkedHashMap<>();
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
   private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
+  private RecycleService.State recycleState;
 
   public static NeoForge1211CommissionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
     NeoForge1211CommissionSavedData data = new NeoForge1211CommissionSavedData();
@@ -31,6 +33,19 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
         throw new IllegalArgumentException("duplicate public commission id");
       }
     }
+    if (tag.contains("recycleState", Tag.TAG_COMPOUND)) {
+      CompoundTag state = tag.getCompound("recycleState");
+      Map<String, Integer> quotas = new LinkedHashMap<>();
+      for (Tag raw : state.getList("quotas", Tag.TAG_COMPOUND)) {
+        CompoundTag quota = (CompoundTag) raw;
+        quotas.put(quota.getString("item"), Math.max(0, quota.getInt("remaining")));
+      }
+      Set<UUID> submissions = new HashSet<>();
+      for (Tag raw : state.getList("submissions", Tag.TAG_COMPOUND)) {
+        submissions.add(((CompoundTag) raw).getUUID("id"));
+      }
+      data.recycleState = new RecycleService.State(state.getLong("cycle"), quotas, submissions);
+    }
     return data;
   }
 
@@ -44,6 +59,26 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
     ListTag publicRows = new ListTag();
     publicCommissions.values().forEach(commission -> publicRows.add(writePublic(commission)));
     tag.put("publicCommissions", publicRows);
+    if (recycleState != null) {
+      CompoundTag state = new CompoundTag();
+      state.putLong("cycle", recycleState.cycleNumber());
+      ListTag quotas = new ListTag();
+      recycleState.highRemaining().forEach((item, remaining) -> {
+        CompoundTag row = new CompoundTag();
+        row.putString("item", item);
+        row.putInt("remaining", remaining);
+        quotas.add(row);
+      });
+      state.put("quotas", quotas);
+      ListTag submissions = new ListTag();
+      recycleState.completedSubmissions().forEach(id -> {
+        CompoundTag row = new CompoundTag();
+        row.putUUID("id", id);
+        submissions.add(row);
+      });
+      state.put("submissions", submissions);
+      tag.put("recycleState", state);
+    }
     return tag;
   }
 
@@ -75,6 +110,8 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
   }
   public synchronized void saveReward(CommissionRewardRecord reward) { rewards.put(reward.rewardRecordId(), reward); setDirty(); }
   public synchronized List<CommissionRewardRecord> rewardsFor(UUID player) { return rewards.values().stream().filter(r -> r.playerId().equals(player)).toList(); }
+  public synchronized RecycleService.State loadRecycleState() { return recycleState; }
+  public synchronized void saveRecycleState(RecycleService.State state) { recycleState = state; setDirty(); }
 
   private CompoundTag writePlayer(CommissionPlayerState state) {
     CompoundTag out = new CompoundTag(); out.putUUID("id", state.playerId());

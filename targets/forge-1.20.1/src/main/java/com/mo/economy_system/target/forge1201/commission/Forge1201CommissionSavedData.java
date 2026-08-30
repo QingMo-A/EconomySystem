@@ -13,6 +13,7 @@ import com.mo.economy_system.common.commission.PersonalCommissionSchedule;
 import com.mo.economy_system.common.commission.PublicCommission;
 import com.mo.economy_system.common.commission.PublicCommissionRepository;
 import com.mo.economy_system.common.commission.PublicCommissionStatus;
+import com.mo.economy_system.common.recycle.RecycleService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ public final class Forge1201CommissionSavedData extends SavedData
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
   private final Map<String, UUID> rewardsByKey = new HashMap<>();
   private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
+  private RecycleService.State recycleState;
 
   private Forge1201CommissionSavedData() {}
 
@@ -65,6 +67,7 @@ public final class Forge1201CommissionSavedData extends SavedData
     data.readPlayers(tag);
     data.readRewards(tag);
     data.readPublicCommissions(tag);
+    data.readRecycleState(tag);
     return data;
   }
 
@@ -168,7 +171,53 @@ public final class Forge1201CommissionSavedData extends SavedData
       publicList.add(encodePublicCommission(commission));
     }
     tag.put("publicCommissions", publicList);
+    if (recycleState != null) tag.put("recycleState", encodeRecycleState(recycleState));
     return tag;
+  }
+
+  public synchronized RecycleService.State loadRecycleState() {
+    return recycleState;
+  }
+
+  public synchronized void saveRecycleState(RecycleService.State state) {
+    recycleState = state;
+    setDirty();
+  }
+
+  private void readRecycleState(CompoundTag root) {
+    if (!root.contains("recycleState", Tag.TAG_COMPOUND)) return;
+    CompoundTag row = root.getCompound("recycleState");
+    Map<String, Integer> quotas = new LinkedHashMap<>();
+    ListTag quotaList = row.getList("quotas", Tag.TAG_COMPOUND);
+    for (int i = 0; i < quotaList.size(); i++) {
+      CompoundTag quota = quotaList.getCompound(i);
+      quotas.put(quota.getString("item"), Math.max(0, quota.getInt("remaining")));
+    }
+    Set<UUID> submissions = new HashSet<>();
+    ListTag submissionList = row.getList("submissions", Tag.TAG_COMPOUND);
+    for (int i = 0; i < submissionList.size(); i++) submissions.add(submissionList.getCompound(i).getUUID("id"));
+    recycleState = new RecycleService.State(row.getLong("cycle"), quotas, submissions);
+  }
+
+  private static CompoundTag encodeRecycleState(RecycleService.State state) {
+    CompoundTag row = new CompoundTag();
+    row.putLong("cycle", state.cycleNumber());
+    ListTag quotas = new ListTag();
+    state.highRemaining().forEach((item, remaining) -> {
+      CompoundTag value = new CompoundTag();
+      value.putString("item", item);
+      value.putInt("remaining", remaining);
+      quotas.add(value);
+    });
+    row.put("quotas", quotas);
+    ListTag submissions = new ListTag();
+    state.completedSubmissions().forEach(id -> {
+      CompoundTag value = new CompoundTag();
+      value.putUUID("id", id);
+      submissions.add(value);
+    });
+    row.put("submissions", submissions);
+    return row;
   }
 
   private void readPublicCommissions(CompoundTag root) {

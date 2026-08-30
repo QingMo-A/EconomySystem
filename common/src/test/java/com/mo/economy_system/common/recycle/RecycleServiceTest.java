@@ -53,6 +53,25 @@ class RecycleServiceTest {
   }
 
   @Test
+  void quotaAndSubmissionIdempotencySurviveServiceRecreation() {
+    RecycleConfig config = new RecycleConfig(Duration.ofHours(1),
+        new RecycleOffer("minecraft:kelp", 1, 4, 4, false));
+    InMemoryStateRepository state = new InMemoryStateRepository();
+    FakeInventory firstInventory = new FakeInventory(10);
+    FakeEconomy firstEconomy = new FakeEconomy();
+    RecycleService first = new RecycleService(config, firstInventory, firstEconomy, state);
+    UUID submission = UUID.randomUUID();
+    assertEquals(RecycleResult.Status.SUCCESS,
+        first.recycle(PLAYER, KELP, 3, submission, 1).status());
+    assertEquals(1, first.highQuotaRemaining(1).get("minecraft:kelp"));
+
+    RecycleService recreated = new RecycleService(config, new FakeInventory(10), new FakeEconomy(), state);
+    assertEquals(1, recreated.highQuotaRemaining(1).get("minecraft:kelp"));
+    assertEquals(RecycleResult.Status.DUPLICATE_SUBMISSION,
+        recreated.recycle(PLAYER, KELP, 3, submission, 2).status());
+  }
+
+  @Test
   void failedCreditRestoresItems() {
     FakeInventory inventory = new FakeInventory(10);
     FakeEconomy economy = new FakeEconomy();
@@ -104,5 +123,11 @@ class RecycleServiceTest {
       if (result == BalanceMutationResult.SUCCESS) balance += amount;
       return result;
     }
+  }
+
+  private static final class InMemoryStateRepository implements RecycleService.StateRepository {
+    private RecycleService.State state;
+    @Override public RecycleService.State load() { return state; }
+    @Override public void save(RecycleService.State value) { state = value; }
   }
 }

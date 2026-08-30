@@ -91,9 +91,14 @@ public final class NeoForge1211RecyclerAdapter {
 
   private static synchronized RecycleService service(MinecraftServer server) {
     if (server == null) throw new IllegalStateException("no active Minecraft server");
+    com.mo.economy_system.target.neoforge1211.commission.NeoForge1211CommissionSavedData persisted =
+        com.mo.economy_system.target.neoforge1211.commission.NeoForge1211CommissionSavedData.getInstance(server.overworld());
     return SERVICES.computeIfAbsent(server, value -> new RecycleService(
         CONFIGS.computeIfAbsent(value, NeoForge1211RecyclerAdapter::loadConfig),
-        new InventoryPort(), new EconomyPort()));
+        new InventoryPort(), new EconomyPort(), new RecycleService.StateRepository() {
+          @Override public RecycleService.State load() { return persisted.loadRecycleState(); }
+          @Override public void save(RecycleService.State state) { persisted.saveRecycleState(state); }
+        }));
   }
 
   private static RecycleConfig loadConfig(MinecraftServer server) {
