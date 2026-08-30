@@ -11,6 +11,7 @@ public final class EconomyUiMenu {
     private static final List<Entry> DEFAULT_ENTRIES = List.of(
             new Entry(EconomyUiRoute.SHOP, "button.home.shop"),
             new Entry(EconomyUiRoute.MARKET, "button.home.market"),
+            new Entry(EconomyUiRoute.COMMISSIONS, "button.home.commissions"),
             new Entry(EconomyUiRoute.DELIVERY_BOX, "button.home.delivery_box"),
             new Entry(EconomyUiRoute.TERRITORY, "button.home.territory"),
             new Entry(EconomyUiRoute.ABOUT, "button.home.about"));

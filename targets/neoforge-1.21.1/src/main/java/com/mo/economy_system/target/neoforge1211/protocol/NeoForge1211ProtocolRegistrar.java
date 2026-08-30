@@ -139,6 +139,10 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(registrar, EconomyMessages.MAILBOX_SEND_PLAYER, NeoForge1211MailboxHandlers::sendPlayer);
     bindCommon(registrar, EconomyMessages.MAILBOX_SEND_RESULT, NeoForge1211MailboxHandlers::sendResult);
     bindCommon(registrar, EconomyMessages.MAILBOX_NOTIFICATION, NeoForge1211MailboxHandlers::notification);
+    bindCommon(registrar, EconomyMessages.COMMISSION_DATA_REQUEST, NeoForge1211CommissionHandlers::request);
+    bindCommon(registrar, EconomyMessages.COMMISSION_DATA_RESPONSE, NeoForge1211CommissionHandlers::data);
+    bindCommon(registrar, EconomyMessages.COMMISSION_SUBMIT, NeoForge1211CommissionHandlers::submit);
+    bindCommon(registrar, EconomyMessages.COMMISSION_ACTION_RESPONSE, NeoForge1211CommissionHandlers::action);
   }
 
   private static <T extends EconomyNetworkMessage> void bindCommon(

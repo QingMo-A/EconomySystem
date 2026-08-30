@@ -60,6 +60,10 @@ public final class Forge1201CommissionRuntime {
     return activeCatalog.templates().stream().map(value -> value.id()).toList();
   }
 
+  public static int maxActivePersonalCommissions() {
+    return activeCatalog.settings().maxActivePersonalCommissions();
+  }
+
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
     try {
       activeCatalog = loadCatalog(source.getServer());
@@ -162,6 +166,11 @@ public final class Forge1201CommissionRuntime {
    * progress is persisted.  Item removal is server-side and is restored if orchestration throws.
    */
   public static SubmitFeedback submitItem(ServerPlayer player, UUID commissionId, int requestedAmount) {
+    return submitItem(player, commissionId, UUID.randomUUID(), requestedAmount);
+  }
+
+  public static SubmitFeedback submitItem(ServerPlayer player, UUID commissionId,
+                                          UUID submissionId, int requestedAmount) {
     if (requestedAmount <= 0) return SubmitFeedback.failure("提交数量必须大于 0。");
     Forge1201CommissionSavedData data = data(player.serverLevel());
     CommissionService service = service(player.serverLevel(), data);
@@ -191,7 +200,7 @@ public final class Forge1201CommissionRuntime {
       consume(player, originals, acceptedAmount);
       try {
         CommissionService.SubmitResult result = service.submitProgress(
-            player.getUUID(), commissionId, acceptedAmount, now());
+            player.getUUID(), commissionId, submissionId, acceptedAmount, now());
         if (!result.accepted()) {
           restore(player, originals);
           return SubmitFeedback.failure(outcomeMessage(result));
@@ -431,6 +440,7 @@ public final class Forge1201CommissionRuntime {
       case DISABLED -> "该委托已被禁用。";
       case NOT_FOUND -> "找不到该委托。";
       case INVALID_AMOUNT -> "提交数量必须大于 0。";
+      case DUPLICATE_SUBMISSION -> "该提交已处理。";
     };
   }
 

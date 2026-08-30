@@ -178,6 +178,7 @@ public final class HomeView {
       case SHOP -> EconomyUiTheme.HOME_NAV_SHOP_STYLE;
       case MARKET -> EconomyUiTheme.HOME_NAV_MARKET_STYLE;
       case DELIVERY_BOX, MAIL_COMPOSE -> EconomyUiTheme.HOME_NAV_DELIVERY_STYLE;
+      case COMMISSIONS -> EconomyUiTheme.HOME_NAV_MARKET_STYLE;
       case TERRITORY -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
       case ABOUT, BALANCE_LOG -> EconomyUiTheme.HOME_NAV_ABOUT_STYLE;
       case HOME -> EconomyUiTheme.HOME_NAV_TERRITORY_STYLE;
@@ -189,6 +190,7 @@ public final class HomeView {
       case SHOP -> UiIcon.SHOP;
       case MARKET -> UiIcon.MARKET;
       case DELIVERY_BOX, MAIL_COMPOSE -> UiIcon.DELIVERY;
+      case COMMISSIONS -> UiIcon.MARKET;
       case TERRITORY -> UiIcon.TERRITORY;
       case ABOUT, BALANCE_LOG -> UiIcon.ABOUT;
       case HOME -> UiIcon.HOME;

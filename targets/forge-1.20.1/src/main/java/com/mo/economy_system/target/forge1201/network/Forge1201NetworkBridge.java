@@ -13,6 +13,10 @@ import com.mo.economy_system.common.network.CheckedFileTransferControlResponseMe
 import com.mo.economy_system.common.network.CheckedFileTransferChunkRequestMessage;
 import com.mo.economy_system.common.network.CheckedFileTransferChunkResponseMessage;
 import com.mo.economy_system.common.network.ConfirmDemandOrderMessage;
+import com.mo.economy_system.common.network.CommissionActionResponseMessage;
+import com.mo.economy_system.common.network.CommissionDataRequestMessage;
+import com.mo.economy_system.common.network.CommissionDataResponseMessage;
+import com.mo.economy_system.common.network.CommissionSubmitMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
@@ -164,6 +168,8 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     if (message instanceof MailboxClaimAttachmentMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof MailboxClaimAllMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof MailboxSendPlayerMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof CommissionDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof CommissionSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message.getClass() == ModifyTerritoryModeMessage.class) {
       Forge1201NetworkChannel.sendToServer((ModifyTerritoryModeMessage) message);
       return;
@@ -249,6 +255,14 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       return;
     }
     if (message instanceof MailboxNotificationMessage value) {
+      Forge1201NetworkChannel.sendToPlayer(player, value);
+      return;
+    }
+    if (message instanceof CommissionDataResponseMessage value) {
+      Forge1201NetworkChannel.sendToPlayer(player, value);
+      return;
+    }
+    if (message instanceof CommissionActionResponseMessage value) {
       Forge1201NetworkChannel.sendToPlayer(player, value);
       return;
     }

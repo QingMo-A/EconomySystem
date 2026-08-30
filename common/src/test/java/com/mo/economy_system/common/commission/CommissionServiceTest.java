@@ -101,6 +101,25 @@ class CommissionServiceTest {
         service.submitProgress(PLAYER, COMMISSION, 1, 11).outcome());
   }
 
+  @Test
+  void duplicatePartialSubmissionIdDoesNotDoubleProgress() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(4, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionService service = new CommissionService(generator, repository, repository, delivery(repository));
+    repository.save(new CommissionPlayerState(PLAYER, List.of(new CommissionInstance(
+        COMMISSION, PLAYER, "deliver", CommissionType.ITEM_DELIVERY, "town", "Town",
+        "minecraft:stone", 4, CommissionRewardSnapshot.coins(40), 1, 100)), null));
+    UUID submission = UUID.randomUUID();
+
+    assertEquals(CommissionService.SubmitOutcome.PROGRESSED,
+        service.submitProgress(PLAYER, COMMISSION, submission, 2, 10).outcome());
+    CommissionService.SubmitResult duplicate = service.submitProgress(
+        PLAYER, COMMISSION, submission, 2, 11);
+    assertEquals(CommissionService.SubmitOutcome.DUPLICATE_SUBMISSION, duplicate.outcome());
+    assertEquals(2, repository.load(PLAYER).commissions().get(0).progress());
+  }
+
   private static CommissionCatalog catalog(CommissionTemplate template) {
     return new CommissionCatalog(
         List.of(template),

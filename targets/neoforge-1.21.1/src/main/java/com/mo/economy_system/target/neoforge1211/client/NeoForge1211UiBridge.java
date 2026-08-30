@@ -18,6 +18,7 @@ public final class NeoForge1211UiBridge implements EconomyUiBridge<Screen> {
             case HOME -> Optional.of(new NeoForge1211HomeScreen());
             case SHOP -> Optional.of(new NeoForge1211ShopScreen());
             case MARKET -> Optional.of(new NeoForge1211MarketScreen());
+            case COMMISSIONS -> Optional.of(new NeoForge1211CommissionCenterScreen());
             case DELIVERY_BOX -> Optional.of(new NeoForge1211DeliveryBoxScreen());
             case MAIL_COMPOSE -> Optional.of(new NeoForge1211MailboxComposeScreen(null));
             case TERRITORY -> Optional.of(new NeoForge1211TerritoryListScreen());

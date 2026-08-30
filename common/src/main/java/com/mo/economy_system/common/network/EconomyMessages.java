@@ -140,6 +140,14 @@ public final class EconomyMessages {
       new EconomyMessageType<>(EconomyProtocol.MAILBOX_SEND_RESULT, MailboxSendResultMessage.class);
   public static final EconomyMessageType<MailboxNotificationMessage> MAILBOX_NOTIFICATION =
       new EconomyMessageType<>(EconomyProtocol.MAILBOX_NOTIFICATION, MailboxNotificationMessage.class);
+  public static final EconomyMessageType<CommissionDataRequestMessage> COMMISSION_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.COMMISSION_DATA_REQUEST, CommissionDataRequestMessage.class);
+  public static final EconomyMessageType<CommissionDataResponseMessage> COMMISSION_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.COMMISSION_DATA_RESPONSE, CommissionDataResponseMessage.class);
+  public static final EconomyMessageType<CommissionSubmitMessage> COMMISSION_SUBMIT =
+      new EconomyMessageType<>(EconomyProtocol.COMMISSION_SUBMIT, CommissionSubmitMessage.class);
+  public static final EconomyMessageType<CommissionActionResponseMessage> COMMISSION_ACTION_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.COMMISSION_ACTION_RESPONSE, CommissionActionResponseMessage.class);
 
   private EconomyMessages() {}
 }

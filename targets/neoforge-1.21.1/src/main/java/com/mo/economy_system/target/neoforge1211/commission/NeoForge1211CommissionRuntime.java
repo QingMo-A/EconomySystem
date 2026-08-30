@@ -40,7 +40,10 @@ public final class NeoForge1211CommissionRuntime {
 
   public static CommissionService.RefreshView refresh(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()); }
   public static CommissionPlayerState state(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()).state(); }
-  public static List<String> templateIds(MinecraftServer server) { return catalog(server).templates().stream().map(CommissionTemplate::id).toList(); }
+  public static synchronized List<String> templateIds(MinecraftServer server) { return catalog(server).templates().stream().map(CommissionTemplate::id).toList(); }
+  public static synchronized int maxActivePersonalCommissions(MinecraftServer server) {
+    return catalog(server).settings().maxActivePersonalCommissions();
+  }
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
     try {
       MinecraftServer server = source.getServer();
@@ -135,15 +138,20 @@ public final class NeoForge1211CommissionRuntime {
   }
 
   public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id, int amount) {
+    return submitItem(player, id, UUID.randomUUID(), amount);
+  }
+
+  public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id,
+                                                            UUID submissionId, int amount) {
     CommissionPlayerState state = state(player);
     CommissionInstance commission = state.commissions().stream().filter(c -> c.commissionId().equals(id)).findFirst().orElse(null);
-    if (commission == null || commission.type() != CommissionType.ITEM_DELIVERY) return service(player.server).submitProgress(player.getUUID(), id, amount, System.currentTimeMillis());
+    if (commission == null || commission.type() != CommissionType.ITEM_DELIVERY) return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
     int available = 0;
     for (ItemStack stack : player.getInventory().items) if (stack.getItem() == BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot()))) available += stack.getCount();
     if (available < amount) throw new IllegalStateException("背包中没有足够的目标物品");
     int remaining = amount;
     for (ItemStack stack : player.getInventory().items) { if (remaining == 0) break; if (stack.getItem() != BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot()))) continue; int take=Math.min(remaining, stack.getCount()); stack.shrink(take); remaining-=take; }
-    CommissionService.SubmitResult result = service(player.server).submitProgress(player.getUUID(), id, amount, System.currentTimeMillis());
+    CommissionService.SubmitResult result = service(player.server).submitProgress(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
     if (!result.accepted() && result.outcome() != CommissionService.SubmitOutcome.REWARD_PENDING_MAIL) player.getInventory().add(new ItemStack(BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot())), amount));
     return result;
   }

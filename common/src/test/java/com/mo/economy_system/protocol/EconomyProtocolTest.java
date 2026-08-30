@@ -65,17 +65,21 @@ class EconomyProtocolTest {
             "CLIENT_TO_SERVER|economy_system:mailbox/packet_claim_all",
             "CLIENT_TO_SERVER|economy_system:mailbox/packet_send_player",
             "SERVER_TO_CLIENT|economy_system:mailbox/packet_send_result",
-            "SERVER_TO_CLIENT|economy_system:mailbox/packet_notification"
+            "SERVER_TO_CLIENT|economy_system:mailbox/packet_notification",
+            "CLIENT_TO_SERVER|economy_system:commission/packet_data_request",
+            "SERVER_TO_CLIENT|economy_system:commission/packet_data_response",
+            "CLIENT_TO_SERVER|economy_system:commission/packet_submit",
+            "SERVER_TO_CLIENT|economy_system:commission/packet_action_response"
     );
 
     @Test
     void manifestIsAppendOnlyAndComplete() {
-        assertEquals("bridge-4", EconomyProtocol.VERSION);
-        assertEquals(53, EconomyProtocol.ALL.size());
-        assertEquals(37, EconomyProtocol.ALL.stream()
+        assertEquals("bridge-5", EconomyProtocol.VERSION);
+        assertEquals(57, EconomyProtocol.ALL.size());
+        assertEquals(39, EconomyProtocol.ALL.stream()
                 .filter(spec -> spec.direction() == EconomyMessageDirection.CLIENT_TO_SERVER)
                 .count());
-        assertEquals(16, EconomyProtocol.ALL.stream()
+        assertEquals(18, EconomyProtocol.ALL.stream()
                 .filter(spec -> spec.direction() == EconomyMessageDirection.SERVER_TO_CLIENT)
                 .count());
 

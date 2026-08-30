@@ -1,9 +1,11 @@
 package com.mo.economy_system.common.commission;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,7 +25,8 @@ public final class CommissionService {
     NOT_FOUND,
     INVALID_AMOUNT,
     REWARD_PENDING_MAIL,
-    REWARD_DELIVERY_RETRY
+    REWARD_DELIVERY_RETRY,
+    DUPLICATE_SUBMISSION
   }
 
   public record RefreshView(
@@ -58,6 +61,12 @@ public final class CommissionService {
   private final CommissionRepository commissions;
   private final CommissionRewardRepository rewards;
   private final CommissionRewardDeliveryPort delivery;
+  /**
+   * Packet-level idempotency guard. Target persistence still makes completed rewards durable;
+   * this bounded session cache prevents a retried partial-progress packet from being applied twice.
+   */
+  private final Set<String> acceptedSubmissions = new LinkedHashSet<>();
+  private static final int MAX_REMEMBERED_SUBMISSIONS = 8_192;
 
   public CommissionService(
       CommissionGenerator generator,
@@ -111,12 +120,27 @@ public final class CommissionService {
    */
   public synchronized SubmitResult submitProgress(
       UUID playerId, UUID commissionId, int amount, long nowMillis) {
+    return submitProgress(playerId, commissionId, UUID.randomUUID(), amount, nowMillis);
+  }
+
+  /** Applies progress with an explicit packet idempotency key. */
+  public synchronized SubmitResult submitProgress(
+      UUID playerId, UUID commissionId, UUID submissionId, int amount, long nowMillis) {
     requireTime(nowMillis);
+    Objects.requireNonNull(submissionId, "submissionId");
     if (amount <= 0) {
       return new SubmitResult(SubmitOutcome.INVALID_AMOUNT,
           placeholder(playerId, commissionId), Optional.empty(), "amount must be positive");
     }
     CommissionPlayerState state = commissions.loadOrEmpty(playerId);
+    String submissionKey = playerId + ":" + commissionId + ":" + submissionId;
+    if (acceptedSubmissions.contains(submissionKey)) {
+      CommissionInstance duplicate = state.commissions().stream()
+          .filter(value -> value.commissionId().equals(commissionId)).findFirst()
+          .orElse(placeholder(playerId, commissionId));
+      return new SubmitResult(SubmitOutcome.DUPLICATE_SUBMISSION, duplicate, Optional.empty(),
+          "duplicate commission submission");
+    }
     CommissionInstance found = state.commissions().stream()
         .filter(value -> value.commissionId().equals(commissionId)).findFirst().orElse(null);
     if (found == null) {
@@ -149,6 +173,7 @@ public final class CommissionService {
     CommissionInstance progressed = current.addProgress(amount);
     if (!progressed.completeable()) {
       saveReplacing(state, progressed);
+      rememberSubmission(submissionKey);
       return new SubmitResult(SubmitOutcome.PROGRESSED, progressed, Optional.empty(), "");
     }
 
@@ -168,6 +193,7 @@ public final class CommissionService {
         CommissionRewardStatus.PENDING_MAIL,
         0);
     CommissionRewardRecord reward = rewards.createIfAbsent(candidate);
+    rememberSubmission(submissionKey);
     if (reward.status() == CommissionRewardStatus.CLAIMED
         || reward.status() == CommissionRewardStatus.MAIL_CREATED) {
       return new SubmitResult(SubmitOutcome.COMPLETED, completed, Optional.of(reward), "");
@@ -180,6 +206,13 @@ public final class CommissionService {
     }
     return new SubmitResult(SubmitOutcome.REWARD_DELIVERY_RETRY, completed,
         Optional.of(reward), "reward mail delivery requires retry");
+  }
+
+  private void rememberSubmission(String key) {
+    acceptedSubmissions.add(key);
+    while (acceptedSubmissions.size() > MAX_REMEMBERED_SUBMISSIONS) {
+      acceptedSubmissions.remove(acceptedSubmissions.iterator().next());
+    }
   }
 
   private Optional<CommissionRewardRecord> rewardFor(CommissionInstance instance) {
