@@ -90,6 +90,11 @@ public final class Forge1201ServerEvents {
     if (event.getServer().getTickCount() % 20 == 0) {
       Forge1201TpaCommands.expire(event.getServer());
       Forge1201CommissionRuntime.refreshOnlinePlayers(event.getServer());
+      try {
+        Forge1201CommissionRuntime.expirePublic(event.getServer());
+      } catch (RuntimeException failure) {
+        LOGGER.error("Public commission expiry failed", failure);
+      }
     }
     if (MarketExpirationSchedule.shouldRun(event.getServer().getTickCount())) {
       Forge1201MarketExpirationRuntime.expire(event.getServer());

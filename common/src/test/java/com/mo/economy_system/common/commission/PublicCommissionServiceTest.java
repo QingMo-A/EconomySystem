@@ -49,6 +49,25 @@ class PublicCommissionServiceTest {
   }
 
   @Test
+  void expireDuePersistsOnlyDuePublicCommissionsAndIsIdempotent() {
+    InMemoryPublicCommissionRepository publicRepo = new InMemoryPublicCommissionRepository();
+    InMemoryCommissionRepository rewardRepo = new InMemoryCommissionRepository();
+    UUID dueId = UUID.randomUUID();
+    UUID futureId = UUID.randomUUID();
+    publicRepo.save(PublicCommission.create(dueId, "Due", "town", "Town",
+        "minecraft:stone", 5, 4, 1, 10, "Due commission"));
+    publicRepo.save(PublicCommission.create(futureId, "Future", "town", "Town",
+        "minecraft:dirt", 5, 4, 1, 20, "Future commission"));
+    PublicCommissionService service = new PublicCommissionService(publicRepo, rewardRepo,
+        new Delivery(rewardRepo));
+
+    assertEquals(1, service.expireDue(10));
+    assertEquals(PublicCommissionStatus.EXPIRED, publicRepo.find(dueId).orElseThrow().status());
+    assertEquals(PublicCommissionStatus.AVAILABLE, publicRepo.find(futureId).orElseThrow().status());
+    assertEquals(0, service.expireDue(10));
+  }
+
+  @Test
   void samePacketIdIsIndependentAcrossPlayers() {
     InMemoryPublicCommissionRepository publicRepo = new InMemoryPublicCommissionRepository();
     InMemoryCommissionRepository rewardRepo = new InMemoryCommissionRepository();

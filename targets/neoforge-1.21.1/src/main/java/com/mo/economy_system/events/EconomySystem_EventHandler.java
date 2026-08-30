@@ -122,6 +122,13 @@ public class EconomySystem_EventHandler {
                 }
             }
         }
+        if (event.getServer().getTickCount() % 20 == 0) {
+            try {
+                NeoForge1211CommissionRuntime.expirePublic(event.getServer());
+            } catch (RuntimeException failure) {
+                EconomySystem.LOGGER.error("Public commission expiry failed", failure);
+            }
+        }
         // 确保只在每个 tick 的开始阶段执行
 
         ServerLevel overworld = event.getServer().overworld(); // 获取主世界

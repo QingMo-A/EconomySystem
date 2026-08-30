@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -115,6 +116,36 @@ class CommissionServiceTest {
     CommissionService.SubmitResult duplicate = service.submitProgress(PLAYER, COMMISSION, 1, 11);
     assertEquals(CommissionService.SubmitOutcome.ALREADY_COMPLETED, duplicate.outcome());
     assertEquals(1, repository.listForPlayer(PLAYER).size());
+  }
+
+  @Test
+  void rewardPersistenceFailureRollsBackCompletionForSafeItemRetry() {
+    InMemoryCommissionRepository commissions = new InMemoryCommissionRepository();
+    InMemoryCommissionRepository durableRewards = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(1, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionRewardRepository failingRewards = new CommissionRewardRepository() {
+      @Override public Optional<CommissionRewardRecord> find(UUID id) { return durableRewards.find(id); }
+      @Override public Optional<CommissionRewardRecord> findByIdempotencyKey(String key) {
+        return durableRewards.findByIdempotencyKey(key);
+      }
+      @Override public CommissionRewardRecord createIfAbsent(CommissionRewardRecord candidate) {
+        throw new IllegalStateException("simulated reward persistence failure");
+      }
+      @Override public void save(CommissionRewardRecord record) { durableRewards.save(record); }
+    };
+    CommissionService service = new CommissionService(generator, commissions, failingRewards,
+        delivery(durableRewards));
+    commissions.save(new CommissionPlayerState(PLAYER, List.of(new CommissionInstance(
+        COMMISSION, PLAYER, "deliver", CommissionType.ITEM_DELIVERY, "town", "Town",
+        "minecraft:stone", 1, CommissionRewardSnapshot.coins(10), 1, 100)), null));
+
+    assertThrows(IllegalStateException.class,
+        () -> service.submitProgress(PLAYER, COMMISSION, 1, 10));
+    CommissionInstance restored = commissions.load(PLAYER).commissions().get(0);
+    assertEquals(CommissionStatus.AVAILABLE, restored.status());
+    assertEquals(0, restored.progress());
+    assertTrue(durableRewards.listForPlayer(PLAYER).isEmpty());
   }
 
   @Test

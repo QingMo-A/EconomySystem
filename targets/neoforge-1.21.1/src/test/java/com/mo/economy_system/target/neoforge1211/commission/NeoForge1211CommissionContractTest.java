@@ -65,6 +65,17 @@ class NeoForge1211CommissionContractTest {
     assertTrue(savedData.contains("rewardsByKey.put(reward.idempotencyKey(), reward.rewardRecordId())"));
   }
 
+  @Test
+  void publicCommissionExpiryRunsFromServerTickWithoutOnlinePlayers() throws Exception {
+    String runtime = read(repositoryRoot().resolve(
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/commission/NeoForge1211CommissionRuntime.java"));
+    String events = read(repositoryRoot().resolve(
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/events/EconomySystem_EventHandler.java"));
+
+    assertTrue(runtime.contains("publicService(server).expireDue(Math.max(1L, System.currentTimeMillis()))"));
+    assertTrue(events.contains("NeoForge1211CommissionRuntime.expirePublic(event.getServer())"));
+  }
+
   private static String read(Path path) throws Exception {
     return Files.readString(path, StandardCharsets.UTF_8);
   }

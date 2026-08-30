@@ -70,6 +70,13 @@ public final class NeoForge1211CommissionRuntime {
   public static synchronized int maxActivePersonalCommissions(MinecraftServer server) {
     return catalog(server).settings().maxActivePersonalCommissions();
   }
+
+  /** Marks due public commissions as expired independently of player presence or UI access. */
+  public static int expirePublic(MinecraftServer server) {
+    if (server == null) return 0;
+    return publicService(server).expireDue(Math.max(1L, System.currentTimeMillis()));
+  }
+
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
     try {
       MinecraftServer server = source.getServer();
@@ -96,11 +103,25 @@ public final class NeoForge1211CommissionRuntime {
   public static PublicCommission createPublic(MinecraftServer server, String name, String requesterId,
                                                String requesterName, String target, int targetAmount,
                                                int unitReward, long expiresAt, String description) {
+    validatePublicTarget(target);
     long now = Math.max(1L, System.currentTimeMillis());
     PublicCommission commission = PublicCommission.create(UUID.randomUUID(), name, requesterId,
         requesterName, target, targetAmount, unitReward, now, expiresAt, description);
     publicService(server).create(commission);
     return commission;
+  }
+
+  private static void validatePublicTarget(String target) {
+    String normalized = target == null ? "" : target.trim();
+    net.minecraft.resources.ResourceLocation id =
+        net.minecraft.resources.ResourceLocation.tryParse(normalized);
+    if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+      throw new IllegalArgumentException("公共委托目标物品未注册: " + normalized);
+    }
+    Item item = BuiltInRegistries.ITEM.get(id);
+    if (item == null || item == Items.AIR) {
+      throw new IllegalArgumentException("公共委托目标物品不可用: " + normalized);
+    }
   }
 
   public static List<PublicCommission> listPublic(MinecraftServer server) {

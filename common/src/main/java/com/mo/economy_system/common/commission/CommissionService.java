@@ -238,7 +238,17 @@ public final class CommissionService {
         null,
         CommissionRewardStatus.PENDING_MAIL,
         0);
-    CommissionRewardRecord reward = rewards.createIfAbsent(candidate);
+    CommissionRewardRecord reward;
+    try {
+      reward = rewards.createIfAbsent(candidate);
+    } catch (RuntimeException persistenceFailure) {
+      // Completion is not durable until its reward record exists. Restore the pre-completion
+      // progress so the target adapter can safely restore the submitted item and retry later.
+      // Reward repositories are required to make createIfAbsent atomic; if an implementation
+      // violates that contract, its exception still surfaces for operator reconciliation.
+      saveReplacing(state, current);
+      throw persistenceFailure;
+    }
     rememberSubmission(playerId, commissionId, submissionId, submissionKey);
     if (reward.status() == CommissionRewardStatus.CLAIMED
         || reward.status() == CommissionRewardStatus.MAIL_CREATED) {

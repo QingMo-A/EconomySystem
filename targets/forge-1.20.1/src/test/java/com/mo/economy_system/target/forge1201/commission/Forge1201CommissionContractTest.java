@@ -52,6 +52,17 @@ class Forge1201CommissionContractTest {
     assertTrue(runtime.contains("targetId="));
   }
 
+  @Test
+  void publicCommissionExpiryRunsFromServerTickWithoutOnlinePlayers() throws Exception {
+    String runtime = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/commission/Forge1201CommissionRuntime.java"));
+    String events = read(repositoryRoot().resolve(
+        "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/Forge1201ServerEvents.java"));
+
+    assertTrue(runtime.contains("publicService(level, data(level)).expireDue(now())"));
+    assertTrue(events.contains("Forge1201CommissionRuntime.expirePublic(event.getServer())"));
+  }
+
   private static String read(Path path) throws Exception {
     return Files.readString(path, StandardCharsets.UTF_8);
   }

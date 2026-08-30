@@ -116,6 +116,13 @@ public final class Forge1201CommissionRuntime {
     }
   }
 
+  /** Marks due public commissions as expired independently of player presence or UI access. */
+  public static int expirePublic(MinecraftServer server) {
+    if (server == null) return 0;
+    ServerLevel level = server.overworld();
+    return publicService(level, data(level)).expireDue(now());
+  }
+
   /** Retries personal and public commission mail delivery without requiring another UI packet. */
   public static void retryPendingRewards(ServerPlayer player) {
     Forge1201CommissionSavedData data = data(player.serverLevel());
@@ -297,12 +304,25 @@ public final class Forge1201CommissionRuntime {
   public static PublicCommission createPublic(MinecraftServer server, String name, String requesterId,
       String requesterName, String target, int targetAmount, int unitReward, long expiresAt,
       String description) {
+    validatePublicTarget(target);
     ServerLevel level = server.overworld();
     Forge1201CommissionSavedData data = data(level);
     PublicCommission commission = PublicCommission.create(UUID.randomUUID(), name, requesterId,
         requesterName, target, targetAmount, unitReward, now(), expiresAt, description);
     publicService(level, data).create(commission);
     return commission;
+  }
+
+  private static void validatePublicTarget(String target) {
+    String normalized = target == null ? "" : target.trim();
+    ResourceLocation id = ResourceLocation.tryParse(normalized);
+    if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+      throw new IllegalArgumentException("公共委托目标物品未注册: " + normalized);
+    }
+    Item item = BuiltInRegistries.ITEM.get(id);
+    if (item == null || item == Items.AIR) {
+      throw new IllegalArgumentException("公共委托目标物品不可用: " + normalized);
+    }
   }
 
   public static List<PublicCommission> listPublic(MinecraftServer server) {
