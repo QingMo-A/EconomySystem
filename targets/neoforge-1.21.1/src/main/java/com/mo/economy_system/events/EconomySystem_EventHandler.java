@@ -116,7 +116,10 @@ public class EconomySystem_EventHandler {
                 try {
                     NeoForge1211CommissionRuntime.refresh(player);
                     NeoForge1211CommissionRuntime.retryPendingRewards(player);
-                } catch (RuntimeException ignored) { }
+                } catch (RuntimeException failure) {
+                    EconomySystem.LOGGER.error("Personal commission refresh failed player={}",
+                        player.getUUID(), failure);
+                }
             }
         }
         // 确保只在每个 tick 的开始阶段执行
@@ -158,7 +161,11 @@ public class EconomySystem_EventHandler {
             try {
                 NeoForge1211CommissionRuntime.refresh(serverPlayer);
                 NeoForge1211CommissionRuntime.retryPendingRewards(serverPlayer);
-            } catch (RuntimeException ignored) { }
+            } catch (RuntimeException failure) {
+                EconomySystem.LOGGER.error("Personal commission login refresh failed player={}",
+                    serverPlayer.getUUID(), failure);
+                serverPlayer.sendSystemMessage(Component.literal("个人委托刷新失败，请稍后重试。"));
+            }
 
 
             ServerLevel serverLevel = serverPlayer.serverLevel();

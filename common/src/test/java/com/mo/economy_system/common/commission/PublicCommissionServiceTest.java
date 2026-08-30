@@ -92,6 +92,33 @@ class PublicCommissionServiceTest {
     assertTrue(delivered[0]);
   }
 
+  @Test
+  void rewardRecordPersistenceFailureRestoresSharedProgressForRetry() {
+    InMemoryPublicCommissionRepository publicRepo = new InMemoryPublicCommissionRepository();
+    publicRepo.save(PublicCommission.create(COMMISSION, "Stone Drive", "town", "Town",
+        "minecraft:stone", 5, 4, 1, 100, "Deliver stone"));
+    CommissionRewardRepository failingRewards = new CommissionRewardRepository() {
+      @Override public java.util.Optional<CommissionRewardRecord> find(UUID id) {
+        return java.util.Optional.empty();
+      }
+      @Override public java.util.Optional<CommissionRewardRecord> findByIdempotencyKey(String key) {
+        return java.util.Optional.empty();
+      }
+      @Override public CommissionRewardRecord createIfAbsent(CommissionRewardRecord candidate) {
+        throw new IllegalStateException("reward persistence unavailable");
+      }
+      @Override public void save(CommissionRewardRecord record) { }
+    };
+    PublicCommissionService service = new PublicCommissionService(publicRepo, failingRewards,
+        new Delivery(new InMemoryCommissionRepository()));
+
+    assertThrows(IllegalStateException.class,
+        () -> service.submit(PLAYER, COMMISSION, UUID.randomUUID(), 2, 10));
+    PublicCommission restored = publicRepo.find(COMMISSION).orElseThrow();
+    assertEquals(5, restored.remainingAmount());
+    assertEquals(PublicCommissionStatus.AVAILABLE, restored.status());
+  }
+
   private record Delivery(InMemoryCommissionRepository rewards) implements CommissionRewardDeliveryPort {
     @Override public DeliveryResult deliver(CommissionRewardRecord record) {
       rewards.save(record.mailCreated(UUID.randomUUID()));

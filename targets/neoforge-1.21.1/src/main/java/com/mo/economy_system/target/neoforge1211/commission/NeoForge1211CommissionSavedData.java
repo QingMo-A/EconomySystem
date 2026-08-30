@@ -17,6 +17,7 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
   private static final String DATA_NAME = "economy_commissions";
   private final Map<UUID, CommissionPlayerState> players = new LinkedHashMap<>();
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
+  private final Map<String, UUID> rewardsByKey = new LinkedHashMap<>();
   private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
   private final Set<String> acceptedSubmissionKeys = new LinkedHashSet<>();
   private RecycleService.State recycleState;
@@ -120,11 +121,41 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
     if (acceptedSubmissionKeys.add(submissionKey(playerId, commissionId, submissionId))) setDirty();
   }
   public synchronized Optional<CommissionRewardRecord> findReward(UUID id) { return Optional.ofNullable(rewards.get(id)); }
-  public synchronized Optional<CommissionRewardRecord> findRewardByKey(String key) { return rewards.values().stream().filter(r -> r.idempotencyKey().equals(key)).findFirst(); }
-  public synchronized CommissionRewardRecord createReward(CommissionRewardRecord candidate) {
-    return findRewardByKey(candidate.idempotencyKey()).orElseGet(() -> { rewards.put(candidate.rewardRecordId(), candidate); setDirty(); return candidate; });
+  public synchronized Optional<CommissionRewardRecord> findRewardByKey(String key) {
+    if (key == null) return Optional.empty();
+    UUID rewardId = rewardsByKey.get(key);
+    return rewardId == null ? Optional.empty() : Optional.ofNullable(rewards.get(rewardId));
   }
-  public synchronized void saveReward(CommissionRewardRecord reward) { rewards.put(reward.rewardRecordId(), reward); setDirty(); }
+  public synchronized CommissionRewardRecord createReward(CommissionRewardRecord candidate) {
+    if (candidate == null) throw new NullPointerException("candidate");
+    CommissionRewardRecord existing = findRewardByKey(candidate.idempotencyKey()).orElse(null);
+    if (existing != null) return existing;
+    CommissionRewardRecord byId = rewards.get(candidate.rewardRecordId());
+    if (byId != null) {
+      if (!byId.idempotencyKey().equals(candidate.idempotencyKey())) {
+        throw new IllegalArgumentException("reward id is already used by another idempotency key");
+      }
+      return byId;
+    }
+    rewards.put(candidate.rewardRecordId(), candidate);
+    rewardsByKey.put(candidate.idempotencyKey(), candidate.rewardRecordId());
+    setDirty();
+    return candidate;
+  }
+  public synchronized void saveReward(CommissionRewardRecord reward) {
+    if (reward == null) throw new NullPointerException("reward");
+    CommissionRewardRecord existing = rewards.get(reward.rewardRecordId());
+    if (existing != null && !existing.idempotencyKey().equals(reward.idempotencyKey())) {
+      throw new IllegalArgumentException("reward idempotency key cannot change");
+    }
+    UUID keyed = rewardsByKey.get(reward.idempotencyKey());
+    if (keyed != null && !keyed.equals(reward.rewardRecordId())) {
+      throw new IllegalArgumentException("idempotency key is already used by another reward");
+    }
+    rewards.put(reward.rewardRecordId(), reward);
+    rewardsByKey.put(reward.idempotencyKey(), reward.rewardRecordId());
+    setDirty();
+  }
   public synchronized List<CommissionRewardRecord> rewardsFor(UUID player) { return rewards.values().stream().filter(r -> r.playerId().equals(player)).toList(); }
   public synchronized RecycleService.State loadRecycleState() { return recycleState; }
   public synchronized void saveRecycleState(RecycleService.State state) { recycleState = state; setDirty(); }
@@ -146,7 +177,25 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
     PersonalCommissionSchedule schedule = row.contains("next", Tag.TAG_LONG) ? new PersonalCommissionSchedule(id, row.getLong("next"), row.getLong("last")) : null; players.put(id, new CommissionPlayerState(id, list, schedule));
   }
   private CompoundTag writeReward(CommissionRewardRecord r) { CompoundTag out = new CompoundTag(); out.putUUID("id", r.rewardRecordId()); out.putString("key", r.idempotencyKey()); out.putUUID("player", r.playerId()); out.putUUID("commission", r.commissionId()); out.putString("batch", r.batchId()); out.putString("template", r.templateId()); out.putString("requester", r.requesterId()); out.putInt("amount", r.rewardSnapshot().amount()); out.putString("description", r.rewardSnapshot().description()); out.putLong("created", r.createdAt()); if (r.mailId()!=null) out.putUUID("mail", r.mailId()); out.putString("status", r.status().name()); out.putLong("claimed", r.claimedAt()); return out; }
-  private void readReward(CompoundTag row) { UUID id=row.getUUID("id"); UUID mail=row.hasUUID("mail")?row.getUUID("mail"):null; CommissionRewardRecord r=new CommissionRewardRecord(id,row.getString("key"),row.getUUID("player"),row.getUUID("commission"),row.getString("batch"),row.getString("template"),row.getString("requester"),new CommissionRewardSnapshot(CommissionRewardSnapshot.DEFAULT_CURRENCY_ID, row.getInt("amount"), row.getString("description")),row.getLong("created"),mail,CommissionRewardStatus.valueOf(row.getString("status")),row.getLong("claimed")); rewards.put(id,r); }
+  private void readReward(CompoundTag row) {
+    UUID id = row.getUUID("id");
+    UUID mail = row.hasUUID("mail") ? row.getUUID("mail") : null;
+    CommissionRewardRecord reward = new CommissionRewardRecord(
+        id, row.getString("key"), row.getUUID("player"), row.getUUID("commission"),
+        row.getString("batch"), row.getString("template"), row.getString("requester"),
+        new CommissionRewardSnapshot(CommissionRewardSnapshot.DEFAULT_CURRENCY_ID,
+            row.getInt("amount"), row.getString("description")), row.getLong("created"), mail,
+        CommissionRewardStatus.valueOf(row.getString("status")), row.getLong("claimed"));
+    if (rewards.containsKey(reward.rewardRecordId())) {
+      throw new IllegalArgumentException("duplicate commission reward id");
+    }
+    UUID existing = rewardsByKey.get(reward.idempotencyKey());
+    if (existing != null) {
+      throw new IllegalArgumentException("duplicate commission reward key");
+    }
+    rewards.put(reward.rewardRecordId(), reward);
+    rewardsByKey.put(reward.idempotencyKey(), reward.rewardRecordId());
+  }
   private static CompoundTag writePublic(PublicCommission c) { CompoundTag out=new CompoundTag(); out.putUUID("id",c.commissionId()); out.putString("name",c.name()); out.putString("requesterId",c.requesterId()); out.putString("requesterName",c.requesterName()); out.putString("target",c.targetSnapshot()); out.putInt("targetAmount",c.targetAmount()); out.putInt("unitReward",c.unitReward()); out.putLong("generated",c.generatedAt()); out.putLong("expires",c.expiresAt()); out.putString("description",c.description()); out.putString("status",c.status().name()); out.putInt("remaining",c.remainingAmount()); out.putInt("budget",c.remainingBudget()); return out; }
   private static PublicCommission readPublic(CompoundTag c) { return new PublicCommission(c.getUUID("id"), c.getString("name"), c.getString("requesterId"), c.getString("requesterName"), c.getString("target"), c.getInt("targetAmount"), c.getInt("unitReward"), c.getLong("generated"), c.getLong("expires"), c.getString("description"), PublicCommissionStatus.valueOf(c.getString("status")), c.getInt("remaining"), c.getInt("budget")); }
 }

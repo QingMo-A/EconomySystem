@@ -17,6 +17,8 @@ public final class CommissionCenterController
   private final CommissionCenterPort port;
   private long startedAt;
   private boolean requestInFlight;
+  private long clockAnchorNanos = Long.MIN_VALUE;
+  private long clockAnchorMillis;
 
   public CommissionCenterController(CommissionCenterPort port) {
     super(new CommissionCenterState(List.of(), 0L, 0L, 1, null, ScreenState.IDLE, "", -1L));
@@ -57,6 +59,8 @@ public final class CommissionCenterController
     replaceState(new CommissionCenterState(response.commissions(), response.nextRefreshAt(),
         response.serverNowMillis(), response.maxActivePersonalCommissions(), selected,
         response.commissions().isEmpty() ? ScreenState.EMPTY : ScreenState.READY, "", state().requestId()));
+    clockAnchorNanos = Long.MIN_VALUE;
+    clockAnchorMillis = response.serverNowMillis();
   }
 
   private void failed(String errorKey) {
@@ -88,7 +92,32 @@ public final class CommissionCenterController
   }
 
   private void tick(long nowNanos) {
+    advanceServerClock(nowNanos);
     if (requestInFlight && nowNanos - startedAt >= TIMEOUT_NANOS) failed("screen.commissions.sync_timeout");
+  }
+
+  /** Advances the server-time snapshot locally between network refreshes so countdowns stay live. */
+  private void advanceServerClock(long nowNanos) {
+    if (state().serverNowMillis() <= 0 || state().screenState() == ScreenState.IDLE) return;
+    if (clockAnchorNanos == Long.MIN_VALUE) {
+      clockAnchorNanos = nowNanos;
+      clockAnchorMillis = state().serverNowMillis();
+      return;
+    }
+    long elapsedNanos = nowNanos - clockAnchorNanos;
+    if (elapsedNanos <= 0) return;
+    long elapsedMillis = elapsedNanos / 1_000_000L;
+    if (elapsedMillis <= 0) return;
+    long updated;
+    try {
+      updated = Math.addExact(clockAnchorMillis, elapsedMillis);
+    } catch (ArithmeticException overflow) {
+      updated = Long.MAX_VALUE;
+    }
+    if (updated <= state().serverNowMillis()) return;
+    replaceState(new CommissionCenterState(state().commissions(), state().nextRefreshAt(), updated,
+        state().maxActivePersonalCommissions(), state().selectedCommissionId(), state().screenState(),
+        state().errorKey(), state().requestId()));
   }
 
   private CommissionCenterState copy(UUID selected) {

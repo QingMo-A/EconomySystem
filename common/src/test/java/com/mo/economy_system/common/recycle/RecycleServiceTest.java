@@ -84,6 +84,29 @@ class RecycleServiceTest {
   }
 
   @Test
+  void statePersistenceFailureHappensBeforeCreditAndCanBeRetried() {
+    FakeInventory inventory = new FakeInventory(10);
+    FakeEconomy economy = new FakeEconomy();
+    InMemoryStateRepository state = new InMemoryStateRepository();
+    RecycleService service = new RecycleService(
+        new RecycleConfig(Duration.ofHours(1), new RecycleOffer("minecraft:kelp", 2)),
+        inventory, economy, state);
+    UUID submission = UUID.randomUUID();
+    state.fail = true;
+
+    RecycleResult failed = service.recycle(PLAYER, KELP, 3, submission, 0);
+    assertEquals(RecycleResult.Status.PERSIST_FAILED, failed.status());
+    assertEquals(10, inventory.count);
+    assertEquals(0, economy.balance);
+
+    state.fail = false;
+    RecycleResult retried = service.recycle(PLAYER, KELP, 3, submission, 0);
+    assertEquals(RecycleResult.Status.SUCCESS, retried.status());
+    assertEquals(7, inventory.count);
+    assertEquals(6, economy.balance);
+  }
+
+  @Test
   void stopPolicyNeverDowngradesExcessToBasePrice() {
     FakeInventory inventory = new FakeInventory(10);
     FakeEconomy economy = new FakeEconomy();
@@ -127,7 +150,11 @@ class RecycleServiceTest {
 
   private static final class InMemoryStateRepository implements RecycleService.StateRepository {
     private RecycleService.State state;
+    private boolean fail;
     @Override public RecycleService.State load() { return state; }
-    @Override public void save(RecycleService.State value) { state = value; }
+    @Override public void save(RecycleService.State value) {
+      if (fail) throw new IllegalStateException("simulated persistence failure");
+      state = value;
+    }
   }
 }

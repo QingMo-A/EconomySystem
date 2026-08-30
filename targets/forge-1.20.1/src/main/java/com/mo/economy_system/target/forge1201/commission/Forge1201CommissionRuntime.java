@@ -368,12 +368,19 @@ public final class Forge1201CommissionRuntime {
   /** Synchronizes the durable commission reward record after the mailbox ledger claims it. */
   public static void markRewardClaimed(ServerPlayer player, UUID rewardRecordId) {
     if (rewardRecordId == null) return;
-    Forge1201CommissionSavedData data = data(player.serverLevel());
-    data.find(rewardRecordId).ifPresent(record -> {
-      if (record.status() != com.mo.economy_system.common.commission.CommissionRewardStatus.CLAIMED) {
-        data.save(record.claimed(now()));
-      }
-    });
+    try {
+      Forge1201CommissionSavedData data = data(player.serverLevel());
+      data.find(rewardRecordId).ifPresent(record -> {
+        if (record.status() != com.mo.economy_system.common.commission.CommissionRewardStatus.CLAIMED) {
+          data.save(record.claimed(now()));
+        }
+      });
+    } catch (RuntimeException failure) {
+      // The mailbox marker is already the duplicate-claim guard. Keep the currency in the account
+      // and let a later reconciliation retry this audit marker; never debit a successful claim.
+      LOGGER.error("Commission reward claim marker reconciliation failed reward={}",
+          rewardRecordId, failure);
+    }
   }
 
   private static synchronized CommissionService service(ServerLevel level,

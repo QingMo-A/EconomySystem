@@ -41,11 +41,22 @@ public final class PublicCommissionService {
   }
 
   public synchronized List<PublicCommission> list(long nowMillis) {
-    return commissions.list().stream().map(value -> {
+    expireDue(nowMillis);
+    return commissions.list();
+  }
+
+  /** Persists all due public commissions without creating replacement work. */
+  public synchronized int expireDue(long nowMillis) {
+    if (nowMillis <= 0) throw new IllegalArgumentException("nowMillis must be positive");
+    int expired = 0;
+    for (PublicCommission value : commissions.list()) {
       PublicCommission updated = value.expireIfDue(nowMillis);
-      if (updated != value) commissions.save(updated);
-      return updated;
-    }).toList();
+      if (updated != value) {
+        commissions.save(updated);
+        expired++;
+      }
+    }
+    return expired;
   }
 
   public synchronized SubmitResult submit(UUID playerId, UUID commissionId, UUID submissionId,
@@ -72,11 +83,28 @@ public final class PublicCommissionService {
       return new SubmitResult(outcome, submission.commission(), 0, 0, Optional.empty(), submission.issue());
     }
     commissions.save(submission.commission());
-    CommissionRewardRecord reward = rewards.createIfAbsent(new CommissionRewardRecord(
-        UUID.randomUUID(), key, playerId, commissionId, "public", current.requesterId(),
-        new CommissionRewardSnapshot(CommissionRewardSnapshot.DEFAULT_CURRENCY_ID,
-            submission.payout(), "Public commission reward"), nowMillis));
-    CommissionRewardDeliveryPort.DeliveryResult delivered = delivery.deliver(reward);
+    CommissionRewardRecord reward;
+    try {
+      reward = rewards.createIfAbsent(new CommissionRewardRecord(
+          UUID.randomUUID(), key, playerId, commissionId, "public", current.requesterId(),
+          new CommissionRewardSnapshot(CommissionRewardSnapshot.DEFAULT_CURRENCY_ID,
+              submission.payout(), "Public commission reward"), nowMillis));
+    } catch (RuntimeException persistenceFailure) {
+      // The target adapter has not yet been told that the submission is accepted. Restore the
+      // shared commission so a retry cannot lose public capacity without a durable reward record.
+      // If a repository cannot persist the rollback, its exception is intentionally allowed to
+      // surface: silently claiming success would be less safe than failing the packet.
+      commissions.save(current);
+      throw persistenceFailure;
+    }
+    CommissionRewardDeliveryPort.DeliveryResult delivered;
+    try {
+      delivered = delivery.deliver(reward);
+    } catch (RuntimeException failure) {
+      return new SubmitResult(SubmitOutcome.DELIVERY_RETRY, submission.commission(),
+          submission.acceptedAmount(), submission.payout(), Optional.of(reward),
+          "reward mail delivery requires retry");
+    }
     SubmitOutcome outcome = submission.commission().status() == PublicCommissionStatus.COMPLETED
         ? SubmitOutcome.COMPLETED
         : submission.acceptedAmount() < requestedAmount ? SubmitOutcome.PARTIAL : SubmitOutcome.ACCEPTED;
@@ -104,7 +132,11 @@ public final class PublicCommissionService {
       if (reward.status() != CommissionRewardStatus.PENDING_MAIL
           && reward.status() != CommissionRewardStatus.FAILED) continue;
       attempted++;
-      delivery.deliver(reward);
+      try {
+        delivery.deliver(reward);
+      } catch (RuntimeException ignored) {
+        // Isolate a broken mailbox so other pending public rewards still get retried.
+      }
     }
     return attempted;
   }

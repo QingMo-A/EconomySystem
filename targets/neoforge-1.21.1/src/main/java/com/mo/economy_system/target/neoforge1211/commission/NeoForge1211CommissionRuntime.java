@@ -161,12 +161,20 @@ public final class NeoForge1211CommissionRuntime {
   /** Synchronizes the durable reward record after its mailbox currency attachment is claimed. */
   public static void markRewardClaimed(ServerPlayer player, UUID rewardRecordId) {
     if (rewardRecordId == null) return;
-    NeoForge1211CommissionSavedData data = NeoForge1211CommissionSavedData.getInstance(player.serverLevel());
-    data.findReward(rewardRecordId).ifPresent(record -> {
-      if (record.status() != CommissionRewardStatus.CLAIMED) {
-        data.saveReward(record.claimed(Math.max(1L, System.currentTimeMillis())));
-      }
-    });
+    try {
+      NeoForge1211CommissionSavedData data = NeoForge1211CommissionSavedData.getInstance(player.serverLevel());
+      data.findReward(rewardRecordId).ifPresent(record -> {
+        if (record.status() != CommissionRewardStatus.CLAIMED) {
+          data.saveReward(record.claimed(Math.max(1L, System.currentTimeMillis())));
+        }
+      });
+    } catch (RuntimeException failure) {
+      // The mailbox marker is already the duplicate-claim guard. Keep the currency in the account
+      // and retry only this audit marker later; never debit a successful claim.
+      com.mo.economy_system.EconomySystem.LOGGER.error(
+          "Commission reward claim marker reconciliation failed reward={}",
+          rewardRecordId, failure);
+    }
   }
 
   public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id, int amount) {

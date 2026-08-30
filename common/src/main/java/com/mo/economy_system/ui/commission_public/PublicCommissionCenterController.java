@@ -22,6 +22,8 @@ public final class PublicCommissionCenterController
   private long startedAt;
   private boolean requestInFlight;
   private long pendingSubmitRequestId = -1L;
+  private long clockAnchorNanos = Long.MIN_VALUE;
+  private long clockAnchorMillis;
 
   public PublicCommissionCenterController(PublicCommissionCenterPort port) {
     super(new PublicCommissionCenterState(List.of(), 0L, null, ScreenState.IDLE, "", -1L,
@@ -67,6 +69,8 @@ public final class PublicCommissionCenterController
     replaceState(new PublicCommissionCenterState(response.commissions(), response.serverNowMillis(), selected,
         response.commissions().isEmpty() ? ScreenState.EMPTY : ScreenState.READY, "", state().requestId(),
         false, state().lastSubmitStatus(), state().actionMessage()));
+    clockAnchorNanos = Long.MIN_VALUE;
+    clockAnchorMillis = response.serverNowMillis();
   }
 
   private void failed(long requestId, String errorKey) {
@@ -134,6 +138,7 @@ public final class PublicCommissionCenterController
   }
 
   private void tick(long nowNanos) {
+    advanceServerClock(nowNanos);
     if (requestInFlight && nowNanos - startedAt >= TIMEOUT_NANOS) {
       requestInFlight = false;
       setError("screen.commissions.public.sync_timeout");
@@ -144,6 +149,30 @@ public final class PublicCommissionCenterController
           state().lastSubmitStatus(), state().actionMessage(), state().serverNowMillis(),
           state().commissions()));
     }
+  }
+
+  /** Advances the server-time snapshot locally between network refreshes so expiry text stays live. */
+  private void advanceServerClock(long nowNanos) {
+    if (state().serverNowMillis() <= 0 || state().screenState() == ScreenState.IDLE) return;
+    if (clockAnchorNanos == Long.MIN_VALUE) {
+      clockAnchorNanos = nowNanos;
+      clockAnchorMillis = state().serverNowMillis();
+      return;
+    }
+    long elapsedNanos = nowNanos - clockAnchorNanos;
+    if (elapsedNanos <= 0) return;
+    long elapsedMillis = elapsedNanos / 1_000_000L;
+    if (elapsedMillis <= 0) return;
+    long updated;
+    try {
+      updated = Math.addExact(clockAnchorMillis, elapsedMillis);
+    } catch (ArithmeticException overflow) {
+      updated = Long.MAX_VALUE;
+    }
+    if (updated <= state().serverNowMillis()) return;
+    replaceState(new PublicCommissionCenterState(state().commissions(), updated,
+        state().selectedCommissionId(), state().screenState(), state().errorKey(), state().requestId(),
+        state().submitInFlight(), state().lastSubmitStatus(), state().actionMessage()));
   }
 
   private PublicCommissionCenterState copy(UUID selected, ScreenState screenState, String error,

@@ -129,7 +129,11 @@ public final class CommissionService {
       if (reward.status() != CommissionRewardStatus.PENDING_MAIL
           && reward.status() != CommissionRewardStatus.FAILED) continue;
       attempted++;
-      delivery.deliver(reward);
+      try {
+        delivery.deliver(reward);
+      } catch (RuntimeException ignored) {
+        // Keep retrying the remaining records; one broken mailbox must not starve other rewards.
+      }
     }
     return attempted;
   }
@@ -189,7 +193,13 @@ public final class CommissionService {
           || existing.get().status() == CommissionRewardStatus.MAIL_CREATED) {
         return new SubmitResult(SubmitOutcome.ALREADY_COMPLETED, found, existing, "");
       }
-      CommissionRewardDeliveryPort.DeliveryResult delivered = delivery.deliver(existing.get());
+      CommissionRewardDeliveryPort.DeliveryResult delivered;
+      try {
+        delivered = delivery.deliver(existing.get());
+      } catch (RuntimeException failure) {
+        return new SubmitResult(SubmitOutcome.REWARD_DELIVERY_RETRY, found, existing,
+            "reward mail delivery requires retry");
+      }
       if (delivered == CommissionRewardDeliveryPort.DeliveryResult.CREATED
           || delivered == CommissionRewardDeliveryPort.DeliveryResult.ALREADY_DELIVERED) {
         return new SubmitResult(SubmitOutcome.REWARD_PENDING_MAIL, found,
@@ -234,7 +244,13 @@ public final class CommissionService {
         || reward.status() == CommissionRewardStatus.MAIL_CREATED) {
       return new SubmitResult(SubmitOutcome.COMPLETED, completed, Optional.of(reward), "");
     }
-    CommissionRewardDeliveryPort.DeliveryResult delivered = delivery.deliver(reward);
+    CommissionRewardDeliveryPort.DeliveryResult delivered;
+    try {
+      delivered = delivery.deliver(reward);
+    } catch (RuntimeException failure) {
+      return new SubmitResult(SubmitOutcome.REWARD_DELIVERY_RETRY, completed,
+          Optional.of(reward), "reward mail delivery requires retry");
+    }
     if (delivered == CommissionRewardDeliveryPort.DeliveryResult.CREATED
         || delivered == CommissionRewardDeliveryPort.DeliveryResult.ALREADY_DELIVERED) {
       return new SubmitResult(SubmitOutcome.REWARD_PENDING_MAIL, completed,

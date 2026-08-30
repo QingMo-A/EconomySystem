@@ -51,6 +51,20 @@ class NeoForge1211CommissionContractTest {
     assertTrue(runtime.contains("targetId="));
   }
 
+  @Test
+  void rewardPersistenceRejectsIdAndIdempotencyKeyCollisions() throws Exception {
+    String savedData = read(repositoryRoot().resolve(
+        "targets/neoforge-1.21.1/src/main/java/com/mo/economy_system/target/neoforge1211/commission/NeoForge1211CommissionSavedData.java"));
+
+    assertTrue(savedData.contains("private final Map<String, UUID> rewardsByKey"));
+    assertTrue(savedData.contains("reward id is already used by another idempotency key"));
+    assertTrue(savedData.contains("reward idempotency key cannot change"));
+    assertTrue(savedData.contains("idempotency key is already used by another reward"));
+    assertTrue(savedData.contains("duplicate commission reward id"));
+    assertTrue(savedData.contains("duplicate commission reward key"));
+    assertTrue(savedData.contains("rewardsByKey.put(reward.idempotencyKey(), reward.rewardRecordId())"));
+  }
+
   private static String read(Path path) throws Exception {
     return Files.readString(path, StandardCharsets.UTF_8);
   }

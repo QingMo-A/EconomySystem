@@ -104,6 +104,15 @@ class PublicCommissionCenterControllerTest {
     assertEquals("库存不足", controller.state().actionMessage());
   }
 
+  @Test
+  void serverClockAdvancesBetweenSnapshotsForLiveExpiryText() {
+    FakePort port = new FakePort();
+    PublicCommissionCenterController controller = loadedController(port);
+    controller.handle(new PublicCommissionCenterEvent.Tick(1_000_000_000L));
+    controller.handle(new PublicCommissionCenterEvent.Tick(2_500_000_000L));
+    assertEquals(1_600L, controller.state().serverNowMillis());
+  }
+
   private static PublicCommissionCenterController loadedController(FakePort port) {
     PublicCommissionCenterController controller = new PublicCommissionCenterController(port);
     controller.handle(new PublicCommissionCenterEvent.Initialize(1L));
