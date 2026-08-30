@@ -124,7 +124,19 @@ public final class CommissionService {
           placeholder(playerId, commissionId), Optional.empty(), "commission not found");
     }
     if (found.status() == CommissionStatus.COMPLETED) {
-      return new SubmitResult(SubmitOutcome.ALREADY_COMPLETED, found, rewardFor(found), "");
+      Optional<CommissionRewardRecord> existing = rewardFor(found);
+      if (existing.isEmpty() || existing.get().status() == CommissionRewardStatus.CLAIMED
+          || existing.get().status() == CommissionRewardStatus.MAIL_CREATED) {
+        return new SubmitResult(SubmitOutcome.ALREADY_COMPLETED, found, existing, "");
+      }
+      CommissionRewardDeliveryPort.DeliveryResult delivered = delivery.deliver(existing.get());
+      if (delivered == CommissionRewardDeliveryPort.DeliveryResult.CREATED
+          || delivered == CommissionRewardDeliveryPort.DeliveryResult.ALREADY_DELIVERED) {
+        return new SubmitResult(SubmitOutcome.REWARD_PENDING_MAIL, found,
+            rewards.find(existing.get().rewardRecordId()), "");
+      }
+      return new SubmitResult(SubmitOutcome.REWARD_DELIVERY_RETRY, found, existing,
+          "reward mail delivery requires retry");
     }
     if (found.status() == CommissionStatus.DISABLED) {
       return new SubmitResult(SubmitOutcome.DISABLED, found, Optional.empty(), "commission disabled");

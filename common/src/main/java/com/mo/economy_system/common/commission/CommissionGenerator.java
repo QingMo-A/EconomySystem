@@ -108,17 +108,18 @@ public final class CommissionGenerator {
       return failed(current, schedule, "could not schedule next refresh: " + message(error));
     }
 
-    List<CommissionTemplate> legalTemplates = catalog.legalTemplates();
+    int active = (int) current.stream()
+        .filter(value -> value.status().countsAsActive())
+        .filter(value -> value.expiresAt() > nowMillis)
+        .count();
+    List<CommissionTemplate> legalTemplates = catalog.legalTemplates().stream()
+        .filter(template -> template.allowsPlayerCount(active))
+        .toList();
     if (legalTemplates.isEmpty()) {
       return new RefreshResult(
           RefreshOutcome.NO_LEGAL_TEMPLATES, current, List.of(), next,
           List.of("no legal personal commission templates are configured"));
     }
-
-    int active = (int) current.stream()
-        .filter(value -> value.status().countsAsActive())
-        .filter(value -> value.expiresAt() > nowMillis)
-        .count();
     int remaining = catalog.settings().maxActivePersonalCommissions() - active;
     if (remaining <= 0) {
       return new RefreshResult(
@@ -153,7 +154,9 @@ public final class CommissionGenerator {
     Objects.requireNonNull(playerId, "playerId");
     Objects.requireNonNull(existing, "existing");
     if (nowMillis < 0 || count < 0) throw new IllegalArgumentException("invalid generation arguments");
-    List<CommissionTemplate> legalTemplates = catalog.legalTemplates();
+    List<CommissionTemplate> legalTemplates = catalog.legalTemplates().stream()
+        .filter(template -> template.allowsPlayerCount(existing.size()))
+        .toList();
     if (count > catalog.settings().maxActivePersonalCommissions() - existing.size()) {
       throw new IllegalArgumentException("requested commissions exceed active limit");
     }

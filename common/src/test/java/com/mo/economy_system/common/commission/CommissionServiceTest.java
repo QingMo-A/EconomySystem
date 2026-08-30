@@ -75,6 +75,32 @@ class CommissionServiceTest {
     assertTrue(repository.listForPlayer(PLAYER).isEmpty());
   }
 
+  @Test
+  void completedCommissionRetriesPendingMailOnLaterSubmit() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(1, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    final boolean[] firstAttempt = {true};
+    CommissionRewardDeliveryPort flaky = new CommissionRewardDeliveryPort() {
+      @Override public DeliveryResult deliver(CommissionRewardRecord record) {
+        if (firstAttempt[0]) { firstAttempt[0] = false; return DeliveryResult.RETRYABLE_FAILURE; }
+        repository.save(record.mailCreated(UUID.nameUUIDFromBytes(record.rewardRecordId().toString().getBytes())));
+        return DeliveryResult.CREATED;
+      }
+      @Override public ClaimResult claim(UUID rewardRecordId, UUID playerId, long nowMillis) {
+        return ClaimResult.CLAIMED;
+      }
+    };
+    CommissionService service = new CommissionService(generator, repository, repository, flaky);
+    repository.save(new CommissionPlayerState(PLAYER, List.of(new CommissionInstance(
+        COMMISSION, PLAYER, "deliver", CommissionType.ITEM_DELIVERY, "town", "Town",
+        "minecraft:stone", 1, CommissionRewardSnapshot.coins(10), 1, 100)), null));
+    assertEquals(CommissionService.SubmitOutcome.REWARD_DELIVERY_RETRY,
+        service.submitProgress(PLAYER, COMMISSION, 1, 10).outcome());
+    assertEquals(CommissionService.SubmitOutcome.REWARD_PENDING_MAIL,
+        service.submitProgress(PLAYER, COMMISSION, 1, 11).outcome());
+  }
+
   private static CommissionCatalog catalog(CommissionTemplate template) {
     return new CommissionCatalog(
         List.of(template),
