@@ -344,7 +344,8 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, "你的订购单 %s x %s 被 %s 交付");
 
     // Screen_DeliveryBox | 邮箱
-    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "邮箱");
+    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "配送箱");
+    add("screen.mailbox.title", "邮箱");
     add(Util_MessageKeys.DELIVERY_BOX_HINT_TEXT_KEY, "搜索发件人、来源或附件");
     add(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY, "你的邮箱是空的喵~");
     add(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, "来源: %s");

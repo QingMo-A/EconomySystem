@@ -37,9 +37,9 @@ public final class DeliveryView {
 
   public static void render(EconomyUiRenderer renderer, DeliveryState state,
                             DeliveryLayout.Layout layout, int mouseX, int mouseY) {
-    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.card(layout.title(), EconomyUiTheme.DELIVERY_CARD, false);
     renderer.scaledIconTranslatedText(com.mo.economy_system.ui.renderer.UiIcon.DELIVERY,
-        "screen.delivery_box.title", List.of(), layout.title().x() + 8,
+        "screen.mailbox.title", List.of(), layout.title().x() + 8,
         layout.title().y() + 5, layout.versionInfoScale(), EconomyUiRenderer.ICON_SIZE,
         EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
     renderer.translatedTextInRect("screen.delivery_box.esc", List.of(), layout.esc(),

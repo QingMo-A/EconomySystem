@@ -8,7 +8,7 @@ public enum EconomyUiRoute {
     COMMISSIONS("screen.commissions.title"),
     PUBLIC_COMMISSIONS("screen.commissions.public.title"),
     RECYCLE("screen.recycle.title"),
-    DELIVERY_BOX("screen.delivery_box.title"),
+    DELIVERY_BOX("screen.mailbox.title"),
     MAIL_COMPOSE("screen.mailbox.compose.title"),
     TERRITORY("screen.territory.title"),
     ABOUT("screen.about.title"),

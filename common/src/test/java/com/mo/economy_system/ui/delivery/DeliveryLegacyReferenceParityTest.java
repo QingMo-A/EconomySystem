@@ -39,7 +39,9 @@ class DeliveryLegacyReferenceParityTest {
     DeliveryView.render(renderer, state, layout, 0, 0);
 
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("scaledIconTranslatedText")
-        && op.value().contains("screen.delivery_box.title")));
+        && op.value().contains("screen.mailbox.title")));
+    assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("card")
+        && op.value().startsWith(EconomyUiTheme.DELIVERY_CARD.toString())));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextWithSuffix")
         && op.value().startsWith("screen.mailbox.category.all")));
     assertTrue(renderer.operations().stream().anyMatch(op -> op.kind().equals("translatedTextInRect")

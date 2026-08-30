@@ -448,6 +448,7 @@
   "message.territory.rule.use_item": "使用物品",
   "message.territory_management.access": "成员权限",
   "screen.delivery_box.title": "配送箱",
+  "screen.mailbox.title": "邮箱",
   "screen.territory.manage": "管理领地",
   "screen.territory.search": "筛选成员",
   "screen.territory.members": "成员：{0}",

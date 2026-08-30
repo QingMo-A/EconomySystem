@@ -372,7 +372,8 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add(Util_MessageKeys.ORDER_DELIVERED_BY_PLAYER_KEY, "Order Delivered By Player: %s %s %s");
 
     // Screen_DeliveryBox | 收货箱
-    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "Mailbox Title");
+    add(Util_MessageKeys.DELIVERY_BOX_TITLE_KEY, "Delivery box");
+    add("screen.mailbox.title", "Mailbox");
     add(Util_MessageKeys.DELIVERY_BOX_HINT_TEXT_KEY, "Mailbox Hint");
     add(Util_MessageKeys.DELIVERY_BOX_NO_ITEMS_TEXT_KEY, "Mailbox No Items");
     add(Util_MessageKeys.DELIVERY_BOX_SOURCE_KEY, "Mailbox Source: %s");

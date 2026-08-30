@@ -448,6 +448,7 @@
   "message.territory.rule.use_item": "Use items",
   "message.territory_management.access": "Member access",
   "screen.delivery_box.title": "Delivery box",
+  "screen.mailbox.title": "Mailbox",
   "screen.territory.manage": "Manage territory",
   "screen.territory.search": "Filter members",
   "screen.territory.members": "Members: {0}",

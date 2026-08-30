@@ -150,7 +150,7 @@ public final class DeliveryLayout {
 
     UiRect message = new UiRect(detailPanel.x(), detailPanel.y(), detailPanel.width(), detailPanel.height());
     UiVersionInfoLayout.Result versionInfo = UiVersionInfoLayout.calculate(metrics,
-        "screen.delivery_box.title", List.of(), panel, height - panel, 150);
+        "screen.mailbox.title", List.of(), panel, height - panel, 150);
     UiRect title = versionInfo.card();
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90), height - panel - lineHeight, 90, lineHeight);
 

@@ -19,7 +19,7 @@ public final class MailboxComposeView {
 
   public static void render(EconomyUiRenderer renderer, MailboxComposeLayout.Layout layout,
                             MailboxComposeState state, int mouseX, int mouseY) {
-    renderer.card(layout.title(), EconomyUiTheme.VERSION_CARD, false);
+    renderer.card(layout.title(), EconomyUiTheme.DELIVERY_CARD, false);
     renderer.scaledIconTranslatedText(UiIcon.DELIVERY, "screen.mailbox.compose.title", List.of(),
         layout.title().x() + 8, layout.title().y() + 5, layout.versionInfoScale(),
         EconomyUiRenderer.ICON_SIZE, EconomyUiRenderer.ICON_ADVANCE, EconomyUiTheme.TEXT_PRIMARY);
