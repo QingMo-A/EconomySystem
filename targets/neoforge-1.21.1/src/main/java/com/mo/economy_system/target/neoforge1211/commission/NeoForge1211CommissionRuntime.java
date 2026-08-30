@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.*;
@@ -35,7 +36,16 @@ public final class NeoForge1211CommissionRuntime {
             public double nextDouble() { return random.nextDouble(); }
             public int nextInt(int bound) { return random.nextInt(bound); }
           }),
-          new CommissionRepository() { public CommissionPlayerState load(UUID id) { return data.loadState(id); } public void save(CommissionPlayerState state) { data.saveState(state); } },
+          new CommissionRepository() {
+            public CommissionPlayerState load(UUID id) { return data.loadState(id); }
+            public void save(CommissionPlayerState state) { data.saveState(state); }
+            public boolean hasAcceptedSubmission(UUID playerId, UUID commissionId, UUID submissionId) {
+              return data.hasAcceptedSubmission(playerId, commissionId, submissionId);
+            }
+            public void recordAcceptedSubmission(UUID playerId, UUID commissionId, UUID submissionId) {
+              data.recordAcceptedSubmission(playerId, commissionId, submissionId);
+            }
+          },
           new CommissionRewardRepository() { public Optional<CommissionRewardRecord> find(UUID id) { return data.findReward(id); } public Optional<CommissionRewardRecord> findByIdempotencyKey(String key) { return data.findRewardByKey(key); } public CommissionRewardRecord createIfAbsent(CommissionRewardRecord candidate) { return data.createReward(candidate); } public void save(CommissionRewardRecord r) { data.saveReward(r); } public List<CommissionRewardRecord> listForPlayer(UUID id) { return data.rewardsFor(id); } },
           new Delivery(data, s));
     });
@@ -288,9 +298,59 @@ public final class NeoForge1211CommissionRuntime {
     java.nio.file.Path path = server.getServerDirectory()
         .resolve("config").resolve("economysystem").resolve("commissions").resolve("catalog.json");
     CommissionCatalog catalog = CommissionCatalogConfigLoader.loadOrCreate(path);
+    validateCatalog(catalog, path);
     com.mo.economy_system.EconomySystem.LOGGER.info("Loaded personal commission catalog {} ({} templates)",
         path, catalog.templates().size());
     return catalog;
+  }
+
+  /**
+   * Resolves target-pool IDs against the NeoForge registries before a catalog becomes active.
+   *
+   * <p>Common catalog parsing deliberately stays loader-neutral, so this target-side boundary
+   * checks Minecraft item/entity availability. Invalid administrator data must fail startup or
+   * reload instead of silently producing an unusable commission.
+   */
+  private static void validateCatalog(CommissionCatalog catalog, java.nio.file.Path path) {
+    for (CommissionTemplate template : catalog.templates()) {
+      if (template.type() != CommissionType.ITEM_DELIVERY
+          && template.type() != CommissionType.ENTITY_KILL) {
+        continue;
+      }
+      CommissionTargetPool pool = catalog.targetPool(template.targetPool()).orElseThrow(() ->
+          catalogError(path, template, template.targetPool(), "<missing>",
+              "target pool is missing"));
+      for (CommissionTargetPool.Target target : pool.targets()) {
+        net.minecraft.resources.ResourceLocation id =
+            net.minecraft.resources.ResourceLocation.tryParse(target.id());
+        if (id == null) {
+          throw catalogError(path, template, pool.id(), target.id(),
+              "target ID is not a valid resource location");
+        }
+        if (template.type() == CommissionType.ITEM_DELIVERY) {
+          if (!BuiltInRegistries.ITEM.containsKey(id)) {
+            throw catalogError(path, template, pool.id(), target.id(),
+                "item is not registered");
+          }
+          Item item = BuiltInRegistries.ITEM.get(id);
+          if (item == null || item == Items.AIR) {
+            throw catalogError(path, template, pool.id(), target.id(),
+                "item resolves to AIR or is unavailable");
+          }
+        } else if (!BuiltInRegistries.ENTITY_TYPE.containsKey(id)
+            || BuiltInRegistries.ENTITY_TYPE.get(id) == null) {
+          throw catalogError(path, template, pool.id(), target.id(),
+              "entity type is not registered");
+        }
+      }
+    }
+  }
+
+  private static IllegalStateException catalogError(java.nio.file.Path path,
+      CommissionTemplate template, String poolId, String targetId, String reason) {
+    return new IllegalStateException("Invalid NeoForge 1.21.1 commission catalog at " + path
+        + " [target=NeoForge 1.21.1, template=" + template.id() + ", pool=" + poolId
+        + ", targetId=" + targetId + ", type=" + template.type() + "]: " + reason);
   }
 
   private static final class Delivery implements CommissionRewardDeliveryPort {

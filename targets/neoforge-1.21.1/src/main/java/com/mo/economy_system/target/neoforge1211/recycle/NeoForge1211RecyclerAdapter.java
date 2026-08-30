@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.UUID;
 import java.nio.file.Path;
@@ -104,7 +105,16 @@ public final class NeoForge1211RecyclerAdapter {
   private static RecycleConfig loadConfig(MinecraftServer server) {
     Path path = server.getServerDirectory()
         .resolve("config").resolve("economysystem").resolve("recycle.json");
-    return RecycleConfigLoader.loadOrCreate(path);
+    RecycleConfig config = RecycleConfigLoader.loadOrCreate(path);
+    for (var offer : config.offers()) {
+      ResourceLocation id = ResourceLocation.tryParse(offer.itemId());
+      if (id == null || !BuiltInRegistries.ITEM.containsKey(id)
+          || BuiltInRegistries.ITEM.get(id) == null || BuiltInRegistries.ITEM.get(id) == Items.AIR) {
+        throw new IllegalStateException("Invalid NeoForge 1.21.1 recycler item at " + path
+            + ": " + offer.itemId());
+      }
+    }
+    return config;
   }
 
   private static final class InventoryPort implements RecycleService.InventoryPort {

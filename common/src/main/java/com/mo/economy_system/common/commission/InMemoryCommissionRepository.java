@@ -13,6 +13,7 @@ public final class InMemoryCommissionRepository implements CommissionRepository,
   private final Map<UUID, CommissionPlayerState> players = new LinkedHashMap<>();
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
   private final Map<String, UUID> rewardKeys = new LinkedHashMap<>();
+  private final java.util.Set<String> acceptedSubmissionKeys = new java.util.HashSet<>();
 
   @Override
   public synchronized CommissionPlayerState load(UUID playerId) {
@@ -25,6 +26,24 @@ public final class InMemoryCommissionRepository implements CommissionRepository,
   public synchronized void save(CommissionPlayerState state) {
     Objects.requireNonNull(state, "state");
     players.put(state.playerId(), new CommissionPlayerState(state.playerId(), state.commissions(), state.schedule()));
+  }
+
+  @Override
+  public synchronized boolean hasAcceptedSubmission(UUID playerId, UUID commissionId,
+      UUID submissionId) {
+    return acceptedSubmissionKeys.contains(submissionKey(playerId, commissionId, submissionId));
+  }
+
+  @Override
+  public synchronized void recordAcceptedSubmission(UUID playerId, UUID commissionId,
+      UUID submissionId) {
+    acceptedSubmissionKeys.add(submissionKey(playerId, commissionId, submissionId));
+  }
+
+  private static String submissionKey(UUID playerId, UUID commissionId, UUID submissionId) {
+    return Objects.requireNonNull(playerId, "playerId") + ":"
+        + Objects.requireNonNull(commissionId, "commissionId") + ":"
+        + Objects.requireNonNull(submissionId, "submissionId");
   }
 
   @Override

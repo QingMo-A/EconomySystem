@@ -18,6 +18,7 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
   private final Map<UUID, CommissionPlayerState> players = new LinkedHashMap<>();
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
   private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
+  private final Set<String> acceptedSubmissionKeys = new LinkedHashSet<>();
   private RecycleService.State recycleState;
 
   public static NeoForge1211CommissionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -31,6 +32,12 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
       PublicCommission commission = readPublic((CompoundTag) raw);
       if (data.publicCommissions.put(commission.commissionId(), commission) != null) {
         throw new IllegalArgumentException("duplicate public commission id");
+      }
+    }
+    for (Tag raw : tag.getList("acceptedSubmissionKeys", Tag.TAG_STRING)) {
+      String key = raw.getAsString();
+      if (key.isBlank() || key.length() > 160 || !data.acceptedSubmissionKeys.add(key)) {
+        throw new IllegalArgumentException("invalid or duplicate accepted commission submission key");
       }
     }
     if (tag.contains("recycleState", Tag.TAG_COMPOUND)) {
@@ -59,6 +66,9 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
     ListTag publicRows = new ListTag();
     publicCommissions.values().forEach(commission -> publicRows.add(writePublic(commission)));
     tag.put("publicCommissions", publicRows);
+    ListTag accepted = new ListTag();
+    acceptedSubmissionKeys.forEach(key -> accepted.add(net.minecraft.nbt.StringTag.valueOf(key)));
+    tag.put("acceptedSubmissionKeys", accepted);
     if (recycleState != null) {
       CompoundTag state = new CompoundTag();
       state.putLong("cycle", recycleState.cycleNumber());
@@ -103,6 +113,12 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
 
   public synchronized CommissionPlayerState loadState(UUID id) { return players.getOrDefault(id, CommissionPlayerState.empty(id)); }
   public synchronized void saveState(CommissionPlayerState state) { players.put(state.playerId(), state); setDirty(); }
+  public synchronized boolean hasAcceptedSubmission(UUID playerId, UUID commissionId, UUID submissionId) {
+    return acceptedSubmissionKeys.contains(submissionKey(playerId, commissionId, submissionId));
+  }
+  public synchronized void recordAcceptedSubmission(UUID playerId, UUID commissionId, UUID submissionId) {
+    if (acceptedSubmissionKeys.add(submissionKey(playerId, commissionId, submissionId))) setDirty();
+  }
   public synchronized Optional<CommissionRewardRecord> findReward(UUID id) { return Optional.ofNullable(rewards.get(id)); }
   public synchronized Optional<CommissionRewardRecord> findRewardByKey(String key) { return rewards.values().stream().filter(r -> r.idempotencyKey().equals(key)).findFirst(); }
   public synchronized CommissionRewardRecord createReward(CommissionRewardRecord candidate) {
@@ -112,6 +128,12 @@ public final class NeoForge1211CommissionSavedData extends SavedData implements 
   public synchronized List<CommissionRewardRecord> rewardsFor(UUID player) { return rewards.values().stream().filter(r -> r.playerId().equals(player)).toList(); }
   public synchronized RecycleService.State loadRecycleState() { return recycleState; }
   public synchronized void saveRecycleState(RecycleService.State state) { recycleState = state; setDirty(); }
+
+  private static String submissionKey(UUID playerId, UUID commissionId, UUID submissionId) {
+    return Objects.requireNonNull(playerId, "playerId") + ":"
+        + Objects.requireNonNull(commissionId, "commissionId") + ":"
+        + Objects.requireNonNull(submissionId, "submissionId");
+  }
 
   private CompoundTag writePlayer(CommissionPlayerState state) {
     CompoundTag out = new CompoundTag(); out.putUUID("id", state.playerId());

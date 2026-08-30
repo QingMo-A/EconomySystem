@@ -9,6 +9,8 @@ import com.mo.economy_system.common.commission.CommissionInstance;
 import com.mo.economy_system.common.commission.CommissionRandom;
 import com.mo.economy_system.common.commission.CommissionService;
 import com.mo.economy_system.common.commission.CommissionStatus;
+import com.mo.economy_system.common.commission.CommissionTargetPool;
+import com.mo.economy_system.common.commission.CommissionTemplate;
 import com.mo.economy_system.common.commission.CommissionType;
 import com.mo.economy_system.common.commission.PublicCommission;
 import com.mo.economy_system.common.commission.PublicCommissionService;
@@ -31,6 +33,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -405,8 +408,57 @@ public final class Forge1201CommissionRuntime {
     Path path = server.getServerDirectory().toPath()
         .resolve("config").resolve("economysystem").resolve("commissions").resolve("catalog.json");
     CommissionCatalog catalog = CommissionCatalogConfigLoader.loadOrCreate(path);
+    validateCatalog(catalog, path);
     LOGGER.info("Loaded personal commission catalog {} ({} templates)", path, catalog.templates().size());
     return catalog;
+  }
+
+  /**
+   * Resolves target-pool IDs against the Forge registries before a catalog becomes active.
+   *
+   * <p>Common catalog parsing deliberately stays loader-neutral, so this is the target-side
+   * boundary where Minecraft item/entity availability is checked.  Invalid administrator data
+   * must fail startup/reload rather than silently producing an unusable commission.
+   */
+  private static void validateCatalog(CommissionCatalog catalog, Path path) {
+    for (CommissionTemplate template : catalog.templates()) {
+      if (template.type() != CommissionType.ITEM_DELIVERY
+          && template.type() != CommissionType.ENTITY_KILL) {
+        continue;
+      }
+      CommissionTargetPool pool = catalog.targetPool(template.targetPool()).orElseThrow(() ->
+          catalogError(path, template, template.targetPool(), "<missing>",
+              "target pool is missing"));
+      for (CommissionTargetPool.Target target : pool.targets()) {
+        ResourceLocation id = ResourceLocation.tryParse(target.id());
+        if (id == null) {
+          throw catalogError(path, template, pool.id(), target.id(),
+              "target ID is not a valid resource location");
+        }
+        if (template.type() == CommissionType.ITEM_DELIVERY) {
+          if (!BuiltInRegistries.ITEM.containsKey(id)) {
+            throw catalogError(path, template, pool.id(), target.id(),
+                "item is not registered");
+          }
+          Item item = BuiltInRegistries.ITEM.get(id);
+          if (item == null || item == Items.AIR) {
+            throw catalogError(path, template, pool.id(), target.id(),
+                "item resolves to AIR or is unavailable");
+          }
+        } else if (!BuiltInRegistries.ENTITY_TYPE.containsKey(id)
+            || BuiltInRegistries.ENTITY_TYPE.get(id) == null) {
+          throw catalogError(path, template, pool.id(), target.id(),
+              "entity type is not registered");
+        }
+      }
+    }
+  }
+
+  private static IllegalStateException catalogError(Path path, CommissionTemplate template,
+      String poolId, String targetId, String reason) {
+    return new IllegalStateException("Invalid Forge 1.20.1 commission catalog at " + path
+        + " [target=Forge 1.20.1, template=" + template.id() + ", pool=" + poolId
+        + ", targetId=" + targetId + ", type=" + template.type() + "]: " + reason);
   }
 
   private static CommissionRandom random() {

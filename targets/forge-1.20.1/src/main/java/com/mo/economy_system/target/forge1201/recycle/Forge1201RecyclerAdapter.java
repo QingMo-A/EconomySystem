@@ -12,6 +12,7 @@ import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionSave
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 
@@ -104,7 +105,16 @@ public final class Forge1201RecyclerAdapter {
   private static RecycleConfig loadConfig(MinecraftServer server) {
     Path path = server.getServerDirectory().toPath()
         .resolve("config").resolve("economysystem").resolve("recycle.json");
-    return RecycleConfigLoader.loadOrCreate(path);
+    RecycleConfig config = RecycleConfigLoader.loadOrCreate(path);
+    for (var offer : config.offers()) {
+      ResourceLocation id = ResourceLocation.tryParse(offer.itemId());
+      if (id == null || !BuiltInRegistries.ITEM.containsKey(id)
+          || BuiltInRegistries.ITEM.get(id) == null || BuiltInRegistries.ITEM.get(id) == Items.AIR) {
+        throw new IllegalStateException("Invalid Forge 1.20.1 recycler item at " + path
+            + ": " + offer.itemId());
+      }
+    }
+    return config;
   }
 
   private static final class InventoryPort implements RecycleService.InventoryPort {

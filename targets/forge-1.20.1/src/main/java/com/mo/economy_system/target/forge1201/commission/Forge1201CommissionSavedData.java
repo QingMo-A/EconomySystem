@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +47,7 @@ public final class Forge1201CommissionSavedData extends SavedData
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
   private final Map<String, UUID> rewardsByKey = new HashMap<>();
   private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
+  private final Set<String> acceptedSubmissionKeys = new LinkedHashSet<>();
   private RecycleService.State recycleState;
 
   private Forge1201CommissionSavedData() {}
@@ -67,6 +69,7 @@ public final class Forge1201CommissionSavedData extends SavedData
     data.readPlayers(tag);
     data.readRewards(tag);
     data.readPublicCommissions(tag);
+    data.readAcceptedSubmissions(tag);
     data.readRecycleState(tag);
     return data;
   }
@@ -100,6 +103,20 @@ public final class Forge1201CommissionSavedData extends SavedData
     if (state == null) throw new NullPointerException("state");
     players.put(state.playerId(), state);
     setDirty();
+  }
+
+  @Override
+  public synchronized boolean hasAcceptedSubmission(UUID playerId, UUID commissionId,
+      UUID submissionId) {
+    return acceptedSubmissionKeys.contains(submissionKey(playerId, commissionId, submissionId));
+  }
+
+  @Override
+  public synchronized void recordAcceptedSubmission(UUID playerId, UUID commissionId,
+      UUID submissionId) {
+    if (acceptedSubmissionKeys.add(submissionKey(playerId, commissionId, submissionId))) {
+      setDirty();
+    }
   }
 
   @Override
@@ -171,6 +188,9 @@ public final class Forge1201CommissionSavedData extends SavedData
       publicList.add(encodePublicCommission(commission));
     }
     tag.put("publicCommissions", publicList);
+    ListTag accepted = new ListTag();
+    for (String key : acceptedSubmissionKeys) accepted.add(net.minecraft.nbt.StringTag.valueOf(key));
+    tag.put("acceptedSubmissionKeys", accepted);
     if (recycleState != null) tag.put("recycleState", encodeRecycleState(recycleState));
     return tag;
   }
@@ -229,6 +249,26 @@ public final class Forge1201CommissionSavedData extends SavedData
         throw new IllegalArgumentException("duplicate public commission id");
       }
     }
+  }
+
+  private void readAcceptedSubmissions(CompoundTag root) {
+    if (!root.contains("acceptedSubmissionKeys", Tag.TAG_LIST)) return;
+    ListTag encoded = root.getList("acceptedSubmissionKeys", Tag.TAG_STRING);
+    for (int index = 0; index < encoded.size(); index++) {
+      String key = encoded.getString(index);
+      if (key.isBlank() || key.length() > 160) {
+        throw new IllegalArgumentException("invalid accepted commission submission key");
+      }
+      if (!acceptedSubmissionKeys.add(key)) {
+        throw new IllegalArgumentException("duplicate accepted commission submission key");
+      }
+    }
+  }
+
+  private static String submissionKey(UUID playerId, UUID commissionId, UUID submissionId) {
+    return java.util.Objects.requireNonNull(playerId, "playerId") + ":"
+        + java.util.Objects.requireNonNull(commissionId, "commissionId") + ":"
+        + java.util.Objects.requireNonNull(submissionId, "submissionId");
   }
 
   private void readPlayers(CompoundTag root) {

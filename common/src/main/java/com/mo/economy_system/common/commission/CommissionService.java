@@ -169,7 +169,8 @@ public final class CommissionService {
     }
     CommissionPlayerState state = commissions.loadOrEmpty(playerId);
     String submissionKey = playerId + ":" + commissionId + ":" + submissionId;
-    if (acceptedSubmissions.contains(submissionKey)) {
+    if (acceptedSubmissions.contains(submissionKey)
+        || commissions.hasAcceptedSubmission(playerId, commissionId, submissionId)) {
       CommissionInstance duplicate = state.commissions().stream()
           .filter(value -> value.commissionId().equals(commissionId)).findFirst()
           .orElse(placeholder(playerId, commissionId));
@@ -208,7 +209,7 @@ public final class CommissionService {
     CommissionInstance progressed = current.addProgress(amount);
     if (!progressed.completeable()) {
       saveReplacing(state, progressed);
-      rememberSubmission(submissionKey);
+      rememberSubmission(playerId, commissionId, submissionId, submissionKey);
       return new SubmitResult(SubmitOutcome.PROGRESSED, progressed, Optional.empty(), "");
     }
 
@@ -228,7 +229,7 @@ public final class CommissionService {
         CommissionRewardStatus.PENDING_MAIL,
         0);
     CommissionRewardRecord reward = rewards.createIfAbsent(candidate);
-    rememberSubmission(submissionKey);
+    rememberSubmission(playerId, commissionId, submissionId, submissionKey);
     if (reward.status() == CommissionRewardStatus.CLAIMED
         || reward.status() == CommissionRewardStatus.MAIL_CREATED) {
       return new SubmitResult(SubmitOutcome.COMPLETED, completed, Optional.of(reward), "");
@@ -243,8 +244,9 @@ public final class CommissionService {
         Optional.of(reward), "reward mail delivery requires retry");
   }
 
-  private void rememberSubmission(String key) {
+  private void rememberSubmission(UUID playerId, UUID commissionId, UUID submissionId, String key) {
     acceptedSubmissions.add(key);
+    commissions.recordAcceptedSubmission(playerId, commissionId, submissionId);
     while (acceptedSubmissions.size() > MAX_REMEMBERED_SUBMISSIONS) {
       acceptedSubmissions.remove(acceptedSubmissions.iterator().next());
     }

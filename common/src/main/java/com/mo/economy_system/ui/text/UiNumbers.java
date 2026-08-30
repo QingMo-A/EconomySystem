@@ -34,4 +34,15 @@ public final class UiNumbers {
     public static String formatTimestamp(long epochMillis) {
         return BALANCE_LOG_TIME.format(Instant.ofEpochMilli(epochMillis));
     }
+
+    /** Formats a non-negative duration as a compact, locale-neutral countdown. */
+    public static String formatDurationMillis(long durationMillis) {
+        long totalSeconds = Math.max(0L, durationMillis) / 1_000L;
+        long days = totalSeconds / 86_400L;
+        long hours = (totalSeconds % 86_400L) / 3_600L;
+        long minutes = (totalSeconds % 3_600L) / 60L;
+        long seconds = totalSeconds % 60L;
+        if (days > 0L) return String.format(Locale.ROOT, "%dd %02d:%02d:%02d", days, hours, minutes, seconds);
+        return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
+    }
 }

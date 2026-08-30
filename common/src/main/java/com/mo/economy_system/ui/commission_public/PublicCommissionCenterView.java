@@ -70,7 +70,7 @@ public final class PublicCommissionCenterView {
               UiNumbers.formatInteger(selected.remainingBudget())), layout.reward(),
           EconomyUiTheme.HOME_BALANCE_ACCENT, UiTextAlignment.LEFT);
       renderer.translatedTextInRect("screen.commissions.public.expires",
-          List.of(Long.toString(selected.expiresAt())), layout.expiration(),
+          List.of(UiNumbers.formatDurationMillis(selected.expiresAt() - state.serverNowMillis())), layout.expiration(),
           selected.status() == PublicCommissionStatus.AVAILABLE
               ? EconomyUiTheme.Text.SECONDARY : EconomyUiTheme.Text.ERROR, UiTextAlignment.LEFT);
       if (!state.actionMessage().isBlank()) {

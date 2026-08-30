@@ -227,6 +227,27 @@ class CommissionServiceTest {
     assertEquals(1, repository.load(PLAYER).commissions().get(0).progress());
   }
 
+  @Test
+  void acceptedPartialSubmissionSurvivesServiceRecreation() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template(4, 10)), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    repository.save(new CommissionPlayerState(PLAYER, List.of(new CommissionInstance(
+        COMMISSION, PLAYER, "deliver", CommissionType.ITEM_DELIVERY, "town", "Town",
+        "minecraft:stone", 4, CommissionRewardSnapshot.coins(40), 1, 100)), null));
+    UUID submission = UUID.randomUUID();
+    CommissionService first = new CommissionService(generator, repository, repository, delivery(repository));
+
+    assertEquals(CommissionService.SubmitOutcome.PROGRESSED,
+        first.submitProgress(PLAYER, COMMISSION, submission, 2, 10).outcome());
+
+    CommissionService recreated = new CommissionService(generator, repository, repository,
+        delivery(repository));
+    assertEquals(CommissionService.SubmitOutcome.DUPLICATE_SUBMISSION,
+        recreated.submitProgress(PLAYER, COMMISSION, submission, 2, 11).outcome());
+    assertEquals(2, repository.load(PLAYER).commissions().get(0).progress());
+  }
+
   private static CommissionCatalog catalog(CommissionTemplate template) {
     return new CommissionCatalog(
         List.of(template),
