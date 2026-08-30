@@ -5,6 +5,7 @@ import com.mo.economy_system.common.network.TransferMessage;
 import com.mo.economy_system.common.settings.EconomySettings;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.target.forge1201.item.Forge1201SupporterHat;
+import com.mo.economy_system.target.forge1201.recycle.Forge1201RecyclerCommands;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -27,6 +28,7 @@ public final class Forge1201EconomyCommands {
 
   @SubscribeEvent
   public static void register(RegisterCommandsEvent event) {
+    Forge1201RecyclerCommands.register(event.getDispatcher());
     event.getDispatcher().register(
         Commands.literal("economy_system")
             .then(Commands.literal("shop")

@@ -9,6 +9,7 @@ import com.mo.economy_system.core.economy_system.BalanceTransferResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.common.settings.EconomySettings;
 import com.mo.economy_system.utils.Util_MessageKeys;
+import com.mo.economy_system.target.neoforge1211.recycle.NeoForge1211RecyclerCommands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -28,6 +29,7 @@ import java.util.Collection;
 public class Command_Economy {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        NeoForge1211RecyclerCommands.register(dispatcher);
         dispatcher.register(Commands.literal("economy_system")
                 .then(Commands.literal("shop")
                         .then(Commands.literal("addhand")
