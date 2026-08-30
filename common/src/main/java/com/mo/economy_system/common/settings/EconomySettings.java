@@ -6,6 +6,9 @@ import java.util.Map;
 
 /** Process-local facade for the one common settings store used by both target builds. */
 public final class EconomySettings {
+  /** Price charged for each claimed X/Z cell, shared by all loader targets. */
+  public static final String TERRITORY_PRICE_PER_CELL = "territory.price_per_cell";
+
   private static CommonSettingsStore store;
 
   private EconomySettings() {}
@@ -38,6 +41,15 @@ public final class EconomySettings {
     } catch (java.io.IOException error) {
       throw new IllegalStateException("could not persist setting " + key, error);
     }
+  }
+
+  /** Updates the territory cell price with the same bounds used by the administrator command. */
+  public static synchronized boolean setTerritoryPricePerCell(long value) {
+    if (value < 0 || value > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("territory price per cell must be between 0 and "
+          + Integer.MAX_VALUE);
+    }
+    return set(TERRITORY_PRICE_PER_CELL, Long.toString(value));
   }
 
   public static synchronized void reload() {

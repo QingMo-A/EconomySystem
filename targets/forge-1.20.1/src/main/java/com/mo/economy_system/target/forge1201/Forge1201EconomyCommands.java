@@ -174,6 +174,15 @@ public final class Forge1201EconomyCommands {
                   c.getSource().sendSuccess(() -> Component.literal("已重载 EconomySystem 设置"), false);
                   return 1;
                 }))));
+    event.getDispatcher().register(
+        Commands.literal("economy_system")
+            .then(Commands.literal("territory")
+                .then(Commands.literal("price").requires(s -> s.hasPermission(2))
+                    .executes(c -> showTerritoryPrice(c.getSource()))
+                    .then(Commands.argument("amount", LongArgumentType.longArg(
+                            0L, com.mo.economy_system.common.territory.TerritoryPricing.MAX_PRICE_PER_CELL))
+                        .executes(c -> setTerritoryPrice(c.getSource(),
+                            LongArgumentType.getLong(c, "amount")))))));
   }
 
   private static int submitCommission(
@@ -383,6 +392,23 @@ public final class Forge1201EconomyCommands {
       return 1;
     } catch (IllegalArgumentException failure) {
       source.sendFailure(Component.literal("设置失败: " + failure.getMessage()));
+      return 0;
+    }
+  }
+
+  private static int showTerritoryPrice(net.minecraft.commands.CommandSourceStack source) {
+    long value = com.mo.economy_system.common.territory.TerritoryPricing.pricePerCell();
+    source.sendSuccess(() -> Component.literal("当前圈地单格价格: " + value + " 梦鱼币"), false);
+    return 1;
+  }
+
+  private static int setTerritoryPrice(net.minecraft.commands.CommandSourceStack source, long value) {
+    try {
+      EconomySettings.setTerritoryPricePerCell(value);
+      source.sendSuccess(() -> Component.literal("已设置圈地单格价格: " + value + " 梦鱼币"), true);
+      return 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(Component.literal("设置圈地单格价格失败: " + failure.getMessage()));
       return 0;
     }
   }

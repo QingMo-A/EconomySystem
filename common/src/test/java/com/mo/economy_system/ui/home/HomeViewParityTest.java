@@ -48,7 +48,7 @@ class HomeViewParityTest {
 
     assertEquals(7, renderer.operations.stream()
         .filter(operation -> operation.kind.equals("translatedIconButton")).count());
-    for (UiIcon icon : List.of(UiIcon.SHOP, UiIcon.MARKET, UiIcon.MARKET, UiIcon.DELIVERY,
+    for (UiIcon icon : List.of(UiIcon.SHOP, UiIcon.MARKET, UiIcon.COMMISSION, UiIcon.RECYCLE,
         UiIcon.DELIVERY, UiIcon.TERRITORY, UiIcon.ABOUT)) {
       assertTrue(renderer.operations.stream().anyMatch(operation ->
           operation.kind.equals("translatedIconButton") && operation.value.endsWith(icon.name())));

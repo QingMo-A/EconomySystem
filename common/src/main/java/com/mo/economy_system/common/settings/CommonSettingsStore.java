@@ -22,6 +22,7 @@ import java.util.Objects;
 public final class CommonSettingsStore {
   private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
   public static final String SHOP_PRICING_MODE = "shop.pricing.mode";
+  public static final String TERRITORY_PRICE_PER_CELL = "territory.price_per_cell";
 
   private final Path path;
   private final Map<String, SettingDefinition> definitions = new LinkedHashMap<>();
@@ -34,6 +35,11 @@ public final class CommonSettingsStore {
         "shop pricing mode: demand or stock",
         "demand",
         java.util.Set.of("demand", "stock")));
+    register(new SettingDefinition(
+        TERRITORY_PRICE_PER_CELL,
+        "territory claim price per X/Z cell (non-negative integer)",
+        "20",
+        java.util.Set.of()));
   }
 
   public synchronized void register(SettingDefinition definition) {

@@ -107,7 +107,7 @@ public final class TerritoryClaimService {
     final int price;
     try {
       area = TerritoryGeometry.area(request.first(), request.second());
-      long calculated = TerritoryPricing.priceForArea(area, TerritoryPricing.DEFAULT_PRICE_PER_CELL);
+      long calculated = TerritoryPricing.priceForArea(area, TerritoryPricing.pricePerCell());
       if (calculated > Integer.MAX_VALUE) return new Outcome(Result.PRICE_OVERFLOW, area, 0, null);
       price = (int) calculated;
     } catch (ArithmeticException overflow) {

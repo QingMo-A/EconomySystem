@@ -6,6 +6,8 @@ public enum UiIcon {
     HOME("home"),
     SHOP("shop"),
     MARKET("market"),
+    COMMISSION("leaderboard"),
+    RECYCLE("balance"),
     DELIVERY("delivery"),
     ABOUT("about"),
     TRADE("trade"),

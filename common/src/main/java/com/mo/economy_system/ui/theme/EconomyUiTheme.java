@@ -17,6 +17,8 @@ public final class EconomyUiTheme {
     /** Home reference accents; kept separate from tokens consumed by other screens. */
     public static final int HOME_NAV_SHOP_ACCENT = 0xFFFF8C00;
     public static final int HOME_NAV_MARKET_ACCENT = 0xFF4FC3F7;
+    public static final int HOME_NAV_COMMISSION_ACCENT = 0xFFE2A93B;
+    public static final int HOME_NAV_RECYCLE_ACCENT = 0xFF1ABC9C;
     public static final int HOME_NAV_DELIVERY_ACCENT = 0xFF27AE60;
     public static final int HOME_NAV_TERRITORY_ACCENT = 0xFF9B59B6;
     public static final int HOME_NAV_ABOUT_ACCENT = 0xFF888888;
@@ -163,6 +165,8 @@ public final class EconomyUiTheme {
     public static final UiButtonStyle TERRITORY_RULE_EVERYONE_BUTTON = actionButton(DELIVERY_ACCENT, 4);
     public static final UiButtonStyle HOME_NAV_SHOP_STYLE = homeNavButton(HOME_NAV_SHOP_ACCENT);
     public static final UiButtonStyle HOME_NAV_MARKET_STYLE = homeNavButton(HOME_NAV_MARKET_ACCENT);
+    public static final UiButtonStyle HOME_NAV_COMMISSION_STYLE = homeNavButton(HOME_NAV_COMMISSION_ACCENT);
+    public static final UiButtonStyle HOME_NAV_RECYCLE_STYLE = homeNavButton(HOME_NAV_RECYCLE_ACCENT);
     public static final UiButtonStyle HOME_NAV_DELIVERY_STYLE = homeNavButton(HOME_NAV_DELIVERY_ACCENT);
     public static final UiButtonStyle HOME_NAV_TERRITORY_STYLE = homeNavButton(HOME_NAV_TERRITORY_ACCENT);
     public static final UiButtonStyle HOME_NAV_ABOUT_STYLE = homeNavButton(HOME_NAV_ABOUT_ACCENT);

@@ -150,7 +150,7 @@ public final class Forge1201TerritoryClaimSessions {
         Forge1201TerritoryEvents.showSelectionBoundary(player, position(first), position(second));
         long area = TerritoryGeometry.area(first.x(), first.z(), second.x(), second.z());
         long price = TerritoryPricing.saturatingPriceForArea(
-            area, TerritoryPricing.DEFAULT_PRICE_PER_CELL);
+            area, TerritoryPricing.pricePerCell());
         player.sendSystemMessage(Component.translatable(
             "message.claim_wand.second_position_set", second.x(), second.y(), second.z()));
         player.sendSystemMessage(Component.translatable("message.claim_wand.volume", area));

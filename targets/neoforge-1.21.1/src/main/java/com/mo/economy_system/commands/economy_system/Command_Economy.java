@@ -13,6 +13,7 @@ import com.mo.economy_system.target.neoforge1211.recycle.NeoForge1211RecyclerCom
 import com.mo.economy_system.target.neoforge1211.commission.NeoForge1211CommissionCommands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -137,6 +138,15 @@ public class Command_Economy {
                                     return 1;
                                 }))));
 
+        dispatcher.register(Commands.literal("economy_system")
+                .then(Commands.literal("territory")
+                        .then(Commands.literal("price").requires(source -> source.hasPermission(2))
+                                .executes(context -> showTerritoryPrice(context.getSource()))
+                                .then(Commands.argument("amount", LongArgumentType.longArg(
+                                                0L, com.mo.economy_system.common.territory.TerritoryPricing.MAX_PRICE_PER_CELL))
+                                        .executes(context -> setTerritoryPrice(context.getSource(),
+                                                LongArgumentType.getLong(context, "amount")))))));
+
         dispatcher.register(Commands.literal("coin")
                 // 查询余额
                 .then(Commands.literal("balance")
@@ -233,6 +243,23 @@ public class Command_Economy {
                     "message.coin_command_set_many", amount, count), false);
         }
         return count;
+    }
+
+    private static int showTerritoryPrice(CommandSourceStack source) {
+        long value = com.mo.economy_system.common.territory.TerritoryPricing.pricePerCell();
+        source.sendSuccess(() -> Component.literal("当前圈地单格价格: " + value + " 梦鱼币"), false);
+        return 1;
+    }
+
+    private static int setTerritoryPrice(CommandSourceStack source, long value) {
+        try {
+            EconomySettings.setTerritoryPricePerCell(value);
+            source.sendSuccess(() -> Component.literal("已设置圈地单格价格: " + value + " 梦鱼币"), true);
+            return 1;
+        } catch (RuntimeException failure) {
+            source.sendFailure(Component.literal("设置圈地单格价格失败: " + failure.getMessage()));
+            return 0;
+        }
     }
 
     private static int bindSupporterHat(CommandSourceStack source, ServerPlayer executor, UUID supporterUuid, String supporterName) {

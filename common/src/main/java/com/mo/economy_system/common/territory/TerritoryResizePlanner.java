@@ -57,7 +57,7 @@ public final class TerritoryResizePlanner {
       long newArea = TerritoryGeometry.area(first, second);
       long difference = TerritoryPricing.areaDifference(oldArea, newArea);
       int charge = TerritoryPricing.expansionCharge(
-          oldArea, newArea, TerritoryPricing.DEFAULT_PRICE_PER_CELL);
+          oldArea, newArea, TerritoryPricing.pricePerCell());
       return new PlanningOutcome(
           PrepareResult.READY,
           new Plan(

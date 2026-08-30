@@ -172,7 +172,7 @@ public final class NeoForge1211TerritorySelectionRuntime {
           long newArea = area(first, second);
           long charge = com.mo.economy_system.common.territory.TerritoryPricing.saturatingPriceForArea(
               Math.max(0L, newArea - oldArea),
-              com.mo.economy_system.common.territory.TerritoryPricing.DEFAULT_PRICE_PER_CELL);
+              com.mo.economy_system.common.territory.TerritoryPricing.pricePerCell());
           if (newArea > oldArea) {
             player.sendSystemMessage(Component.translatable("message.claim_wand.confirm_expand"));
             player.sendSystemMessage(Component.translatable(
@@ -189,7 +189,7 @@ public final class NeoForge1211TerritorySelectionRuntime {
           long area = area(first, second);
           long price = valid(first) && valid(second)
               ? com.mo.economy_system.common.territory.TerritoryPricing.saturatingPriceForArea(
-                  area, com.mo.economy_system.common.territory.TerritoryPricing.DEFAULT_PRICE_PER_CELL)
+                  area, com.mo.economy_system.common.territory.TerritoryPricing.pricePerCell())
               : 0L;
           player.sendSystemMessage(Component.translatable("message.claim_wand.volume", area));
           player.sendSystemMessage(Component.translatable("message.claim_wand.price", price));
