@@ -31,6 +31,7 @@ import com.mo.economy_system.target.neoforge1211.update.NeoForge1211UpdateRuntim
 import com.mo.economy_system.target.neoforge1211.market.NeoForge1211MarketExpirationRuntime;
 import com.mo.economy_system.target.neoforge1211.territory.NeoForge1211TerritorySelectionRuntime;
 import com.mo.economy_system.target.neoforge1211.commission.NeoForge1211CommissionRuntime;
+import com.mo.economy_system.target.neoforge1211.recycle.NeoForge1211RecyclerAdapter;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,6 +75,7 @@ public class EconomySystem_EventHandler {
         // 初始化 经济系统
         EconomySavedData.getInstance(overworld);
         NeoForge1211CommissionRuntime.initialize(event.getServer());
+        NeoForge1211RecyclerAdapter.initialize(event.getServer());
         NeoForge1211RedPacketRuntime.service(event.getServer());
         NeoForge1211RewardRuntime.start(event.getServer());
         NeoForge1211StarterKitRuntime.start(event.getServer());
@@ -91,6 +93,7 @@ public class EconomySystem_EventHandler {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         NeoForge1211CommissionRuntime.clear(event.getServer());
+        NeoForge1211RecyclerAdapter.shutdown(event.getServer());
         SHOP_REFRESH_SCHEDULE.reset();
         EventHandler_Player.stop(event.getServer());
         NeoForge1211TerritorySelectionRuntime.clearAll();

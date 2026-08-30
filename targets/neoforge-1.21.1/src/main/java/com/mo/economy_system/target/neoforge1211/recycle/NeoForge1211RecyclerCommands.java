@@ -15,9 +15,22 @@ public final class NeoForge1211RecyclerCommands {
   public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
     dispatcher.register(Commands.literal("economy_system")
         .then(Commands.literal("recycle")
+            .then(Commands.literal("reload").requires(source -> source.hasPermission(2))
+                .executes(context -> reload(context.getSource())))
             .then(Commands.argument("amount", IntegerArgumentType.integer(1, 2304))
                 .executes(context -> execute(context.getSource().getPlayerOrException(),
                     IntegerArgumentType.getInteger(context, "amount"), context.getSource())))));
+  }
+
+  private static int reload(CommandSourceStack source) {
+    try {
+      NeoForge1211RecyclerAdapter.reload(source.getServer());
+      source.sendSuccess(() -> Component.literal("回收站配置已重载。"), true);
+      return 1;
+    } catch (RuntimeException failure) {
+      source.sendFailure(Component.literal("回收站配置重载失败：" + failure.getMessage()));
+      return 0;
+    }
   }
 
   private static int execute(ServerPlayer player, int amount, CommandSourceStack source) {

@@ -13,6 +13,7 @@ import com.mo.economy_system.target.forge1201.reward.Forge1201RewardRuntime;
 import com.mo.economy_system.target.forge1201.starter.Forge1201StarterKitRuntime;
 import com.mo.economy_system.target.forge1201.update.Forge1201UpdateRuntime;
 import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
+import com.mo.economy_system.target.forge1201.recycle.Forge1201RecyclerAdapter;
 import com.mo.economy_system.target.forge1201.network.Forge1201MarketExpirationRuntime;
 import com.mo.economy_system.target.forge1201.network.Forge1201ClientFileCheckRuntime;
 import com.mo.economy_system.target.forge1201.network.Forge1201TerritoryInviteRuntime;
@@ -45,6 +46,7 @@ public final class Forge1201ServerEvents {
     EconomySavedData.getInstance(overworld);
     MarketSavedData.getInstance(overworld);
     Forge1201CommissionRuntime.initialize(overworld);
+    Forge1201RecyclerAdapter.initialize(event.getServer());
     if (TerritoryBuffManager.initConfig()) {
       var buffCatalog = TerritoryBuffManager.catalog();
       Forge1201TerritorySnapshotStore.configureBuffCatalog(buffCatalog);
@@ -76,6 +78,7 @@ public final class Forge1201ServerEvents {
     Forge1201TpaRuntime.shutdown(event.getServer());
     Forge1201ClientFileCheckRuntime.stop(event.getServer());
     Forge1201CommissionRuntime.shutdown(event.getServer());
+    Forge1201RecyclerAdapter.shutdown(event.getServer());
   }
 
   @SubscribeEvent

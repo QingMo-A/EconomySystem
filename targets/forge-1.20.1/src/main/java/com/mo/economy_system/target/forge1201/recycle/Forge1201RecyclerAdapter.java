@@ -1,6 +1,7 @@
 package com.mo.economy_system.target.forge1201.recycle;
 
 import com.mo.economy_system.common.recycle.RecycleConfig;
+import com.mo.economy_system.common.recycle.RecycleConfigLoader;
 import com.mo.economy_system.common.recycle.RecycleResult;
 import com.mo.economy_system.common.recycle.RecycleService;
 import com.mo.economy_system.core.economy_system.BalanceMutationResult;
@@ -12,13 +13,33 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /** Forge adapter for the loader-neutral recycling transaction service. */
 public final class Forge1201RecyclerAdapter {
-  private static final RecycleService SERVICE = new RecycleService(
-      RecycleConfig.defaults(), new InventoryPort(), new EconomyPort());
+  private static final Map<MinecraftServer, RecycleService> SERVICES = new WeakHashMap<>();
+  private static final Map<MinecraftServer, RecycleConfig> CONFIGS = new WeakHashMap<>();
 
   private Forge1201RecyclerAdapter() {}
+
+  public static synchronized void initialize(MinecraftServer server) {
+    CONFIGS.put(server, loadConfig(server));
+    SERVICES.remove(server);
+  }
+
+  public static synchronized void shutdown(MinecraftServer server) {
+    SERVICES.remove(server);
+    CONFIGS.remove(server);
+  }
+
+  public static synchronized boolean reload(MinecraftServer server) {
+    RecycleConfig config = loadConfig(server);
+    CONFIGS.put(server, config);
+    SERVICES.remove(server);
+    return true;
+  }
 
   public static RecycleResult recycleHeld(ServerPlayer player, int amount) {
     ItemStack held = player.getMainHandItem();
@@ -27,10 +48,10 @@ public final class Forge1201RecyclerAdapter {
     one.setCount(1);
     ItemStackSnapshot snapshot = Forge1201Platform.nativeItemStacks()
         .captureSnapshot(one, player.serverLevel().registryAccess()).orElseThrow();
-    return SERVICE.recycle(player.getUUID(), snapshot, amount, UUID.randomUUID(), player.server.getTickCount() * 50L);
+    return service(player.server).recycle(player.getUUID(), snapshot, amount, UUID.randomUUID(), System.currentTimeMillis());
   }
 
-  public static RecycleConfig config() { return SERVICE.config(); }
+  public static RecycleConfig config() { return service(Forge1201Platform.activeServer()).config(); }
 
   private static ServerPlayer find(UUID id) {
     MinecraftServer server = Forge1201Platform.activeServer();
@@ -39,6 +60,19 @@ public final class Forge1201RecyclerAdapter {
 
   private static ItemStack nativeStack(ServerPlayer player, ItemStackSnapshot snapshot) {
     return Forge1201Platform.nativeItemStacks().restoreSnapshot(snapshot, player.serverLevel().registryAccess()).orElseThrow();
+  }
+
+  private static synchronized RecycleService service(MinecraftServer server) {
+    if (server == null) throw new IllegalStateException("no active Minecraft server");
+    return SERVICES.computeIfAbsent(server, value -> new RecycleService(
+        CONFIGS.computeIfAbsent(value, Forge1201RecyclerAdapter::loadConfig),
+        new InventoryPort(), new EconomyPort()));
+  }
+
+  private static RecycleConfig loadConfig(MinecraftServer server) {
+    Path path = server.getServerDirectory().toPath()
+        .resolve("config").resolve("economysystem").resolve("recycle.json");
+    return RecycleConfigLoader.loadOrCreate(path);
   }
 
   private static final class InventoryPort implements RecycleService.InventoryPort {
