@@ -11,10 +11,14 @@ import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.UUID;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.WeakHashMap;
 
 /** Forge adapter for the loader-neutral recycling transaction service. */
@@ -49,6 +53,29 @@ public final class Forge1201RecyclerAdapter {
     ItemStackSnapshot snapshot = Forge1201Platform.nativeItemStacks()
         .captureSnapshot(one, player.serverLevel().registryAccess()).orElseThrow();
     return service(player.server).recycle(player.getUUID(), snapshot, amount, UUID.randomUUID(), System.currentTimeMillis());
+  }
+
+  public static RecycleResult recycle(ServerPlayer player, String itemId, int amount, UUID submissionId) {
+    ResourceLocation id = ResourceLocation.tryParse(itemId);
+    if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) return new RecycleResult(RecycleResult.Status.UNKNOWN_ITEM, 0, 0, 0, 0);
+    ItemStack one = new ItemStack(BuiltInRegistries.ITEM.get(id));
+    ItemStackSnapshot snapshot = Forge1201Platform.nativeItemStacks().captureSnapshot(one, player.serverLevel().registryAccess()).orElseThrow();
+    return service(player.server).recycle(player.getUUID(), snapshot, amount, submissionId, System.currentTimeMillis());
+  }
+
+  public static List<com.mo.economy_system.common.network.RecycleOfferSnapshot> offers(ServerPlayer player) {
+    long now = System.currentTimeMillis(); RecycleConfig config = service(player.server).config(); List<com.mo.economy_system.common.network.RecycleOfferSnapshot> values = new ArrayList<>();
+    for (var offer : config.offers()) {
+      ResourceLocation id = ResourceLocation.tryParse(offer.itemId()); if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) continue;
+      ItemStackSnapshot snapshot = Forge1201Platform.nativeItemStacks().captureSnapshot(new ItemStack(BuiltInRegistries.ITEM.get(id)), player.serverLevel().registryAccess()).orElseThrow();
+      int owned = new InventoryPort().count(player.getUUID(), snapshot); int quota = service(player.server).highQuotaRemaining(now).getOrDefault(offer.itemId(), 0);
+      values.add(new com.mo.economy_system.common.network.RecycleOfferSnapshot(offer.itemId(), offer.baseUnitPrice(), offer.highUnitPrice(), quota, owned, BuiltInRegistries.ITEM.get(id).getMaxStackSize(), offer.fallbackToBaseWhenHighQuotaExhausted()));
+    }
+    return List.copyOf(values);
+  }
+
+  public static long cycleEndsAt(ServerPlayer player, long nowMillis) {
+    long duration = service(player.server).config().cycle().toMillis(); return (Math.floorDiv(nowMillis, duration) + 1L) * duration;
   }
 
   public static RecycleConfig config() { return service(Forge1201Platform.activeServer()).config(); }

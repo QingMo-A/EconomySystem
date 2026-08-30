@@ -143,6 +143,10 @@ public final class NeoForge1211ProtocolRegistrar {
     bindCommon(registrar, EconomyMessages.COMMISSION_DATA_RESPONSE, NeoForge1211CommissionHandlers::data);
     bindCommon(registrar, EconomyMessages.COMMISSION_SUBMIT, NeoForge1211CommissionHandlers::submit);
     bindCommon(registrar, EconomyMessages.COMMISSION_ACTION_RESPONSE, NeoForge1211CommissionHandlers::action);
+    bindCommon(registrar, EconomyMessages.RECYCLE_DATA_REQUEST, NeoForge1211RecycleHandlers::request);
+    bindCommon(registrar, EconomyMessages.RECYCLE_DATA_RESPONSE, NeoForge1211RecycleHandlers::data);
+    bindCommon(registrar, EconomyMessages.RECYCLE_SUBMIT, NeoForge1211RecycleHandlers::submit);
+    bindCommon(registrar, EconomyMessages.RECYCLE_ACTION_RESPONSE, NeoForge1211RecycleHandlers::action);
   }
 
   private static <T extends EconomyNetworkMessage> void bindCommon(

@@ -148,6 +148,14 @@ public final class EconomyMessages {
       new EconomyMessageType<>(EconomyProtocol.COMMISSION_SUBMIT, CommissionSubmitMessage.class);
   public static final EconomyMessageType<CommissionActionResponseMessage> COMMISSION_ACTION_RESPONSE =
       new EconomyMessageType<>(EconomyProtocol.COMMISSION_ACTION_RESPONSE, CommissionActionResponseMessage.class);
+  public static final EconomyMessageType<RecycleDataRequestMessage> RECYCLE_DATA_REQUEST =
+      new EconomyMessageType<>(EconomyProtocol.RECYCLE_DATA_REQUEST, RecycleDataRequestMessage.class);
+  public static final EconomyMessageType<RecycleDataResponseMessage> RECYCLE_DATA_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.RECYCLE_DATA_RESPONSE, RecycleDataResponseMessage.class);
+  public static final EconomyMessageType<RecycleSubmitMessage> RECYCLE_SUBMIT =
+      new EconomyMessageType<>(EconomyProtocol.RECYCLE_SUBMIT, RecycleSubmitMessage.class);
+  public static final EconomyMessageType<RecycleActionResponseMessage> RECYCLE_ACTION_RESPONSE =
+      new EconomyMessageType<>(EconomyProtocol.RECYCLE_ACTION_RESPONSE, RecycleActionResponseMessage.class);
 
   private EconomyMessages() {}
 }

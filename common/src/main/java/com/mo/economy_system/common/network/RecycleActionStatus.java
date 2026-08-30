@@ -1,0 +1,4 @@
+package com.mo.economy_system.common.network;
+
+public enum RecycleActionStatus { SUCCESS, UNKNOWN_ITEM, INVALID_AMOUNT, INSUFFICIENT_ITEMS,
+  HIGH_QUOTA_EXHAUSTED, BALANCE_LIMIT, PERSIST_FAILED, DUPLICATE_SUBMISSION, ERROR }

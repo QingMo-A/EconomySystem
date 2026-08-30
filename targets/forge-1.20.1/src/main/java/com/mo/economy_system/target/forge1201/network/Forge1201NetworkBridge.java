@@ -53,6 +53,10 @@ import com.mo.economy_system.common.network.TerritoryDataRequestMessage;
 import com.mo.economy_system.common.network.TerritoryDataResponseMessage;
 import com.mo.economy_system.common.network.TransferTerritoryOwnershipMessage;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.network.RecycleDataRequestMessage;
+import com.mo.economy_system.common.network.RecycleDataResponseMessage;
+import com.mo.economy_system.common.network.RecycleSubmitMessage;
+import com.mo.economy_system.common.network.RecycleActionResponseMessage;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
@@ -170,6 +174,8 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     if (message instanceof MailboxSendPlayerMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof CommissionDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof CommissionSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof RecycleDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof RecycleSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message.getClass() == ModifyTerritoryModeMessage.class) {
       Forge1201NetworkChannel.sendToServer((ModifyTerritoryModeMessage) message);
       return;
@@ -266,6 +272,8 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
       Forge1201NetworkChannel.sendToPlayer(player, value);
       return;
     }
+    if (message instanceof RecycleDataResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
+    if (message instanceof RecycleActionResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
     if (message.getClass() == SingleTerritoryDataResponseMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (SingleTerritoryDataResponseMessage) message);
       return;

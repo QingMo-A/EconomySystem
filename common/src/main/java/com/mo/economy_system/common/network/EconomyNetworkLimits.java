@@ -39,6 +39,10 @@ public final class EconomyNetworkLimits {
   public static final int MAX_COMMISSION_TEMPLATE_LENGTH = 64;
   public static final int MAX_COMMISSION_TEXT_LENGTH = 1_024;
   public static final int MAX_COMMISSION_SUBMIT_AMOUNT = 2_304;
+  public static final int MAX_RECYCLE_OFFERS = 1_024;
+  public static final int MAX_RECYCLE_ITEM_ID_LENGTH = 256;
+  public static final int MAX_RECYCLE_TEXT_LENGTH = 512;
+  public static final int MAX_RECYCLE_SUBMIT_AMOUNT = 2_304;
   public static final int MAX_DELIVERY_RESPONSE_WIRE_BYTES = 1024 * 1024;
   public static final int MAX_TERRITORIES_PER_RESPONSE = 2_048;
   public static final int MAX_TERRITORY_NAME_LENGTH = 128;

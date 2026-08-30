@@ -17,6 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.WeakHashMap;
 
 /** NeoForge adapter for the loader-neutral recycling transaction service. */
@@ -51,6 +53,29 @@ public final class NeoForge1211RecyclerAdapter {
     ItemStackSnapshot snapshot = NeoForge1211Platform.nativeItemStacks()
         .captureSnapshot(one, player.serverLevel().registryAccess()).orElseThrow();
     return service(player.server).recycle(player.getUUID(), snapshot, amount, UUID.randomUUID(), System.currentTimeMillis());
+  }
+
+  public static RecycleResult recycle(ServerPlayer player, String itemId, int amount, UUID submissionId) {
+    ResourceLocation id = ResourceLocation.tryParse(itemId);
+    if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) return new RecycleResult(RecycleResult.Status.UNKNOWN_ITEM, 0, 0, 0, 0);
+    ItemStack one = new ItemStack(BuiltInRegistries.ITEM.get(id));
+    ItemStackSnapshot snapshot = NeoForge1211Platform.nativeItemStacks().captureSnapshot(one, player.serverLevel().registryAccess()).orElseThrow();
+    return service(player.server).recycle(player.getUUID(), snapshot, amount, submissionId, System.currentTimeMillis());
+  }
+
+  public static List<com.mo.economy_system.common.network.RecycleOfferSnapshot> offers(ServerPlayer player) {
+    long now = System.currentTimeMillis(); RecycleConfig config = service(player.server).config(); List<com.mo.economy_system.common.network.RecycleOfferSnapshot> values = new ArrayList<>();
+    for (var offer : config.offers()) {
+      ResourceLocation id = ResourceLocation.tryParse(offer.itemId()); if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) continue;
+      ItemStackSnapshot snapshot = NeoForge1211Platform.nativeItemStacks().captureSnapshot(new ItemStack(BuiltInRegistries.ITEM.get(id)), player.serverLevel().registryAccess()).orElseThrow();
+      int owned = new InventoryPort().count(player.getUUID(), snapshot); int quota = service(player.server).highQuotaRemaining(now).getOrDefault(offer.itemId(), 0);
+      values.add(new com.mo.economy_system.common.network.RecycleOfferSnapshot(offer.itemId(), offer.baseUnitPrice(), offer.highUnitPrice(), quota, owned, new ItemStack(BuiltInRegistries.ITEM.get(id)).getMaxStackSize(), offer.fallbackToBaseWhenHighQuotaExhausted()));
+    }
+    return List.copyOf(values);
+  }
+
+  public static long cycleEndsAt(ServerPlayer player, long nowMillis) {
+    long duration = service(player.server).config().cycle().toMillis(); return (Math.floorDiv(nowMillis, duration) + 1L) * duration;
   }
 
   public static RecycleConfig config() { return service(NeoForge1211Platform.activeServer()).config(); }
