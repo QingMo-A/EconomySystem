@@ -1407,3 +1407,35 @@ CommissionRewardRecord
 24. 职业系统作为 P2 成长层，不采用普通动作直接发钱。
 25. 探索奖励作为 P2，未来接入同一 Commission 框架。
 26. 所有委托验证、物品扣除、过期、进度、公共剩余数量、奖励记录和邮件投递必须服务端权威。
+
+---
+
+# 二十六、实施 checkpoint（当前）
+
+状态：**P0 IMPLEMENTED / VERIFIED**
+
+代码 checkpoint：see git history。
+
+当前已注册并运行的 P0 能力：
+
+- 个人委托题库：`CommissionTemplate`、`CommissionRequester`、`CommissionTargetPool`；
+- 每玩家独立刷新、独立过期、刷新只新增、活跃数量上限和服务端绝对时间；
+- Forge 1.20.1 与 NeoForge 1.21.1 的物资提交、实体击杀归属事件、服务端目标注册表校验；
+- 公共大型委托的管理员 create/list/info/end/remove、全服共享进度和部分提交；
+- 委托奖励记录、确定性邮件 ID、邮箱容量失败重试、领取幂等和重启后提交幂等；
+- 回收站基础报价、周期高价配额、stop/fallback 策略、即时结算和持久化幂等；
+- 个人/公共委托中心 common UI，独立倒计时、过期状态表达和网络超时/重试状态机。
+
+默认配置仍为每次刷新新增 1~2 条、最多 6 条活跃个人委托；配置 reload 只影响未来生成的实例，已生成实例保持冻结。
+
+验证 checkpoint（本地 Gradle，不代表 GitHub CI）：
+
+- Forge 1.20.1：1071 tests，0 failures，0 errors，1 skipped；
+- NeoForge 1.21.1：1135 tests，0 failures，0 errors，1 skipped；
+- 双端目标构建和 commission/recycler 相关契约测试均通过。
+
+已知边界与后续阶段：
+
+- 物品委托当前以配置的物品 ID 快照为权威匹配；需要特殊 NBT/Data Component 的目标应先扩展目标快照 schema，再启用对应配置。
+- 实体击杀委托只接受服务端确认的玩家直接归属事件；环境伤害、未归属自动化陷阱不会计入，避免无主刷怪场自动产币。
+- 职业系统、探索奖励、管理员委托 GUI、委托历史和个性化权重仍属于 P2，当前不伪造第三阶段能力。
