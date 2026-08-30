@@ -35,6 +35,12 @@ public final class NeoForge1211CommissionRuntime {
 
   public static CommissionService.RefreshView refresh(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()); }
   public static CommissionPlayerState state(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()).state(); }
+  public static List<String> templateIds() { return defaultCatalog().templates().stream().map(CommissionTemplate::id).toList(); }
+  public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
+    clear(source.getServer());
+    source.sendSuccess(() -> net.minecraft.network.chat.Component.literal("个人委托库已重载。"), true);
+    return 1;
+  }
 
   public static synchronized PublicCommissionService publicService(MinecraftServer server) {
     return PUBLIC_SERVICES.computeIfAbsent(server, s -> {

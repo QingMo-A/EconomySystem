@@ -51,6 +51,18 @@ public final class Forge1201CommissionRuntime {
     return service(player.serverLevel(), data).refresh(player.getUUID(), now());
   }
 
+  public static List<String> templateIds() {
+    return DEFAULT_CATALOG.templates().stream().map(value -> value.id()).toList();
+  }
+
+  public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
+    // The built-in catalog is immutable; clearing server-scoped state makes the next access
+    // reconstruct its service and is the safe fallback until external catalog files are present.
+    shutdown(source.getServer());
+    source.sendSuccess(() -> Component.literal("个人委托库已重载。"), true);
+    return 1;
+  }
+
   /** Called from the login hook and periodically from the server tick hook. */
   public static void refreshOnlinePlayers(MinecraftServer server) {
     for (ServerPlayer player : server.getPlayerList().getPlayers()) {

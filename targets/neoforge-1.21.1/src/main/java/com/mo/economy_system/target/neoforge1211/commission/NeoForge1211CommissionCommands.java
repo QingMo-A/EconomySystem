@@ -22,7 +22,15 @@ public final class NeoForge1211CommissionCommands {
       var view = NeoForge1211CommissionRuntime.refresh(player);
       c.getSource().sendSuccess(() -> Component.literal("委托已刷新，新增 " + view.generation().added().size() + " 条"), false);
       return 1;
-    }));
+    }).then(Commands.literal("player").requires(s -> s.hasPermission(2))
+        .then(Commands.argument("target", net.minecraft.commands.arguments.EntityArgument.player())
+            .executes(c -> {
+              var target = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "target");
+              var view = NeoForge1211CommissionRuntime.refresh(target);
+              c.getSource().sendSuccess(() -> Component.literal("已刷新 " + target.getName().getString()
+                  + "，新增 " + view.generation().added().size() + " 条。"), true);
+              return 1;
+            }))));
     commission.then(Commands.literal("list").executes(c -> {
       var player = c.getSource().getPlayerOrException();
       var state = NeoForge1211CommissionRuntime.state(player);
@@ -30,6 +38,15 @@ public final class NeoForge1211CommissionCommands {
       for (var x : state.commissions()) c.getSource().sendSuccess(() -> Component.literal(x.commissionId()+" | "+x.type()+" | "+x.targetSnapshot()+" | "+x.progress()+"/"+x.requiredAmount()+" | "+x.status()), false);
       return state.commissions().size();
     }));
+    commission.then(Commands.literal("reload").requires(s -> s.hasPermission(2))
+        .executes(c -> NeoForge1211CommissionRuntime.reloadCommand(c.getSource())));
+    commission.then(Commands.literal("template")
+        .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> {
+          for (String id : NeoForge1211CommissionRuntime.templateIds()) {
+            c.getSource().sendSuccess(() -> Component.literal(id), false);
+          }
+          return NeoForge1211CommissionRuntime.templateIds().size();
+        })));
     var submit = Commands.literal("submit").then(Commands.argument("commissionId", UuidArgument.uuid())
         .then(Commands.argument("amount", IntegerArgumentType.integer(1))
             .executes(c -> submit(c.getSource(), UuidArgument.getUuid(c, "commissionId"), IntegerArgumentType.getInteger(c, "amount")))));

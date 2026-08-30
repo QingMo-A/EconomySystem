@@ -101,7 +101,24 @@ public final class Forge1201EconomyCommands {
 
     var commission = Commands.literal("commission");
     commission.then(Commands.literal("refresh")
-        .executes(c -> Forge1201CommissionRuntime.refreshCommand(c.getSource())));
+        .executes(c -> Forge1201CommissionRuntime.refreshCommand(c.getSource()))
+        .then(Commands.literal("player").requires(s -> s.hasPermission(2))
+            .then(Commands.argument("target", EntityArgument.player()).executes(c -> {
+              ServerPlayer target = EntityArgument.getPlayer(c, "target");
+              var view = Forge1201CommissionRuntime.refresh(target);
+              c.getSource().sendSuccess(() -> Component.literal("已刷新 " + target.getName().getString()
+                  + "，新增 " + view.generation().added().size() + " 条。"), true);
+              return 1;
+            }))));
+    commission.then(Commands.literal("reload").requires(s -> s.hasPermission(2))
+        .executes(c -> Forge1201CommissionRuntime.reloadCommand(c.getSource())));
+    commission.then(Commands.literal("template")
+        .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(c -> {
+          for (String id : Forge1201CommissionRuntime.templateIds()) {
+            c.getSource().sendSuccess(() -> Component.literal(id), false);
+          }
+          return Forge1201CommissionRuntime.templateIds().size();
+        })));
     commission.then(Commands.literal("list")
         .executes(c -> Forge1201CommissionRuntime.listCommand(c.getSource())));
     commission.then(Commands.literal("submit")
