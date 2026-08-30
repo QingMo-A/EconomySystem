@@ -13,6 +13,7 @@ import com.mo.economy_system.common.commission.CommissionType;
 import com.mo.economy_system.common.commission.PublicCommission;
 import com.mo.economy_system.common.commission.PublicCommissionService;
 import com.mo.economy_system.common.commission.PublicCommissionStatus;
+import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -430,10 +431,11 @@ public final class Forge1201CommissionRuntime {
   private static Map<Integer, ItemStack> matchingStacks(
       ServerPlayer player, Item target, int required) {
     int available = 0;
+    ItemStack template = new ItemStack(target);
     Map<Integer, ItemStack> originals = new LinkedHashMap<>();
     for (int slot = 0; slot < player.getInventory().items.size(); slot++) {
       ItemStack stack = player.getInventory().items.get(slot);
-      if (stack.isEmpty() || !stack.is(target)) continue;
+      if (stack.isEmpty() || !Forge1201Platform.nativeItemStacks().sameItemAndData(stack, template)) continue;
       available += stack.getCount();
       originals.put(slot, stack.copy());
       if (available >= required) return originals;

@@ -238,8 +238,11 @@ public final class NeoForge1211CommissionRuntime {
 
   private static int countMatching(ServerPlayer player, Item target) {
     int count = 0;
+    ItemStack template = new ItemStack(target);
     for (ItemStack stack : player.getInventory().items) {
-      if (stack.getItem() == target) count = Math.addExact(count, stack.getCount());
+      if (NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template)) {
+        count = Math.addExact(count, stack.getCount());
+      }
     }
     return count;
   }
@@ -247,9 +250,10 @@ public final class NeoForge1211CommissionRuntime {
   private static void consumeMatching(ServerPlayer player, Item target, int amount) {
     if (amount <= 0) return;
     int remaining = amount;
+    ItemStack template = new ItemStack(target);
     for (ItemStack stack : player.getInventory().items) {
       if (remaining == 0) break;
-      if (stack.getItem() != target) continue;
+      if (!NeoForge1211Platform.nativeItemStacks().sameItemAndData(stack, template)) continue;
       int take = Math.min(remaining, stack.getCount());
       stack.shrink(take);
       remaining -= take;
