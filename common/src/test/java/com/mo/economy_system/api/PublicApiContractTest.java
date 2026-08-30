@@ -34,6 +34,9 @@ class PublicApiContractTest {
     EconomyMailboxApi.MailDraft draft = EconomyMailboxApi.MailDraft.of(
         "examplemod:event_reward", "Event reward", "Thanks for playing");
     assertEquals("Event reward", draft.subject());
+    EconomyMailboxApi.MailDraft paidDraft = EconomyMailboxApi.MailDraft.of(
+        "examplemod:coin_reward", "Coin reward", "Thanks for playing", 250);
+    assertEquals(250, paidDraft.moneyAmount());
 
     EconomyMailboxApi.MailItemGrant grant =
         EconomyMailboxApi.MailItemGrant.of("minecraft:diamond", 64);
@@ -43,6 +46,8 @@ class PublicApiContractTest {
         () -> EconomyMailboxApi.MailDraft.of("event_reward", "Reward", "Body"));
     assertThrows(IllegalArgumentException.class,
         () -> EconomyMailboxApi.MailDraft.of("examplemod:reward", "", "Body"));
+    assertThrows(IllegalArgumentException.class,
+        () -> EconomyMailboxApi.MailDraft.of("examplemod:reward", "Reward", "Body", -1));
     assertThrows(IllegalArgumentException.class,
         () -> EconomyMailboxApi.MailItemGrant.of("diamond", 1));
     assertThrows(IllegalArgumentException.class,

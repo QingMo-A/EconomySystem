@@ -11,16 +11,34 @@ public record MailboxComposeState(
     String recipient,
     String subject,
     String body,
+    String moneyAmount,
     Set<Integer> selectedSlots,
     boolean sending,
     long requestId,
     long appliedRevision,
     MailboxSendStatus status) {
+
+  /** Compatibility constructor for compose screens created before money input was added. */
+  public MailboxComposeState(
+      List<MailboxComposeInventoryItem> inventory,
+      String recipient,
+      String subject,
+      String body,
+      Set<Integer> selectedSlots,
+      boolean sending,
+      long requestId,
+      long appliedRevision,
+      MailboxSendStatus status) {
+    this(inventory, recipient, subject, body, "0", selectedSlots, sending, requestId,
+        appliedRevision, status);
+  }
+
   public MailboxComposeState {
     inventory = List.copyOf(Objects.requireNonNull(inventory, "inventory"));
     recipient = Objects.requireNonNullElse(recipient, "");
     subject = Objects.requireNonNullElse(subject, "");
     body = Objects.requireNonNullElse(body, "");
+    moneyAmount = Objects.requireNonNullElse(moneyAmount, "0");
     selectedSlots = Set.copyOf(Objects.requireNonNull(selectedSlots, "selectedSlots"));
     if (requestId < -1 || appliedRevision < -1) throw new IllegalArgumentException("invalid request state");
   }

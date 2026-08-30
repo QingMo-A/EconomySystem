@@ -100,8 +100,8 @@ public final class MailboxLedger {
     if (record.type() != MailType.ANNOUNCEMENT) {
       throw new IllegalArgumentException("global mail must be an announcement");
     }
-    if (!record.attachmentIds().isEmpty()) {
-      throw new IllegalArgumentException("global announcements cannot carry attachments");
+    if (!record.attachmentIds().isEmpty() || record.moneyAmount() > 0) {
+      throw new IllegalArgumentException("global announcements cannot carry economic attachments");
     }
     if (announcements.size() >= EconomyNetworkLimits.MAX_MAIL_ANNOUNCEMENTS) {
       throw new IllegalStateException("announcement store is full");
@@ -375,7 +375,8 @@ public final class MailboxLedger {
     }
     ensureUnique(state.announcements());
     for (MailRecord record : state.announcements()) {
-      if (record.type() != MailType.ANNOUNCEMENT || !record.attachmentIds().isEmpty()) {
+      if (record.type() != MailType.ANNOUNCEMENT
+          || !record.attachmentIds().isEmpty() || record.moneyAmount() > 0) {
         throw new IllegalArgumentException("invalid global announcement");
       }
       announcements.add(record.withRead(false));

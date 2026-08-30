@@ -11,6 +11,7 @@ import com.mo.economy_system.common.delivery.DeliveryBoxEntrySnapshot;
 import com.mo.economy_system.common.mail.MailRecord;
 import com.mo.economy_system.common.mail.MailType;
 import com.mo.economy_system.common.network.EconomyNetworkLimits;
+import com.mo.economy_system.core.economy_system.BalanceMutationResult;
 import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.core.economy_system.EconomyLedger;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
@@ -146,16 +147,35 @@ public final class NeoForge1211EconomyApiSession implements EconomyApiSession {
       if (data.ledger().listPersonal(recipientId).size() >= EconomyNetworkLimits.MAX_MAILS_PER_PLAYER) {
         return DeliveryStatus.MAILBOX_FULL;
       }
+      int moneyAmount = draft.moneyAmount();
+      EconomySavedData economy = moneyAmount > 0 ? EconomySavedData.getInstance(level) : null;
+      if (economy != null && economy.previewCreditExact(recipientId, moneyAmount)
+          != BalanceMutationResult.SUCCESS) {
+        return DeliveryStatus.BALANCE_LIMIT;
+      }
+      boolean moneyCredited = false;
       try {
+        if (economy != null) {
+          BalanceMutationResult credited = economy.creditExact(
+              recipientId, moneyAmount, "邮件", "系统邮件发放");
+          if (credited != BalanceMutationResult.SUCCESS) {
+            return credited == BalanceMutationResult.BALANCE_LIMIT
+                ? DeliveryStatus.BALANCE_LIMIT : DeliveryStatus.PERSIST_FAILED;
+          }
+          moneyCredited = true;
+        }
         long now = System.currentTimeMillis();
         data.ledger().addPersonal(recipientId,
             new MailRecord(UUID.randomUUID(), MailType.SYSTEM, null, "", draft.subject(), draft.body(),
-                draft.source(), now, 0, List.of(), false, true), data::markDirty);
+                draft.source(), now, 0, List.of(), moneyAmount, false, true), data::markDirty);
       } catch (IllegalArgumentException failure) {
+        if (moneyCredited && economy != null) rollbackCredit(economy, recipientId, moneyAmount);
         return DeliveryStatus.INVALID_INPUT;
       } catch (IllegalStateException failure) {
+        if (moneyCredited && economy != null) rollbackCredit(economy, recipientId, moneyAmount);
         return DeliveryStatus.MAILBOX_FULL;
       } catch (RuntimeException failure) {
+        if (moneyCredited && economy != null) rollbackCredit(economy, recipientId, moneyAmount);
         return DeliveryStatus.PERSIST_FAILED;
       }
       NeoForge1211MailboxHandlers.notifyNewMail(
@@ -195,33 +215,51 @@ public final class NeoForge1211EconomyApiSession implements EconomyApiSession {
           > EconomyNetworkLimits.MAX_DELIVERY_BOX_ENTRIES) {
         return DeliveryStatus.ATTACHMENT_STORAGE_FULL;
       }
-
-      try {
-        delivery.ledger().addAll(recipientId, attachments, delivery::markDirty);
-      } catch (IllegalStateException failure) {
-        return DeliveryStatus.ATTACHMENT_STORAGE_FULL;
-      } catch (RuntimeException failure) {
-        return DeliveryStatus.PERSIST_FAILED;
+      int moneyAmount = draft.moneyAmount();
+      EconomySavedData economy = moneyAmount > 0 ? EconomySavedData.getInstance(level) : null;
+      if (economy != null && economy.previewCreditExact(recipientId, moneyAmount)
+          != BalanceMutationResult.SUCCESS) {
+        return DeliveryStatus.BALANCE_LIMIT;
       }
 
+      boolean deliveryAdded = false;
+      boolean moneyCredited = false;
       List<UUID> attachmentIds = attachments.stream().map(DeliveryBoxEntrySnapshot::entryId).toList();
       try {
+        delivery.ledger().addAll(recipientId, attachments, delivery::markDirty);
+        deliveryAdded = true;
+        if (economy != null) {
+          BalanceMutationResult credited = economy.creditExact(
+              recipientId, moneyAmount, "邮件", "补偿邮件发放");
+          if (credited != BalanceMutationResult.SUCCESS) {
+            if (!rollbackDelivery(delivery, recipientId, attachmentIds)) {
+              return DeliveryStatus.STATE_UNKNOWN;
+            }
+            return credited == BalanceMutationResult.BALANCE_LIMIT
+                ? DeliveryStatus.BALANCE_LIMIT : DeliveryStatus.PERSIST_FAILED;
+          }
+          moneyCredited = true;
+        }
         long now = System.currentTimeMillis();
         mailboxData.ledger().addPersonal(recipientId,
             new MailRecord(UUID.randomUUID(), MailType.COMPENSATION, null, "", draft.subject(), draft.body(),
-                draft.source(), now, 0, attachmentIds, false, true), mailboxData::markDirty);
-      } catch (RuntimeException failure) {
-        try {
-          if (!delivery.ledger().removeUnclaimedBatch(
-              recipientId, Set.copyOf(attachmentIds), delivery::markDirty)) {
-            return DeliveryStatus.STATE_UNKNOWN;
-          }
-        } catch (RuntimeException rollbackFailure) {
-          failure.addSuppressed(rollbackFailure);
+                draft.source(), now, 0, attachmentIds, moneyAmount, false, true), mailboxData::markDirty);
+      } catch (IllegalStateException failure) {
+        if (deliveryAdded && !rollbackDelivery(delivery, recipientId, attachmentIds)) {
           return DeliveryStatus.STATE_UNKNOWN;
         }
-        return failure instanceof IllegalStateException
-            ? DeliveryStatus.MAILBOX_FULL : DeliveryStatus.PERSIST_FAILED;
+        if (moneyCredited && economy != null && !rollbackCredit(economy, recipientId, moneyAmount)) {
+          return DeliveryStatus.STATE_UNKNOWN;
+        }
+        return DeliveryStatus.MAILBOX_FULL;
+      } catch (RuntimeException failure) {
+        if (deliveryAdded && !rollbackDelivery(delivery, recipientId, attachmentIds)) {
+          return DeliveryStatus.STATE_UNKNOWN;
+        }
+        if (moneyCredited && economy != null && !rollbackCredit(economy, recipientId, moneyAmount)) {
+          return DeliveryStatus.STATE_UNKNOWN;
+        }
+        return DeliveryStatus.PERSIST_FAILED;
       }
 
       NeoForge1211MailboxHandlers.notifyNewMail(
@@ -233,6 +271,7 @@ public final class NeoForge1211EconomyApiSession implements EconomyApiSession {
       requireServerThread();
       Objects.requireNonNull(draft, "draft");
       if (expiresAtEpochMillis < 0) return DeliveryStatus.INVALID_INPUT;
+      if (draft.moneyAmount() > 0) return DeliveryStatus.INVALID_INPUT;
       MailboxSavedData data = MailboxSavedData.getInstance(level);
       if (data.ledger().snapshot().announcements().size() >= EconomyNetworkLimits.MAX_MAIL_ANNOUNCEMENTS) {
         return DeliveryStatus.MAILBOX_FULL;
@@ -282,6 +321,26 @@ public final class NeoForge1211EconomyApiSession implements EconomyApiSession {
     }
 
     private record Materialization(List<ItemStack> stacks, DeliveryStatus error) {}
+
+    private static boolean rollbackCredit(
+        EconomySavedData economy, UUID recipientId, int amount) {
+      try {
+        return economy.debitExact(recipientId, amount, "邮件回滚", "邮件发送失败退款")
+            == BalanceMutationResult.SUCCESS;
+      } catch (RuntimeException failure) {
+        return false;
+      }
+    }
+
+    private static boolean rollbackDelivery(
+        DeliveryBoxSavedData delivery, UUID recipientId, List<UUID> attachmentIds) {
+      try {
+        return delivery.ledger().removeUnclaimedBatch(
+            recipientId, Set.copyOf(attachmentIds), delivery::markDirty);
+      } catch (RuntimeException failure) {
+        return false;
+      }
+    }
   }
 
   private final class Market implements EconomyMarketApi {

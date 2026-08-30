@@ -54,10 +54,10 @@ excluded from both target source sets.
 
 ## Historical migration status
 
-This section records intermediate boundaries. The current authoritative status is the 52-message Bridge described above.
+This section records intermediate boundaries. The current authoritative status is the 53-message Bridge described above.
 
-- Protocol `bridge-2` locks all 52 message IDs, directions,
-  and Forge discriminators (`0` through `51`). Mailbox messages occupy append-only IDs `44` through `51`.
+- Protocol `bridge-3` locks all 53 message IDs, directions,
+  and Forge discriminators (`0` through `52`). Mailbox messages occupy append-only IDs `44` through `52`.
 - Common messages currently cover balance (`0/1`), balance history (`2/3`),
   transfers (`4`), system-shop catalog synchronization and purchasing (`5-7`),
   sales-order creation (`8`), demand-order creation (`9`), and server player lists (`34/35`). Both targets have real codecs and handlers for these

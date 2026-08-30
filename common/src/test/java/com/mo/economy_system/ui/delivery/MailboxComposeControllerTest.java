@@ -48,9 +48,41 @@ class MailboxComposeControllerTest {
     assertInstanceOf(UiNavigation.Back.class, controller.pollNavigation().orElseThrow());
   }
 
+  @Test void moneyAmountIsIncludedInTheSubmittedPlayerMail() {
+    FakePort port = new FakePort();
+    MailboxComposeController controller = new MailboxComposeController(List.of(), port);
+    controller.handle(new MailboxComposeEvent.RecipientChanged("Player"));
+    controller.handle(new MailboxComposeEvent.SubjectChanged("Payment"));
+    controller.handle(new MailboxComposeEvent.BodyChanged("Here are the coins"));
+    controller.handle(new MailboxComposeEvent.MoneyChanged("250"));
+    controller.handle(new MailboxComposeEvent.ActionClicked(MailboxComposeAction.SEND));
+
+    assertEquals(1, port.calls);
+    assertNotNull(port.message);
+    assertEquals(250, port.message.moneyAmount());
+  }
+
+  @Test void malformedMoneyAmountIsRejectedBeforeSending() {
+    FakePort port = new FakePort();
+    MailboxComposeController controller = new MailboxComposeController(List.of(), port);
+    controller.handle(new MailboxComposeEvent.RecipientChanged("Player"));
+    controller.handle(new MailboxComposeEvent.SubjectChanged("Payment"));
+    controller.handle(new MailboxComposeEvent.BodyChanged("Body"));
+    controller.handle(new MailboxComposeEvent.MoneyChanged("12x"));
+    controller.handle(new MailboxComposeEvent.ActionClicked(MailboxComposeAction.SEND));
+
+    assertEquals(0, port.calls);
+    assertEquals(MailboxSendStatus.INVALID_CONTENT, controller.state().status());
+    assertFalse(controller.state().sending());
+  }
+
   private static final class FakePort implements MailboxComposePort {
     private int calls;
+    private MailboxSendPlayerMessage message;
     @Override public long nextRequestId() { return 7; }
-    @Override public void send(MailboxSendPlayerMessage message) { calls++; }
+    @Override public void send(MailboxSendPlayerMessage message) {
+      calls++;
+      this.message = message;
+    }
   }
 }

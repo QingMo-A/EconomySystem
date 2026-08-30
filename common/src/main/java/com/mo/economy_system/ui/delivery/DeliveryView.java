@@ -125,6 +125,10 @@ public final class DeliveryView {
     String meta = formatTime(row.mail().createdAtEpochMillis());
     if (!row.mail().source().isBlank()) meta = meta.isEmpty() ? row.mail().source() : meta + " · " + row.mail().source();
     renderer.textInRect(meta, layout.detailMeta(), EconomyUiTheme.TEXT_MUTED, UiTextAlignment.LEFT);
+    if (row.mail().hasMoney()) {
+      renderer.translatedTextInRect("screen.mailbox.money", List.of(Integer.toString(row.mail().moneyAmount())),
+          layout.detailMeta(), EconomyUiTheme.TEXT_SUCCESS, UiTextAlignment.RIGHT);
+    }
     if (!row.mail().body().isBlank()) {
       renderWrappedText(renderer, row.mail().body(), layout.detailBody(), layout,
           EconomyUiTheme.TEXT_SECONDARY);

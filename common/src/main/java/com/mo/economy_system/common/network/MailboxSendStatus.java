@@ -6,6 +6,8 @@ public enum MailboxSendStatus {
   CANNOT_SEND_TO_SELF("cannot_send_to_self"),
   INVALID_CONTENT("invalid_content"),
   INVALID_ATTACHMENT("invalid_attachment"),
+  INSUFFICIENT_FUNDS("insufficient_funds"),
+  RECIPIENT_BALANCE_LIMIT("recipient_balance_limit"),
   RECIPIENT_MAILBOX_FULL("recipient_mailbox_full"),
   RATE_LIMITED("rate_limited"),
   FAILED("failed");

@@ -392,6 +392,7 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add("screen.mailbox.compose.recipient", "收件人");
     add("screen.mailbox.compose.subject", "主题");
     add("screen.mailbox.compose.body", "正文");
+    add("screen.mailbox.compose.money", "金额（可选）");
     add("screen.mailbox.compose.attachments", "附件 %s/%s");
     add("screen.mailbox.compose.send", "发送");
     add("screen.mailbox.compose.back", "返回");
@@ -412,6 +413,9 @@ public class ZhCnLanguageProvider extends LanguageProvider {
     add("message.mailbox.send.recipient_mailbox_full", "对方邮箱已满");
     add("message.mailbox.send.rate_limited", "发送过快，请稍后再试");
     add("message.mailbox.send.failed", "邮件发送失败");
+    add("message.mailbox.send.insufficient_funds", "余额不足，无法发送该金额");
+    add("message.mailbox.send.recipient_balance_limit", "对方余额达到上限，无法接收该金额");
+    add("screen.mailbox.money", "金额：%s 梦鱼币");
 
     // RedPacket Command | 红包指令
     add(RedPacketFeedback.INSUFFICIENT_BALANCE, "§c你没有足够的梦鱼币创建红包");

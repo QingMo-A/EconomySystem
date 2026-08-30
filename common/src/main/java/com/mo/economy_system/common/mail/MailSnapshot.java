@@ -18,7 +18,27 @@ public record MailSnapshot(
     boolean read,
     boolean globalAnnouncement,
     boolean protectedMail,
-    List<MailAttachmentSnapshot> attachments) {
+    List<MailAttachmentSnapshot> attachments,
+    int moneyAmount) {
+
+  /** Backward-compatible constructor for snapshots without a monetary transfer. */
+  public MailSnapshot(
+      UUID mailId,
+      MailType type,
+      UUID senderId,
+      String senderName,
+      String subject,
+      String body,
+      String source,
+      long createdAtEpochMillis,
+      long expiresAtEpochMillis,
+      boolean read,
+      boolean globalAnnouncement,
+      boolean protectedMail,
+      List<MailAttachmentSnapshot> attachments) {
+    this(mailId, type, senderId, senderName, subject, body, source, createdAtEpochMillis,
+        expiresAtEpochMillis, read, globalAnnouncement, protectedMail, attachments, 0);
+  }
 
   public MailSnapshot {
     Objects.requireNonNull(mailId, "mailId");
@@ -28,10 +48,15 @@ public record MailSnapshot(
     body = Objects.requireNonNullElse(body, "");
     source = Objects.requireNonNullElse(source, "");
     attachments = List.copyOf(Objects.requireNonNull(attachments, "attachments"));
+    if (moneyAmount < 0) throw new IllegalArgumentException("moneyAmount must be non-negative");
   }
 
   public boolean hasAttachments() {
     return !attachments.isEmpty();
+  }
+
+  public boolean hasMoney() {
+    return moneyAmount > 0;
   }
 
   public boolean hasUnclaimedAttachments() {

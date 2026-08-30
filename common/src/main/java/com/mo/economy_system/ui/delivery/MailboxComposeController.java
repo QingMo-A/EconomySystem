@@ -16,7 +16,7 @@ public final class MailboxComposeController
   private final MailboxComposePort port;
 
   public MailboxComposeController(List<MailboxComposeInventoryItem> inventory, MailboxComposePort port) {
-    super(new MailboxComposeState(inventory, "", "", "", Set.of(), false, -1, -1, null));
+    super(new MailboxComposeState(inventory, "", "", "", "0", Set.of(), false, -1, -1, null));
     this.port = Objects.requireNonNull(port, "port");
   }
 
@@ -26,6 +26,7 @@ public final class MailboxComposeController
     else if (event instanceof MailboxComposeEvent.RecipientChanged value) text(value.value(), null, null);
     else if (event instanceof MailboxComposeEvent.SubjectChanged value) text(null, value.value(), null);
     else if (event instanceof MailboxComposeEvent.BodyChanged value) text(null, null, value.value());
+    else if (event instanceof MailboxComposeEvent.MoneyChanged value) money(value.value());
     else if (event instanceof MailboxComposeEvent.SlotToggled value) toggle(value.slot());
     else if (event instanceof MailboxComposeEvent.SendResult value) result(value);
     else if (event instanceof MailboxComposeEvent.ActionClicked value) action(value.action());
@@ -37,13 +38,20 @@ public final class MailboxComposeController
     LinkedHashSet<Integer> selected = new LinkedHashSet<>(state().selectedSlots());
     selected.retainAll(occupied);
     replace(inventory, state().recipient(), state().subject(), state().body(), selected,
-        state().sending(), state().requestId(), state().appliedRevision(), state().status());
+        state().moneyAmount(), state().sending(), state().requestId(), state().appliedRevision(),
+        state().status());
   }
 
   private void text(String recipient, String subject, String body) {
     replace(state().inventory(), recipient == null ? state().recipient() : recipient,
         subject == null ? state().subject() : subject,
-        body == null ? state().body() : body, state().selectedSlots(), state().sending(),
+        body == null ? state().body() : body, state().selectedSlots(), state().moneyAmount(),
+        state().sending(), state().requestId(), state().appliedRevision(), state().status());
+  }
+
+  private void money(String value) {
+    replace(state().inventory(), state().recipient(), state().subject(), state().body(),
+        state().selectedSlots(), value == null ? "" : value, state().sending(),
         state().requestId(), state().appliedRevision(), state().status());
   }
 
@@ -54,7 +62,7 @@ public final class MailboxComposeController
       selected.add(slot);
     }
     replace(state().inventory(), state().recipient(), state().subject(), state().body(), selected,
-        false, state().requestId(), state().appliedRevision(), state().status());
+        state().moneyAmount(), false, state().requestId(), state().appliedRevision(), state().status());
   }
 
   private void action(MailboxComposeAction action) {
@@ -66,15 +74,18 @@ public final class MailboxComposeController
     if (state().sending()) return;
     long requestId = port.nextRequestId();
     try {
+      int moneyAmount = parseMoney(state().moneyAmount());
       MailboxSendPlayerMessage message = new MailboxSendPlayerMessage(
           state().recipient(), state().subject(), state().body(),
-          List.copyOf(state().selectedSlots()), requestId);
+          List.copyOf(state().selectedSlots()), requestId, moneyAmount);
       replace(state().inventory(), state().recipient(), state().subject(), state().body(),
-          state().selectedSlots(), true, requestId, state().appliedRevision(), null);
+          state().selectedSlots(), state().moneyAmount(), true, requestId,
+          state().appliedRevision(), null);
       port.send(message);
     } catch (IllegalArgumentException invalid) {
       replace(state().inventory(), state().recipient(), state().subject(), state().body(),
-          state().selectedSlots(), false, -1, state().appliedRevision(), MailboxSendStatus.INVALID_CONTENT);
+          state().selectedSlots(), state().moneyAmount(), false, -1, state().appliedRevision(),
+          MailboxSendStatus.INVALID_CONTENT);
     }
   }
 
@@ -82,14 +93,24 @@ public final class MailboxComposeController
     if (!state().sending() || result.requestId() != state().requestId()
         || result.revision() <= state().appliedRevision()) return;
     replace(state().inventory(), state().recipient(), state().subject(), state().body(),
-        state().selectedSlots(), false, state().requestId(), result.revision(), result.status());
+        state().selectedSlots(), state().moneyAmount(), false, state().requestId(),
+        result.revision(), result.status());
     if (result.status() == MailboxSendStatus.SUCCESS) navigate(new UiNavigation.Back());
   }
 
   private void replace(List<MailboxComposeInventoryItem> inventory, String recipient, String subject,
-                       String body, Set<Integer> slots, boolean sending, long requestId,
+                       String body, Set<Integer> slots, String moneyAmount, boolean sending, long requestId,
                        long revision, MailboxSendStatus status) {
-    replaceState(new MailboxComposeState(inventory, recipient, subject, body, slots,
+    replaceState(new MailboxComposeState(inventory, recipient, subject, body, moneyAmount, slots,
         sending, requestId, revision, status));
+  }
+
+  private static int parseMoney(String value) {
+    String normalized = value == null ? "" : value.trim();
+    if (normalized.isEmpty()) return 0;
+    if (normalized.length() > 10) throw new IllegalArgumentException("money amount is too large");
+    int amount = Integer.parseInt(normalized);
+    if (amount < 0) throw new IllegalArgumentException("money amount must be non-negative");
+    return amount;
   }
 }

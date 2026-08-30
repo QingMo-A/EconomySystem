@@ -8,6 +8,7 @@ public sealed interface MailboxComposeEvent permits
     MailboxComposeEvent.RecipientChanged,
     MailboxComposeEvent.SubjectChanged,
     MailboxComposeEvent.BodyChanged,
+    MailboxComposeEvent.MoneyChanged,
     MailboxComposeEvent.SlotToggled,
     MailboxComposeEvent.SendResult,
     MailboxComposeEvent.ActionClicked {
@@ -17,6 +18,7 @@ public sealed interface MailboxComposeEvent permits
   record RecipientChanged(String value) implements MailboxComposeEvent {}
   record SubjectChanged(String value) implements MailboxComposeEvent {}
   record BodyChanged(String value) implements MailboxComposeEvent {}
+  record MoneyChanged(String value) implements MailboxComposeEvent {}
   record SlotToggled(int slot) implements MailboxComposeEvent {}
   record SendResult(long revision, long requestId, MailboxSendStatus status) implements MailboxComposeEvent {}
   record ActionClicked(MailboxComposeAction action) implements MailboxComposeEvent {}

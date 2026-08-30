@@ -190,6 +190,22 @@ var result = mailbox.sendNotice(
 
 收件人可以离线。在线时会使用 EconomySystem 的新邮件 Toast / 提示音。
 
+如果需要随通知发放梦鱼币，在 `MailDraft` 的第四个参数填写金额：
+
+```java
+var result = mailbox.sendNotice(
+    playerId,
+    EconomyMailboxApi.MailDraft.of(
+        "examplemod:quest_bonus",
+        "任务奖金",
+        "奖励已发放。",
+        250
+    )
+);
+```
+
+金额在邮件写入成功的同一服务端操作中立即计入收件人账户，并作为邮件记录中的发放凭据展示；它不会在打开邮件时重复入账。余额达到上限时调用返回 `BALANCE_LIMIT`。
+
 ### 发送带附件的系统补偿/奖励
 
 ```java
@@ -209,6 +225,8 @@ var result = mailbox.sendCompensation(
 
 API 会按物品原生最大堆叠数拆分附件。拆分后最多 27 个附件；超出时整个调用返回 `TOO_MANY_ATTACHMENTS`，不会少发一部分物品。
 
+补偿邮件也可以在 `MailDraft` 中携带金额；金额与物品附件一起写入同一封邮件，发放成功后立即计入收件人账户。
+
 附件写入仍使用 EconomySystem 原有的 DeliveryBox + Mailbox 事务语义，避免复制或静默丢失。
 
 ### 发布全局公告
@@ -227,6 +245,8 @@ mailbox.publishAnnouncement(
 ```
 
 `expiresAtEpochMillis = 0` 表示不设置显式过期时间。
+
+全局公告是面向所有玩家的文本消息，不能携带金额或物品。公告会保存在世界数据中；只要尚未过期或被玩家关闭，新进服玩家之后打开邮箱仍可看到该公告。定向的系统/补偿邮件只会显示给指定 UUID 的收件人，新玩家不会收到发给其他玩家的历史邮件。
 
 ## 6. 市场 API
 

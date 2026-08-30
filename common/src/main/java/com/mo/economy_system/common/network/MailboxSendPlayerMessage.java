@@ -10,7 +10,18 @@ public record MailboxSendPlayerMessage(
     String subject,
     String body,
     List<Integer> inventorySlots,
-    long requestId) implements EconomyNetworkMessage {
+    long requestId,
+    int moneyAmount) implements EconomyNetworkMessage {
+
+  /** Compatibility constructor for item/text-only player mail. */
+  public MailboxSendPlayerMessage(
+      String recipientName,
+      String subject,
+      String body,
+      List<Integer> inventorySlots,
+      long requestId) {
+    this(recipientName, subject, body, inventorySlots, requestId, 0);
+  }
 
   public MailboxSendPlayerMessage {
     recipientName = Objects.requireNonNull(recipientName, "recipientName").trim();
@@ -26,6 +37,9 @@ public record MailboxSendPlayerMessage(
     if (body.length() > EconomyNetworkLimits.MAX_MAIL_BODY_LENGTH) {
       throw new IllegalArgumentException("mail body too long");
     }
+    if (moneyAmount < 0) {
+      throw new IllegalArgumentException("mail money amount must be non-negative");
+    }
     if (inventorySlots.size() > EconomyNetworkLimits.MAX_PLAYER_MAIL_ATTACHMENTS) {
       throw new IllegalArgumentException("too many player mail attachments");
     }
@@ -35,7 +49,7 @@ public record MailboxSendPlayerMessage(
         throw new IllegalArgumentException("invalid inventory slot selection");
       }
     }
-    if (subject.isBlank() && body.isBlank() && inventorySlots.isEmpty()) {
+    if (subject.isBlank() && body.isBlank() && inventorySlots.isEmpty() && moneyAmount == 0) {
       throw new IllegalArgumentException("empty mail cannot be sent");
     }
     if (requestId < 0) throw new IllegalArgumentException("requestId must be non-negative");

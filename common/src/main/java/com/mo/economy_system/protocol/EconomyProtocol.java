@@ -15,8 +15,8 @@ import java.util.Set;
  * never be reordered, renumbered, or reused. New messages are appended only.</p>
  */
 public final class EconomyProtocol {
-    /** Bumped because Bridge codecs are intentionally incompatible with legacy packets. */
-    public static final String VERSION = "bridge-2";
+    /** Bumped for the monetary mailbox fields appended to player-mail and mail responses. */
+    public static final String VERSION = "bridge-3";
 
     private static final List<EconomyMessageSpec> DECLARATIONS = new ArrayList<>();
 

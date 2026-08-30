@@ -12,7 +12,8 @@ import java.util.UUID;
 
 /** Loader-neutral NBT codec for mailbox metadata. */
 public final class MailboxCodec {
-  private static final int SCHEMA = 2;
+  /** Schema 3 adds the optional, already-transferred monetary amount to each mail. */
+  private static final int SCHEMA = 3;
 
   private MailboxCodec() {}
 
@@ -38,7 +39,9 @@ public final class MailboxCodec {
 
   public static MailboxLedger.State decode(NbtData.Compound root) {
     int schema = intValue(root, "schema", 1);
-    if (schema != 1 && schema != SCHEMA) throw new IllegalArgumentException("unsupported mailbox schema: " + schema);
+    if (schema < 1 || schema > SCHEMA) {
+      throw new IllegalArgumentException("unsupported mailbox schema: " + schema);
+    }
 
     Map<UUID, List<MailRecord>> personal = new LinkedHashMap<>();
     for (NbtData value : listValue(root, "personal")) {
@@ -72,6 +75,7 @@ public final class MailboxCodec {
         .putBoolean("read", mail.read())
         .putBoolean("protected", mail.protectedMail());
     if (mail.senderId() != null) builder.putUuid("sender_id", mail.senderId());
+    if (mail.moneyAmount() > 0) builder.putInt("money", mail.moneyAmount());
     List<NbtData> attachments = mail.attachmentIds().stream().map(NbtData::uuid).map(v -> (NbtData) v).toList();
     List<NbtData> claimed = mail.claimedAttachments().stream().map(attachment -> (NbtData) NbtData.compoundBuilder()
         .putUuid("id", attachment.entryId())
@@ -109,7 +113,8 @@ public final class MailboxCodec {
         List.copyOf(attachments),
         List.copyOf(claimed),
         booleanValue(tag, "read", false),
-        booleanValue(tag, "protected", false));
+        booleanValue(tag, "protected", false),
+        intValue(tag, "money", 0));
   }
 
   private static NbtData.ListValue encodeSetMap(Map<UUID, Set<UUID>> source) {

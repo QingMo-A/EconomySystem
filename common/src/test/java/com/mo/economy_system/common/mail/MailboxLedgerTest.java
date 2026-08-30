@@ -54,6 +54,32 @@ class MailboxLedgerTest {
   }
 
   @Test
+  void globalAnnouncementsRejectMoneyBecauseTheyHaveNoIndividualRecipient() {
+    MailboxLedger ledger = new MailboxLedger();
+    MailRecord announcement = new MailRecord(
+        UUID.randomUUID(), MailType.ANNOUNCEMENT, null, "", "subject", "body", "test.mail",
+        10, 0, List.of(), 25, false, true);
+
+    assertThrows(IllegalArgumentException.class,
+        () -> ledger.addAnnouncement(announcement, () -> {}));
+  }
+
+  @Test
+  void monetaryMailMetadataSurvivesReadAndSnapshotProjection() {
+    UUID owner = UUID.randomUUID();
+    MailRecord original = new MailRecord(
+        UUID.randomUUID(), MailType.SYSTEM, null, "", "subject", "body", "test.mail",
+        10, 0, List.of(), 250, false, true);
+    MailboxLedger ledger = new MailboxLedger();
+    ledger.addPersonal(owner, original, () -> {});
+
+    assertEquals(250, ledger.listPersonal(owner).get(0).moneyAmount());
+    ledger.markRead(owner, original.mailId(), () -> {});
+    assertEquals(250, ledger.listPersonal(owner).get(0).moneyAmount());
+    assertEquals(250, ledger.snapshot().personal().get(owner).get(0).moneyAmount());
+  }
+
+  @Test
   void expiredMailWithAttachmentIsNeverPurgedSilently() {
     UUID owner = UUID.randomUUID();
     UUID attachment = UUID.randomUUID();

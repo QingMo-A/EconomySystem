@@ -32,13 +32,14 @@ public final class MailboxComposeLayout {
     int top = 52;
 
     // Compose stays vertical but no longer stretches across the whole viewport.
-    UiRect formPanel = new UiRect(contentX, top, contentWidth, 92);
-    UiRect inventoryPanel = new UiRect(contentX, top + 100, contentWidth, 124);
+    UiRect formPanel = new UiRect(contentX, top, contentWidth, 116);
+    UiRect inventoryPanel = new UiRect(contentX, top + 124, contentWidth, 124);
     int innerX = formPanel.x() + 14;
     int inputWidth = Math.max(160, formPanel.width() - 28);
-    UiRect recipient = new UiRect(innerX, formPanel.y() + 12, inputWidth, 18);
-    UiRect subject = new UiRect(innerX, formPanel.y() + 39, inputWidth, 18);
-    UiRect body = new UiRect(innerX, formPanel.y() + 66, inputWidth, 18);
+    UiRect recipient = new UiRect(innerX, formPanel.y() + 8, inputWidth, 18);
+    UiRect subject = new UiRect(innerX, formPanel.y() + 31, inputWidth, 18);
+    UiRect body = new UiRect(innerX, formPanel.y() + 54, inputWidth, 18);
+    UiRect money = new UiRect(innerX, formPanel.y() + 77, inputWidth, 18);
     UiRect completionDropdown = new UiRect(recipient.x(), recipient.bottom() + 2,
         recipient.width(), COMPLETION_ROW_HEIGHT * COMPLETION_MAX_ROWS);
 
@@ -64,12 +65,12 @@ public final class MailboxComposeLayout {
     UiRect esc = new UiRect(Math.max(panel, width - panel - 90),
         height - panel - metrics.lineHeight(), 90, metrics.lineHeight());
     return new Layout(scale, versionInfo.card(), versionInfo.contentScale(), esc, formPanel, inventoryPanel,
-        recipient, subject, body, completionDropdown, send, back, status, List.copyOf(slots), metrics);
+        recipient, subject, body, money, completionDropdown, send, back, status, List.copyOf(slots), metrics);
   }
 
   public record Layout(UiScale scale, UiRect title, float versionInfoScale, UiRect esc,
                        UiRect formPanel, UiRect inventoryPanel,
-                       UiRect recipient, UiRect subject, UiRect body, UiRect completionDropdown,
+                       UiRect recipient, UiRect subject, UiRect body, UiRect money, UiRect completionDropdown,
                        UiRect sendButton, UiRect backButton, UiRect status,
                        List<Slot> slots, UiTextMetrics metrics) {}
   public record Slot(int slot, UiRect rect) {}

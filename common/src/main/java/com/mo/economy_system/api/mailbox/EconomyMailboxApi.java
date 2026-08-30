@@ -27,12 +27,18 @@ public interface EconomyMailboxApi {
     MAILBOX_FULL,
     ATTACHMENT_STORAGE_FULL,
     TOO_MANY_ATTACHMENTS,
+    BALANCE_LIMIT,
     PERSIST_FAILED,
     STATE_UNKNOWN
   }
 
   /** Immutable text/source metadata for one API-produced mail. */
-  record MailDraft(String source, String subject, String body) {
+  record MailDraft(String source, String subject, String body, int moneyAmount) {
+    /** Compatibility constructor for text/item-only messages. */
+    public MailDraft(String source, String subject, String body) {
+      this(source, subject, body, 0);
+    }
+
     public MailDraft {
       source = Objects.requireNonNull(source, "source").trim();
       subject = Objects.requireNonNullElse(subject, "").trim();
@@ -46,10 +52,17 @@ public interface EconomyMailboxApi {
       if (body.length() > MAX_BODY_LENGTH) {
         throw new IllegalArgumentException("body exceeds " + MAX_BODY_LENGTH + " characters");
       }
+      if (moneyAmount < 0) {
+        throw new IllegalArgumentException("moneyAmount must be non-negative");
+      }
     }
 
     public static MailDraft of(String source, String subject, String body) {
       return new MailDraft(source, subject, body);
+    }
+
+    public static MailDraft of(String source, String subject, String body, int moneyAmount) {
+      return new MailDraft(source, subject, body, moneyAmount);
     }
   }
 

@@ -9,6 +9,7 @@ import com.mo.economy_system.platform.EconomyServices;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.Map;
+import java.util.Collection;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.UuidArgument;
@@ -55,33 +56,42 @@ public final class Forge1201EconomyCommands {
     var coin = Commands.literal("coin");
     coin.then(Commands.literal("balance")
         .executes(c -> balance(c.getSource().getPlayerOrException())));
+
+    var addTarget = Commands.argument("target", EntityArgument.player())
+        .executes(c -> add(EntityArgument.getPlayer(c, "target"),
+            IntegerArgumentType.getInteger(c, "amount"), c.getSource()));
     coin.then(Commands.literal("add").requires(s -> s.hasPermission(2))
-        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
-            .then(Commands.argument("target", EntityArgument.player())
-                .executes(c -> add(EntityArgument.getPlayer(c, "target"),
-                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+        .then(Commands.argument("amount", IntegerArgumentType.integer(1)).then(addTarget)));
+
+    var minTarget = Commands.argument("target", EntityArgument.player())
+        .executes(c -> min(EntityArgument.getPlayer(c, "target"),
+            IntegerArgumentType.getInteger(c, "amount"), c.getSource()));
     coin.then(Commands.literal("min").requires(s -> s.hasPermission(2))
-        .then(Commands.argument("amount", IntegerArgumentType.integer(1))
-            .then(Commands.argument("target", EntityArgument.player())
-                .executes(c -> min(EntityArgument.getPlayer(c, "target"),
-                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+        .then(Commands.argument("amount", IntegerArgumentType.integer(1)).then(minTarget)));
+
+    var setTarget = Commands.argument("target", EntityArgument.players())
+        .executes(c -> setMany(EntityArgument.getPlayers(c, "target"),
+            IntegerArgumentType.getInteger(c, "amount"), c.getSource()));
     coin.then(Commands.literal("set").requires(s -> s.hasPermission(2))
+        .then(Commands.argument("amount", IntegerArgumentType.integer(0)).then(setTarget)));
+
+    coin.then(Commands.literal("setall").requires(s -> s.hasPermission(2))
         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
-            .then(Commands.argument("target", EntityArgument.player())
-                .executes(c -> set(EntityArgument.getPlayer(c, "target"),
-                    IntegerArgumentType.getInteger(c, "amount"), c.getSource())))));
+            .executes(c -> setMany(c.getSource().getServer().getPlayerList().getPlayers(),
+                IntegerArgumentType.getInteger(c, "amount"), c.getSource()))));
+
+    var transferAmount = Commands.argument("amount", IntegerArgumentType.integer(1))
+        .executes(c -> {
+          ServerPlayer sender = c.getSource().getPlayerOrException();
+          ServerPlayer target = EntityArgument.getPlayer(c, "target");
+          return Forge1201TransferAdapter.execute(sender,
+              new TransferMessage(target.getUUID(),
+                  IntegerArgumentType.getInteger(c, "amount")))
+              == com.mo.economy_system.core.economy_system.BalanceTransferResult.SUCCESS
+              ? 1 : 0;
+        });
     coin.then(Commands.literal("transfer")
-        .then(Commands.argument("target", EntityArgument.player())
-            .then(Commands.argument("amount", IntegerArgumentType.integer(1))
-                .executes(c -> {
-                  ServerPlayer sender = c.getSource().getPlayerOrException();
-                  ServerPlayer target = EntityArgument.getPlayer(c, "target");
-                  return Forge1201TransferAdapter.execute(sender,
-                      new TransferMessage(target.getUUID(),
-                          IntegerArgumentType.getInteger(c, "amount")))
-                      == com.mo.economy_system.core.economy_system.BalanceTransferResult.SUCCESS
-                      ? 1 : 0;
-                }))));
+        .then(Commands.argument("target", EntityArgument.player()).then(transferAmount)));
     event.getDispatcher().register(coin);
 
     event.getDispatcher().register(
@@ -177,6 +187,29 @@ public final class Forge1201EconomyCommands {
         player.getUUID(), amount, "指令", "管理员设置余额");
     source.sendSuccess(() -> Component.translatable("message.coin_command_set", amount), false);
     return 1;
+  }
+
+  private static int setMany(Collection<ServerPlayer> players, int amount,
+      net.minecraft.commands.CommandSourceStack source) {
+    if (players == null || players.isEmpty()) {
+      source.sendFailure(Component.translatable("message.coin_command_no_targets"));
+      return 0;
+    }
+    int updated = 0;
+    for (ServerPlayer player : players) {
+      if (player == null) continue;
+      EconomySavedData.getInstance(player.serverLevel()).setBalance(
+          player.getUUID(), amount, "指令", "管理员设置余额");
+      updated++;
+    }
+    final int count = updated;
+    if (count == 1) {
+      source.sendSuccess(() -> Component.translatable("message.coin_command_set", amount), false);
+    } else {
+      source.sendSuccess(() -> Component.translatable(
+          "message.coin_command_set_many", amount, count), false);
+    }
+    return count;
   }
 
   private static int listSettings(net.minecraft.commands.CommandSourceStack source) {

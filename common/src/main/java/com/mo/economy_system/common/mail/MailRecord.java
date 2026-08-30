@@ -21,7 +21,8 @@ public record MailRecord(
     List<UUID> attachmentIds,
     List<MailAttachmentSnapshot> claimedAttachments,
     boolean read,
-    boolean protectedMail) {
+    boolean protectedMail,
+    int moneyAmount) {
 
   /** Backward-compatible constructor for callers that only create unclaimed attachments. */
   public MailRecord(
@@ -38,7 +39,47 @@ public record MailRecord(
       boolean read,
       boolean protectedMail) {
     this(mailId, type, senderId, senderName, subject, body, source,
-        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read, protectedMail);
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read, protectedMail, 0);
+  }
+
+  /** Backward-compatible canonical-shape constructor for callers that include claim history. */
+  public MailRecord(
+      UUID mailId,
+      MailType type,
+      UUID senderId,
+      String senderName,
+      String subject,
+      String body,
+      String source,
+      long createdAtEpochMillis,
+      long expiresAtEpochMillis,
+      List<UUID> attachmentIds,
+      List<MailAttachmentSnapshot> claimedAttachments,
+      boolean read,
+      boolean protectedMail) {
+    this(mailId, type, senderId, senderName, subject, body, source,
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments,
+        read, protectedMail, 0);
+  }
+
+  /** Convenience constructor for a mail carrying an immediately transferred money amount. */
+  public MailRecord(
+      UUID mailId,
+      MailType type,
+      UUID senderId,
+      String senderName,
+      String subject,
+      String body,
+      String source,
+      long createdAtEpochMillis,
+      long expiresAtEpochMillis,
+      List<UUID> attachmentIds,
+      int moneyAmount,
+      boolean read,
+      boolean protectedMail) {
+    this(mailId, type, senderId, senderName, subject, body, source,
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, List.of(), read,
+        protectedMail, moneyAmount);
   }
 
   public MailRecord {
@@ -53,6 +94,9 @@ public record MailRecord(
     }
     if (expiresAtEpochMillis != 0 && expiresAtEpochMillis < createdAtEpochMillis) {
       throw new IllegalArgumentException("mail expiry predates creation");
+    }
+    if (moneyAmount < 0) {
+      throw new IllegalArgumentException("mail money amount must be non-negative");
     }
     attachmentIds = List.copyOf(Objects.requireNonNull(attachmentIds, "attachmentIds"));
     claimedAttachments = List.copyOf(Objects.requireNonNull(claimedAttachments, "claimedAttachments"));
@@ -91,7 +135,8 @@ public record MailRecord(
   public MailRecord withRead(boolean value) {
     if (read == value) return this;
     return new MailRecord(mailId, type, senderId, senderName, subject, body, source,
-        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments, value, protectedMail);
+        createdAtEpochMillis, expiresAtEpochMillis, attachmentIds, claimedAttachments, value,
+        protectedMail, moneyAmount);
   }
 
   /** Removes an attachment reference without adding claim history (used only for reconciliation/migration cleanup). */
@@ -101,7 +146,7 @@ public record MailRecord(
         createdAtEpochMillis, expiresAtEpochMillis,
         attachmentIds.stream().filter(id -> !id.equals(entryId)).toList(),
         claimedAttachments.stream().filter(attachment -> !attachment.entryId().equals(entryId)).toList(),
-        read, protectedMail);
+        read, protectedMail, moneyAmount);
   }
 
   /** Marks one authoritative delivery attachment claimed while preserving its original slot order. */
@@ -113,7 +158,11 @@ public record MailRecord(
     history.add(attachment.asClaimed());
     return new MailRecord(mailId, type, senderId, senderName, subject, body, source,
         createdAtEpochMillis, expiresAtEpochMillis,
-        attachmentIds, List.copyOf(history), true, protectedMail);
+        attachmentIds, List.copyOf(history), true, protectedMail, moneyAmount);
+  }
+
+  public boolean hasMoney() {
+    return moneyAmount > 0;
   }
 
   private static String validateText(String value, int max, String field) {

@@ -23,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
 import java.util.Map;
+import java.util.Collection;
 
 public class Command_Economy {
 
@@ -178,16 +179,19 @@ public class Command_Economy {
                 .then(Commands.literal("set")
                         .requires(source -> source.hasPermission(2)) // 设置需要权限等级 2
                         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
-                                .then(Commands.argument("target", EntityArgument.player())
+                                .then(Commands.argument("target", EntityArgument.players())
                                 .executes(context -> {
-                                    ServerPlayer player = EntityArgument.getPlayer(context, "target");
                                     int amount = IntegerArgumentType.getInteger(context, "amount");
-                                    ServerLevel serverLevel = player.serverLevel(); // 获取服务器世界实例
-                                    EconomySavedData data = EconomySavedData.getInstance(serverLevel);
-                                    data.setBalance(player.getUUID(), amount, "指令", "管理员设置余额");
-                                    context.getSource().sendSuccess(() -> Component.translatable(Util_MessageKeys.COIN_COMMAND_SET, amount), false);
-                                    return 1;
+                                    return setBalances(context.getSource(),
+                                            EntityArgument.getPlayers(context, "target"), amount);
                                 }))))
+                // Convenience alias for all currently online players.
+                .then(Commands.literal("setall")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                                .executes(context -> setBalances(context.getSource(),
+                                        context.getSource().getServer().getPlayerList().getPlayers(),
+                                        IntegerArgumentType.getInteger(context, "amount")))))
                 // 转账功能
                 .then(Commands.literal("transfer")
                         .then(Commands.argument("target", EntityArgument.player())
@@ -203,6 +207,28 @@ public class Command_Economy {
                                             ) == BalanceTransferResult.SUCCESS ? 1 : 0;
                                         }))))
         );
+    }
+
+    private static int setBalances(CommandSourceStack source, Collection<ServerPlayer> players, int amount) {
+        if (players == null || players.isEmpty()) {
+            source.sendFailure(Component.translatable("message.coin_command_no_targets"));
+            return 0;
+        }
+        int updated = 0;
+        for (ServerPlayer player : players) {
+            if (player == null) continue;
+            EconomySavedData.getInstance(player.serverLevel()).setBalance(
+                    player.getUUID(), amount, "指令", "管理员设置余额");
+            updated++;
+        }
+        final int count = updated;
+        if (count == 1) {
+            source.sendSuccess(() -> Component.translatable(Util_MessageKeys.COIN_COMMAND_SET, amount), false);
+        } else {
+            source.sendSuccess(() -> Component.translatable(
+                    "message.coin_command_set_many", amount, count), false);
+        }
+        return count;
     }
 
     private static int bindSupporterHat(CommandSourceStack source, ServerPlayer executor, UUID supporterUuid, String supporterName) {

@@ -422,6 +422,7 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("screen.mailbox.compose.recipient", "Recipient");
     add("screen.mailbox.compose.subject", "Subject");
     add("screen.mailbox.compose.body", "Message");
+    add("screen.mailbox.compose.money", "Money (optional)");
     add("screen.mailbox.compose.attachments", "Attachments %s/%s");
     add("screen.mailbox.compose.send", "Send");
     add("screen.mailbox.compose.back", "Back");
@@ -442,6 +443,9 @@ public class EnUsLanguageProvider extends LanguageProvider {
     add("message.mailbox.send.recipient_mailbox_full", "The recipient's mailbox is full");
     add("message.mailbox.send.rate_limited", "You are sending mail too quickly");
     add("message.mailbox.send.failed", "Mail could not be sent");
+    add("message.mailbox.send.insufficient_funds", "You do not have enough coins to send this amount");
+    add("message.mailbox.send.recipient_balance_limit", "The recipient cannot receive that many coins");
+    add("screen.mailbox.money", "Money: %s coins");
 
     // RedPacket Command | 红包指令
     add(RedPacketFeedback.INSUFFICIENT_BALANCE, "Red Packet Insufficient Balance");

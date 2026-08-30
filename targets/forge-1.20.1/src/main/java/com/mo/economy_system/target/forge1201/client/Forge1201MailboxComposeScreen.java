@@ -38,6 +38,7 @@ public final class Forge1201MailboxComposeScreen extends Screen {
   private EditBox recipient;
   private EditBox subject;
   private EditBox body;
+  private EditBox money;
 
   public Forge1201MailboxComposeScreen(Screen parent) {
     super(Component.translatable("screen.mailbox.compose.title"));
@@ -54,6 +55,7 @@ public final class Forge1201MailboxComposeScreen extends Screen {
     String recipientValue = controller.state().recipient();
     String subjectValue = controller.state().subject();
     String bodyValue = controller.state().body();
+    String moneyValue = controller.state().moneyAmount();
     MailboxComposeLayout.Layout layout = layout();
     recipient = input(layout.recipient(), "screen.mailbox.compose.recipient",
         EconomyNetworkLimits.MAX_PLAYER_NAME_LENGTH, recipientValue, layout.scale());
@@ -61,6 +63,8 @@ public final class Forge1201MailboxComposeScreen extends Screen {
         EconomyNetworkLimits.MAX_MAIL_SUBJECT_LENGTH, subjectValue, layout.scale());
     body = input(layout.body(), "screen.mailbox.compose.body",
         EconomyNetworkLimits.MAX_MAIL_BODY_LENGTH, bodyValue, layout.scale());
+    money = input(layout.money(), "screen.mailbox.compose.money",
+        10, moneyValue, layout.scale());
     recipient.setResponder(value -> {
       recipientCompletion.reset();
       if (!value.equals(acceptedRecipientName)) acceptedRecipientName = "";
@@ -68,9 +72,11 @@ public final class Forge1201MailboxComposeScreen extends Screen {
     });
     subject.setResponder(value -> controller.handle(new MailboxComposeEvent.SubjectChanged(value)));
     body.setResponder(value -> controller.handle(new MailboxComposeEvent.BodyChanged(value)));
+    money.setResponder(value -> controller.handle(new MailboxComposeEvent.MoneyChanged(value)));
     addRenderableWidget(recipient);
     addRenderableWidget(subject);
     addRenderableWidget(body);
+    addRenderableWidget(money);
     EconomyServices.platform().network().sendToServer(ServerPlayerListRequestMessage.INSTANCE);
   }
 
@@ -114,6 +120,7 @@ public final class Forge1201MailboxComposeScreen extends Screen {
     renderInputFrame(renderer, recipient, mouseX, mouseY);
     renderInputFrame(renderer, subject, mouseX, mouseY);
     renderInputFrame(renderer, body, mouseX, mouseY);
+    renderInputFrame(renderer, money, mouseX, mouseY);
     syncHints();
     super.render(graphics, mouseX, mouseY, partialTick);
 
@@ -210,6 +217,7 @@ public final class Forge1201MailboxComposeScreen extends Screen {
     syncInput(recipient, layout.recipient(), layout.scale());
     syncInput(subject, layout.subject(), layout.scale());
     syncInput(body, layout.body(), layout.scale());
+    syncInput(money, layout.money(), layout.scale());
   }
 
   private static void syncInput(EditBox box, UiRect rect, UiScale scale) {
@@ -224,6 +232,7 @@ public final class Forge1201MailboxComposeScreen extends Screen {
     syncHint(recipient, "screen.mailbox.compose.recipient");
     syncHint(subject, "screen.mailbox.compose.subject");
     syncHint(body, "screen.mailbox.compose.body");
+    syncHint(money, "screen.mailbox.compose.money");
   }
 
   private static void syncHint(EditBox box, String key) {

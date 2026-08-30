@@ -23,6 +23,8 @@ import com.mo.economy_system.common.network.MailboxNotificationMessage;
 import com.mo.economy_system.common.network.MailboxSendPlayerMessage;
 import com.mo.economy_system.common.network.MailboxSendResultMessage;
 import com.mo.economy_system.common.network.MailboxSendStatus;
+import com.mo.economy_system.core.economy_system.BalanceTransferResult;
+import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mo.economy_system.target.forge1201.client.Forge1201MailboxNotifications;
 import java.util.ArrayList;
@@ -228,6 +230,15 @@ final class Forge1201MailboxHandlers {
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     }
 
+    int moneyAmount = message.moneyAmount();
+    EconomySavedData economy = moneyAmount > 0
+        ? EconomySavedData.getInstance(sender.serverLevel()) : null;
+    if (economy != null) {
+      MailboxSendStatus financialStatus = mapTransferFailure(
+          economy.previewTransferExact(sender.getUUID(), recipientId, moneyAmount));
+      if (financialStatus != MailboxSendStatus.SUCCESS) return financialStatus;
+    }
+
     Map<Integer, ItemStack> originals = new LinkedHashMap<>();
     List<DeliveryBoxEntrySnapshot> entries = new ArrayList<>();
     for (int slot : message.inventorySlots()) {
@@ -241,9 +252,18 @@ final class Forge1201MailboxHandlers {
       entries.add(new DeliveryBoxEntrySnapshot(UUID.randomUUID(), snapshot.orElseThrow(), "mail.player"));
     }
 
-    for (int slot : originals.keySet()) sender.getInventory().setItem(slot, ItemStack.EMPTY);
     boolean deliveryAdded = false;
+    boolean moneyTransferred = false;
     try {
+      if (economy != null) {
+        BalanceTransferResult transfer = economy.transferExact(
+            sender.getUUID(), recipientId, moneyAmount,
+            "邮件转账", "发送邮件金额", "接收邮件金额");
+        MailboxSendStatus financialStatus = mapTransferFailure(transfer);
+        if (financialStatus != MailboxSendStatus.SUCCESS) return financialStatus;
+        moneyTransferred = true;
+      }
+      for (int slot : originals.keySet()) sender.getInventory().setItem(slot, ItemStack.EMPTY);
       if (!entries.isEmpty()) {
         delivery.ledger().addAll(recipientId, entries, delivery::markDirty);
         deliveryAdded = true;
@@ -253,12 +273,14 @@ final class Forge1201MailboxHandlers {
       mailbox.ledger().addPersonal(recipientId,
           new MailRecord(UUID.randomUUID(), MailType.PLAYER, sender.getUUID(),
               sender.getGameProfile().getName(), message.subject(), message.body(), "mail.player",
-              now, 0, attachmentIds, false, false), mailbox::markDirty);
+              now, 0, attachmentIds, moneyAmount, false, false), mailbox::markDirty);
     } catch (IllegalStateException full) {
-      rollbackSend(sender, recipientId, originals, entries, deliveryAdded, delivery);
+      rollbackSend(sender, recipientId, originals, entries, deliveryAdded, delivery,
+          economy, moneyAmount, moneyTransferred);
       return MailboxSendStatus.RECIPIENT_MAILBOX_FULL;
     } catch (RuntimeException failure) {
-      rollbackSend(sender, recipientId, originals, entries, deliveryAdded, delivery);
+      rollbackSend(sender, recipientId, originals, entries, deliveryAdded, delivery,
+          economy, moneyAmount, moneyTransferred);
       throw failure;
     }
 
@@ -283,7 +305,8 @@ final class Forge1201MailboxHandlers {
 
   private static void rollbackSend(
       ServerPlayer sender, UUID recipientId, Map<Integer, ItemStack> originals,
-      List<DeliveryBoxEntrySnapshot> entries, boolean deliveryAdded, Forge1201DeliveryBoxSavedData delivery) {
+      List<DeliveryBoxEntrySnapshot> entries, boolean deliveryAdded, Forge1201DeliveryBoxSavedData delivery,
+      EconomySavedData economy, int moneyAmount, boolean moneyTransferred) {
     boolean safeToRestoreSender = true;
     if (deliveryAdded) {
       Set<UUID> ids = new LinkedHashSet<>();
@@ -294,6 +317,17 @@ final class Forge1201MailboxHandlers {
         safeToRestoreSender = false;
         LOGGER.error("Failed to roll back player-mail delivery entries recipient={}; sender items will not be restored to avoid duplication",
             recipientId, rollbackFailure);
+      }
+    }
+    if (moneyTransferred && economy != null) {
+      BalanceTransferResult refund = economy.transferExact(
+          recipientId, sender.getUUID(), moneyAmount,
+          "邮件回滚", "邮件发送失败退款", "邮件发送失败回退");
+      if (refund != BalanceTransferResult.SUCCESS) {
+        safeToRestoreSender = false;
+        LOGGER.error(
+            "Failed to roll back player-mail money transfer sender={} recipient={} amount={} result={}; sender items will not be restored",
+            sender.getUUID(), recipientId, moneyAmount, refund);
       }
     }
     if (safeToRestoreSender) {
@@ -319,6 +353,16 @@ final class Forge1201MailboxHandlers {
     long now = System.currentTimeMillis();
     Long previous = LAST_PLAYER_MAIL_SEND.put(senderId, now);
     return previous == null || now - previous >= EconomyNetworkLimits.PLAYER_MAIL_COOLDOWN_MILLIS;
+  }
+
+  private static MailboxSendStatus mapTransferFailure(BalanceTransferResult result) {
+    if (result == null) return MailboxSendStatus.FAILED;
+    return switch (result) {
+      case SUCCESS -> MailboxSendStatus.SUCCESS;
+      case INSUFFICIENT_FUNDS -> MailboxSendStatus.INSUFFICIENT_FUNDS;
+      case RECIPIENT_BALANCE_LIMIT -> MailboxSendStatus.RECIPIENT_BALANCE_LIMIT;
+      case INVALID_AMOUNT, SAME_ACCOUNT, PERSIST_FAILED, TARGET_NOT_AVAILABLE -> MailboxSendStatus.FAILED;
+    };
   }
 
   private static String feedbackKey(DeliveryBoxClaimResult result) {

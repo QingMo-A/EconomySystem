@@ -134,6 +134,7 @@ public final class MailboxWireCodec {
     buffer.writeInt(message.inventorySlots().size());
     for (Integer slot : message.inventorySlots()) buffer.writeInt(slot);
     buffer.writeLong(message.requestId());
+    buffer.writeInt(message.moneyAmount());
   }
 
   public static MailboxSendPlayerMessage decodeSendPlayer(WireBuffer buffer) {
@@ -148,8 +149,9 @@ public final class MailboxWireCodec {
       List<Integer> slots = new ArrayList<>(count);
       for (int i = 0; i < count; i++) slots.add(buffer.readInt());
       long requestId = buffer.readLong();
+      int moneyAmount = buffer.readInt();
       requireConsumed(buffer);
-      return new MailboxSendPlayerMessage(recipient, subject, body, slots, requestId);
+      return new MailboxSendPlayerMessage(recipient, subject, body, slots, requestId, moneyAmount);
     } catch (WireDecodeException failure) {
       throw failure;
     } catch (RuntimeException failure) {
@@ -212,6 +214,7 @@ public final class MailboxWireCodec {
       buffer.writeBoolean(attachment.claimed());
       buffer.writeNbt(ItemStackSnapshotCodec.encode(attachment.item()).orElseThrow());
     }
+    buffer.writeInt(mail.moneyAmount());
   }
 
   private static MailSnapshot decodeMail(WireBuffer buffer) {
@@ -240,8 +243,9 @@ public final class MailboxWireCodec {
       attachments.add(new MailAttachmentSnapshot(
           entryId, ItemStackSnapshotCodec.decode(nbt).orElseThrow(), claimed));
     }
+    int moneyAmount = buffer.readInt();
     return new MailSnapshot(mailId, type, senderId, senderName, subject, body, source,
-        created, expires, read, global, protectedMail, attachments);
+        created, expires, read, global, protectedMail, attachments, moneyAmount);
   }
 
   private static void requireBytes(WireBuffer buffer, int count) {
