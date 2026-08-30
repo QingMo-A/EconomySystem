@@ -23,6 +23,10 @@ import com.mo.economy_system.common.network.RecycleDataRequestMessage;
 import com.mo.economy_system.common.network.RecycleDataResponseMessage;
 import com.mo.economy_system.common.network.RecycleSubmitMessage;
 import com.mo.economy_system.common.network.RecycleActionResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionActionResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataRequestMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionSubmitMessage;
 import com.mo.economy_system.common.network.CreateDemandOrderMessage;
 import com.mo.economy_system.common.network.CreateSalesOrderMessage;
 import com.mo.economy_system.common.network.DeliverDemandOrderMessage;
@@ -71,6 +75,7 @@ import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.CommissionWireCodec;
 import com.mo.economy_system.network.RecycleWireCodec;
+import com.mo.economy_system.network.commission_public.PublicCommissionWireCodec;
 import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.DeliveryBoxWireCodec;
 import com.mo.economy_system.network.MailboxWireCodec;
@@ -441,6 +446,18 @@ public final class Forge1201NetworkChannel {
     CHANNEL.messageBuilder(RecycleActionResponseMessage.class, EconomyMessages.RECYCLE_ACTION_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
         .encoder(targetEncoder(RecycleWireCodec::encodeAction)).decoder(targetDecoder(RecycleWireCodec::decodeAction))
         .consumerMainThread(Forge1201RecycleHandlers::action).add();
+    CHANNEL.messageBuilder(PublicCommissionDataRequestMessage.class, EconomyMessages.PUBLIC_COMMISSION_DATA_REQUEST.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(PublicCommissionWireCodec::encodeDataRequest)).decoder(targetDecoder(PublicCommissionWireCodec::decodeDataRequest))
+        .consumerMainThread(Forge1201PublicCommissionHandlers::request).add();
+    CHANNEL.messageBuilder(PublicCommissionDataResponseMessage.class, EconomyMessages.PUBLIC_COMMISSION_DATA_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(targetEncoder(PublicCommissionWireCodec::encodeDataResponse)).decoder(targetDecoder(PublicCommissionWireCodec::decodeDataResponse))
+        .consumerMainThread(Forge1201PublicCommissionHandlers::data).add();
+    CHANNEL.messageBuilder(PublicCommissionSubmitMessage.class, EconomyMessages.PUBLIC_COMMISSION_SUBMIT.discriminator(), NetworkDirection.PLAY_TO_SERVER)
+        .encoder(targetEncoder(PublicCommissionWireCodec::encodeSubmit)).decoder(targetDecoder(PublicCommissionWireCodec::decodeSubmit))
+        .consumerMainThread(Forge1201PublicCommissionHandlers::submit).add();
+    CHANNEL.messageBuilder(PublicCommissionActionResponseMessage.class, EconomyMessages.PUBLIC_COMMISSION_ACTION_RESPONSE.discriminator(), NetworkDirection.PLAY_TO_CLIENT)
+        .encoder(targetEncoder(PublicCommissionWireCodec::encodeActionResponse)).decoder(targetDecoder(PublicCommissionWireCodec::decodeActionResponse))
+        .consumerMainThread(Forge1201PublicCommissionHandlers::action).add();
 
     CHANNEL
         .messageBuilder(
@@ -655,6 +672,8 @@ public final class Forge1201NetworkChannel {
   static void sendToServer(CommissionSubmitMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
   static void sendToServer(RecycleDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
   static void sendToServer(RecycleSubmitMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(PublicCommissionDataRequestMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
+  static void sendToServer(PublicCommissionSubmitMessage message) { requireRegistered(); CHANNEL.sendToServer(message); }
 
   static void sendToServer(ServerPlayerListRequestMessage message) {
     requireRegistered();
@@ -770,6 +789,8 @@ public final class Forge1201NetworkChannel {
   }
   static void sendToPlayer(ServerPlayer player, RecycleDataResponseMessage message) { requireRegistered(); CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message); }
   static void sendToPlayer(ServerPlayer player, RecycleActionResponseMessage message) { requireRegistered(); CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message); }
+  static void sendToPlayer(ServerPlayer player, PublicCommissionDataResponseMessage message) { requireRegistered(); CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message); }
+  static void sendToPlayer(ServerPlayer player, PublicCommissionActionResponseMessage message) { requireRegistered(); CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message); }
 
   static void sendToPlayer(ServerPlayer player, SingleTerritoryDataResponseMessage message) {
     requireRegistered();

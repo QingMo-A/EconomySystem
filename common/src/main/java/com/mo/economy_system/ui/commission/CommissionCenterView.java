@@ -16,6 +16,8 @@ public final class CommissionCenterView {
     renderer.card(layout.list(), EconomyUiTheme.HOME_LEADERBOARD_CARD, false);
     renderer.translatedText("screen.commissions.mine", List.of(), layout.list().x() + 10, layout.list().y() + 10, 0xFFFFFFFF);
     renderer.card(layout.detail(), EconomyUiTheme.HOME_BALANCE_CARD, false);
+    renderer.translatedButton(layout.publicTab(), EconomyUiTheme.TERRITORY_BUTTON,
+        "screen.commissions.public.tab", List.of(), layout.publicTab().contains(mouseX, mouseY), true);
     if (state.screenState() == ScreenState.LOADING) {
       renderer.translatedTextInRect("screen.commissions.loading", List.of(), layout.retry(), 0xFFFFFFFF, UiTextAlignment.CENTER);
     } else if (state.screenState() == ScreenState.ERROR) {

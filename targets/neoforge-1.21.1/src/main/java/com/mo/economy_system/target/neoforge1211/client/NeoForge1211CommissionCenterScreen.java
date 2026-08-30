@@ -81,6 +81,10 @@ public final class NeoForge1211CommissionCenterScreen extends Screen {
       controller.handle(new CommissionCenterEvent.ActionClicked(CommissionCenterAction.SUBMIT, id, 1));
       return true;
     }
+    if (layout.publicTab().contains(x, y)) {
+      controller.handle(new CommissionCenterEvent.ActionClicked(CommissionCenterAction.PUBLIC, null, 0));
+      return true;
+    }
     if (layout.back().contains(x, y)) {
       controller.handle(new CommissionCenterEvent.ActionClicked(CommissionCenterAction.BACK, null, 0));
       return true;
@@ -107,7 +111,12 @@ public final class NeoForge1211CommissionCenterScreen extends Screen {
 
   private void navigate(UiNavigation navigation) {
     if (minecraft == null) return;
-    if (navigation instanceof UiNavigation.Route route && route.route() == EconomyUiRoute.HOME) onClose();
+    if (navigation instanceof UiNavigation.Route route) {
+      if (route.route() == EconomyUiRoute.HOME) onClose();
+      else if (route.route() == EconomyUiRoute.PUBLIC_COMMISSIONS) {
+        minecraft.setScreen(new NeoForge1211PublicCommissionCenterScreen(this));
+      }
+    }
   }
 
   private final class Port implements CommissionCenterPort {

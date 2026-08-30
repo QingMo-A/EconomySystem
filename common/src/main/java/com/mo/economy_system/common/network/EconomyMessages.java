@@ -156,6 +156,18 @@ public final class EconomyMessages {
       new EconomyMessageType<>(EconomyProtocol.RECYCLE_SUBMIT, RecycleSubmitMessage.class);
   public static final EconomyMessageType<RecycleActionResponseMessage> RECYCLE_ACTION_RESPONSE =
       new EconomyMessageType<>(EconomyProtocol.RECYCLE_ACTION_RESPONSE, RecycleActionResponseMessage.class);
+  public static final EconomyMessageType<com.mo.economy_system.common.network.commission_public.PublicCommissionDataRequestMessage>
+      PUBLIC_COMMISSION_DATA_REQUEST = new EconomyMessageType<>(EconomyProtocol.PUBLIC_COMMISSION_DATA_REQUEST,
+          com.mo.economy_system.common.network.commission_public.PublicCommissionDataRequestMessage.class);
+  public static final EconomyMessageType<com.mo.economy_system.common.network.commission_public.PublicCommissionDataResponseMessage>
+      PUBLIC_COMMISSION_DATA_RESPONSE = new EconomyMessageType<>(EconomyProtocol.PUBLIC_COMMISSION_DATA_RESPONSE,
+          com.mo.economy_system.common.network.commission_public.PublicCommissionDataResponseMessage.class);
+  public static final EconomyMessageType<com.mo.economy_system.common.network.commission_public.PublicCommissionSubmitMessage>
+      PUBLIC_COMMISSION_SUBMIT = new EconomyMessageType<>(EconomyProtocol.PUBLIC_COMMISSION_SUBMIT,
+          com.mo.economy_system.common.network.commission_public.PublicCommissionSubmitMessage.class);
+  public static final EconomyMessageType<com.mo.economy_system.common.network.commission_public.PublicCommissionActionResponseMessage>
+      PUBLIC_COMMISSION_ACTION_RESPONSE = new EconomyMessageType<>(EconomyProtocol.PUBLIC_COMMISSION_ACTION_RESPONSE,
+          com.mo.economy_system.common.network.commission_public.PublicCommissionActionResponseMessage.class);
 
   private EconomyMessages() {}
 }

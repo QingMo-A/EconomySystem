@@ -21,6 +21,7 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
       case SHOP -> Optional.of(new Forge1201ShopScreen());
       case MARKET -> Optional.of(new Forge1201MarketScreen());
       case COMMISSIONS -> Optional.of(new Forge1201CommissionCenterScreen());
+      case PUBLIC_COMMISSIONS -> Optional.of(new Forge1201PublicCommissionCenterScreen());
       case RECYCLE -> Optional.of(new Forge1201RecycleCenterScreen());
       case ABOUT -> Optional.of(new Forge1201AboutScreen());
       case BALANCE_LOG -> Optional.of(new Forge1201BalanceLogScreen());
@@ -35,7 +36,7 @@ public final class Forge1201UiBridge implements EconomyUiBridge<Screen> {
         || route == EconomyUiRoute.TERRITORY
         || route == EconomyUiRoute.SHOP
         || route == EconomyUiRoute.MARKET
-        || route == EconomyUiRoute.COMMISSIONS
+        || route == EconomyUiRoute.COMMISSIONS || route == EconomyUiRoute.PUBLIC_COMMISSIONS
         || route == EconomyUiRoute.RECYCLE
         || route == EconomyUiRoute.ABOUT
         || route == EconomyUiRoute.BALANCE_LOG;

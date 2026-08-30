@@ -32,7 +32,7 @@ class BridgeCompletionSourceTest {
         "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/network/Forge1201NetworkChannel.java"));
     String bridge = read(root.resolve(
         "targets/forge-1.20.1/src/main/java/com/mo/economy_system/target/forge1201/network/Forge1201NetworkBridge.java"));
-    assertEquals(61, channel.split("\\.messageBuilder\\(", -1).length - 1);
+    assertEquals(65, channel.split("\\.messageBuilder\\(", -1).length - 1);
     for (String type : TYPES) {
       assertTrue(channel.contains("EconomyMessages." + type + ".discriminator()"), type);
     }
@@ -87,6 +87,12 @@ class BridgeCompletionSourceTest {
       assertTrue(bridge.contains("message instanceof " + message + " value"), message);
     }
     for (String message : List.of("RecycleDataResponseMessage", "RecycleActionResponseMessage")) {
+      assertTrue(bridge.contains("message instanceof " + message + " value"), message);
+    }
+    for (String message : List.of("PublicCommissionDataRequestMessage", "PublicCommissionSubmitMessage")) {
+      assertTrue(bridge.contains("message instanceof " + message + " value"), message);
+    }
+    for (String message : List.of("PublicCommissionDataResponseMessage", "PublicCommissionActionResponseMessage")) {
       assertTrue(bridge.contains("message instanceof " + message + " value"), message);
     }
   }

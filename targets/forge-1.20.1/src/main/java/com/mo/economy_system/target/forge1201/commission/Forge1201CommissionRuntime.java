@@ -278,7 +278,13 @@ public final class Forge1201CommissionRuntime {
 
   public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player,
       UUID id, int requestedAmount) {
+    return submitPublicItem(player, id, UUID.randomUUID(), requestedAmount);
+  }
+
+  public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player,
+      UUID id, UUID submissionId, int requestedAmount) {
     if (requestedAmount <= 0) throw new IllegalArgumentException("提交数量必须大于 0");
+    java.util.Objects.requireNonNull(submissionId, "submissionId");
     ServerLevel level = player.serverLevel();
     Forge1201CommissionSavedData data = data(level);
     PublicCommissionService publicService = publicService(level, data);
@@ -286,7 +292,7 @@ public final class Forge1201CommissionRuntime {
         .filter(c -> c.commissionId().equals(id)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("找不到公共委托"));
     if (commission.status() != PublicCommissionStatus.AVAILABLE) {
-      return publicService.submit(player.getUUID(), id, UUID.randomUUID(), requestedAmount, now());
+      return publicService.submit(player.getUUID(), id, submissionId, requestedAmount, now());
     }
     int amount = Math.min(requestedAmount, commission.remainingAmount());
     ResourceLocation targetId = ResourceLocation.tryParse(commission.targetSnapshot());
@@ -299,7 +305,7 @@ public final class Forge1201CommissionRuntime {
     consume(player, originals, amount);
     try {
       PublicCommissionService.SubmitResult result = publicService.submit(
-          player.getUUID(), id, UUID.randomUUID(), amount, now());
+          player.getUUID(), id, submissionId, amount, now());
       if (result.acceptedAmount() == 0) restore(player, originals);
       player.containerMenu.broadcastChanges();
       return result;

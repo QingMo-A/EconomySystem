@@ -14,6 +14,8 @@ class EconomyUiMenuTest {
         assertEquals(List.of(
                 EconomyUiRoute.SHOP,
                 EconomyUiRoute.MARKET,
+                EconomyUiRoute.COMMISSIONS,
+                EconomyUiRoute.RECYCLE,
                 EconomyUiRoute.DELIVERY_BOX,
                 EconomyUiRoute.TERRITORY,
                 EconomyUiRoute.ABOUT),

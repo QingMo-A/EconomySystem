@@ -24,7 +24,7 @@ class HomeReferenceParityTest {
     assertEquals(160, layout.leftPanelWidth());
     assertEquals(172, layout.rightPanelStartX());
     assertEquals(456, layout.rightPanelWidth());
-    assertEquals(List.of(12, 48, 84, 120, 156),
+    assertEquals(List.of(12, 48, 84, 120, 156, 192, 228),
         layout.navButtons().stream().map(button -> button.rect().y()).toList());
     assertEquals(new UiRect(12, 12, 136, 28), layout.navButtons().get(0).rect());
     assertEquals(new UiRect(172, 12, 224, 70), layout.balanceCard());

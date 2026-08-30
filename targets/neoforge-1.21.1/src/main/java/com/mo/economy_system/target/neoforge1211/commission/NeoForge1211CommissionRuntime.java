@@ -91,11 +91,17 @@ public final class NeoForge1211CommissionRuntime {
   public static void removePublic(MinecraftServer server, UUID id) { publicService(server).remove(id); }
 
   public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player, UUID id, int requested) {
+    return submitPublicItem(player, id, UUID.randomUUID(), requested);
+  }
+
+  public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player, UUID id,
+                                                                        UUID submissionId, int requested) {
     if (requested <= 0) throw new IllegalArgumentException("提交数量必须大于 0");
+    java.util.Objects.requireNonNull(submissionId, "submissionId");
     PublicCommissionService service = publicService(player.server);
     PublicCommission commission = findPublic(player.server, id).orElseThrow(() -> new IllegalArgumentException("找不到公共委托"));
     if (commission.status() != PublicCommissionStatus.AVAILABLE) {
-      return service.submit(player.getUUID(), id, UUID.randomUUID(), requested, System.currentTimeMillis());
+      return service.submit(player.getUUID(), id, submissionId, requested, System.currentTimeMillis());
     }
     int amount = Math.min(requested, commission.remainingAmount());
     var itemId = net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot());
@@ -113,7 +119,7 @@ public final class NeoForge1211CommissionRuntime {
       int take = Math.min(remaining, stack.getCount()); stack.shrink(take); remaining -= take;
     }
     try {
-      PublicCommissionService.SubmitResult result = service.submit(player.getUUID(), id, UUID.randomUUID(), amount, System.currentTimeMillis());
+      PublicCommissionService.SubmitResult result = service.submit(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
       if (result.acceptedAmount() == 0) {
         for (int i = 0; i < originals.size(); i++) player.getInventory().items.set(i, originals.get(i));
       }

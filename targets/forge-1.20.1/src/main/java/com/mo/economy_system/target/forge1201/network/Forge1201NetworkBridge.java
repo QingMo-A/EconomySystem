@@ -57,6 +57,10 @@ import com.mo.economy_system.common.network.RecycleDataRequestMessage;
 import com.mo.economy_system.common.network.RecycleDataResponseMessage;
 import com.mo.economy_system.common.network.RecycleSubmitMessage;
 import com.mo.economy_system.common.network.RecycleActionResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionActionResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataRequestMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionSubmitMessage;
 import com.mo.economy_system.common.network.UnlockTerritoryBuffMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryPermissionMessage;
 import com.mo.economy_system.common.network.UpdateTerritoryRuleMessage;
@@ -176,6 +180,8 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     if (message instanceof CommissionSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof RecycleDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message instanceof RecycleSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof PublicCommissionDataRequestMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
+    if (message instanceof PublicCommissionSubmitMessage value) { Forge1201NetworkChannel.sendToServer(value); return; }
     if (message.getClass() == ModifyTerritoryModeMessage.class) {
       Forge1201NetworkChannel.sendToServer((ModifyTerritoryModeMessage) message);
       return;
@@ -274,6 +280,8 @@ public final class Forge1201NetworkBridge implements EconomyNetworkBridge {
     }
     if (message instanceof RecycleDataResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
     if (message instanceof RecycleActionResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
+    if (message instanceof PublicCommissionDataResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
+    if (message instanceof PublicCommissionActionResponseMessage value) { Forge1201NetworkChannel.sendToPlayer(player, value); return; }
     if (message.getClass() == SingleTerritoryDataResponseMessage.class) {
       Forge1201NetworkChannel.sendToPlayer(player, (SingleTerritoryDataResponseMessage) message);
       return;

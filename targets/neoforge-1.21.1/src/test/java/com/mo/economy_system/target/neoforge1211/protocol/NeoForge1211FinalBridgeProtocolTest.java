@@ -31,7 +31,7 @@ class NeoForge1211FinalBridgeProtocolTest {
     assertEquals(com.mo.economy_system.protocol.EconomyProtocol.ALL.size(), values.size());
     for (EconomyMessageType<?> value : values) {
       assertTrue(
-          value.messageClass().getPackageName().equals("com.mo.economy_system.common.network"),
+          value.messageClass().getPackageName().startsWith("com.mo.economy_system.common.network"),
           value.messageClass().getName());
       assertTrue(NeoForge1211MessageCodecs.supports(value), value.id());
     }

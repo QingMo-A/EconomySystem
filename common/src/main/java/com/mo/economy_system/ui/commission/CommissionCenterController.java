@@ -74,6 +74,7 @@ public final class CommissionCenterController
   private void action(CommissionCenterEvent.ActionClicked event) {
     switch (event.action()) {
       case BACK -> navigate(new UiNavigation.Route(EconomyUiRoute.HOME));
+      case PUBLIC -> navigate(new UiNavigation.Route(EconomyUiRoute.PUBLIC_COMMISSIONS));
       case RETRY -> request(System.nanoTime());
       case SUBMIT -> {
         CommissionInstance selected = state().commissions().stream()

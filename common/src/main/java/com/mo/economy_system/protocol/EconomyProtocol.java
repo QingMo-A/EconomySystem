@@ -16,7 +16,7 @@ import java.util.Set;
  */
 public final class EconomyProtocol {
     /** Bumped for deferred currency-reward fields appended to mailbox responses. */
-    public static final String VERSION = "bridge-6";
+    public static final String VERSION = "bridge-7";
 
     private static final List<EconomyMessageSpec> DECLARATIONS = new ArrayList<>();
 
@@ -81,6 +81,10 @@ public final class EconomyProtocol {
     public static final EconomyMessageSpec RECYCLE_DATA_RESPONSE = s2c(58, "economy_system:recycle/packet_data_response");
     public static final EconomyMessageSpec RECYCLE_SUBMIT = c2s(59, "economy_system:recycle/packet_submit");
     public static final EconomyMessageSpec RECYCLE_ACTION_RESPONSE = s2c(60, "economy_system:recycle/packet_action_response");
+    public static final EconomyMessageSpec PUBLIC_COMMISSION_DATA_REQUEST = c2s(61, "economy_system:commission_public/packet_data_request");
+    public static final EconomyMessageSpec PUBLIC_COMMISSION_DATA_RESPONSE = s2c(62, "economy_system:commission_public/packet_data_response");
+    public static final EconomyMessageSpec PUBLIC_COMMISSION_SUBMIT = c2s(63, "economy_system:commission_public/packet_submit");
+    public static final EconomyMessageSpec PUBLIC_COMMISSION_ACTION_RESPONSE = s2c(64, "economy_system:commission_public/packet_action_response");
 
     public static final List<EconomyMessageSpec> ALL = List.copyOf(DECLARATIONS);
     private static final Map<Integer, EconomyMessageSpec> BY_DISCRIMINATOR;

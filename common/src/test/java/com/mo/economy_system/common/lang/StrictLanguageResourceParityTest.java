@@ -46,7 +46,10 @@ class StrictLanguageResourceParityTest {
           "screen.home.version",
           "button.territory.delete_short",
           "screen.territory.detail.settings.copy_id.description",
-          "screen.territory.buff.tooltip.cost.item_unknown");
+          "screen.territory.buff.tooltip.cost.item_unknown",
+          "screen.recycle.minus",
+          "screen.recycle.plus",
+          "screen.commissions.public.card.progress");
 
   @Test
   void commonResourcesAreValidCompleteAndLoaderNeutral() throws Exception {

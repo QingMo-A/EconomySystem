@@ -80,6 +80,10 @@ public final class NeoForge1211MessageBindings {
     registry.register(EconomyMessages.RECYCLE_DATA_RESPONSE);
     registry.register(EconomyMessages.RECYCLE_SUBMIT);
     registry.register(EconomyMessages.RECYCLE_ACTION_RESPONSE);
+    registry.register(EconomyMessages.PUBLIC_COMMISSION_DATA_REQUEST);
+    registry.register(EconomyMessages.PUBLIC_COMMISSION_DATA_RESPONSE);
+    registry.register(EconomyMessages.PUBLIC_COMMISSION_SUBMIT);
+    registry.register(EconomyMessages.PUBLIC_COMMISSION_ACTION_RESPONSE);
     EconomyProtocol.validateBindings(registry.values());
     registry.freeze();
     return registry;

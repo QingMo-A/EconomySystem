@@ -30,11 +30,12 @@ public final class CommissionCenterLayout {
     UiRect submit = new UiRect(detail.x() + 12, detail.bottom() - 34, Math.max(1, detail.width() - 24), 22);
     UiRect back = new UiRect(pad, height - pad - 22, 82, 22);
     UiRect retry = new UiRect(detail.x() + 12, detail.y() + detail.height() / 2, Math.max(1, detail.width() - 24), 22);
-    return new Layout(scale, list, detail, List.copyOf(cards), submit, back, retry, metrics);
+    UiRect publicTab = new UiRect(Math.max(detail.x() + 4, detail.right() - 116), detail.y() + 6, 112, 20);
+    return new Layout(scale, list, detail, List.copyOf(cards), submit, back, retry, publicTab, metrics);
   }
 
   public record Layout(UiScale scale, UiRect list, UiRect detail, List<Card> cards, UiRect submit,
-                       UiRect back, UiRect retry, UiTextMetrics metrics) {
+                       UiRect back, UiRect retry, UiRect publicTab, UiTextMetrics metrics) {
     public Layout { cards = List.copyOf(cards); }
   }
   public record Card(com.mo.economy_system.common.commission.CommissionInstance commission,

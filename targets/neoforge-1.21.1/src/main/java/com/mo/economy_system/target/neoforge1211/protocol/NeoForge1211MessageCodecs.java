@@ -10,6 +10,10 @@ import com.mo.economy_system.common.network.RecycleActionResponseMessage;
 import com.mo.economy_system.common.network.RecycleDataRequestMessage;
 import com.mo.economy_system.common.network.RecycleDataResponseMessage;
 import com.mo.economy_system.common.network.RecycleSubmitMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionActionResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataRequestMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionDataResponseMessage;
+import com.mo.economy_system.common.network.commission_public.PublicCommissionSubmitMessage;
 import com.mo.economy_system.common.network.BalanceLogResponseMessage;
 import com.mo.economy_system.common.network.BalanceRequestMessage;
 import com.mo.economy_system.common.network.BalanceResponseMessage;
@@ -68,6 +72,7 @@ import com.mo.economy_system.core.economy_system.BalanceLogEntry;
 import com.mo.economy_system.network.ClientFileCheckWireCodec;
 import com.mo.economy_system.network.CommissionWireCodec;
 import com.mo.economy_system.network.RecycleWireCodec;
+import com.mo.economy_system.network.commission_public.PublicCommissionWireCodec;
 import com.mo.economy_system.network.CheckedFileTransferWireCodec;
 import com.mo.economy_system.network.DeliveryBoxWireCodec;
 import com.mo.economy_system.network.MailboxWireCodec;
@@ -261,6 +266,22 @@ public final class NeoForge1211MessageCodecs {
     register(codecs, EconomyMessages.RECYCLE_ACTION_RESPONSE, new NeoForge1211MessageCodec<>() {
       public void encode(RecycleActionResponseMessage message, RegistryFriendlyByteBuf buffer) { RecycleWireCodec.encodeAction(message, wire(buffer)); }
       public RecycleActionResponseMessage decode(RegistryFriendlyByteBuf buffer) { return RecycleWireCodec.decodeAction(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.PUBLIC_COMMISSION_DATA_REQUEST, new NeoForge1211MessageCodec<>() {
+      public void encode(PublicCommissionDataRequestMessage message, RegistryFriendlyByteBuf buffer) { PublicCommissionWireCodec.encodeDataRequest(message, wire(buffer)); }
+      public PublicCommissionDataRequestMessage decode(RegistryFriendlyByteBuf buffer) { return PublicCommissionWireCodec.decodeDataRequest(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.PUBLIC_COMMISSION_DATA_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(PublicCommissionDataResponseMessage message, RegistryFriendlyByteBuf buffer) { PublicCommissionWireCodec.encodeDataResponse(message, wire(buffer)); }
+      public PublicCommissionDataResponseMessage decode(RegistryFriendlyByteBuf buffer) { return PublicCommissionWireCodec.decodeDataResponse(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.PUBLIC_COMMISSION_SUBMIT, new NeoForge1211MessageCodec<>() {
+      public void encode(PublicCommissionSubmitMessage message, RegistryFriendlyByteBuf buffer) { PublicCommissionWireCodec.encodeSubmit(message, wire(buffer)); }
+      public PublicCommissionSubmitMessage decode(RegistryFriendlyByteBuf buffer) { return PublicCommissionWireCodec.decodeSubmit(wire(buffer)); }
+    });
+    register(codecs, EconomyMessages.PUBLIC_COMMISSION_ACTION_RESPONSE, new NeoForge1211MessageCodec<>() {
+      public void encode(PublicCommissionActionResponseMessage message, RegistryFriendlyByteBuf buffer) { PublicCommissionWireCodec.encodeActionResponse(message, wire(buffer)); }
+      public PublicCommissionActionResponseMessage decode(RegistryFriendlyByteBuf buffer) { return PublicCommissionWireCodec.decodeActionResponse(wire(buffer)); }
     });
     register(codecs, EconomyMessages.MODIFY_MODE, new NeoForge1211MessageCodec<>() {
       public void encode(ModifyTerritoryModeMessage message, RegistryFriendlyByteBuf buffer) {

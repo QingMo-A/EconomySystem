@@ -46,10 +46,10 @@ class HomeViewParityTest {
     RecordingRenderer renderer = new RecordingRenderer();
     HomeView.render(renderer, state, layout, 0, 0);
 
-    assertEquals(5, renderer.operations.stream()
+    assertEquals(7, renderer.operations.stream()
         .filter(operation -> operation.kind.equals("translatedIconButton")).count());
-    for (UiIcon icon : List.of(UiIcon.SHOP, UiIcon.MARKET, UiIcon.DELIVERY,
-        UiIcon.TERRITORY, UiIcon.ABOUT)) {
+    for (UiIcon icon : List.of(UiIcon.SHOP, UiIcon.MARKET, UiIcon.MARKET, UiIcon.DELIVERY,
+        UiIcon.DELIVERY, UiIcon.TERRITORY, UiIcon.ABOUT)) {
       assertTrue(renderer.operations.stream().anyMatch(operation ->
           operation.kind.equals("translatedIconButton") && operation.value.endsWith(icon.name())));
     }
