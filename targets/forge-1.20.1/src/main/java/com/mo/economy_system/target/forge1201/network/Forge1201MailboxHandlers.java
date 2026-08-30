@@ -28,6 +28,7 @@ import com.mo.economy_system.core.economy_system.BalanceTransferResult;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.target.forge1201.Forge1201Platform;
 import com.mo.economy_system.target.forge1201.client.Forge1201MailboxNotifications;
+import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -240,6 +241,7 @@ final class Forge1201MailboxHandlers {
       MailboxLedger.MutationResult marked = mailbox.ledger().markCurrencyRewardClaimed(
           player.getUUID(), mailId, mailbox::markDirty);
       if (marked == MailboxLedger.MutationResult.UPDATED) {
+        Forge1201CommissionRuntime.markRewardClaimed(player, mail.rewardRecordId());
         return CurrencyClaimResult.claimed(amount);
       }
     } catch (RuntimeException failure) {

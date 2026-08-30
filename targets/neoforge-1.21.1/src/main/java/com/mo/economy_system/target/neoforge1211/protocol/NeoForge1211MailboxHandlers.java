@@ -31,6 +31,7 @@ import com.mo.economy_system.core.economy_system.mailbox.MailboxSavedData;
 import com.mo.economy_system.network.EconomySystem_NetworkManager;
 import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import com.mo.economy_system.target.neoforge1211.client.NeoForge1211MailboxNotifications;
+import com.mo.economy_system.target.neoforge1211.commission.NeoForge1211CommissionRuntime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -220,6 +221,7 @@ public final class NeoForge1211MailboxHandlers {
       MailboxLedger.MutationResult marked = mailbox.ledger().markCurrencyRewardClaimed(
           player.getUUID(), mailId, mailbox::markDirty);
       if (marked == MailboxLedger.MutationResult.UPDATED) {
+        NeoForge1211CommissionRuntime.markRewardClaimed(player, mail.rewardRecordId());
         return CurrencyClaimResult.claimed(amount);
       }
     } catch (RuntimeException failure) {

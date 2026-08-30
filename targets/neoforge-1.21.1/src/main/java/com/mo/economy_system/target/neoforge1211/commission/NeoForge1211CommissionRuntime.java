@@ -103,6 +103,17 @@ public final class NeoForge1211CommissionRuntime {
     }
   }
 
+  /** Synchronizes the durable reward record after its mailbox currency attachment is claimed. */
+  public static void markRewardClaimed(ServerPlayer player, UUID rewardRecordId) {
+    if (rewardRecordId == null) return;
+    NeoForge1211CommissionSavedData data = NeoForge1211CommissionSavedData.getInstance(player.serverLevel());
+    data.findReward(rewardRecordId).ifPresent(record -> {
+      if (record.status() != CommissionRewardStatus.CLAIMED) {
+        data.saveReward(record.claimed(Math.max(1L, System.currentTimeMillis())));
+      }
+    });
+  }
+
   public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id, int amount) {
     CommissionPlayerState state = state(player);
     CommissionInstance commission = state.commissions().stream().filter(c -> c.commissionId().equals(id)).findFirst().orElse(null);
@@ -142,12 +153,7 @@ public final class NeoForge1211CommissionRuntime {
   }
 
   private static CommissionCatalog defaultCatalog() {
-    CommissionRequester requester = new CommissionRequester("town", "城镇供应处");
-    Map<String,List<CommissionRequester>> requesters = Map.of("default", List.of(requester));
-    Map<String,CommissionTargetPool> targets = Map.of("items", CommissionTargetPool.unweighted("items", List.of("minecraft:cobblestone", "minecraft:kelp")), "mobs", CommissionTargetPool.unweighted("mobs", List.of("minecraft:zombie", "minecraft:skeleton")));
-    long h=60L*60L*1000L;
-    List<CommissionTemplate> templates = List.of(new CommissionTemplate("materials", CommissionType.ITEM_DELIVERY, "default", "items", 16, 64, 16, 2, 1, "material", h*2, h*4), new CommissionTemplate("hunt", CommissionType.ENTITY_KILL, "default", "mobs", 5, 15, 5, 20, 1, "combat", h*2, h*4));
-    return new CommissionCatalog(templates, requesters, targets);
+    return CommissionCatalogDefaults.create();
   }
 
   private static final class Delivery implements CommissionRewardDeliveryPort {

@@ -279,6 +279,17 @@ public final class Forge1201CommissionRuntime {
     }
   }
 
+  /** Synchronizes the durable commission reward record after the mailbox ledger claims it. */
+  public static void markRewardClaimed(ServerPlayer player, UUID rewardRecordId) {
+    if (rewardRecordId == null) return;
+    Forge1201CommissionSavedData data = data(player.serverLevel());
+    data.find(rewardRecordId).ifPresent(record -> {
+      if (record.status() != com.mo.economy_system.common.commission.CommissionRewardStatus.CLAIMED) {
+        data.save(record.claimed(now()));
+      }
+    });
+  }
+
   private static CommissionService service(ServerLevel level, Forge1201CommissionSavedData data) {
     return new CommissionService(
         new CommissionGenerator(DEFAULT_CATALOG, random()),
