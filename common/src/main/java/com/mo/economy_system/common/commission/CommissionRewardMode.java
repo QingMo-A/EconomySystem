@@ -7,6 +7,10 @@ public enum CommissionRewardMode {
   FIXED,
   PER_UNIT;
 
+  public String id() {
+    return name().toLowerCase(Locale.ROOT);
+  }
+
   public static CommissionRewardMode fromId(String raw) {
     if (raw == null) throw new IllegalArgumentException("reward mode is required");
     String normalized = raw.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
