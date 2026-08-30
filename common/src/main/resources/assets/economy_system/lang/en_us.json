@@ -639,6 +639,7 @@
   "screen.balance_log.retry": "Retry",
   "screen.balance_log.previous": "Previous",
   "screen.balance_log.next": "Next",
+  "button.common.back": "Back",
   "button.home.shop": "Shop",
   "button.home.market": "Market",
   "button.home.delivery_box": "Mailbox",
@@ -954,5 +955,12 @@
   "message.territory.runtime.denied.interact_block": "You do not have permission to interact with blocks in this territory.",
   "message.territory.runtime.denied.open_container": "You do not have permission to open containers in this territory.",
   "message.territory.sync_timeout": "Territory data request timed out",
+  "screen.commissions.mine": "My Commissions",
+  "screen.commissions.loading": "Loading commissions...",
+  "screen.commissions.empty": "No personal commissions",
+  "screen.commissions.sync_failed": "Commission sync failed",
+  "screen.commissions.sync_timeout": "Commission request timed out",
+  "screen.commissions.retry": "Retry",
+  "screen.commissions.submit_one": "Submit 1",
   "screen.check_result.unknown": "Unknown"
 }

@@ -33,6 +33,12 @@ public final class EconomyNetworkLimits {
   public static final int MAX_PLAYER_MAIL_ATTACHMENTS = 6;
   public static final long PLAYER_MAIL_COOLDOWN_MILLIS = 3_000L;
   public static final int MAX_MAILBOX_RESPONSE_WIRE_BYTES = 1024 * 1024;
+  public static final int MAX_COMMISSION_ENTRIES = 24;
+  public static final int MAX_COMMISSION_REQUESTER_LENGTH = 128;
+  public static final int MAX_COMMISSION_TARGET_LENGTH = 256;
+  public static final int MAX_COMMISSION_TEMPLATE_LENGTH = 64;
+  public static final int MAX_COMMISSION_TEXT_LENGTH = 1_024;
+  public static final int MAX_COMMISSION_SUBMIT_AMOUNT = 2_304;
   public static final int MAX_DELIVERY_RESPONSE_WIRE_BYTES = 1024 * 1024;
   public static final int MAX_TERRITORIES_PER_RESPONSE = 2_048;
   public static final int MAX_TERRITORY_NAME_LENGTH = 128;
