@@ -56,7 +56,10 @@ public final class PublicCommissionService {
     if (nowMillis <= 0) throw new IllegalArgumentException("nowMillis must be positive");
     PublicCommission current = commissions.find(commissionId).orElse(null);
     if (current == null) return missing(commissionId);
-    String key = "public:" + commissionId + ":" + submissionId;
+    // Scope packet idempotency to the contributing player as well as the commission.  A client
+    // UUID is random, but a malicious or buggy client must not be able to consume another
+    // player's submission key and turn a valid contribution into a false duplicate.
+    String key = "public:" + playerId + ":" + commissionId + ":" + submissionId;
     Optional<CommissionRewardRecord> existingReward = rewards.findByIdempotencyKey(key);
     if (existingReward.isPresent()) {
       return new SubmitResult(SubmitOutcome.DUPLICATE, current, 0, 0, existingReward, "duplicate submission");

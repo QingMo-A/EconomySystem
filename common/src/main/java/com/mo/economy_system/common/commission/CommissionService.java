@@ -85,11 +85,12 @@ public final class CommissionService {
     CommissionPlayerState before = commissions.loadOrEmpty(playerId);
     PersonalCommissionSchedule schedule = before.schedule();
     if (schedule == null) {
-      // A first login should receive work immediately; subsequent refreshes use the absolute
-      // schedule written by the generator. Keep the timestamp non-negative for fresh worlds.
-      long firstLastRefresh = Math.max(0L, nowMillis - generator.refreshIntervalMillis());
-      schedule = PersonalCommissionSchedule.initial(
-          playerId, firstLastRefresh, generator.refreshIntervalMillis());
+      // A first login should receive work immediately.  Use a one-millisecond due schedule
+      // instead of subtracting the interval: a newly-created world can have a tiny synthetic
+      // clock in tests (or during startup), and clamping that subtraction would otherwise defer
+      // the first commission for the entire refresh interval.
+      long firstLastRefresh = Math.max(0L, nowMillis - 1L);
+      schedule = new PersonalCommissionSchedule(playerId, nowMillis, firstLastRefresh);
     }
     CommissionGenerator.RefreshResult result = generator.refresh(
         playerId, nowMillis, before.commissions(), schedule);

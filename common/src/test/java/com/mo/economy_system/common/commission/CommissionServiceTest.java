@@ -30,11 +30,48 @@ class CommissionServiceTest {
   }
 
   @Test
+  void firstRefreshGeneratesImmediatelyEvenWhenClockIsNearZero() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionTemplate template = template(1, 10);
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionService service = new CommissionService(generator, repository, repository,
+        delivery(repository));
+
+    CommissionService.RefreshView first = service.refresh(PLAYER, 1);
+
+    assertEquals(CommissionGenerator.RefreshOutcome.GENERATED, first.generation().outcome());
+    assertEquals(1, first.state().commissions().size());
+    assertTrue(first.state().schedule().nextRefreshAt() > 1);
+  }
+
+  @Test
   void builtInCatalogProducesBothServerSafeWorkKinds() {
     CommissionCatalog catalog = CommissionCatalogDefaults.create();
     assertTrue(catalog.template("vanilla_material_delivery").isPresent());
     assertTrue(catalog.template("vanilla_hunt").isPresent());
     assertEquals(2, catalog.legalTemplates().size());
+  }
+
+  @Test
+  void adminGenerationCountsOnlyLiveWorkAgainstCapacity() {
+    InMemoryCommissionRepository repository = new InMemoryCommissionRepository();
+    CommissionTemplate template = template(1, 10);
+    CommissionGenerator generator = new CommissionGenerator(
+        catalog(template), fixedRandom(), CommissionRewardPolicy.defaultPolicy(), () -> COMMISSION);
+    CommissionService service = new CommissionService(generator, repository, repository,
+        delivery(repository));
+    List<CommissionInstance> expired = java.util.stream.IntStream.rangeClosed(3, 8)
+        .mapToObj(value -> new CommissionInstance(
+            UUID.fromString("00000000-0000-0000-0000-00000000000" + value), PLAYER, "deliver",
+            CommissionType.ITEM_DELIVERY, "town", "Town", "minecraft:stone", 1,
+            CommissionRewardSnapshot.coins(10), 1, 2).expireIfDue(2))
+        .toList();
+    repository.save(new CommissionPlayerState(PLAYER, expired, null));
+
+    List<CommissionInstance> generated = service.generate(PLAYER, 10, 1);
+
+    assertEquals(1, generated.size());
   }
 
   @Test

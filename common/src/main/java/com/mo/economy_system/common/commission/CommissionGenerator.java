@@ -154,10 +154,15 @@ public final class CommissionGenerator {
     Objects.requireNonNull(playerId, "playerId");
     Objects.requireNonNull(existing, "existing");
     if (nowMillis < 0 || count < 0) throw new IllegalArgumentException("invalid generation arguments");
+    int active = (int) existing.stream()
+        .filter(Objects::nonNull)
+        .filter(value -> value.status().countsAsActive())
+        .filter(value -> value.expiresAt() > nowMillis)
+        .count();
     List<CommissionTemplate> legalTemplates = catalog.legalTemplates().stream()
-        .filter(template -> template.allowsPlayerCount(existing.size()))
+        .filter(template -> template.allowsPlayerCount(active))
         .toList();
-    if (count > catalog.settings().maxActivePersonalCommissions() - existing.size()) {
+    if (count > catalog.settings().maxActivePersonalCommissions() - active) {
       throw new IllegalArgumentException("requested commissions exceed active limit");
     }
     List<CommissionInstance> result = new ArrayList<>();

@@ -8,6 +8,7 @@ import com.mo.economy_system.target.neoforge1211.NeoForge1211Platform;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.registries.BuiltInRegistries;
 
@@ -104,29 +105,29 @@ public final class NeoForge1211CommissionRuntime {
       return service.submit(player.getUUID(), id, submissionId, requested, System.currentTimeMillis());
     }
     int amount = Math.min(requested, commission.remainingAmount());
-    var itemId = net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot());
+    if (amount <= 0) {
+      return service.submit(player.getUUID(), id, submissionId, requested,
+          System.currentTimeMillis());
+    }
+    var itemId = net.minecraft.resources.ResourceLocation.tryParse(commission.targetSnapshot());
+    if (itemId == null) throw new IllegalArgumentException("目标物品 ID 无效");
     var target = BuiltInRegistries.ITEM.get(itemId);
     if (target == null || target == net.minecraft.world.item.Items.AIR) throw new IllegalArgumentException("目标物品不可用");
-    int available = 0;
-    for (ItemStack stack : player.getInventory().items) if (stack.getItem() == target) available += stack.getCount();
+    int available = countMatching(player, target);
     if (available < amount) throw new IllegalArgumentException("背包中没有足够的目标物品");
     List<ItemStack> originals = new ArrayList<>();
     for (ItemStack stack : player.getInventory().items) originals.add(stack.copy());
-    int remaining = amount;
-    for (ItemStack stack : player.getInventory().items) {
-      if (remaining == 0) break;
-      if (stack.getItem() != target) continue;
-      int take = Math.min(remaining, stack.getCount()); stack.shrink(take); remaining -= take;
-    }
+    consumeMatching(player, target, amount);
     try {
       PublicCommissionService.SubmitResult result = service.submit(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
-      if (result.acceptedAmount() == 0) {
-        for (int i = 0; i < originals.size(); i++) player.getInventory().items.set(i, originals.get(i));
+      if (result.acceptedAmount() != amount) {
+        restoreInventory(player, originals);
+        consumeMatching(player, target, result.acceptedAmount());
       }
       player.containerMenu.broadcastChanges();
       return result;
     } catch (RuntimeException failure) {
-      for (int i = 0; i < originals.size(); i++) player.getInventory().items.set(i, originals.get(i));
+      restoreInventory(player, originals);
       player.containerMenu.broadcastChanges();
       throw failure;
     }
@@ -149,17 +150,52 @@ public final class NeoForge1211CommissionRuntime {
 
   public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id,
                                                             UUID submissionId, int amount) {
+    if (amount <= 0) {
+      return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount,
+          System.currentTimeMillis());
+    }
     CommissionPlayerState state = state(player);
     CommissionInstance commission = state.commissions().stream().filter(c -> c.commissionId().equals(id)).findFirst().orElse(null);
-    if (commission == null || commission.type() != CommissionType.ITEM_DELIVERY) return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
-    int available = 0;
-    for (ItemStack stack : player.getInventory().items) if (stack.getItem() == BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot()))) available += stack.getCount();
-    if (available < amount) throw new IllegalStateException("背包中没有足够的目标物品");
-    int remaining = amount;
-    for (ItemStack stack : player.getInventory().items) { if (remaining == 0) break; if (stack.getItem() != BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot()))) continue; int take=Math.min(remaining, stack.getCount()); stack.shrink(take); remaining-=take; }
-    CommissionService.SubmitResult result = service(player.server).submitProgress(player.getUUID(), id, submissionId, amount, System.currentTimeMillis());
-    if (!result.accepted() && result.outcome() != CommissionService.SubmitOutcome.REWARD_PENDING_MAIL) player.getInventory().add(new ItemStack(BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot())), amount));
-    return result;
+    if (commission == null) {
+      return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount,
+          System.currentTimeMillis());
+    }
+    if (commission.type() != CommissionType.ITEM_DELIVERY) {
+      throw new IllegalArgumentException("该委托不是物资提交委托");
+    }
+    if (commission.status().terminal()) {
+      return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount,
+          System.currentTimeMillis());
+    }
+    int acceptedAmount = Math.min(amount,
+        Math.max(0, commission.requiredAmount() - commission.progress()));
+    if (acceptedAmount <= 0) {
+      return service(player.server).submitProgress(player.getUUID(), id, submissionId, amount,
+          System.currentTimeMillis());
+    }
+    var itemId = net.minecraft.resources.ResourceLocation.tryParse(commission.targetSnapshot());
+    if (itemId == null) throw new IllegalStateException("委托目标物品 ID 无效");
+    Item target = BuiltInRegistries.ITEM.get(itemId);
+    if (target == null || target == net.minecraft.world.item.Items.AIR) {
+      throw new IllegalStateException("委托目标物品不可用");
+    }
+    if (countMatching(player, target) < acceptedAmount) {
+      throw new IllegalStateException("背包中没有足够的目标物品");
+    }
+    List<ItemStack> originals = new ArrayList<>();
+    for (ItemStack stack : player.getInventory().items) originals.add(stack.copy());
+    consumeMatching(player, target, acceptedAmount);
+    try {
+      CommissionService.SubmitResult result = service(player.server).submitProgress(
+          player.getUUID(), id, submissionId, acceptedAmount, System.currentTimeMillis());
+      if (!result.accepted()) restoreInventory(player, originals);
+      player.containerMenu.broadcastChanges();
+      return result;
+    } catch (RuntimeException failure) {
+      restoreInventory(player, originals);
+      player.containerMenu.broadcastChanges();
+      throw failure;
+    }
   }
 
   public static void onKill(ServerPlayer player, LivingEntity entity) {
@@ -175,6 +211,36 @@ public final class NeoForge1211CommissionRuntime {
   }
 
   public static void clear(MinecraftServer server) { SERVICES.remove(server); PUBLIC_SERVICES.remove(server); CATALOGS.remove(server); }
+
+  private static int countMatching(ServerPlayer player, Item target) {
+    int count = 0;
+    for (ItemStack stack : player.getInventory().items) {
+      if (stack.getItem() == target) count = Math.addExact(count, stack.getCount());
+    }
+    return count;
+  }
+
+  private static void consumeMatching(ServerPlayer player, Item target, int amount) {
+    if (amount <= 0) return;
+    int remaining = amount;
+    for (ItemStack stack : player.getInventory().items) {
+      if (remaining == 0) break;
+      if (stack.getItem() != target) continue;
+      int take = Math.min(remaining, stack.getCount());
+      stack.shrink(take);
+      remaining -= take;
+    }
+    if (remaining != 0) throw new IllegalStateException("背包在提交期间发生变化");
+  }
+
+  private static void restoreInventory(ServerPlayer player, List<ItemStack> originals) {
+    if (originals.size() != player.getInventory().items.size()) {
+      throw new IllegalStateException("背包槽位在提交期间发生变化");
+    }
+    for (int index = 0; index < originals.size(); index++) {
+      player.getInventory().items.set(index, originals.get(index).copy());
+    }
+  }
 
   private static CommissionRewardRepository rewardRepository(NeoForge1211CommissionSavedData data) {
     return new CommissionRewardRepository() {

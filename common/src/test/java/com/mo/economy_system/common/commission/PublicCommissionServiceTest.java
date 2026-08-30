@@ -48,6 +48,25 @@ class PublicCommissionServiceTest {
     assertEquals(PublicCommissionStatus.EXPIRED, publicRepo.find(COMMISSION).orElseThrow().status());
   }
 
+  @Test
+  void samePacketIdIsIndependentAcrossPlayers() {
+    InMemoryPublicCommissionRepository publicRepo = new InMemoryPublicCommissionRepository();
+    InMemoryCommissionRepository rewardRepo = new InMemoryCommissionRepository();
+    publicRepo.save(PublicCommission.create(COMMISSION, "Stone Drive", "town", "Town",
+        "minecraft:stone", 4, 2, 1, 100, "Deliver stone"));
+    PublicCommissionService service = new PublicCommissionService(publicRepo, rewardRepo,
+        new Delivery(rewardRepo));
+    UUID sharedPacketId = UUID.fromString("00000000-0000-0000-0000-000000000099");
+    UUID otherPlayer = UUID.fromString("00000000-0000-0000-0000-000000000013");
+
+    assertEquals(PublicCommissionService.SubmitOutcome.ACCEPTED,
+        service.submit(PLAYER, COMMISSION, sharedPacketId, 1, 10).outcome());
+    assertEquals(PublicCommissionService.SubmitOutcome.ACCEPTED,
+        service.submit(otherPlayer, COMMISSION, sharedPacketId, 1, 11).outcome());
+    assertEquals(2, rewardRepo.listForPlayer(PLAYER).size()
+        + rewardRepo.listForPlayer(otherPlayer).size());
+  }
+
   private record Delivery(InMemoryCommissionRepository rewards) implements CommissionRewardDeliveryPort {
     @Override public DeliveryResult deliver(CommissionRewardRecord record) {
       rewards.save(record.mailCreated(UUID.randomUUID()));

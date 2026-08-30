@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.nio.file.Path;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -36,17 +37,28 @@ public final class Forge1201CommissionRuntime {
   private static final Logger LOGGER = LoggerFactory.getLogger(Forge1201CommissionRuntime.class);
   private static final CommissionCatalog BUILTIN_CATALOG = CommissionCatalogDefaults.create();
   private static volatile CommissionCatalog activeCatalog = BUILTIN_CATALOG;
+  /** Keep the packet idempotency cache alive for the whole server session. */
+  private static final Map<MinecraftServer, CommissionService> SERVICES = new WeakHashMap<>();
+  private static final Map<MinecraftServer, PublicCommissionService> PUBLIC_SERVICES =
+      new WeakHashMap<>();
 
   private Forge1201CommissionRuntime() {}
 
   /** Ensures the SavedData is registered in the overworld during server startup. */
   public static void initialize(ServerLevel level) {
     activeCatalog = loadCatalog(level.getServer());
+    synchronized (Forge1201CommissionRuntime.class) {
+      SERVICES.remove(level.getServer());
+      PUBLIC_SERVICES.remove(level.getServer());
+    }
     Forge1201CommissionSavedData.get(level);
   }
 
   public static void shutdown(MinecraftServer server) {
-    // The state is owned by DimensionDataStorage; no process-global cache needs clearing.
+    synchronized (Forge1201CommissionRuntime.class) {
+      SERVICES.remove(server);
+      PUBLIC_SERVICES.remove(server);
+    }
     activeCatalog = BUILTIN_CATALOG;
   }
 
@@ -67,6 +79,11 @@ public final class Forge1201CommissionRuntime {
   public static int reloadCommand(net.minecraft.commands.CommandSourceStack source) {
     try {
       activeCatalog = loadCatalog(source.getServer());
+      synchronized (Forge1201CommissionRuntime.class) {
+        // Rebuild generators against the new catalog, while persisted instances remain frozen.
+        SERVICES.remove(source.getServer());
+        PUBLIC_SERVICES.remove(source.getServer());
+      }
       source.sendSuccess(() -> Component.literal("个人委托库已重载。"), true);
       return 1;
     } catch (RuntimeException failure) {
@@ -306,7 +323,10 @@ public final class Forge1201CommissionRuntime {
     try {
       PublicCommissionService.SubmitResult result = publicService.submit(
           player.getUUID(), id, submissionId, amount, now());
-      if (result.acceptedAmount() == 0) restore(player, originals);
+      if (result.acceptedAmount() != amount) {
+        restore(player, originals);
+        consume(player, originals, result.acceptedAmount());
+      }
       player.containerMenu.broadcastChanges();
       return result;
     } catch (RuntimeException failure) {
@@ -326,24 +346,28 @@ public final class Forge1201CommissionRuntime {
     });
   }
 
-  private static CommissionService service(ServerLevel level, Forge1201CommissionSavedData data) {
-    return new CommissionService(
-        new CommissionGenerator(activeCatalog, random()),
-        data,
-        data,
-        new Forge1201CommissionMailBridge(level, data));
+  private static synchronized CommissionService service(ServerLevel level,
+      Forge1201CommissionSavedData data) {
+    MinecraftServer server = level.getServer();
+    return SERVICES.computeIfAbsent(server, ignored -> new CommissionService(
+        new CommissionGenerator(activeCatalog, random()), data, data,
+        new Forge1201CommissionMailBridge(level, data)));
   }
 
-  private static PublicCommissionService publicService(ServerLevel level,
+  private static synchronized PublicCommissionService publicService(ServerLevel level,
       Forge1201CommissionSavedData data) {
-    com.mo.economy_system.common.commission.PublicCommissionRepository publicRepository =
-        new com.mo.economy_system.common.commission.PublicCommissionRepository() {
-          @Override public java.util.Optional<PublicCommission> find(UUID id) { return data.findPublic(id); }
-          @Override public java.util.List<PublicCommission> list() { return data.listPublic(); }
-          @Override public void save(PublicCommission value) { data.savePublic(value); }
-          @Override public void remove(UUID id) { data.removePublic(id); }
-        };
-    return new PublicCommissionService(publicRepository, data, new Forge1201CommissionMailBridge(level, data));
+    MinecraftServer server = level.getServer();
+    return PUBLIC_SERVICES.computeIfAbsent(server, ignored -> {
+      com.mo.economy_system.common.commission.PublicCommissionRepository publicRepository =
+          new com.mo.economy_system.common.commission.PublicCommissionRepository() {
+            @Override public java.util.Optional<PublicCommission> find(UUID id) { return data.findPublic(id); }
+            @Override public java.util.List<PublicCommission> list() { return data.listPublic(); }
+            @Override public void save(PublicCommission value) { data.savePublic(value); }
+            @Override public void remove(UUID id) { data.removePublic(id); }
+          };
+      return new PublicCommissionService(publicRepository, data,
+          new Forge1201CommissionMailBridge(level, data));
+    });
   }
 
   private static Forge1201CommissionSavedData data(ServerLevel level) {
