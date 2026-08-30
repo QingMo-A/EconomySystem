@@ -16,6 +16,7 @@ import java.util.*;
 /** NeoForge lifecycle bridge for the common personal commission service. */
 public final class NeoForge1211CommissionRuntime {
   private static final Map<MinecraftServer, CommissionService> SERVICES = new WeakHashMap<>();
+  private static final Map<MinecraftServer, PublicCommissionService> PUBLIC_SERVICES = new WeakHashMap<>();
   private NeoForge1211CommissionRuntime() {}
 
   public static synchronized CommissionService service(MinecraftServer server) {
@@ -35,6 +36,73 @@ public final class NeoForge1211CommissionRuntime {
   public static CommissionService.RefreshView refresh(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()); }
   public static CommissionPlayerState state(ServerPlayer player) { return service(player.server).refresh(player.getUUID(), System.currentTimeMillis()).state(); }
 
+  public static synchronized PublicCommissionService publicService(MinecraftServer server) {
+    return PUBLIC_SERVICES.computeIfAbsent(server, s -> {
+      NeoForge1211CommissionSavedData data = NeoForge1211CommissionSavedData.getInstance(s.overworld());
+      CommissionRewardRepository rewards = rewardRepository(data);
+      return new PublicCommissionService(data, rewards, new Delivery(data, s));
+    });
+  }
+
+  public static PublicCommission createPublic(MinecraftServer server, String name, String requesterId,
+                                               String requesterName, String target, int targetAmount,
+                                               int unitReward, long expiresAt, String description) {
+    long now = Math.max(1L, System.currentTimeMillis());
+    PublicCommission commission = PublicCommission.create(UUID.randomUUID(), name, requesterId,
+        requesterName, target, targetAmount, unitReward, now, expiresAt, description);
+    publicService(server).create(commission);
+    return commission;
+  }
+
+  public static List<PublicCommission> listPublic(MinecraftServer server) {
+    return publicService(server).list(Math.max(1L, System.currentTimeMillis()));
+  }
+
+  public static Optional<PublicCommission> findPublic(MinecraftServer server, UUID id) {
+    return publicService(server).list(Math.max(1L, System.currentTimeMillis())).stream()
+        .filter(c -> c.commissionId().equals(id)).findFirst();
+  }
+
+  public static boolean cancelPublic(MinecraftServer server, UUID id) { return publicService(server).cancel(id); }
+
+  public static void removePublic(MinecraftServer server, UUID id) { publicService(server).remove(id); }
+
+  public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player, UUID id, int requested) {
+    if (requested <= 0) throw new IllegalArgumentException("提交数量必须大于 0");
+    PublicCommissionService service = publicService(player.server);
+    PublicCommission commission = findPublic(player.server, id).orElseThrow(() -> new IllegalArgumentException("找不到公共委托"));
+    if (commission.status() != PublicCommissionStatus.AVAILABLE) {
+      return service.submit(player.getUUID(), id, UUID.randomUUID(), requested, System.currentTimeMillis());
+    }
+    int amount = Math.min(requested, commission.remainingAmount());
+    var itemId = net.minecraft.resources.ResourceLocation.parse(commission.targetSnapshot());
+    var target = BuiltInRegistries.ITEM.get(itemId);
+    if (target == null || target == net.minecraft.world.item.Items.AIR) throw new IllegalArgumentException("目标物品不可用");
+    int available = 0;
+    for (ItemStack stack : player.getInventory().items) if (stack.getItem() == target) available += stack.getCount();
+    if (available < amount) throw new IllegalArgumentException("背包中没有足够的目标物品");
+    List<ItemStack> originals = new ArrayList<>();
+    for (ItemStack stack : player.getInventory().items) originals.add(stack.copy());
+    int remaining = amount;
+    for (ItemStack stack : player.getInventory().items) {
+      if (remaining == 0) break;
+      if (stack.getItem() != target) continue;
+      int take = Math.min(remaining, stack.getCount()); stack.shrink(take); remaining -= take;
+    }
+    try {
+      PublicCommissionService.SubmitResult result = service.submit(player.getUUID(), id, UUID.randomUUID(), amount, System.currentTimeMillis());
+      if (result.acceptedAmount() == 0) {
+        for (int i = 0; i < originals.size(); i++) player.getInventory().items.set(i, originals.get(i));
+      }
+      player.containerMenu.broadcastChanges();
+      return result;
+    } catch (RuntimeException failure) {
+      for (int i = 0; i < originals.size(); i++) player.getInventory().items.set(i, originals.get(i));
+      player.containerMenu.broadcastChanges();
+      throw failure;
+    }
+  }
+
   public static CommissionService.SubmitResult submitItem(ServerPlayer player, UUID id, int amount) {
     CommissionPlayerState state = state(player);
     CommissionInstance commission = state.commissions().stream().filter(c -> c.commissionId().equals(id)).findFirst().orElse(null);
@@ -52,10 +120,26 @@ public final class NeoForge1211CommissionRuntime {
   public static void onKill(ServerPlayer player, LivingEntity entity) {
     String target = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
     CommissionPlayerState state = state(player);
-    for (CommissionInstance c : state.commissions()) if (c.type() == CommissionType.ENTITY_KILL && c.targetSnapshot().equals(target) && c.status().countsAsActive()) { service(player.server).submitProgress(player.getUUID(), c.commissionId(), 1, System.currentTimeMillis()); break; }
+    for (CommissionInstance c : state.commissions()) {
+      if (c.type() == CommissionType.ENTITY_KILL && c.targetSnapshot().equals(target)
+          && c.status().countsAsActive()) {
+        service(player.server).submitProgress(player.getUUID(), c.commissionId(), 1,
+            System.currentTimeMillis());
+      }
+    }
   }
 
-  public static void clear(MinecraftServer server) { SERVICES.remove(server); }
+  public static void clear(MinecraftServer server) { SERVICES.remove(server); PUBLIC_SERVICES.remove(server); }
+
+  private static CommissionRewardRepository rewardRepository(NeoForge1211CommissionSavedData data) {
+    return new CommissionRewardRepository() {
+      public Optional<CommissionRewardRecord> find(UUID id) { return data.findReward(id); }
+      public Optional<CommissionRewardRecord> findByIdempotencyKey(String key) { return data.findRewardByKey(key); }
+      public CommissionRewardRecord createIfAbsent(CommissionRewardRecord candidate) { return data.createReward(candidate); }
+      public void save(CommissionRewardRecord reward) { data.saveReward(reward); }
+      public List<CommissionRewardRecord> listForPlayer(UUID id) { return data.rewardsFor(id); }
+    };
+  }
 
   private static CommissionCatalog defaultCatalog() {
     CommissionRequester requester = new CommissionRequester("town", "城镇供应处");

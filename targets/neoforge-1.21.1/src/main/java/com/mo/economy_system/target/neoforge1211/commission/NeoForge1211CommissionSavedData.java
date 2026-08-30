@@ -12,17 +12,25 @@ import net.minecraft.world.level.saveddata.SavedData;
 import java.util.*;
 
 /** Durable NeoForge storage for personal commission state and reward idempotency records. */
-public final class NeoForge1211CommissionSavedData extends SavedData {
+public final class NeoForge1211CommissionSavedData extends SavedData implements PublicCommissionRepository {
   private static final String DATA_NAME = "economy_commissions";
   private final Map<UUID, CommissionPlayerState> players = new LinkedHashMap<>();
   private final Map<UUID, CommissionRewardRecord> rewards = new LinkedHashMap<>();
+  private final Map<UUID, PublicCommission> publicCommissions = new LinkedHashMap<>();
 
   public static NeoForge1211CommissionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
     NeoForge1211CommissionSavedData data = new NeoForge1211CommissionSavedData();
     ListTag rows = tag.getList("players", Tag.TAG_COMPOUND);
-    for (Tag raw : rows) { try { data.readPlayer((CompoundTag) raw); } catch (RuntimeException ignored) {} }
+    for (Tag raw : rows) { data.readPlayer((CompoundTag) raw); }
     rows = tag.getList("rewards", Tag.TAG_COMPOUND);
-    for (Tag raw : rows) { try { data.readReward((CompoundTag) raw); } catch (RuntimeException ignored) {} }
+    for (Tag raw : rows) { data.readReward((CompoundTag) raw); }
+    rows = tag.getList("publicCommissions", Tag.TAG_COMPOUND);
+    for (Tag raw : rows) {
+      PublicCommission commission = readPublic((CompoundTag) raw);
+      if (data.publicCommissions.put(commission.commissionId(), commission) != null) {
+        throw new IllegalArgumentException("duplicate public commission id");
+      }
+    }
     return data;
   }
 
@@ -33,7 +41,22 @@ public final class NeoForge1211CommissionSavedData extends SavedData {
     ListTag rewardRows = new ListTag();
     rewards.values().forEach(reward -> rewardRows.add(writeReward(reward)));
     tag.put("rewards", rewardRows);
+    ListTag publicRows = new ListTag();
+    publicCommissions.values().forEach(commission -> publicRows.add(writePublic(commission)));
+    tag.put("publicCommissions", publicRows);
     return tag;
+  }
+
+  @Override public synchronized Optional<PublicCommission> find(UUID id) {
+    return Optional.ofNullable(publicCommissions.get(Objects.requireNonNull(id, "commissionId")));
+  }
+  @Override public synchronized List<PublicCommission> list() { return List.copyOf(publicCommissions.values()); }
+  @Override public synchronized void save(PublicCommission commission) {
+    publicCommissions.put(Objects.requireNonNull(commission, "commission").commissionId(), commission);
+    setDirty();
+  }
+  @Override public synchronized void remove(UUID id) {
+    if (publicCommissions.remove(Objects.requireNonNull(id, "commissionId")) != null) setDirty();
   }
 
   public static NeoForge1211CommissionSavedData getInstance(ServerLevel level) {
@@ -65,4 +88,6 @@ public final class NeoForge1211CommissionSavedData extends SavedData {
   }
   private CompoundTag writeReward(CommissionRewardRecord r) { CompoundTag out = new CompoundTag(); out.putUUID("id", r.rewardRecordId()); out.putString("key", r.idempotencyKey()); out.putUUID("player", r.playerId()); out.putUUID("commission", r.commissionId()); out.putString("batch", r.batchId()); out.putString("template", r.templateId()); out.putString("requester", r.requesterId()); out.putInt("amount", r.rewardSnapshot().amount()); out.putString("description", r.rewardSnapshot().description()); out.putLong("created", r.createdAt()); if (r.mailId()!=null) out.putUUID("mail", r.mailId()); out.putString("status", r.status().name()); out.putLong("claimed", r.claimedAt()); return out; }
   private void readReward(CompoundTag row) { UUID id=row.getUUID("id"); UUID mail=row.hasUUID("mail")?row.getUUID("mail"):null; CommissionRewardRecord r=new CommissionRewardRecord(id,row.getString("key"),row.getUUID("player"),row.getUUID("commission"),row.getString("batch"),row.getString("template"),row.getString("requester"),new CommissionRewardSnapshot(CommissionRewardSnapshot.DEFAULT_CURRENCY_ID, row.getInt("amount"), row.getString("description")),row.getLong("created"),mail,CommissionRewardStatus.valueOf(row.getString("status")),row.getLong("claimed")); rewards.put(id,r); }
+  private static CompoundTag writePublic(PublicCommission c) { CompoundTag out=new CompoundTag(); out.putUUID("id",c.commissionId()); out.putString("name",c.name()); out.putString("requesterId",c.requesterId()); out.putString("requesterName",c.requesterName()); out.putString("target",c.targetSnapshot()); out.putInt("targetAmount",c.targetAmount()); out.putInt("unitReward",c.unitReward()); out.putLong("generated",c.generatedAt()); out.putLong("expires",c.expiresAt()); out.putString("description",c.description()); out.putString("status",c.status().name()); out.putInt("remaining",c.remainingAmount()); out.putInt("budget",c.remainingBudget()); return out; }
+  private static PublicCommission readPublic(CompoundTag c) { return new PublicCommission(c.getUUID("id"), c.getString("name"), c.getString("requesterId"), c.getString("requesterName"), c.getString("target"), c.getInt("targetAmount"), c.getInt("unitReward"), c.getLong("generated"), c.getLong("expires"), c.getString("description"), PublicCommissionStatus.valueOf(c.getString("status")), c.getInt("remaining"), c.getInt("budget")); }
 }

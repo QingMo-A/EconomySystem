@@ -2,6 +2,7 @@ package com.mo.economy_system.target.forge1201;
 
 import com.mo.economy_system.EconomyConstants;
 import com.mo.economy_system.common.network.TransferMessage;
+import com.mo.economy_system.common.commission.PublicCommission;
 import com.mo.economy_system.common.settings.EconomySettings;
 import com.mo.economy_system.core.economy_system.EconomySavedData;
 import com.mo.economy_system.target.forge1201.item.Forge1201SupporterHat;
@@ -9,6 +10,7 @@ import com.mo.economy_system.target.forge1201.recycle.Forge1201RecyclerCommands;
 import com.mo.economy_system.target.forge1201.commission.Forge1201CommissionRuntime;
 import com.mo.economy_system.platform.EconomyServices;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.Map;
 import java.util.Collection;
@@ -97,18 +99,43 @@ public final class Forge1201EconomyCommands {
         .then(Commands.argument("target", EntityArgument.player()).then(transferAmount)));
     event.getDispatcher().register(coin);
 
-    var commission = Commands.literal("commission")
-        .then(Commands.literal("refresh")
-            .executes(c -> Forge1201CommissionRuntime.refreshCommand(c.getSource())))
-        .then(Commands.literal("list")
-            .executes(c -> Forge1201CommissionRuntime.listCommand(c.getSource())))
+    var commission = Commands.literal("commission");
+    commission.then(Commands.literal("refresh")
+        .executes(c -> Forge1201CommissionRuntime.refreshCommand(c.getSource())));
+    commission.then(Commands.literal("list")
+        .executes(c -> Forge1201CommissionRuntime.listCommand(c.getSource())));
+    commission.then(Commands.literal("submit")
+        .then(Commands.argument("commissionId", UuidArgument.uuid())
+            .then(Commands.argument("amount", IntegerArgumentType.integer(1))
+                .executes(c -> submitCommission(c.getSource(),
+                    UuidArgument.getUuid(c, "commissionId"),
+                    IntegerArgumentType.getInteger(c, "amount"))))));
+    commission.then(Commands.literal("public")
+        .then(Commands.literal("list").executes(c -> listPublic(c.getSource())))
+        .then(Commands.literal("info")
+            .then(Commands.argument("id", UuidArgument.uuid())
+                .executes(c -> infoPublic(c.getSource(), UuidArgument.getUuid(c, "id")))))
+        .then(Commands.literal("create").requires(s -> s.hasPermission(2))
+            .then(Commands.argument("name", StringArgumentType.string())
+                .then(Commands.argument("requesterId", StringArgumentType.word())
+                    .then(Commands.argument("requesterName", StringArgumentType.string())
+                        .then(Commands.argument("target", StringArgumentType.word())
+                            .then(Commands.argument("targetAmount", IntegerArgumentType.integer(1))
+                                .then(Commands.argument("unitReward", IntegerArgumentType.integer(1))
+                                    .then(Commands.argument("durationSeconds", LongArgumentType.longArg(1))
+                                        .then(Commands.argument("description", StringArgumentType.greedyString())
+                                            .executes(c -> createPublic(c)))))))))))
+        .then(Commands.literal("end").requires(s -> s.hasPermission(2))
+            .then(Commands.argument("id", UuidArgument.uuid())
+                .executes(c -> endPublic(c.getSource(), UuidArgument.getUuid(c, "id")))))
+        .then(Commands.literal("remove").requires(s -> s.hasPermission(2))
+            .then(Commands.argument("id", UuidArgument.uuid())
+                .executes(c -> removePublic(c.getSource(), UuidArgument.getUuid(c, "id")))))
         .then(Commands.literal("submit")
-            .then(Commands.argument("commissionId", UuidArgument.uuid())
+            .then(Commands.argument("id", UuidArgument.uuid())
                 .then(Commands.argument("amount", IntegerArgumentType.integer(1))
-                    .executes(c -> submitCommission(
-                        c.getSource(),
-                        UuidArgument.getUuid(c, "commissionId"),
-                        IntegerArgumentType.getInteger(c, "amount"))))));
+                    .executes(c -> submitPublic(c.getSource(), UuidArgument.getUuid(c, "id"),
+                        IntegerArgumentType.getInteger(c, "amount")))))));
     event.getDispatcher().register(Commands.literal("economy_system").then(commission));
 
     event.getDispatcher().register(
@@ -149,6 +176,67 @@ public final class Forge1201EconomyCommands {
     }
     source.sendFailure(Component.literal(feedback.message()));
     return 0;
+  }
+
+  private static int createPublic(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> c) {
+    try {
+      long now = Math.max(1L, System.currentTimeMillis());
+      long duration = LongArgumentType.getLong(c, "durationSeconds");
+      long expires = Math.addExact(now, Math.multiplyExact(duration, 1000L));
+      PublicCommission value = Forge1201CommissionRuntime.createPublic(c.getSource().getServer(),
+          StringArgumentType.getString(c, "name"), StringArgumentType.getString(c, "requesterId"),
+          StringArgumentType.getString(c, "requesterName"), StringArgumentType.getString(c, "target"),
+          IntegerArgumentType.getInteger(c, "targetAmount"), IntegerArgumentType.getInteger(c, "unitReward"),
+          expires, StringArgumentType.getString(c, "description"));
+      c.getSource().sendSuccess(() -> Component.literal("已创建公共委托 " + value.commissionId()
+          + "，总预算 " + value.remainingBudget()), true);
+      return 1;
+    } catch (RuntimeException failure) {
+      c.getSource().sendFailure(Component.literal("创建公共委托失败：" + failure.getMessage())); return 0;
+    }
+  }
+
+  private static int listPublic(net.minecraft.commands.CommandSourceStack source) {
+    var entries = Forge1201CommissionRuntime.listPublic(source.getServer());
+    if (entries.isEmpty()) { source.sendSuccess(() -> Component.literal("当前暂无公共大型委托。"), false); return 1; }
+    for (PublicCommission value : entries) source.sendSuccess(() -> Component.literal(formatPublic(value)), false);
+    return entries.size();
+  }
+
+  private static int infoPublic(net.minecraft.commands.CommandSourceStack source, java.util.UUID id) {
+    var entry = Forge1201CommissionRuntime.findPublic(source.getServer(), id);
+    if (entry.isEmpty()) { source.sendFailure(Component.literal("找不到公共委托。")); return 0; }
+    source.sendSuccess(() -> Component.literal(formatPublic(entry.get())), false); return 1;
+  }
+
+  private static int endPublic(net.minecraft.commands.CommandSourceStack source, java.util.UUID id) {
+    if (!Forge1201CommissionRuntime.cancelPublic(source.getServer(), id)) { source.sendFailure(Component.literal("找不到公共委托。")); return 0; }
+    source.sendSuccess(() -> Component.literal("公共委托已结束。"), true); return 1;
+  }
+
+  private static int removePublic(net.minecraft.commands.CommandSourceStack source, java.util.UUID id) {
+    if (Forge1201CommissionRuntime.findPublic(source.getServer(), id).isEmpty()) { source.sendFailure(Component.literal("找不到公共委托。")); return 0; }
+    Forge1201CommissionRuntime.removePublic(source.getServer(), id);
+    source.sendSuccess(() -> Component.literal("公共委托已删除。"), true); return 1;
+  }
+
+  private static int submitPublic(net.minecraft.commands.CommandSourceStack source, java.util.UUID id, int amount) {
+    try {
+      ServerPlayer player = source.getPlayerOrException();
+      var result = Forge1201CommissionRuntime.submitPublicItem(player, id, amount);
+      source.sendSuccess(() -> Component.literal("公共委托提交：" + result.outcome()
+          + "，接受 " + result.acceptedAmount() + "，奖励 " + result.payout() + "（邮件领取）"), false);
+      return result.acceptedAmount() > 0 ? 1 : 0;
+    } catch (Exception failure) {
+      source.sendFailure(Component.literal("提交公共委托失败：" + failure.getMessage())); return 0;
+    }
+  }
+
+  private static String formatPublic(PublicCommission value) {
+    return value.commissionId() + " | " + value.name() + " | " + value.requesterName() + " | "
+        + value.targetSnapshot() + " | " + (value.targetAmount() - value.remainingAmount()) + "/"
+        + value.targetAmount() + " | 单价 " + value.unitReward() + " | 剩余预算 "
+        + value.remainingBudget() + " | " + value.status();
   }
 
   private static int addHand(

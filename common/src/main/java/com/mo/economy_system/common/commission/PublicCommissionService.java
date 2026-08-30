@@ -92,6 +92,14 @@ public final class PublicCommissionService {
     return true;
   }
 
+  /** Removes an administrator-owned public commission from persistence. */
+  public synchronized boolean remove(UUID commissionId) {
+    Objects.requireNonNull(commissionId, "commissionId");
+    if (commissions.find(commissionId).isEmpty()) return false;
+    commissions.remove(commissionId);
+    return true;
+  }
+
   private static SubmitResult missing(UUID commissionId) {
     PublicCommission placeholder = PublicCommission.create(commissionId, "Missing", "system", "System",
         "missing", 1, 1, 1, 2, "").cancel();

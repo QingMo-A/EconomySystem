@@ -8,6 +8,9 @@ import com.mo.economy_system.common.commission.CommissionRandom;
 import com.mo.economy_system.common.commission.CommissionService;
 import com.mo.economy_system.common.commission.CommissionStatus;
 import com.mo.economy_system.common.commission.CommissionType;
+import com.mo.economy_system.common.commission.PublicCommission;
+import com.mo.economy_system.common.commission.PublicCommissionService;
+import com.mo.economy_system.common.commission.PublicCommissionStatus;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -214,12 +217,86 @@ public final class Forge1201CommissionRuntime {
     }
   }
 
+  public static PublicCommission createPublic(MinecraftServer server, String name, String requesterId,
+      String requesterName, String target, int targetAmount, int unitReward, long expiresAt,
+      String description) {
+    ServerLevel level = server.overworld();
+    Forge1201CommissionSavedData data = data(level);
+    PublicCommission commission = PublicCommission.create(UUID.randomUUID(), name, requesterId,
+        requesterName, target, targetAmount, unitReward, now(), expiresAt, description);
+    publicService(level, data).create(commission);
+    return commission;
+  }
+
+  public static List<PublicCommission> listPublic(MinecraftServer server) {
+    ServerLevel level = server.overworld();
+    return publicService(level, data(level)).list(now());
+  }
+
+  public static java.util.Optional<PublicCommission> findPublic(MinecraftServer server, UUID id) {
+    return listPublic(server).stream().filter(c -> c.commissionId().equals(id)).findFirst();
+  }
+
+  public static boolean cancelPublic(MinecraftServer server, UUID id) {
+    ServerLevel level = server.overworld();
+    return publicService(level, data(level)).cancel(id);
+  }
+
+  public static void removePublic(MinecraftServer server, UUID id) {
+    data(server.overworld()).removePublic(id);
+  }
+
+  public static PublicCommissionService.SubmitResult submitPublicItem(ServerPlayer player,
+      UUID id, int requestedAmount) {
+    if (requestedAmount <= 0) throw new IllegalArgumentException("提交数量必须大于 0");
+    ServerLevel level = player.serverLevel();
+    Forge1201CommissionSavedData data = data(level);
+    PublicCommissionService publicService = publicService(level, data);
+    PublicCommission commission = publicService.list(now()).stream()
+        .filter(c -> c.commissionId().equals(id)).findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("找不到公共委托"));
+    if (commission.status() != PublicCommissionStatus.AVAILABLE) {
+      return publicService.submit(player.getUUID(), id, UUID.randomUUID(), requestedAmount, now());
+    }
+    int amount = Math.min(requestedAmount, commission.remainingAmount());
+    ResourceLocation targetId = ResourceLocation.tryParse(commission.targetSnapshot());
+    if (targetId == null || !BuiltInRegistries.ITEM.containsKey(targetId)) {
+      throw new IllegalArgumentException("目标物品不可用");
+    }
+    Item target = BuiltInRegistries.ITEM.get(targetId);
+    Map<Integer, ItemStack> originals = matchingStacks(player, target, amount);
+    if (originals == null) throw new IllegalArgumentException("背包中没有足够的目标物品");
+    consume(player, originals, amount);
+    try {
+      PublicCommissionService.SubmitResult result = publicService.submit(
+          player.getUUID(), id, UUID.randomUUID(), amount, now());
+      if (result.acceptedAmount() == 0) restore(player, originals);
+      player.containerMenu.broadcastChanges();
+      return result;
+    } catch (RuntimeException failure) {
+      restore(player, originals);
+      throw failure;
+    }
+  }
+
   private static CommissionService service(ServerLevel level, Forge1201CommissionSavedData data) {
     return new CommissionService(
         new CommissionGenerator(DEFAULT_CATALOG, random()),
         data,
         data,
         new Forge1201CommissionMailBridge(level, data));
+  }
+
+  private static PublicCommissionService publicService(ServerLevel level,
+      Forge1201CommissionSavedData data) {
+    com.mo.economy_system.common.commission.PublicCommissionRepository publicRepository =
+        new com.mo.economy_system.common.commission.PublicCommissionRepository() {
+          @Override public java.util.Optional<PublicCommission> find(UUID id) { return data.findPublic(id); }
+          @Override public java.util.List<PublicCommission> list() { return data.listPublic(); }
+          @Override public void save(PublicCommission value) { data.savePublic(value); }
+          @Override public void remove(UUID id) { data.removePublic(id); }
+        };
+    return new PublicCommissionService(publicRepository, data, new Forge1201CommissionMailBridge(level, data));
   }
 
   private static Forge1201CommissionSavedData data(ServerLevel level) {
